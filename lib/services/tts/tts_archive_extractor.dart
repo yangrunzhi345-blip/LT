@@ -84,10 +84,13 @@ class ArchiveTtsArchiveExtractor implements TtsArchiveExtractor {
     try {
       final Archive archiveData;
       try {
+        // `storeData` must stay at its default (true): with `storeData: false`
+        // the decoder yields `ArchiveFile.noData` entries whose content is
+        // empty, so `writeContent` would silently produce 0-byte files. The
+        // content is a file-backed stream, not buffered in memory.
         archiveData = TarDecoder().decodeStream(
           tarInput,
           verify: true,
-          storeData: false,
         );
       } on ArchiveException catch (error) {
         throw TtsException(

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,10 +31,13 @@ void main() {
     return path;
   }
 
-  test('a benign archive extracts into the destination', () async {
+  test('a benign archive extracts with intact content', () async {
+    final modelBytes = Uint8List.fromList(
+      List<int>.generate(8192, (i) => (i * 7 + 1) % 256),
+    );
     final archive = writeArchive(<ArchiveFile>[
       ArchiveFile.string('payload/tokens.txt', 'tokens'),
-      ArchiveFile.string('payload/voices.bin', 'voices'),
+      ArchiveFile.bytes('payload/model.int8.onnx', modelBytes),
     ]);
     final dest = Directory('${root.path}/staging');
 
@@ -43,8 +47,14 @@ void main() {
       destinationDir: dest,
     );
 
-    expect(File('${dest.path}/payload/tokens.txt').existsSync(), isTrue);
-    expect(File('${dest.path}/payload/voices.bin').existsSync(), isTrue);
+    final tokens = File('${dest.path}/payload/tokens.txt');
+    final model = File('${dest.path}/payload/model.int8.onnx');
+    expect(tokens.existsSync(), isTrue);
+    expect(model.existsSync(), isTrue);
+    // Content must be intact — a 0-byte extraction is a silent install failure.
+    expect(tokens.readAsStringSync(), 'tokens');
+    expect(model.lengthSync(), modelBytes.length);
+    expect(model.readAsBytesSync(), modelBytes);
   });
 
   test('a "../" entry is rejected and nothing escapes', () async {
@@ -86,5 +96,51 @@ void main() {
       throwsA(isA<TtsException>()),
     );
     expect(File('/tmp/lt_absolute_evil.txt').existsSync(), isFalse);
+  });
+
+  // Windows-style entries are rejected on every host because the check is a
+  // string normalization, not a filesystem check. This guards the Windows
+  // build path even though the test runs on Linux.
+  test('Windows drive-letter and backslash entries are rejected', () async {
+    for (final name in <String>[
+      r'C:\evil.txt',
+      r'C:/evil.txt',
+      r'..\evil.txt',
+      r'..\..\evil.txt',
+      r'\evil.txt',
+      r'\\server\share\evil.txt',
+    ]) {
+      final archive = writeArchive(<ArchiveFile>[
+        ArchiveFile.string(name, 'evil'),
+      ]);
+      final dest = Directory('${root.path}/staging_${name.hashCode}');
+      await expectLater(
+        extractor.extract(
+          archive: archive,
+          format: TtsArchiveFormat.tarBz2,
+          destinationDir: dest,
+        ),
+        throwsA(isA<TtsException>()),
+        reason: 'entry should be rejected: $name',
+      );
+    }
+  });
+
+  test('a benign Windows-style relative path is normalized and accepted',
+      () async {
+    final archive = writeArchive(<ArchiveFile>[
+      ArchiveFile.string(r'payload\model.int8.onnx', 'model'),
+    ]);
+    final dest = Directory('${root.path}/staging_ok');
+
+    await extractor.extract(
+      archive: archive,
+      format: TtsArchiveFormat.tarBz2,
+      destinationDir: dest,
+    );
+
+    final extracted = File('${dest.path}/payload/model.int8.onnx');
+    expect(extracted.existsSync(), isTrue);
+    expect(extracted.readAsStringSync(), 'model');
   });
 }
