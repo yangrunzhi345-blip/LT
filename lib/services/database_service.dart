@@ -335,7 +335,7 @@ class DatabaseService {
         await createRuntimeCheckpointSchema(db);
         await createCreationLibrarySchema(db);
         await createResourceCharacterRelationshipSchema(db);
-        _log('全新安装，v47 schema 创建完毕');
+        _log('全新安装，v48 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
