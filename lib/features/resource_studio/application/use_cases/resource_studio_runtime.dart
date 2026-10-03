@@ -28,6 +28,10 @@ abstract interface class ResourceStudioRuntime {
 
   Future<StreamingGenerationSession?> getSession(String sessionId);
 
+  /// Returns whether a persisted creation session has relationship intent
+  /// that can be committed with the generated character.
+  Future<bool> hasAcceptableRelationshipDraft(String creationSessionId);
+
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
   );
@@ -155,6 +159,14 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
   @override
   Future<StreamingGenerationSession?> getSession(String sessionId) =>
       _controller.getSession(sessionId);
+
+  @override
+  Future<bool> hasAcceptableRelationshipDraft(String creationSessionId) async {
+    final normalizedId = creationSessionId.trim();
+    if (normalizedId.isEmpty) return false;
+    final creation = await _pipeline.findSession(normalizedId);
+    return creation?.relationshipDraft?.isEmpty == false;
+  }
 
   @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
@@ -313,6 +325,15 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         blueprint.status != BlueprintStatus.confirmed ||
         blueprint.resourceId != resourceId) {
       throw StateError('生成候选尚未完成确认或已过期');
+    }
+    final generationSession =
+        (await _sessionRepository.findSessionsForResource(resourceId.value))
+            .where((session) => session.creationSessionId == creationSessionId)
+            .lastOrNull;
+    if (generationSession == null ||
+        generationSession.status != StreamingLifecycleStatus.completed ||
+        generationSession.blueprintId != blueprint.blueprintId) {
+      throw StateError('生成候选尚未完成或已过期');
     }
     final tree = await readTree(resourceId);
     if (tree == null) {

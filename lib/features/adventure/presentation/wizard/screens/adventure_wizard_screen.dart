@@ -238,6 +238,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             targetCharacterId: rel.targetCharacterId,
             relationType: rel.relationType,
             customRelationName: rel.customRelationName,
+            sourceRole: rel.sourceRole,
+            targetRole: rel.targetRole,
             description: rel.description,
           ));
         }
@@ -1556,6 +1558,8 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
             targetCharacterId: r.targetCharacterId,
             relationType: r.relationType,
             customRelationName: r.customRelationName,
+            sourceRole: r.sourceRole,
+            targetRole: r.targetRole,
             description: r.description,
           ))
       .toList();

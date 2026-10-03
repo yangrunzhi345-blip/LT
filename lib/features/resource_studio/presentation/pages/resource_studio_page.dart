@@ -1017,6 +1017,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
             true;
     return [
       if (state.status == ResourceStudioStatus.completed &&
+          state.canAcceptGeneratedCharacter &&
           isGeneratedCharacter)
         FilledButton(
           onPressed: () => unawaited(_acceptGeneratedCharacter()),

@@ -20,6 +20,7 @@ import '../helpers/section_control_fakes.dart';
 import '../helpers/resource_capacity_fakes.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_ai_create_page.dart';
 
 final class _MockResourceLibraryRuntime implements ResourceLibraryRuntime {
   _MockResourceLibraryRuntime({
@@ -109,10 +110,12 @@ Widget _buildTestApp({
   required ResourceLibraryRuntime runtime,
   ThemeMode themeMode = ThemeMode.light,
   double textScaleFactor = 1.0,
+  FakeResourceStudioRuntime? studioRuntime,
 }) {
   final tree = buildStudioTestTree();
-  final studio = FakeResourceStudioRuntime(
-      tree: tree, session: buildStudioTestSession(tree));
+  final studio = studioRuntime ??
+      FakeResourceStudioRuntime(
+          tree: tree, session: buildStudioTestSession(tree));
   addTearDown(studio.eventsController.close);
   return ProviderScope(
     overrides: [
@@ -191,6 +194,98 @@ void main() {
       final searchBox =
           tester.getSize(find.byKey(const Key('resource-search-field')));
       expect(searchBox.height, lessThanOrEqualTo(40));
+    });
+
+    testWidgets(
+        'related generation route locks the source and exposes another live reference',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final runtime = _MockResourceLibraryRuntime(items: _testItems);
+      final studioTree = buildStudioTestTree();
+      final studio = FakeResourceStudioRuntime(
+        tree: studioTree,
+        session: buildStudioTestSession(studioTree),
+      );
+      await tester.pumpWidget(
+        _buildTestApp(runtime: runtime, studioRuntime: studio),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('resource-card-res_2')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final generate =
+          find.byKey(const Key('resource-generate-related-character'));
+      await tester.ensureVisible(generate);
+      await tester.tap(generate);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ResourceAiCreatePage), findsOneWidget);
+      final sourceEditor =
+          find.byKey(const ValueKey<String>('ai-create-relationship-0'));
+      expect(sourceEditor, findsOneWidget);
+      expect(
+        find.descendant(of: sourceEditor, matching: find.text('魔女菈妮')),
+        findsOneWidget,
+      );
+      // The source supplied by Character Detail cannot be removed or replaced.
+      expect(
+        find.descendant(of: sourceEditor, matching: find.byTooltip('删除')),
+        findsNothing,
+      );
+
+      final addRelationship =
+          find.byKey(const Key('ai-create-add-relationship'));
+      await tester.ensureVisible(addRelationship);
+      await tester.tap(addRelationship);
+      await tester.pumpAndSettle();
+      final secondEditor =
+          find.byKey(const ValueKey<String>('ai-create-relationship-1'));
+      expect(secondEditor, findsOneWidget);
+      expect(
+        find.descendant(of: secondEditor, matching: find.text('铁拳亚历山大')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: secondEditor, matching: find.byTooltip('删除')),
+        findsOneWidget,
+      );
+
+      // Completing the form returns a draft through the detail callback and
+      // opens the same Resource Studio route used by ordinary creation.
+      await tester.enterText(
+        find.byKey(const Key('ai-create-name-field')),
+        '关联角色',
+      );
+      await tester.enterText(
+        find.byKey(const Key('ai-create-paste-field')),
+        '用于验证完整入口回调的角色资料。',
+      );
+      final submit = find.byKey(const Key('ai-create-submit-button'));
+      await tester.ensureVisible(submit);
+      await tester.tap(submit);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(ResourceStudioPage), findsOneWidget);
+      expect(studio.createCalled, isTrue);
+      expect(
+        studio.createdRelationshipDraft?.relationship.references,
+        hasLength(2),
+      );
+      expect(
+        studio.createdRelationshipDraft?.relationship.references.first
+            .sourceResourceId.value,
+        'res_2',
+      );
+      expect(
+        studio.createdRelationshipDraft?.relationship.references[1]
+            .sourceResourceId.value,
+        'res_3',
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 

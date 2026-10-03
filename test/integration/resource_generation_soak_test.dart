@@ -727,6 +727,10 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
       _streamingController.getSession(sessionId);
 
   @override
+  Future<bool> hasAcceptableRelationshipDraft(String creationSessionId) async =>
+      false;
+
+  @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
   ) =>

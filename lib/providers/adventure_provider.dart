@@ -361,6 +361,25 @@ class AdventureProvider extends ChangeNotifier {
     return id;
   }
 
+  /// Resolves the current Resource relationships for the assembly preview.
+  ///
+  /// The preview and launch boundaries share this application-owned
+  /// projection so the user reviews the same frozen relationship snapshot
+  /// that [createAdventure] will persist.
+  Future<AdventureConfig> assemblePreviewConfig(AdventureConfig config) async {
+    final relationshipLoader = _relationshipLoader;
+    if (relationshipLoader == null) {
+      return const AdventureAssembler().assemble(config);
+    }
+    final selection = await relationshipLoader.load(config);
+    return const AdventureAssembler().assembleWithResourceRelationships(
+      input: config,
+      relationships: selection.relationships,
+      selectedResourceIds: selection.selectedResourceIds,
+      resourceIdToAdventureId: selection.resourceIdToAdventureId,
+    );
+  }
+
   /// Materializes the assembled prologue as the adventure's first assistant
   /// message and returns whether it wrote one.
   ///

@@ -11,6 +11,7 @@ import 'package:lt_dialogue/controllers/streaming_resource_generation_controller
 import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/character_relationship_repository.dart';
@@ -38,6 +39,14 @@ void main() {
   test('accepts a persisted related candidate through the production runtime',
       () async {
     final candidate = await fixture.seedRelatedCandidate();
+
+    // Candidate review is session state only; no permanent relationship may
+    // exist before the explicit acceptance transaction.
+    expect(
+      await fixture.relationships
+          .listForResource(const ResourceId('runtime_source')),
+      isEmpty,
+    );
 
     final accepted = await fixture.runtime.acceptGeneratedCharacter(
       resourceId: candidate.resourceId,
@@ -202,6 +211,27 @@ void main() {
     );
   });
 
+  test('rejects acceptance before the generation runtime is completed',
+      () async {
+    final candidate = await fixture.seedRelatedCandidate(
+      runtimeStatus: StreamingLifecycleStatus.generatingPart,
+    );
+
+    await expectLater(
+      fixture.runtime.acceptGeneratedCharacter(
+        resourceId: candidate.resourceId,
+        creationSessionId: candidate.creationSessionId,
+        idempotencyKey: 'runtime-incomplete-generation',
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      await fixture.relationships
+          .listForResource(const ResourceId('runtime_source')),
+      isEmpty,
+    );
+  });
+
   test('rejects a candidate when the resource tree revision is stale',
       () async {
     final candidate = await fixture.seedRelatedCandidate();
@@ -286,7 +316,9 @@ final class _RuntimeFixture {
         getDb: () => DatabaseService.database,
       );
 
-  Future<_CandidateSetup> seedRelatedCandidate() async {
+  Future<_CandidateSetup> seedRelatedCandidate({
+    StreamingLifecycleStatus runtimeStatus = StreamingLifecycleStatus.completed,
+  }) async {
     await trees.createResourceTree(const ResourceTreeDraft(
       id: ResourceId('runtime_source'),
       type: ResourceType.character,
@@ -338,6 +370,21 @@ final class _RuntimeFixture {
     await blueprints.saveBlueprint(blueprint);
     final confirmation = await blueprints.confirmBlueprint(
       blueprintId: blueprint.blueprintId,
+    );
+    final now = DateTime(2026);
+    await streamFixture.sessionRepository.createSession(
+      StreamingGenerationSession(
+        sessionId: 'gen_$creationSessionId',
+        resourceId: confirmation.resourceId,
+        blueprintId: blueprint.blueprintId,
+        creationSessionId: creationSessionId,
+        status: runtimeStatus,
+        completedPartsCount:
+            runtimeStatus == StreamingLifecycleStatus.completed ? 1 : 0,
+        totalPartsCount: 1,
+        createdAt: now,
+        updatedAt: now,
+      ),
     );
     return _CandidateSetup(
       creationSessionId: creationSessionId,

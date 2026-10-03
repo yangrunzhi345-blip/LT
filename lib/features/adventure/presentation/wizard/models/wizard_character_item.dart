@@ -92,6 +92,8 @@ class WizardRelationshipItem {
   String targetCharacterId;
   String relationType;
   String customRelationName;
+  String sourceRole;
+  String targetRole;
   String description;
   String assetSuggestion;
 
@@ -101,6 +103,8 @@ class WizardRelationshipItem {
     required this.targetCharacterId,
     this.relationType = AdventureRelationType.unset,
     this.customRelationName = '',
+    this.sourceRole = '',
+    this.targetRole = '',
     this.description = '',
     this.assetSuggestion = '',
   });

@@ -155,6 +155,8 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
           targetCharacterId: rel.targetCharacterId,
           relationType: rel.relationType,
           customRelationName: rel.customRelationName,
+          sourceRole: rel.sourceRole,
+          targetRole: rel.targetRole,
           description: rel.description,
         ));
       }
@@ -274,6 +276,8 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         targetCharacterId: r.targetCharacterId,
         relationType: r.relationType,
         customRelationName: r.customRelationName,
+        sourceRole: r.sourceRole,
+        targetRole: r.targetRole,
         description: r.description,
         createdAt: DateTime.now().toIso8601String(),
         updatedAt: DateTime.now().toIso8601String(),
@@ -573,10 +577,29 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
   }
 
   Future<void> _navigateToPreviewPage() async {
+    final config = _buildCurrentConfig();
+    AdventureConfig previewConfig;
+    try {
+      // Resolve the live resource graph at the preview boundary so the user
+      // can confirm the same relationship snapshot that launch will freeze.
+      previewConfig =
+          await ref.read(adventureProvider).assemblePreviewConfig(config);
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedback.error(
+        context,
+        localizeAppError(
+          _l10n(context),
+          asAppDomainError(error),
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
     await AppRouter.push<void>(
       context,
       pageBuilder: (_) => AssemblyPreviewPage(
-        config: _buildCurrentConfig(),
+        config: previewConfig,
         worldviewDesc: _worldviewDescCtrl.text,
         onStartAdventure: widget.onStartAdventure,
         onEditWorldview: () {

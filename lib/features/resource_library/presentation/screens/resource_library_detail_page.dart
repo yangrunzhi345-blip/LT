@@ -43,6 +43,7 @@ final class ResourceLibraryDetailPage extends ConsumerStatefulWidget {
     this.embedded = false,
     this.onDeleted,
     this.onOpenStudio,
+    this.relationshipResources = const [],
     this.tree,
     this.isConsumableOverride,
     this.session,
@@ -54,6 +55,10 @@ final class ResourceLibraryDetailPage extends ConsumerStatefulWidget {
   final Future<void> Function()? onOpenStudio;
   final Future<void> Function(String message)? onDeleted;
   final Future<String?> Function() onMoveToTrash;
+
+  /// Live character/NPC resources available as additional relationship
+  /// references when this page opens related-character generation.
+  final List<ResourceLibraryItem> relationshipResources;
   final ResourceTree? tree;
   final bool? isConsumableOverride;
   final StreamingGenerationSession? session;
@@ -376,6 +381,7 @@ final class _ResourceLibraryDetailPageState
       MaterialPageRoute<ResourceStudioCreationDraft>(
         builder: (_) => ResourceAiCreatePage(
           initialType: ResourceType.character,
+          resources: widget.relationshipResources,
           lockedRelationshipSource: widget.item,
         ),
       ),
@@ -387,6 +393,7 @@ final class _ResourceLibraryDetailPageState
       ),
     );
     if (mounted) await _loadTreeAndSession();
+    if (mounted) await _loadRelationships();
   }
 
   Future<void> _cancelGeneration() async {

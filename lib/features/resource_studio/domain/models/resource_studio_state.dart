@@ -21,6 +21,7 @@ final class ResourceStudioState {
     required this.status,
     this.resourceId,
     this.session,
+    this.canAcceptGeneratedCharacter = false,
     this.tree,
     this.selectedPartId,
     this.partContents = const <String, String>{},
@@ -34,6 +35,7 @@ final class ResourceStudioState {
   final ResourceStudioStatus status;
   final ResourceId? resourceId;
   final StreamingGenerationSession? session;
+  final bool canAcceptGeneratedCharacter;
   final ResourceTree? tree;
   final PartId? selectedPartId;
   final Map<String, String> partContents;
@@ -53,6 +55,7 @@ final class ResourceStudioState {
     ResourceStudioStatus? status,
     ResourceId? resourceId,
     StreamingGenerationSession? session,
+    bool? canAcceptGeneratedCharacter,
     ResourceTree? tree,
     PartId? selectedPartId,
     Map<String, String>? partContents,
@@ -64,6 +67,8 @@ final class ResourceStudioState {
       status: status ?? this.status,
       resourceId: resourceId ?? this.resourceId,
       session: session ?? this.session,
+      canAcceptGeneratedCharacter:
+          canAcceptGeneratedCharacter ?? this.canAcceptGeneratedCharacter,
       tree: tree ?? this.tree,
       selectedPartId: selectedPartId ?? this.selectedPartId,
       partContents: partContents ?? this.partContents,

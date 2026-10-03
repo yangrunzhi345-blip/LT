@@ -113,6 +113,12 @@ final class ResourceStudioController extends ChangeNotifier {
       if (session == null && resolvedResourceId != null) {
         session = await _runtime.ensureSession(resolvedResourceId);
       }
+      final canAcceptGeneratedCharacter =
+          session != null && session.creationSessionId.trim().isNotEmpty
+              ? await _runtime.hasAcceptableRelationshipDraft(
+                  session.creationSessionId,
+                )
+              : false;
       final tree = resolvedResourceId == null
           ? null
           : await _runtime.readTree(resolvedResourceId);
@@ -124,6 +130,7 @@ final class ResourceStudioController extends ChangeNotifier {
         status: _statusForSession(session),
         resourceId: resolvedResourceId,
         session: session,
+        canAcceptGeneratedCharacter: canAcceptGeneratedCharacter,
         tree: tree,
         partContents: _initialPartContents(tree),
         errorMessage: '',
@@ -217,6 +224,7 @@ final class ResourceStudioController extends ChangeNotifier {
           status: ResourceStudioStatus.generating,
           resourceId: session.resourceId,
           session: session,
+          canAcceptGeneratedCharacter: relationshipDraft?.isEmpty == false,
           tree: tree,
           partContents: _initialPartContents(tree),
           errorMessage: '',

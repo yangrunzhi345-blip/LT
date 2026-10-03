@@ -185,6 +185,16 @@ class AdventureCharacterRelationship {
   String targetCharacterId;
   String relationType;
   String customRelationName;
+
+  /// Role of the source endpoint in the frozen relationship snapshot.
+  ///
+  /// Older Adventure JSON does not contain endpoint roles, so this remains
+  /// optional at the wire boundary and defaults to an empty string when
+  /// restoring legacy snapshots.
+  String sourceRole;
+
+  /// Role of the target endpoint in the frozen relationship snapshot.
+  String targetRole;
   String description;
   String createdAt;
   String updatedAt;
@@ -195,6 +205,8 @@ class AdventureCharacterRelationship {
     required this.targetCharacterId,
     this.relationType = AdventureRelationType.unset,
     this.customRelationName = '',
+    this.sourceRole = '',
+    this.targetRole = '',
     this.description = '',
     String? createdAt,
     String? updatedAt,
@@ -215,6 +227,8 @@ class AdventureCharacterRelationship {
         'targetCharacterId': targetCharacterId,
         'relationType': relationType,
         'customRelationName': customRelationName,
+        'sourceRole': sourceRole,
+        'targetRole': targetRole,
         'description': description,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
@@ -235,6 +249,10 @@ class AdventureCharacterRelationship {
       relationType:
           AdventureRelationType.normalize(json['relationType'] as String?),
       customRelationName: json['customRelationName'] as String? ?? '',
+      sourceRole:
+          json['sourceRole'] as String? ?? json['source_role'] as String? ?? '',
+      targetRole:
+          json['targetRole'] as String? ?? json['target_role'] as String? ?? '',
       description: json['description'] as String? ?? '',
       createdAt: json['createdAt'] as String?,
       updatedAt: json['updatedAt'] as String?,
@@ -244,6 +262,8 @@ class AdventureCharacterRelationship {
   AdventureCharacterRelationship copyWith({
     String? relationType,
     String? customRelationName,
+    String? sourceRole,
+    String? targetRole,
     String? description,
   }) =>
       AdventureCharacterRelationship(
@@ -252,6 +272,8 @@ class AdventureCharacterRelationship {
         targetCharacterId: targetCharacterId,
         relationType: relationType ?? this.relationType,
         customRelationName: customRelationName ?? this.customRelationName,
+        sourceRole: sourceRole ?? this.sourceRole,
+        targetRole: targetRole ?? this.targetRole,
         description: description ?? this.description,
         createdAt: createdAt,
         updatedAt: DateTime.now().toIso8601String(),

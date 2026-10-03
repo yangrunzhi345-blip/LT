@@ -25,6 +25,8 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   bool createCalled = false;
   int? createdTargetCharacters;
   String? createdOriginWorldviewId;
+  CharacterRelationshipDraft? createdRelationshipDraft;
+  bool canAcceptGeneratedCharacter = false;
   int getSessionCalls = 0;
   Object? nextSessionError;
   final List<String> resumeCalls = <String>[];
@@ -47,6 +49,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     }
     return session.sessionId == sessionId ? session : null;
   }
+
+  @override
+  Future<bool> hasAcceptableRelationshipDraft(String creationSessionId) async =>
+      canAcceptGeneratedCharacter;
 
   @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
@@ -111,6 +117,8 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     createCalled = true;
     createdTargetCharacters = targetCharacters;
     createdOriginWorldviewId = originWorldviewId;
+    createdRelationshipDraft = relationshipDraft;
+    canAcceptGeneratedCharacter = relationshipDraft?.isEmpty == false;
     return session;
   }
 

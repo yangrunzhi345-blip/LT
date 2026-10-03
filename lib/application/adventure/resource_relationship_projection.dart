@@ -19,8 +19,17 @@ final class ResourceRelationshipProjection {
           !selectedResourceIds.contains(b)) {
         continue;
       }
-      final sourceId = resourceIdToAdventureId[a] ?? a;
-      final targetId = resourceIdToAdventureId[b] ?? b;
+      final sourceIsA = _sourceIsEndpointA(relationship);
+      final sourceResourceId = sourceIsA ? a : b;
+      final targetResourceId = sourceIsA ? b : a;
+      final sourceId =
+          resourceIdToAdventureId[sourceResourceId] ?? sourceResourceId;
+      final targetId =
+          resourceIdToAdventureId[targetResourceId] ?? targetResourceId;
+      final sourceRole =
+          sourceIsA ? relationship.endpointARole : relationship.endpointBRole;
+      final targetRole =
+          sourceIsA ? relationship.endpointBRole : relationship.endpointARole;
       result.add(AdventureCharacterRelationship(
         id: relationship.id,
         sourceCharacterId: sourceId,
@@ -28,12 +37,34 @@ final class ResourceRelationshipProjection {
         relationType: _adventureRelationType(relationship),
         customRelationName:
             relationship.relationType == CharacterRelationshipType.custom
-                ? relationship.endpointARole
+                ? sourceRole
                 : '',
+        sourceRole: sourceRole,
+        targetRole: targetRole,
         description: relationship.description,
       ));
     }
     return List.unmodifiable(result);
+  }
+
+  /// Directional resource relationships are canonicalized by opaque resource
+  /// identity, which may put the semantic target before the semantic source.
+  /// Reorder only the snapshot endpoints for directional types; symmetric and
+  /// custom relationships retain their canonical endpoint order.
+  static bool _sourceIsEndpointA(CharacterRelationship relationship) {
+    final sourceRole = switch (relationship.relationType) {
+      CharacterRelationshipType.mentorStudent => 'mentor',
+      CharacterRelationshipType.parentChild => 'parent',
+      CharacterRelationshipType.employerEmployee => 'employer',
+      CharacterRelationshipType.guardianWard => 'guardian',
+      _ => null,
+    };
+    if (sourceRole == null) return true;
+    if (relationship.endpointARole == sourceRole) return true;
+    if (relationship.endpointBRole == sourceRole) return false;
+    // Domain validation rejects this state. Keep projection deterministic if a
+    // legacy/tampered row reaches the boundary rather than swapping blindly.
+    return true;
   }
 
   static String _adventureRelationType(CharacterRelationship relationship) {

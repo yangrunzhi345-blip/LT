@@ -508,6 +508,13 @@ final class _ResourceLibraryScreenState
         key: ValueKey('resource-detail-${item.id}'),
         item: item,
         embedded: embedded,
+        relationshipResources: [
+          for (final candidate in _controller.state.items)
+            if (candidate.isStudioAvailable &&
+                (candidate.type == ResourceType.character ||
+                    candidate.type == ResourceType.npc))
+              candidate,
+        ],
         onOpenStudio: embedded
             ? () async {
                 setState(() => _studioResourceId = item.id);

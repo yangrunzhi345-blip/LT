@@ -604,6 +604,10 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
       session?.sessionId == sessionId ? session : null;
 
   @override
+  Future<bool> hasAcceptableRelationshipDraft(String creationSessionId) async =>
+      false;
+
+  @override
   Future<StreamingGenerationSession?> ensureSession(
     ResourceId resourceId,
   ) async =>

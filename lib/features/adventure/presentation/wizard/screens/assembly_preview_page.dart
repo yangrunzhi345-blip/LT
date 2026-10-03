@@ -565,10 +565,16 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                       final relName = AdventureRelationType.labelOf(
                           rel.relationType,
                           customName: rel.customRelationName);
+                      final sourceLabel = rel.sourceRole.trim().isEmpty
+                          ? rel.sourceCharacterId
+                          : '${rel.sourceCharacterId} (${rel.sourceRole})';
+                      final targetLabel = rel.targetRole.trim().isEmpty
+                          ? rel.targetCharacterId
+                          : '${rel.targetCharacterId} (${rel.targetRole})';
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Text(
-                          '• ${rel.sourceCharacterId} ↔ ${rel.targetCharacterId}：$relName',
+                          '• $sourceLabel ↔ $targetLabel：$relName',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
