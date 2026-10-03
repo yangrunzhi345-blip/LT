@@ -22,6 +22,7 @@ import '../models/scene_dialogue.dart';
 import '../models/worldview_preset.dart';
 import '../services/database_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
+import '../application/adventure/adventure_resource_relationship_loader.dart';
 import '../application/adventure/tracked_state_bootstrap_runner.dart';
 import '../services/adventure_start_guard.dart';
 import '../services/llm_service.dart';
@@ -37,6 +38,7 @@ import '../services/repositories/library_repository.dart';
 import '../services/repositories/library_repository_impl.dart';
 import '../services/repositories/settings_repository.dart';
 import '../services/repositories/settings_repository_impl.dart';
+import '../services/repositories/character_relationship_repository.dart';
 import 'settings_provider.dart';
 import 'adventure_provider.dart';
 import 'library_provider.dart';
@@ -215,6 +217,7 @@ class ChatProvider extends ChangeNotifier {
     required ISettingsRepository settingsRepo,
     IAdventureReadinessGate? readinessGate,
     ResourceCreationPipeline? creationPipeline,
+    AdventureResourceRelationshipLoader? relationshipLoader,
     ReadAloudController? readAloud,
     TtsVoiceBindingStore? ttsVoiceBindings,
   }) {
@@ -225,12 +228,20 @@ class ChatProvider extends ChangeNotifier {
       readAloud: readAloud,
       ttsVoiceBindings: ttsVoiceBindings,
     );
+    final resolvedRelationshipLoader = relationshipLoader ??
+        AdventureResourceRelationshipLoader(
+          getDb: () => DatabaseService.database,
+          relationshipRepository: CharacterRelationshipRepositoryImpl(
+            getDb: () => DatabaseService.database,
+          ),
+        );
     _adventure = AdventureProvider(
       adventureRepo: adventureRepo,
       worldEntryRepo: worldEntryRepo,
       libraryRepo: libraryRepo,
       readinessGate: readinessGate,
       creationPipeline: creationPipeline,
+      relationshipLoader: resolvedRelationshipLoader,
     );
     _library = LibraryProvider(
       libraryRepo: libraryRepo,

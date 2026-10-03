@@ -9,6 +9,7 @@ final class ResourceRelationshipProjection {
   static List<AdventureCharacterRelationship> project({
     required Iterable<CharacterRelationship> relationships,
     required Set<String> selectedResourceIds,
+    Map<String, String> resourceIdToAdventureId = const <String, String>{},
   }) {
     final result = <AdventureCharacterRelationship>[];
     for (final relationship in relationships) {
@@ -18,10 +19,12 @@ final class ResourceRelationshipProjection {
           !selectedResourceIds.contains(b)) {
         continue;
       }
+      final sourceId = resourceIdToAdventureId[a] ?? a;
+      final targetId = resourceIdToAdventureId[b] ?? b;
       result.add(AdventureCharacterRelationship(
         id: relationship.id,
-        sourceCharacterId: a,
-        targetCharacterId: b,
+        sourceCharacterId: sourceId,
+        targetCharacterId: targetId,
         relationType: _adventureRelationType(relationship),
         customRelationName:
             relationship.relationType == CharacterRelationshipType.custom

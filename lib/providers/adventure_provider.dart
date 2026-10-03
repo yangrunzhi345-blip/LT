@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/widgets.dart';
 import '../application/adventure/adventure_assembler.dart';
+import '../application/adventure/adventure_resource_relationship_loader.dart';
 import '../application/adventure/adventure_character_identity.dart';
 import '../application/adventure/adventure_runtime_state_resolver.dart';
 import '../models/adventure_runtime_state.dart';
@@ -42,6 +43,7 @@ class AdventureProvider extends ChangeNotifier {
   /// Phase 10: assembly readiness 门禁；null 时惰性构造无压缩挂接的默认实现，
   /// 生产路径（riverpod chatProvider）注入带完整压缩基础设施的实例。
   final IAdventureReadinessGate? _readinessGate;
+  final AdventureResourceRelationshipLoader? _relationshipLoader;
   IAdventureReadinessGate? _lazyGate;
 
   final List<Message> _messages = [];
@@ -155,10 +157,12 @@ class AdventureProvider extends ChangeNotifier {
     required ILibraryRepository libraryRepo,
     IAdventureReadinessGate? readinessGate,
     ResourceCreationPipeline? creationPipeline,
+    AdventureResourceRelationshipLoader? relationshipLoader,
   })  : _adventureRepo = adventureRepo,
         _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,
-        _readinessGate = readinessGate {
+        _readinessGate = readinessGate,
+        _relationshipLoader = relationshipLoader {
     _worldMgr = WorldEngine(
       notifyParent: notifyListeners,
       worldEntryRepo: _worldEntryRepo,
@@ -292,7 +296,19 @@ class AdventureProvider extends ChangeNotifier {
     // resources must be ready, or the user must have explicitly allowed the
     // previous ready revision.
     final gatedConfig = await _gate.enforceAndFreeze(config);
-    final assembled = const AdventureAssembler().assemble(gatedConfig);
+    final relationshipLoader = _relationshipLoader;
+    final relationshipSelection = relationshipLoader == null
+        ? null
+        : await relationshipLoader.load(gatedConfig);
+    final assembled = relationshipSelection == null
+        ? const AdventureAssembler().assemble(gatedConfig)
+        : const AdventureAssembler().assembleWithResourceRelationships(
+            input: gatedConfig,
+            relationships: relationshipSelection.relationships,
+            selectedResourceIds: relationshipSelection.selectedResourceIds,
+            resourceIdToAdventureId:
+                relationshipSelection.resourceIdToAdventureId,
+          );
     // Freeze the adventure's own monitoring definitions from every source
     // (protagonist, all selected characters, supporting fallback, NPCs, world)
     // before the config is persisted. Later resource edits cannot change it.

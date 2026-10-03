@@ -41,10 +41,12 @@ class AdventureAssembler {
     required AdventureConfig input,
     required Iterable<CharacterRelationship> relationships,
     required Set<String> selectedResourceIds,
+    Map<String, String> resourceIdToAdventureId = const <String, String>{},
   }) {
     final projected = ResourceRelationshipProjection.project(
       relationships: relationships,
       selectedResourceIds: selectedResourceIds,
+      resourceIdToAdventureId: resourceIdToAdventureId,
     );
     final merged = AdventureConfig.fromJson(_deepCopy(input.toJson()));
     final existing = {
