@@ -47,7 +47,7 @@ class DatabaseService {
   /// revision tracking and idempotent presence mutation requests; v46 adds
   /// branch-local runtime checkpoint metadata; v47 adds resource character
   /// relationships.
-  static const int schemaVersion = 47;
+  static const int schemaVersion = 48;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -1097,6 +1097,7 @@ class DatabaseService {
         target_characters INTEGER NOT NULL DEFAULT 0,
         origin TEXT NOT NULL DEFAULT '',
         request_fingerprint TEXT NOT NULL DEFAULT '',
+        relationship_draft_json TEXT NOT NULL DEFAULT '',
         error_message TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -2561,6 +2562,10 @@ class DatabaseService {
       _log('  执行迁移: v46 → v47（资源角色关系）');
       await createResourceCharacterRelationshipSchema(db);
       _log('  迁移 v46 → v47 完成');
+    }
+    if (oldVersion < 48 && newVersion >= 48) {
+      await safeAddColumn(db, 'resource_creation_sessions',
+          'relationship_draft_json', "TEXT NOT NULL DEFAULT ''");
     }
 
     _log('migrateStepByStep 全部完成');

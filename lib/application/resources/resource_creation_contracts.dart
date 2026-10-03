@@ -549,6 +549,7 @@ final class ResourceCreationSession {
     this.requestFingerprint = '',
     this.resourceId,
     this.errorMessage = '',
+    this.relationshipDraft,
   });
 
   final String sessionId;
@@ -563,6 +564,7 @@ final class ResourceCreationSession {
   final String requestFingerprint;
   final ResourceId? resourceId;
   final String errorMessage;
+  final CharacterRelationshipDraft? relationshipDraft;
 
   /// Whether Phase 4 still has planning work to pick up.
   bool get awaitsPlanning =>
@@ -589,6 +591,7 @@ final class ResourceCreationSession {
       requestFingerprint: requestFingerprint,
       resourceId: resourceId ?? this.resourceId,
       errorMessage: errorMessage ?? this.errorMessage,
+      relationshipDraft: relationshipDraft,
     );
   }
 }

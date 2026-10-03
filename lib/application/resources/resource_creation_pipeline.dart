@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
 
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
@@ -14,6 +15,7 @@ import 'part_generation_coordinator.dart';
 import 'resource_blueprint_repository.dart';
 import 'resource_creation_contracts.dart';
 import 'resource_generation_task_repository.dart';
+import '../resource_library/character_generation_reference.dart';
 import 'resource_revision_service.dart';
 
 /// Reports whether AI creation is currently possible (model + API key present).
@@ -267,6 +269,7 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
           'reference_char_count': reference.characterCount,
           'target_characters': _effectiveTargetCharacters(request),
           'request_fingerprint': _requestFingerprint(request),
+          'relationship_draft_json': _relationshipDraftJson(request),
           'error_message': '',
           'updated_at': now,
         },
@@ -779,6 +782,7 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
       'target_characters': _effectiveTargetCharacters(request),
       'origin': request.origin,
       'request_fingerprint': _requestFingerprint(request),
+      'relationship_draft_json': _relationshipDraftJson(request),
       'created_at': now,
       'updated_at': now,
     });
@@ -857,11 +861,36 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
       targetCharacters: _storedTargetCharacters(row),
       origin: row['origin']?.toString() ?? '',
       requestFingerprint: row['request_fingerprint']?.toString() ?? '',
+      relationshipDraft:
+          _decodeRelationshipDraft(row['relationship_draft_json']?.toString()),
       resourceId: (resourceId == null || resourceId.isEmpty)
           ? null
           : ResourceId(resourceId),
       errorMessage: row['error_message']?.toString() ?? '',
     );
+  }
+
+  String _relationshipDraftJson(ResourceCreationRequest request) {
+    final draft = request.relationshipDraft;
+    return draft == null ? '' : jsonEncode(draft.relationship.toJson());
+  }
+
+  CharacterRelationshipDraft? _decodeRelationshipDraft(String? value) {
+    if (value == null || value.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! List) return null;
+      final refs = decoded
+          .whereType<Map>()
+          .map((item) => CharacterGenerationReference.fromJson(
+                Map<String, Object?>.from(item),
+              ));
+      return CharacterRelationshipDraft(
+        relationship: CharacterGenerationRelationship.fromReferences(refs),
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   String _now() => DateTime.now().toIso8601String();

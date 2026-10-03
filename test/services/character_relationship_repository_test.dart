@@ -136,7 +136,7 @@ void main() {
           'idx_resource_character_relationships_a',
           'idx_resource_character_relationships_b',
         ]));
-    expect(DatabaseService.schemaVersion, 47);
+    expect(DatabaseService.schemaVersion, 48);
     await expectLater(
       db.insert('resource_character_relationships', {
         'id': 'bad',
