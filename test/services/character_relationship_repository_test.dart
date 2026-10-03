@@ -153,6 +153,28 @@ void main() {
     );
   });
 
+  test('projects directional roles from either endpoint', () {
+    const a = ResourceId('res_a');
+    const b = ResourceId('res_b');
+    final relationship = CharacterRelationship(
+      id: 'r1',
+      endpointAResourceId: a,
+      endpointBResourceId: b,
+      relationType: CharacterRelationshipType.mentorStudent,
+      endpointARole: 'mentor',
+      endpointBRole: 'student',
+      description: '',
+      createdAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+    );
+    final fromA = relationship.perspectiveFor(a);
+    final fromB = relationship.perspectiveFor(b);
+    expect(fromA.subjectRole, 'mentor');
+    expect(fromA.counterpartRole, 'student');
+    expect(fromB.subjectRole, 'student');
+    expect(fromB.counterpartRole, 'mentor');
+  });
+
   test('v46 database upgrades without fabricating relationships', () async {
     final path = p.join(tempDir.path, 'upgrade.db');
     final old = await databaseFactory.openDatabase(

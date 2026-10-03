@@ -134,6 +134,31 @@ final class CharacterRelationship {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  /// Projects this canonical edge from one endpoint's perspective.
+  CharacterRelationshipPerspective perspectiveFor(ResourceId resourceId) {
+    if (resourceId == endpointAResourceId) {
+      return CharacterRelationshipPerspective(
+        relationshipId: id,
+        counterpartResourceId: endpointBResourceId,
+        relationType: relationType,
+        subjectRole: endpointARole,
+        counterpartRole: endpointBRole,
+        description: description,
+      );
+    }
+    if (resourceId == endpointBResourceId) {
+      return CharacterRelationshipPerspective(
+        relationshipId: id,
+        counterpartResourceId: endpointAResourceId,
+        relationType: relationType,
+        subjectRole: endpointBRole,
+        counterpartRole: endpointARole,
+        description: description,
+      );
+    }
+    throw ArgumentError.value(resourceId, 'resourceId', 'Not an endpoint');
+  }
+
   static void validate({
     required CharacterRelationshipType relationType,
     required String endpointARole,
@@ -170,4 +195,23 @@ final class CharacterRelationship {
       );
     }
   }
+}
+
+/// A relationship projected for one selected resource.
+final class CharacterRelationshipPerspective {
+  const CharacterRelationshipPerspective({
+    required this.relationshipId,
+    required this.counterpartResourceId,
+    required this.relationType,
+    required this.subjectRole,
+    required this.counterpartRole,
+    required this.description,
+  });
+
+  final String relationshipId;
+  final ResourceId counterpartResourceId;
+  final CharacterRelationshipType relationType;
+  final String subjectRole;
+  final String counterpartRole;
+  final String description;
 }
