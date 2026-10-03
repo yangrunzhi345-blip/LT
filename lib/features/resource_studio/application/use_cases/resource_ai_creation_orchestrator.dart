@@ -68,6 +68,13 @@ final class ResourceAiCreationOrchestrator {
   Future<ResourceAiCreationPlan> _createAndPlan(
     ResourceAiCreationDraft draft,
   ) async {
+    final relationship = draft.relationshipDraft?.relationship;
+    if (relationship != null) {
+      CharacterGenerationScopeValidator.validate(
+        references: relationship.references,
+        targetWorldviewId: draft.originWorldviewId,
+      );
+    }
     final creationWatch = Stopwatch()..start();
     final label = draft.idempotencyKey.trim();
     GenerationDiagnostics.instance

@@ -70,5 +70,45 @@ void main() {
       expect(context.associatedCharacters[0]['relation'], '姐姐');
       expect(context.associatedCharacters[1]['relation'], '敌人');
     });
+
+    test('rejects mixed worldview scopes before building generation context',
+        () {
+      CharacterGenerationReference reference(String id, String worldview) =>
+          CharacterGenerationReference(
+            sourceResourceId: ResourceId(id),
+            relationshipType: CharacterRelationshipType.friend,
+            sourceRole: 'friend',
+            generatedCharacterRole: 'friend',
+            worldviewScope: worldview,
+          );
+
+      expect(
+        () => const CharacterGenerationContextBuilder().build(
+          source: 'new character',
+          relationship: CharacterGenerationRelationship.fromReferences([
+            // Distinct scopes must not silently inherit the first reference.
+            CharacterGenerationReference(
+              sourceResourceId: ResourceId('res_a'),
+              relationshipType: CharacterRelationshipType.friend,
+              sourceRole: 'friend',
+              generatedCharacterRole: 'friend',
+              worldviewScope: 'world_a',
+            ),
+            CharacterGenerationReference(
+              sourceResourceId: ResourceId('res_b'),
+              relationshipType: CharacterRelationshipType.friend,
+              sourceRole: 'friend',
+              generatedCharacterRole: 'friend',
+              worldviewScope: 'world_b',
+            ),
+          ]),
+        ),
+        throwsA(isA<CharacterGenerationScopeException>()),
+      );
+      // Keep the helper's type checked in this test so future changes cannot
+      // accidentally replace ResourceId with display names.
+      expect(reference('res_c', 'world_c').sourceResourceId,
+          const ResourceId('res_c'));
+    });
   });
 }

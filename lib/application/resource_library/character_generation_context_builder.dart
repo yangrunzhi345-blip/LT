@@ -26,10 +26,15 @@ final class CharacterGenerationContextBuilder {
   RelevantCharacterGenerationContext build({
     required String source,
     String worldview = '',
+    String targetWorldviewId = '',
     List<Map<String, String>> associatedCharacters = const [],
     CharacterGenerationRelationship relationship =
         const CharacterGenerationRelationship.empty(),
   }) {
+    CharacterGenerationScopeValidator.validate(
+      references: relationship.references,
+      targetWorldviewId: targetWorldviewId,
+    );
     return RelevantCharacterGenerationContext(
       worldview: _selectWorldview(source, worldview),
       associatedCharacters: [

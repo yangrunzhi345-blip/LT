@@ -1,5 +1,72 @@
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/character_relationship.dart';
+import '../../core/utils/worldview_character_scope_policy.dart';
+
+enum CharacterGenerationScopeFailure {
+  conflictingReferenceWorldviews,
+  crossWorldReference,
+}
+
+/// Typed failure raised when relationship references cannot share one
+/// generation worldview scope.
+final class CharacterGenerationScopeException implements Exception {
+  const CharacterGenerationScopeException({
+    required this.code,
+    required this.message,
+    this.targetWorldviewId = '',
+    this.referenceWorldviewIds = const <String>[],
+  });
+
+  final CharacterGenerationScopeFailure code;
+  final String message;
+  final String targetWorldviewId;
+  final List<String> referenceWorldviewIds;
+
+  @override
+  String toString() => 'CharacterGenerationScopeException($code): $message';
+}
+
+/// Applies the existing resource worldview compatibility semantics to
+/// generation references. It never selects a target from the first reference.
+abstract final class CharacterGenerationScopeValidator {
+  static void validate({
+    required Iterable<CharacterGenerationReference> references,
+    String targetWorldviewId = '',
+  }) {
+    final target = WorldviewCharacterScopePolicy.stableId(targetWorldviewId);
+    final sourceScopes = references
+        .map((reference) =>
+            WorldviewCharacterScopePolicy.stableId(reference.worldviewScope))
+        .whereType<String>()
+        .toSet();
+
+    if (target == null && sourceScopes.length > 1) {
+      throw CharacterGenerationScopeException(
+        code: CharacterGenerationScopeFailure.conflictingReferenceWorldviews,
+        message:
+            'Multiple relationship references come from different worldviews; '
+            'select an explicit compatible target worldview first',
+        referenceWorldviewIds: sourceScopes.toList(growable: false),
+      );
+    }
+
+    if (target == null) return;
+    for (final source in sourceScopes) {
+      final compatibility =
+          WorldviewCharacterScopePolicy.compatibility(source, target);
+      if (compatibility == CharacterWorldviewCompatibility.crossWorld) {
+        throw CharacterGenerationScopeException(
+          code: CharacterGenerationScopeFailure.crossWorldReference,
+          message:
+              'Relationship reference worldview $source is incompatible with '
+              'target worldview $target',
+          targetWorldviewId: target,
+          referenceWorldviewIds: [source],
+        );
+      }
+    }
+  }
+}
 
 /// Immutable relationship context supplied to a related-character generation.
 final class CharacterGenerationReference {

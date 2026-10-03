@@ -136,4 +136,55 @@ void main() {
     expect(constraints, contains('worldviewScope=world_main'));
     expect(constraints, isNot(contains('targetRole')));
   });
+
+  test('rejects mixed reference worldviews without an explicit target', () {
+    CharacterGenerationReference reference(String id, String worldview) =>
+        CharacterGenerationReference(
+          sourceResourceId: ResourceId(id),
+          relationshipType: CharacterRelationshipType.friend,
+          sourceRole: 'friend',
+          generatedCharacterRole: 'friend',
+          worldviewScope: worldview,
+        );
+
+    expect(
+      () => CharacterGenerationScopeValidator.validate(
+        references: [
+          reference('res_a', 'world_a'),
+          reference('res_b', 'world_b'),
+        ],
+      ),
+      throwsA(
+        isA<CharacterGenerationScopeException>().having(
+          (error) => error.code,
+          'code',
+          CharacterGenerationScopeFailure.conflictingReferenceWorldviews,
+        ),
+      ),
+    );
+  });
+
+  test('rejects a cross-world reference against the explicit target', () {
+    final reference = CharacterGenerationReference(
+      sourceResourceId: const ResourceId('res_b'),
+      relationshipType: CharacterRelationshipType.friend,
+      sourceRole: 'friend',
+      generatedCharacterRole: 'friend',
+      worldviewScope: 'world_b',
+    );
+
+    expect(
+      () => CharacterGenerationScopeValidator.validate(
+        references: [reference],
+        targetWorldviewId: 'world_a',
+      ),
+      throwsA(
+        isA<CharacterGenerationScopeException>().having(
+          (error) => error.code,
+          'code',
+          CharacterGenerationScopeFailure.crossWorldReference,
+        ),
+      ),
+    );
+  });
 }
