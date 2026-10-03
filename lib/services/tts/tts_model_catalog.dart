@@ -37,7 +37,7 @@ class TtsModelCatalog {
   List<TtsVoiceDescriptor> voicesForModel(TtsModelDescriptor model) =>
       voicesForFamily(model.voiceFamily, model.speakerCount);
 
-  /// Finds the model that provides [voiceId], preferring installed models.
+  /// Finds a compatible model, preferring installed FP32 over INT8 v1.1.
   ///
   /// [isInstalled] lets the caller prefer an installed model when several
   /// quantizations of the same family are present.
@@ -51,7 +51,13 @@ class TtsModelCatalog {
         .where((model) =>
             model.voiceFamily == voice.voiceFamily &&
             model.speakerCount > voice.speakerId)
-        .toList();
+        .toList()
+      ..sort((a, b) {
+        final priority = _modelPriority(a.modelId).compareTo(
+          _modelPriority(b.modelId),
+        );
+        return priority != 0 ? priority : a.modelId.compareTo(b.modelId);
+      });
     if (candidates.isEmpty) return null;
     if (isInstalled != null) {
       for (final candidate in candidates) {
@@ -63,14 +69,25 @@ class TtsModelCatalog {
 
   TtsVoiceDescriptor? voiceById(String voiceId) {
     for (final model in _models) {
-      if (voiceId.startsWith('${model.voiceFamily}:s')) {
-        final sid = int.tryParse(voiceId.split(':s').last);
+      final match = RegExp('^${RegExp.escape(model.voiceFamily)}:s([0-9]+)\$')
+          .firstMatch(voiceId);
+      if (match != null) {
+        final sid = int.tryParse(match.group(1)!);
         if (sid == null || sid < 0 || sid >= model.speakerCount) continue;
         return _buildVoice(model, sid);
       }
     }
     return null;
   }
+
+  // Compatible quantizations keep the same voices; installing INT8 must not
+  // silently replace an already installed full-precision model. Other families
+  // have a stable id tie-break until their compatibility policy is defined.
+  static int _modelPriority(String modelId) => switch (modelId) {
+        'kokoro-multi-lang-v1_1' => 0,
+        'kokoro-int8-multi-lang-v1_1' => 1,
+        _ => 2,
+      };
 
   List<TtsVoiceDescriptor> allVoices() {
     final seen = <String>{};

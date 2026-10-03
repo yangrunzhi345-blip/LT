@@ -16,17 +16,13 @@ import '../../domain/tts/speech_plan.dart';
 class _QuoteSpan {
   const _QuoteSpan({
     required this.outerStart,
-    required this.innerStart,
-    required this.innerEnd,
     required this.outerEnd,
   });
 
   final int outerStart;
-  final int innerStart;
-  final int innerEnd;
   final int outerEnd;
 
-  String inner(String text) => text.substring(innerStart, innerEnd).trim();
+  String outer(String text) => text.substring(outerStart, outerEnd);
 }
 
 class SpeechPlanner {
@@ -101,33 +97,38 @@ class SpeechPlanner {
 
     final result = <SpeechSegment>[];
     var cursor = 0;
-    for (final quote in quotes) {
+    for (var quoteIndex = 0; quoteIndex < quotes.length; quoteIndex++) {
+      final quote = quotes[quoteIndex];
       final before = quote.outerStart > cursor
           ? paragraph.substring(cursor, quote.outerStart).trim()
           : '';
       if (before.isNotEmpty) {
         result.add(_narration(before));
       }
+      final nextQuote = quoteIndex + 1;
       final after = quote.outerEnd < paragraph.length
-          ? paragraph.substring(quote.outerEnd)
+          ? paragraph.substring(
+              quote.outerEnd,
+              nextQuote < quotes.length
+                  ? quotes[nextQuote].outerStart
+                  : paragraph.length)
           : '';
       final attribution = _attribute(
         before: before,
         after: after,
         context: context,
       );
-      final inner = quote.inner(paragraph);
-      if (inner.isNotEmpty) {
-        result.add(
-          SpeechSegment(
-            id: '',
-            text: inner,
-            role: SpeechRole.dialogue,
-            speakerResourceId: attribution.resourceId,
-            confidence: attribution.confidence,
-          ),
-        );
-      }
+      // Planning partitions text; it does not edit punctuation or the quoted
+      // words. Any TTS cleaning belongs to the shared sanitizer boundary.
+      result.add(
+        SpeechSegment(
+          id: '',
+          text: quote.outer(paragraph),
+          role: SpeechRole.dialogue,
+          speakerResourceId: attribution.resourceId,
+          confidence: attribution.confidence,
+        ),
+      );
       cursor = quote.outerEnd;
     }
     final tail = paragraph.substring(cursor).trim();
@@ -153,61 +154,69 @@ class SpeechPlanner {
   }) {
     if (context.isEmpty) return const _Attribution(null, 0);
 
-    final beforeMatches = _matchSpeakers(before, context);
-    final afterMatches = _matchSpeakers(after, context);
-
-    // A name adjacent to a speech verb / attribution colon on either side is a
-    // strong signal.
-    final beforeStrong = _hasAttributionCue(before);
-    final afterStrong = _hasAttributionCue(after);
-
-    final strong = <String>{};
-    final weak = <String>{};
-    for (final id in beforeMatches) {
-      (beforeStrong ? strong : weak).add(id);
-    }
-    for (final id in afterMatches) {
-      (afterStrong ? strong : weak).add(id);
-    }
-
-    // Resolve to a single speaker only when unambiguous.
-    if (strong.length == 1) {
-      return _Attribution(strong.first, 0.9);
-    }
-    if (strong.isEmpty && weak.length == 1) {
-      return _Attribution(weak.first, 0.6);
-    }
-    // Zero or multiple candidates: do not guess.
-    return const _Attribution(null, 0);
-  }
-
-  /// Returns the resource ids of speakers whose name occurs in [text],
-  /// ignoring matches that are immediately followed by another name character
-  /// (best-effort; aliases are already sorted longest-first).
-  Set<String> _matchSpeakers(String text, NarrativeSpeakerContext context) {
-    if (text.isEmpty) return const <String>{};
-    final matches = <String>{};
-    for (final speaker in context.byNameLength) {
-      for (final name in speaker.names) {
-        if (name.isEmpty) continue;
-        if (text.contains(name)) {
-          matches.add(speaker.resourceId);
-          break;
+    // Only the adjacent sentence/clause can supply attribution. A name in an
+    // earlier sentence or a later quote is not evidence of who is speaking.
+    final preceding = before.split(RegExp(r'[。！？.!?\n]')).last.trim();
+    final following = after.split(RegExp(r'[，,。！？.!?\n]')).first.trim();
+    final candidates = <String>{};
+    for (final cue in <String>[
+      preceding,
+      // A colon opens the next dialogue; it cannot attribute the previous one.
+      if (!following.endsWith('：') && !following.endsWith(':')) following,
+    ]) {
+      if (cue.isEmpty) continue;
+      final ids = <String>{};
+      for (final speaker in context.speakers) {
+        for (final name in speaker.names) {
+          if (_isNamedAttribution(cue, name)) ids.add(speaker.resourceId);
         }
       }
+      if (ids.length > 1) return const _Attribution(null, 0);
+      candidates.addAll(ids);
     }
-    return matches;
+    return candidates.length == 1
+        ? _Attribution(candidates.single, 0.9)
+        : const _Attribution(null, 0);
   }
 
-  /// Whether [text] contains a speech verb or attribution colon.
-  bool _hasAttributionCue(String text) {
-    if (text.isEmpty) return false;
-    if (text.contains(RegExp('[$_attributionColons]'))) return true;
-    final lowered = text.toLowerCase();
-    for (final verb in _speechVerbs) {
-      if (lowered.contains(verb.toLowerCase())) return true;
+  bool _isNamedAttribution(String cue, String name) {
+    final escaped = RegExp.escape(name);
+    // Word boundaries prevent Ann matching Joanne. Chinese attribution has no
+    // spaces, so accept only known speech/action prefixes after the whole name;
+    // arbitrary suffixes such as 林雪儿 must stay unattributed.
+    final englishVerb =
+        _speechVerbs.where((v) => RegExp(r'^[a-z]+$').hasMatch(v)).join('|');
+    if (RegExp('^$escaped\\s+(?:$englishVerb)\\b[\\s,:]*\$',
+                caseSensitive: false)
+            .hasMatch(cue) ||
+        RegExp('^(?:$englishVerb)\\s+$escaped[\\s,:]*\$', caseSensitive: false)
+            .hasMatch(cue)) {
+      return true;
     }
-    return false;
+    if (!cue.startsWith(name)) return false;
+    final suffix = cue.substring(name.length).trim();
+    if (RegExp('^[$_attributionColons]\$').hasMatch(suffix)) return true;
+    if (suffix.isEmpty) return false;
+    final verbs = _speechVerbs.where((v) => !RegExp(r'^[a-z]+$').hasMatch(v));
+    final actions = RegExp(r'^(望|看|摇头|点头|抬头|低头|转身|微笑|笑|叹|轻声|低声|大声|沉声)');
+    // Commas or a second subject make this cue ambiguous rather than assigning
+    // the quote to the first person mentioned in a compound sentence.
+    if (RegExp(r'[，,：:].+[，,：:]').hasMatch(suffix) ||
+        RegExp(r'[，,]')
+            .hasMatch(suffix.replaceFirst(RegExp(r'[，,]\s*$'), ''))) {
+      return false;
+    }
+    final end = suffix.replaceFirst(RegExp(r'[：:,，]\s*$'), '').trim();
+    final speech = verbs.map(RegExp.escape).join('|');
+    if (RegExp('^(?:(?:摇头|点头|抬头|低头|转身|微笑|轻声|低声|大声|沉声)\\s*)?(?:$speech)\$')
+        .hasMatch(end)) {
+      return true;
+    }
+    // Named actions with a colon are allowed, but a later speech verb could
+    // belong to an unnamed object (林雪看见路人说). Never infer that object's id.
+    return (suffix.endsWith('：') || suffix.endsWith(':')) &&
+        actions.hasMatch(end) &&
+        !verbs.any(end.contains);
   }
 
   /// Scans [text] for recognized quote spans.
@@ -229,8 +238,6 @@ class SpeechPlanner {
           spans.add(
             _QuoteSpan(
               outerStart: i,
-              innerStart: i + 1,
-              innerEnd: close,
               outerEnd: close + 1,
             ),
           );

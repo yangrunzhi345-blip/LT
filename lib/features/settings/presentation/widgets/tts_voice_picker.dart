@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,7 +19,8 @@ import '../../../../providers/riverpod_providers.dart';
 /// Returns:
 /// - a non-null voice id when a voice is chosen (already installed or queued
 ///   for an explicit download),
-/// - an empty string when the user chose "system voice" / "auto assign",
+/// - [VoiceBinding.systemVoiceId] for an explicit system voice,
+/// - an empty string when the user chose "auto assign",
 /// - null when dismissed.
 Future<String?> showTtsVoicePicker(
   BuildContext context, {
@@ -53,7 +56,20 @@ class _TtsVoicePickerDialog extends ConsumerStatefulWidget {
 
 class _TtsVoicePickerDialogState extends ConsumerState<_TtsVoicePickerDialog> {
   String? _languageFilter;
-  String? _previewingVoiceId;
+
+  Future<void> Function(String)? _stopPreview;
+
+  @override
+  void initState() {
+    super.initState();
+    _stopPreview = ref.read(readAloudControllerProvider).stopIfActive;
+  }
+
+  @override
+  void dispose() {
+    unawaited(_stopPreview?.call('tts-voice-preview') ?? Future<void>.value());
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +77,7 @@ class _TtsVoicePickerDialogState extends ConsumerState<_TtsVoicePickerDialog> {
     final theme = Theme.of(context);
     final catalog = ref.watch(ttsModelCatalogProvider);
     final manager = ref.watch(ttsModelManagerProvider);
+    final playback = ref.watch(readAloudControllerProvider).state;
     final voices = catalog.allVoices();
     final languages = <String>{
       for (final voice in voices) ...voice.languages,
@@ -146,7 +163,9 @@ class _TtsVoicePickerDialogState extends ConsumerState<_TtsVoicePickerDialog> {
                     return _VoiceRow(
                       voice: voice,
                       installed: installed,
-                      previewing: _previewingVoiceId == voice.voiceId,
+                      previewing:
+                          playback.isActiveSource('tts-voice-preview') &&
+                              playback.currentVoiceId == voice.voiceId,
                       onSelect: () => _select(voice, model, installed),
                       onPreview: () => _preview(voice, model, installed),
                     );
@@ -165,7 +184,8 @@ class _TtsVoicePickerDialogState extends ConsumerState<_TtsVoicePickerDialog> {
                   if (widget.showSystemOption)
                     TextButton(
                       key: const ValueKey('tts-voice-system'),
-                      onPressed: () => Navigator.of(context).pop(''),
+                      onPressed: () =>
+                          Navigator.of(context).pop(VoiceBinding.systemVoiceId),
                       child: Text(l10n.ttsVoicePickerUseSystem),
                     ),
                   if (widget.showAutoOption)
@@ -251,10 +271,10 @@ class _TtsVoicePickerDialogState extends ConsumerState<_TtsVoicePickerDialog> {
       await controller.playText(
         sentence,
         sourceId: 'tts-voice-preview',
+        voiceOverride: ReadAloudVoiceTarget.system,
       );
       return;
     }
-    setState(() => _previewingVoiceId = voice.voiceId);
     await controller.playText(
       sentence,
       sourceId: 'tts-voice-preview',
@@ -266,7 +286,6 @@ class _TtsVoicePickerDialogState extends ConsumerState<_TtsVoicePickerDialog> {
         speakerId: voice.speakerId,
       ),
     );
-    if (mounted) setState(() => _previewingVoiceId = null);
   }
 }
 
@@ -310,6 +329,7 @@ class _VoiceRow extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           IconButton(
+            key: ValueKey('tts-voice-preview-${voice.voiceId}'),
             onPressed: onPreview,
             visualDensity: VisualDensity.compact,
             tooltip: l10n.readAloudVoicePreview,

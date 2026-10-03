@@ -20,6 +20,7 @@ void main() {
   const assignment = TtsVoiceAssignment();
 
   test('stableHash32 is deterministic across runs', () {
+    expect(stableHash32('hello'), 0x4f9f2cab);
     expect(stableHash32('char-lin'), stableHash32('char-lin'));
     expect(stableHash32('char-lin'), isNot(stableHash32('char-chen')));
   });
@@ -55,6 +56,15 @@ void main() {
     final result = assignment.assignForPlan(<String>['a', 'b', 'c'], pool);
     expect(result, hasLength(3));
     expect(result.values.every((v) => v.startsWith('family:s')), isTrue);
+  });
+
+  test('should handle one voice and the complete 103 voice pool', () {
+    expect(assignment.assignForPlan(['a', 'b', 'c'], _pool(1)).values.toSet(),
+        {'family:s0'});
+    final speakers = List.generate(103, (i) => 'resource-$i');
+    final result = assignment.assignForPlan(speakers, _pool(103));
+    expect(result, hasLength(103));
+    expect(result.values.toSet(), hasLength(103));
   });
 
   test('an empty pool yields no assignment', () {

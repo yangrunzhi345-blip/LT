@@ -28,15 +28,23 @@ class EnhancedTtsSettingsSection extends ConsumerWidget {
     final catalog = ref.watch(ttsModelCatalogProvider);
     final controller = ref.watch(readAloudControllerProvider);
     final preferences = bindings.preferences;
-    final systemAvailable = controller.capability.supported;
+    final systemAvailable = controller.systemCapability.supported;
     final installedCount = manager.installedModels.length;
 
     String voiceLabel(String? voiceId) {
-      if (voiceId == null || voiceId.isEmpty) return l10n.readAloudVoiceSystem;
-      return catalog.voiceById(voiceId)?.displayName ?? voiceId;
+      if (voiceId == null ||
+          voiceId.isEmpty ||
+          voiceId == VoiceBinding.systemVoiceId) {
+        return l10n.readAloudVoiceSystem;
+      }
+      return catalog.voiceById(voiceId)?.displayName ??
+          l10n.ttsErrorVoiceUnavailable;
     }
 
     ReadAloudVoiceTarget? targetFor(String? voiceId) {
+      if (voiceId == VoiceBinding.systemVoiceId) {
+        return ReadAloudVoiceTarget.system;
+      }
       if (voiceId == null || voiceId.isEmpty) return null;
       final voice = catalog.voiceById(voiceId);
       final model = catalog.modelForVoice(

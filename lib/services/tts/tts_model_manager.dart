@@ -12,6 +12,7 @@ import 'tts_archive_extractor.dart';
 import 'tts_download_client.dart';
 import 'tts_model_catalog.dart';
 import 'tts_model_storage.dart';
+import 'tts_storage_error.dart';
 import 'tts_voice_resolver.dart';
 
 /// A fully installed, on-disk model with resolved runtime paths.
@@ -52,6 +53,7 @@ class TtsModelManager extends ChangeNotifier
     required TtsDownloadClient downloadClient,
     required TtsArchiveExtractor extractor,
     DateTime Function()? clock,
+    this.beforeDelete,
   })  : _catalog = catalog,
         _storage = storage,
         _downloadClient = downloadClient,
@@ -64,6 +66,10 @@ class TtsModelManager extends ChangeNotifier
   final TtsArchiveExtractor _extractor;
   final DateTime Function() _clock;
 
+  /// Releases an active runtime before removing its files. Playback stays owned
+  /// by ReadAloudController and its delegated engine.
+  final Future<void> Function(String modelId)? beforeDelete;
+
   final Map<String, TtsModelInstallStatus> _statuses =
       <String, TtsModelInstallStatus>{};
   final Map<String, bool> _cancelFlags = <String, bool>{};
@@ -72,6 +78,12 @@ class TtsModelManager extends ChangeNotifier
       <String, InstalledTtsModel>{};
   final Map<String, int> _installedSizes = <String, int>{};
 
+  final Map<String, Future<void>> _tasks = {};
+  final Map<String, Future<void>> _deletions = {};
+  final Map<String, Future<void>> _cancellations = {};
+  final Set<String> _removePartial = {};
+  final Map<String, int> _revisions = {};
+  Future<void>? _refreshFuture;
   bool _disposed = false;
   Future<void>? _initFuture;
   int _installedBytes = 0;
@@ -90,16 +102,19 @@ class TtsModelManager extends ChangeNotifier
   TtsModelInstallStatus statusOf(String modelId) =>
       _statuses[modelId] ?? TtsModelInstallStatus.notInstalled(modelId);
 
-  InstalledTtsModel? installed(String modelId) => _installed[modelId];
+  InstalledTtsModel? installed(String modelId) =>
+      isModelInstalled(modelId) ? _installed[modelId] : null;
 
   /// Measured on-disk size of an installed model, or 0 when not installed.
   int installedBytesFor(String modelId) => _installedSizes[modelId] ?? 0;
 
   @override
-  bool isModelInstalled(String modelId) => _installed.containsKey(modelId);
+  bool isModelInstalled(String modelId) =>
+      !_deletions.containsKey(modelId) && _installed.containsKey(modelId);
 
   @override
   List<TtsModelDescriptor> get installedModelDescriptors => _installed.values
+      .where((model) => isModelInstalled(model.descriptor.modelId))
       .map((model) => model.descriptor)
       .toList(growable: false);
 
@@ -107,10 +122,10 @@ class TtsModelManager extends ChangeNotifier
   bool isVoiceAvailable(String voiceId) {
     final model = _catalog.modelForVoice(
       voiceId,
-      isInstalled: (candidate) => _installed.containsKey(candidate.modelId),
+      isInstalled: (candidate) => isModelInstalled(candidate.modelId),
     );
     if (model == null) return false;
-    return _installed.containsKey(model.modelId);
+    return isModelInstalled(model.modelId);
   }
 
   /// Scans disk state. Performs no network access. Idempotent.
@@ -125,125 +140,250 @@ class TtsModelManager extends ChangeNotifier
     return future;
   }
 
-  Future<void> refresh() async {
-    final installed = <String, InstalledTtsModel>{};
-    final sizes = <String, int>{};
-    var bytes = 0;
+  Future<void> refresh() => _refreshFuture ??= _refresh().whenComplete(() {
+        _refreshFuture = null;
+      });
+
+  Future<void> _refresh() async {
     for (final model in _catalog.models) {
-      final dir = await _storage.modelDir(model);
-      final manifest = await _readManifest(model);
-      final resolved = manifest == null
-          ? null
-          : await _resolveInstalled(model, dir, manifest);
-      if (resolved != null) {
-        installed[model.modelId] = resolved;
-        final modelBytes = await _directorySize(dir);
-        sizes[model.modelId] = modelBytes;
-        bytes += modelBytes;
-        _statuses[model.modelId] = TtsModelInstallStatus(
-          modelId: model.modelId,
-          state: TtsModelInstallState.installed,
-          downloadedBytes: model.downloadSizeBytes,
-          totalBytes: model.downloadSizeBytes,
-        );
+      final id = model.modelId;
+      if (_running.contains(id) ||
+          _deletions.containsKey(id) ||
+          _cancellations.containsKey(id)) {
         continue;
       }
-
+      final revision = _revisions[id] ?? 0;
+      final dir = await _storage.modelDir(model);
+      final manifest = await _readManifest(model);
+      InstalledTtsModel? resolved;
+      try {
+        resolved = manifest == null
+            ? null
+            : await _resolveInstalled(model, dir, manifest);
+      } on FileSystemException {
+        resolved = null;
+      } on TtsException {
+        resolved = null;
+      }
+      final size = resolved == null ? 0 : await _directorySize(dir);
       final part = await _storage.partFile(model);
-      if (await part.exists()) {
-        final length = await part.length();
-        _statuses[model.modelId] = TtsModelInstallStatus(
-          modelId: model.modelId,
-          state: TtsModelInstallState.paused,
-          downloadedBytes: length,
-          totalBytes: model.downloadSizeBytes,
-        );
+      final partSize = await part.exists() ? await part.length() : 0;
+      if (_disposed ||
+          _running.contains(id) ||
+          _deletions.containsKey(id) ||
+          _cancellations.containsKey(id) ||
+          revision != (_revisions[id] ?? 0)) {
+        continue;
+      }
+      if (resolved != null) {
+        _installed[id] = resolved;
+        _installedSizes[id] = size;
+        _statuses[id] = TtsModelInstallStatus(
+            modelId: id,
+            state: TtsModelInstallState.installed,
+            downloadedBytes: model.downloadSizeBytes,
+            totalBytes: model.downloadSizeBytes);
+        if (partSize > 0) {
+          // A crash after atomic publication can leave its verified archive.
+          // Register cleanup before yielding so a new download/delete waits.
+          final cleanup = Future<void>.microtask(() async {
+            if (await part.exists()) await part.delete();
+          }).whenComplete(() {
+            _cancellations.remove(id);
+          });
+          _cancellations[id] = cleanup;
+          await cleanup;
+        }
       } else {
-        _statuses[model.modelId] =
-            TtsModelInstallStatus.notInstalled(model.modelId);
+        _installed.remove(id);
+        _installedSizes.remove(id);
+        _statuses[id] = partSize > 0
+            ? TtsModelInstallStatus(
+                modelId: id,
+                state: TtsModelInstallState.paused,
+                downloadedBytes: partSize,
+                totalBytes: model.downloadSizeBytes)
+            : TtsModelInstallStatus.notInstalled(id);
       }
     }
-    _installed
-      ..clear()
-      ..addAll(installed);
-    _installedSizes
-      ..clear()
-      ..addAll(sizes);
-    _installedBytes = bytes;
+    // Only known staging directories with no live owner are crash leftovers.
+    final staging = await _storage.stagingDir();
+    if (await staging.exists()) {
+      await for (final entry in staging.list(followLinks: false)) {
+        if (entry is! Directory) continue;
+        for (final model in _catalog.models) {
+          if (p
+                  .basename(entry.path)
+                  .startsWith('${model.modelId}.${model.version}.') &&
+              !_running.contains(model.modelId)) {
+            await entry.delete(recursive: true);
+            break;
+          }
+        }
+      }
+    }
+    _recountBytes();
     _emit();
   }
 
-  /// Explicit user action: download and install [modelId].
+  /// Explicit user action. Duplicate clicks are ignored; a cancelled operation
+  /// finishes closing/cleaning its own files before a retry starts.
   Future<void> download(String modelId) async {
-    if (_disposed || _running.contains(modelId)) return;
-    final model = _catalog.byId(modelId);
-    if (model == null) {
-      throw const TtsException(TtsErrorCode.modelUnavailable);
+    if (_disposed) return;
+    final deletion = _deletions[modelId];
+    if (deletion != null) await deletion;
+    final cancellation = _cancellations[modelId];
+    if (cancellation != null) await cancellation;
+    final task = _tasks[modelId];
+    if (task != null) {
+      if (_cancelFlags[modelId] != true) return;
+      await task;
+      return download(modelId);
     }
+    final model = _catalog.byId(modelId);
+    if (model == null) throw const TtsException(TtsErrorCode.modelUnavailable);
+    if (isModelInstalled(modelId)) return;
     _cancelFlags[modelId] = false;
     _running.add(modelId);
-    _setStatus(
-      TtsModelInstallStatus(
-        modelId: modelId,
-        state: TtsModelInstallState.downloading,
-        downloadedBytes: statusOf(modelId).downloadedBytes,
-        totalBytes: model.downloadSizeBytes,
-      ),
-    );
+    _revisions[modelId] = (_revisions[modelId] ?? 0) + 1;
+    // Register ownership before emitting the first status, so a listener can
+    // cancel synchronously without observing a writer with no task handle.
+    final future = Future<void>.microtask(() => _runDownload(model));
+    _tasks[modelId] = future;
+    await future;
+  }
+
+  Future<void> _runDownload(TtsModelDescriptor model) async {
+    final id = model.modelId;
     try {
+      _setStatus(TtsModelInstallStatus(
+          modelId: id,
+          state: TtsModelInstallState.downloading,
+          downloadedBytes: statusOf(id).downloadedBytes,
+          totalBytes: model.downloadSizeBytes));
       await _install(model);
     } on TtsException catch (error) {
+      if (error.code == TtsErrorCode.modelIntegrityFailed) {
+        final part = await _storage.partFile(model);
+        if (await part.exists()) await part.delete();
+      }
       _handleFailure(model, error);
     } catch (error) {
       _handleFailure(
-        model,
-        TtsException(TtsErrorCode.modelInstallFailed, cause: error),
-      );
+          model, ttsFileSystemFailure(error, TtsErrorCode.modelInstallFailed));
     } finally {
-      _running.remove(modelId);
-      _cancelFlags.remove(modelId);
+      try {
+        if (_removePartial.contains(id)) {
+          final part = await _storage.partFile(model);
+          if (await part.exists()) await part.delete();
+          _setStatus(TtsModelInstallStatus.notInstalled(id));
+        }
+      } finally {
+        _running.remove(id);
+        _tasks.remove(id);
+        _cancelFlags.remove(id);
+        _removePartial.remove(id);
+        _revisions[id] = (_revisions[id] ?? 0) + 1;
+      }
     }
   }
 
-  /// Pauses an in-flight download, preserving the `.part` file for resume.
-  Future<void> pause(String modelId) async {
-    if (!_running.contains(modelId)) return;
-    _cancelFlags[modelId] = true;
-    // The download loop observes the flag and stops on the next chunk.
+  Future<void> _interrupt(String id, {required bool removePartial}) async {
+    if (!_running.contains(id)) return;
+    // Atomic publication is the commit point. Cancellation after that point
+    // waits for final accounting rather than reverting only the status mirror.
+    if (_installed.containsKey(id)) {
+      await _tasks[id];
+      return;
+    }
+    _cancelFlags[id] = true;
+    if (removePartial) _removePartial.add(id);
+    final task = _tasks[id];
+    final model = _catalog.byId(id);
+    if (model != null) {
+      final part = await _storage.partFile(model);
+      if (identical(_tasks[id], task)) _downloadClient.cancel(part);
+    }
+    await task;
   }
 
-  /// Cancels a download and removes the partial file.
-  Future<void> cancel(String modelId) async {
-    _cancelFlags[modelId] = true;
+  /// Pauses and waits for the writer to close, preserving resumable bytes.
+  Future<void> pause(String modelId) =>
+      _interrupt(modelId, removePartial: false);
+
+  /// Cancels and waits for cleanup before a new operation can use the file.
+  Future<void> cancel(String modelId) {
+    final active = _cancellations[modelId];
+    if (active != null) return active;
+    final future = _cancel(modelId).whenComplete(() {
+      _cancellations.remove(modelId);
+    });
+    _cancellations[modelId] = future;
+    return future;
+  }
+
+  Future<void> _cancel(String modelId) async {
+    if (_installed.containsKey(modelId)) {
+      await _tasks[modelId];
+      return;
+    }
+    if (_running.contains(modelId)) {
+      await _interrupt(modelId, removePartial: true);
+      return;
+    }
     final model = _catalog.byId(modelId);
-    if (model == null) return;
+    if (model == null || _deletions.containsKey(modelId)) return;
     final part = await _storage.partFile(model);
     if (await part.exists()) await part.delete();
-    if (!_running.contains(modelId)) {
+    if (!isModelInstalled(modelId)) {
       _setStatus(TtsModelInstallStatus.notInstalled(modelId));
     }
   }
 
-  /// Deletes an installed model. Voice bindings are intentionally preserved.
-  Future<void> delete(String modelId) async {
-    final model = _catalog.byId(modelId);
+  /// Stops/releases the model's active runtime, then deletes its files.
+  /// Voice bindings belong to a separate authority and are preserved.
+  Future<void> delete(String modelId) {
+    final active = _deletions[modelId];
+    if (active != null) return active;
+    final future = _delete(modelId).whenComplete(() {
+      _deletions.remove(modelId);
+    });
+    _deletions[modelId] = future;
+    return future;
+  }
+
+  Future<void> _delete(String id) async {
+    final model = _catalog.byId(id);
     if (model == null) return;
-    _cancelFlags[modelId] = true;
+    _revisions[id] = (_revisions[id] ?? 0) + 1;
+    await _cancellations[id];
+    await _interrupt(id, removePartial: true);
+    await beforeDelete?.call(id);
     final dir = await _storage.modelDir(model);
-    if (await dir.exists()) {
-      _installedBytes -= _installedSizes[modelId] ?? await _directorySize(dir);
-      await dir.delete(recursive: true);
-    }
+    if (await dir.exists()) await dir.delete(recursive: true);
     final part = await _storage.partFile(model);
     if (await part.exists()) await part.delete();
-    _installed.remove(modelId);
-    _installedSizes.remove(modelId);
-    _setStatus(TtsModelInstallStatus.notInstalled(modelId));
+    _installed.remove(id);
+    _installedSizes.remove(id);
+    _recountBytes();
+    _setStatus(TtsModelInstallStatus.notInstalled(id));
+  }
+
+  void _checkCancelled(TtsModelDescriptor model) {
+    if (_disposed || _cancelFlags[model.modelId] == true) {
+      throw const TtsException(TtsErrorCode.cancelled);
+    }
+  }
+
+  void _recountBytes() {
+    _installedBytes =
+        _installedSizes.values.fold(0, (sum, value) => sum + value);
   }
 
   // ───────────────────────── install pipeline ─────────────────────────
 
   Future<void> _install(TtsModelDescriptor model) async {
+    _checkCancelled(model);
     final downloadsDir = await _storage.downloadsDir();
     if (!await downloadsDir.exists()) {
       await downloadsDir.create(recursive: true);
@@ -255,7 +395,7 @@ class TtsModelManager extends ChangeNotifier
       destination: part,
       expectedTotalBytes: model.downloadSizeBytes,
       onProgress: (received, total) {
-        if (_disposed) return;
+        if (_disposed || _cancelFlags[model.modelId] == true) return;
         _setStatus(
           TtsModelInstallStatus(
             modelId: model.modelId,
@@ -268,18 +408,7 @@ class TtsModelManager extends ChangeNotifier
       isCancelled: () => _cancelFlags[model.modelId] == true || _disposed,
     );
 
-    if (_cancelFlags[model.modelId] == true) {
-      // Pause: keep the partial file for resume.
-      _setStatus(
-        TtsModelInstallStatus(
-          modelId: model.modelId,
-          state: TtsModelInstallState.paused,
-          downloadedBytes: outcome.bytesWritten,
-          totalBytes: model.downloadSizeBytes,
-        ),
-      );
-      return;
-    }
+    _checkCancelled(model);
 
     _setStatus(
       TtsModelInstallStatus(
@@ -291,6 +420,7 @@ class TtsModelManager extends ChangeNotifier
     );
 
     await _verify(model, part, outcome.bytesWritten);
+    _checkCancelled(model);
 
     final staging = await _storage.newStagingDir(model);
     try {
@@ -309,19 +439,31 @@ class TtsModelManager extends ChangeNotifier
       );
       final root = await _locateModelRoot(staging, model);
       final modelFileName = await _locateModelFile(root, model);
+      _checkCancelled(model);
+      if (!await _validateTree(model, root, modelFileName)) {
+        throw const TtsException(TtsErrorCode.modelIntegrityFailed,
+            detail: 'incomplete or empty model files');
+      }
+      final fileSizes = await _fileSizes(root);
+      final manifest = TtsInstalledManifest.fromDescriptor(model,
+          modelFileName: modelFileName,
+          installedAt: _clock(),
+          fileSizes: fileSizes);
+      // The manifest is part of the atomic directory publication. A crash can
+      // leave a staging tree, never a published tree with a half-written manifest.
+      await File(p.join(root.path, TtsInstalledManifest.fileName))
+          .writeAsString(jsonEncode(manifest.toJson()), flush: true);
+      _checkCancelled(model);
 
       final modelDir = await _storage.modelDir(model);
       if (await modelDir.exists()) await modelDir.delete(recursive: true);
       await modelDir.parent.create(recursive: true);
+      _checkCancelled(model);
       await _moveDirectory(root, modelDir);
-
-      final manifest = TtsInstalledManifest.fromDescriptor(
-        model,
-        modelFileName: modelFileName,
-        installedAt: _clock(),
-      );
-      final manifestFile = await _storage.manifestFile(model);
-      await manifestFile.writeAsString(jsonEncode(manifest.toJson()));
+      if (_disposed || _cancelFlags[model.modelId] == true) {
+        await modelDir.delete(recursive: true);
+        throw const TtsException(TtsErrorCode.cancelled);
+      }
 
       final resolved = InstalledTtsModel(
         descriptor: model,
@@ -332,7 +474,7 @@ class TtsModelManager extends ChangeNotifier
       _installed[model.modelId] = resolved;
       final installedBytes = await _directorySize(modelDir);
       _installedSizes[model.modelId] = installedBytes;
-      _installedBytes += installedBytes;
+      _recountBytes();
       _setStatus(
         TtsModelInstallStatus(
           modelId: model.modelId,
@@ -344,7 +486,7 @@ class TtsModelManager extends ChangeNotifier
     } on TtsException {
       rethrow;
     } catch (error) {
-      throw TtsException(TtsErrorCode.modelInstallFailed, cause: error);
+      throw ttsFileSystemFailure(error, TtsErrorCode.modelInstallFailed);
     } finally {
       try {
         if (await staging.exists()) await staging.delete(recursive: true);
@@ -352,7 +494,11 @@ class TtsModelManager extends ChangeNotifier
         // Best-effort cleanup; the original error is more useful.
       }
       try {
-        if (await part.exists()) await part.delete();
+        if (await part.exists() &&
+            (_cancelFlags[model.modelId] != true ||
+                _removePartial.contains(model.modelId))) {
+          await part.delete();
+        }
       } catch (_) {
         // Best-effort cleanup.
       }
@@ -395,21 +541,77 @@ class TtsModelManager extends ChangeNotifier
     Directory dir,
     TtsInstalledManifest manifest,
   ) async {
-    if (!await dir.exists()) return null;
-    if (manifest.modelId != model.modelId) return null;
-    final modelPath = p.join(dir.path, manifest.modelFileName);
-    if (!await File(modelPath).exists()) return null;
-    for (final required in model.requiredFiles) {
-      if (!await _entryExists(p.join(dir.path, required.name))) return null;
+    if (manifest.modelId != model.modelId ||
+        manifest.version != model.version ||
+        manifest.voiceFamily != model.voiceFamily ||
+        manifest.speakerCount != model.speakerCount ||
+        manifest.integrityAlgorithm != model.integrity.algorithm ||
+        manifest.integrityDigest != model.integrity.digest ||
+        manifest.integritySource != model.integrity.source.name ||
+        DateTime.tryParse(manifest.installedAt) == null ||
+        !model.modelFileName.contains(manifest.modelFileName) ||
+        !listEquals(manifest.lexiconFileNames, model.lexiconFileNames)) {
+      return null;
+    }
+    if (!await _validateTree(model, dir, manifest.modelFileName)) return null;
+    if (manifest.fileSizes.isNotEmpty) {
+      final actual = await _fileSizes(dir);
+      if (!mapEquals(actual, manifest.fileSizes)) return null;
     }
     return InstalledTtsModel(
-      descriptor: model,
-      rootPath: dir.path,
-      modelFileName: manifest.modelFileName,
-      lexiconFileNames: manifest.lexiconFileNames.isEmpty
-          ? _existingLexicons(dir.path, model)
-          : manifest.lexiconFileNames,
-    );
+        descriptor: model,
+        rootPath: dir.path,
+        modelFileName: manifest.modelFileName,
+        lexiconFileNames: model.lexiconFileNames);
+  }
+
+  Future<bool> _validateTree(
+      TtsModelDescriptor model, Directory root, String modelFile) async {
+    if (!await root.exists()) return false;
+    for (final name in [modelFile, ...model.lexiconFileNames]) {
+      final file = File(p.join(root.path, name));
+      if (await FileSystemEntity.type(file.path, followLinks: false) !=
+              FileSystemEntityType.file ||
+          await file.length() <= 0) {
+        return false;
+      }
+    }
+    for (final spec in model.requiredFiles) {
+      final path = p.join(root.path, spec.name);
+      final type = await FileSystemEntity.type(path, followLinks: false);
+      if (type == FileSystemEntityType.file) {
+        final size = await File(path).length();
+        if (size <= 0 || (spec.sizeBytes != null && size != spec.sizeBytes)) {
+          return false;
+        }
+      } else if (type == FileSystemEntityType.directory) {
+        var nonempty = false;
+        await for (final child
+            in Directory(path).list(recursive: true, followLinks: false)) {
+          if (child is Link) return false;
+          if (child is File && await child.length() > 0) nonempty = true;
+        }
+        if (!nonempty) return false;
+      } else {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<Map<String, int>> _fileSizes(Directory dir) async {
+    final sizes = <String, int>{};
+    await for (final entry in dir.list(recursive: true, followLinks: false)) {
+      if (entry is Link) {
+        throw const TtsException(TtsErrorCode.modelIntegrityFailed);
+      }
+      if (entry is File &&
+          p.basename(entry.path) != TtsInstalledManifest.fileName) {
+        sizes[p.relative(entry.path, from: dir.path).replaceAll('\\', '/')] =
+            await entry.length();
+      }
+    }
+    return sizes;
   }
 
   /// Locates the directory containing the model files after extraction.
@@ -461,32 +663,10 @@ class TtsModelManager extends ChangeNotifier
     return result;
   }
 
-  Future<bool> _entryExists(String path) async {
-    if (await File(path).exists()) return true;
-    return Directory(path).exists();
-  }
-
   Future<void> _moveDirectory(Directory from, Directory to) async {
-    try {
-      await from.rename(to.path);
-    } on FileSystemException {
-      // Cross-device fallback: copy then delete.
-      await _copyDirectory(from, to);
-      if (await from.exists()) await from.delete(recursive: true);
-    }
-  }
-
-  Future<void> _copyDirectory(Directory from, Directory to) async {
-    await to.create(recursive: true);
-    await for (final entity in from.list(recursive: false)) {
-      final name = p.basename(entity.path);
-      final target = p.join(to.path, name);
-      if (entity is Directory) {
-        await _copyDirectory(entity, Directory(target));
-      } else if (entity is File) {
-        await entity.copy(target);
-      }
-    }
+    // Both live under the same app-support root. Copying on arbitrary rename
+    // failures would expose a partial installation and hide Windows locks.
+    await from.rename(to.path);
   }
 
   Future<int> _directorySize(Directory dir) async {

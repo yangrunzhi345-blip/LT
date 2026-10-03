@@ -31,6 +31,7 @@ import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
 import 'package:lt_dialogue/services/tts_service.dart';
 import '../support/chat_engine_host_fixture.dart';
 import '../helpers/read_aloud_fakes.dart';
+import '../helpers/tts_casting_fixture.dart';
 
 final class _MockAdventureRepository extends Mock
     implements IAdventureRepository {}
@@ -75,6 +76,7 @@ ChatEngineHost _buildHost({
   required List<Message> messages,
   String gameTopic = '测试',
   TtsService? tts,
+  AdventureConfig? adventureConfig,
 }) {
   var gameState = GameState();
   return ChatDependencies(
@@ -86,7 +88,7 @@ ChatEngineHost _buildHost({
     getAuthorsNote: () => '',
     getAuthorsNoteDepth: () => 0,
     getAuthorsNoteFrequency: () => 0,
-    getAdventureConfig: () => null,
+    getAdventureConfig: () => adventureConfig,
     getWorldEntries: () => const [],
     getBrightness: () => Brightness.light,
     getGameTopic: () => gameTopic,
@@ -117,6 +119,7 @@ ChatEngine _buildThinkingPolicyEngine({
   required CompletionParams userParams,
   required List<Message> messages,
   TtsService? tts,
+  AdventureConfig? adventureConfig,
 }) {
   return ChatEngine(
     host: _buildHost(
@@ -124,6 +127,7 @@ ChatEngine _buildThinkingPolicyEngine({
       userParams: userParams,
       messages: messages,
       tts: tts,
+      adventureConfig: adventureConfig,
     ),
     notifyParent: () {},
     adventureRepo: _MockAdventureRepository(),
@@ -1217,6 +1221,64 @@ void main() {
   });
 
   group('ChatEngine 自动朗读只朗读可见正文', () {
+    test('should cast two character voices through the real autoRead chain',
+        () async {
+      final casting = TtsCastingFixture(autoRead: true);
+      addTearDown(casting.dispose);
+      final repeatedParagraph = '雾港灯塔亮了潮声压过街巷。' * 20;
+      final messages = <Message>[];
+      final llm = _ThinkingPolicyLlmService([
+        LLMStreamResult(
+            content: '$repeatedParagraph\n\n$repeatedParagraph\n\n'
+                '林雪说：“你好。”\n\n陈默说：“再见。”\n'
+                '---JSON---\n{"options":["前进"]}',
+            finishReason: LLMFinishReason.stop,
+            responseCompleted: true),
+      ]);
+      final engine = _buildThinkingPolicyEngine(
+          llm: llm,
+          userParams: const CompletionParams(maxTokens: 2048),
+          messages: messages,
+          tts: TtsService(casting.controller),
+          adventureConfig: AdventureConfig(selectedCharacters: [
+            AdventureSelectedCharacter(
+                id: 'selection-1',
+                characterId: 'lin',
+                characterName: '林雪',
+                isProtagonist: true),
+            AdventureSelectedCharacter(
+                id: 'selection-2', characterId: 'chen', characterName: '陈默'),
+          ]));
+      addTearDown(engine.dispose);
+      await engine.sendMessage('推开门进入大厅');
+      await settleReadAloud();
+      final sessionId = 'chat:${messages.last.id}';
+      expect(casting.controller.state.sourceId, sessionId);
+      final paragraphIds = <String?>{casting.controller.state.currentChunkId};
+      for (var i = 0; i < casting.controller.state.segmentCount; i++) {
+        casting.audio.emitComplete();
+        await settleReadAloud();
+        paragraphIds.add(casting.controller.state.currentChunkId);
+      }
+      expect(
+          paragraphIds,
+          containsAll([
+            '$sessionId#p0',
+            '$sessionId#p1',
+            '$sessionId#p2',
+            '$sessionId#p3'
+          ]));
+      // TextSegmenter can insert boundary whitespace between punctuation atoms.
+      final texts = casting.neural.synthesizedTexts
+          .map((text) => text.replaceAll(RegExp(r'\s+'), ''))
+          .toList();
+      expect(texts, contains('“你好。”'));
+      expect(texts, contains('“再见。”'));
+      expect(casting.neural.synthesizedSpeakers[texts.indexOf('“你好。”')], 3);
+      expect(casting.neural.synthesizedSpeakers[texts.indexOf('“再见。”')], 58);
+      expect(texts.join(), isNot(contains('options')));
+    });
+
     test('不会念出 ---JSON--- 结算数据与思维链', () async {
       final llm = _ThinkingPolicyLlmService([
         LLMStreamResult(

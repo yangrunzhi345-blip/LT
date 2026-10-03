@@ -53,7 +53,9 @@ class ResourceVoiceSettingSection extends ConsumerWidget {
     final installed = model != null && manager.isModelInstalled(model.modelId);
     final display = voiceId == null
         ? l10n.readAloudVoiceAutoAssign
-        : (voice?.displayName ?? voiceId);
+        : voiceId == VoiceBinding.systemVoiceId
+            ? l10n.readAloudVoiceSystem
+            : (voice?.displayName ?? l10n.ttsErrorVoiceUnavailable);
 
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -74,7 +76,7 @@ class ResourceVoiceSettingSection extends ConsumerWidget {
               onPressed: () => _choose(context, ref, voiceId),
               child: Text(l10n.readAloudVoiceChoose),
             ),
-            if (voiceId != null)
+            if (voiceId != null && voiceId != VoiceBinding.systemVoiceId)
               IconButton(
                 onPressed: installed
                     ? () => ref.read(readAloudControllerProvider).playText(
@@ -103,7 +105,9 @@ class ResourceVoiceSettingSection extends ConsumerWidget {
               ),
           ],
         ),
-        if (voiceId != null && !installed)
+        if (voiceId != null &&
+            voiceId != VoiceBinding.systemVoiceId &&
+            !installed)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.xs),
             child: Text(

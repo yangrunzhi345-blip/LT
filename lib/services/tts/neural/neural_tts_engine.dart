@@ -24,7 +24,15 @@ class NeuralTtsModelPaths {
   final int speakerCount;
 
   /// Cache key: two requests with the same key reuse the loaded model.
-  String get cacheKey => modelId;
+  String get cacheKey => <String>[
+        modelId,
+        modelPath,
+        voicesPath,
+        tokensPath,
+        dataDirPath,
+        lexicon,
+        '$speakerCount'
+      ].join('|');
 }
 
 /// Synthesized audio: mono float samples in `[-1, 1]` plus the sample rate.

@@ -161,11 +161,18 @@ final readAloudControllerProvider =
   // ChangeNotifierProvider 自己负责 dispose notifier，不要再挂 onDispose，
   // 否则会二次 dispose 同一控制器。
   final runtime = ref.watch(ttsRuntimeProvider);
-  return ReadAloudController(
+  final controller = ReadAloudController(
     engine: runtime.engine,
     store: SettingsRepoReadAloudStore(ref.watch(settingsRepoProvider)),
     voiceResolver: runtime.resolver,
   );
+  runtime.manager.addListener(controller.refreshCapability);
+  runtime.bindings.addListener(controller.refreshCapability);
+  ref.onDispose(() {
+    runtime.manager.removeListener(controller.refreshCapability);
+    runtime.bindings.removeListener(controller.refreshCapability);
+  });
+  return controller;
 });
 
 /// 全局 UI Locale 唯一 Authority。

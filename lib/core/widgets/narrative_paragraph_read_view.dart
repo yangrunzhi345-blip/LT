@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_svg_icon.dart';
 import '../../../domain/read_aloud/read_aloud_contracts.dart';
+import '../../../domain/read_aloud/read_aloud_paragraphs.dart';
 import '../../../domain/tts/speech_plan.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../l10n/generated/app_localizations_en.dart';
@@ -38,19 +39,12 @@ class NarrativeParagraphReadView extends ConsumerStatefulWidget {
   final TextStyle? textStyle;
   final EdgeInsetsGeometry padding;
 
-  static String chunkIdFor(String baseId, int index) => '$baseId#p$index';
+  static String chunkIdFor(String baseId, int index) =>
+      ReadAloudParagraphs.chunkIdFor(baseId, index);
 
   /// Splits [text] into non-empty paragraphs on blank lines.
-  static List<String> splitParagraphs(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return const <String>[];
-    final parts = trimmed
-        .split(RegExp(r'\n\s*\n'))
-        .map((p) => p.trim())
-        .where((p) => p.isNotEmpty)
-        .toList(growable: false);
-    return parts.isEmpty ? <String>[trimmed] : parts;
-  }
+  static List<String> splitParagraphs(String text) =>
+      ReadAloudParagraphs.split(text);
 
   @override
   ConsumerState<NarrativeParagraphReadView> createState() =>

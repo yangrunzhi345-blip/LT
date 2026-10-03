@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -74,6 +76,21 @@ class _Fixture {
       );
 }
 
+class _MutatingExtractor extends TtsArchiveExtractor {
+  _MutatingExtractor(this.mutate);
+  final Future<void> Function(Directory root) mutate;
+
+  @override
+  Future<void> extract(
+      {required File archive,
+      required TtsArchiveFormat format,
+      required Directory destinationDir}) async {
+    await const FakeTtsArchiveExtractor().extract(
+        archive: archive, format: format, destinationDir: destinationDir);
+    await mutate(Directory('${destinationDir.path}/payload'));
+  }
+}
+
 void main() {
   late Directory tempDir;
 
@@ -83,6 +100,246 @@ void main() {
 
   tearDown(() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+  });
+
+  group('model integrity and operation races', () {
+    test('should keep installation consistent when cancel arrives at commit',
+        () async {
+      final payload = _payload();
+      final fixture = _Fixture(tempDir, payload);
+      final manager = fixture.manager(_descriptor(payload));
+      addTearDown(manager.dispose);
+      Future<void>? cancelling;
+      manager.addListener(() {
+        if (manager.statusOf('test-model').state ==
+                TtsModelInstallState.installed &&
+            cancelling == null) {
+          cancelling = manager.cancel('test-model');
+        }
+      });
+      await manager.download('test-model');
+      await cancelling;
+      expect(manager.isModelInstalled('test-model'), isTrue);
+      expect(
+          manager.statusOf('test-model').state, TtsModelInstallState.installed);
+      await manager.refresh();
+      expect(
+          manager.statusOf('test-model').state, TtsModelInstallState.installed);
+    });
+    test('should retry immediately after cancel without stale cleanup',
+        () async {
+      final payload = _payload();
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      var extractions = 0;
+      final fixture =
+          _Fixture(tempDir, payload, extractor: _MutatingExtractor((_) async {
+        if (extractions++ == 0) {
+          entered.complete();
+          await release.future;
+        }
+      }));
+      final manager = fixture.manager(_descriptor(payload));
+      addTearDown(manager.dispose);
+      final old = manager.download('test-model');
+      await entered.future;
+      final cancel = manager.cancel('test-model');
+      final retry = manager.download('test-model');
+      release.complete();
+      await Future.wait([old, cancel, retry]);
+      expect(
+          manager.statusOf('test-model').state, TtsModelInstallState.installed);
+      expect(fixture.client.requestCount, 2);
+      expect(
+          await File(manager.installed('test-model')!.modelPath).readAsString(),
+          'model');
+    });
+
+    test('should release active runtime before deleting files', () async {
+      final payload = _payload();
+      final fixture = _Fixture(tempDir, payload);
+      final descriptor = _descriptor(payload);
+      final released = Completer<void>();
+      final entered = Completer<void>();
+      final manager = TtsModelManager(
+          catalog: TtsModelCatalog(models: [descriptor]),
+          storage: fixture.storage,
+          downloadClient: fixture.client,
+          extractor: fixture.extractor,
+          beforeDelete: (id) async {
+            expect(id, 'test-model');
+            expect(await (await fixture.storage.modelDir(descriptor)).exists(),
+                isTrue);
+            entered.complete();
+            await released.future;
+          });
+      addTearDown(manager.dispose);
+      await manager.download('test-model');
+      final removal = manager.delete('test-model');
+      await entered.future;
+      expect(manager.isModelInstalled('test-model'), isFalse);
+      released.complete();
+      await removal;
+      expect(
+          await (await fixture.storage.modelDir(descriptor)).exists(), isFalse);
+    });
+
+    test(
+        'should recover crash leftovers without inventing an install or downloading',
+        () async {
+      final payload = _payload();
+      final fixture = _Fixture(tempDir, payload);
+      final descriptor = _descriptor(payload);
+      final dir = await fixture.storage.modelDir(descriptor);
+      await dir.create(recursive: true);
+      await File('${dir.path}/model.onnx').writeAsString('orphan');
+      final stale = await fixture.storage.newStagingDir(descriptor);
+      final part = await fixture.storage.partFile(descriptor);
+      await part.parent.create(recursive: true);
+      await part.writeAsBytes(payload.take(100).toList());
+      final manager = fixture.manager(descriptor);
+      addTearDown(manager.dispose);
+      await manager.refresh();
+      expect(await stale.exists(), isFalse);
+      expect(await part.length(), 100);
+      expect(manager.isModelInstalled('test-model'), isFalse);
+      expect(manager.statusOf('test-model').state, TtsModelInstallState.paused);
+      expect(fixture.client.requestCount, 0);
+      await manager.download('test-model');
+      expect(manager.isModelInstalled('test-model'), isTrue);
+    });
+    for (final name in ['model.onnx', 'voices.bin', 'tokens.txt']) {
+      test('should reject zero-byte $name before publishing', () async {
+        final payload = _payload();
+        final fixture = _Fixture(tempDir, payload,
+            extractor: _MutatingExtractor((root) async {
+          await File('${root.path}/$name').writeAsBytes([]);
+        }));
+        final manager = fixture.manager(_descriptor(payload));
+        addTearDown(manager.dispose);
+        await manager.download('test-model');
+        expect(manager.isModelInstalled('test-model'), isFalse);
+        expect(
+            manager.statusOf('test-model').state, TtsModelInstallState.failed);
+      });
+    }
+
+    for (final mutation in [
+      'invalid JSON',
+      'version',
+      'modelId',
+      'voiceFamily',
+      'speakerCount',
+      'integrity',
+      'missing field',
+      'size mismatch',
+      'zero model',
+      'missing voices',
+      'unsafe path'
+    ]) {
+      test('should reject manifest/tree corruption: $mutation', () async {
+        final payload = _payload();
+        final fixture = _Fixture(tempDir, payload);
+        final descriptor = _descriptor(payload);
+        final manager = fixture.manager(descriptor);
+        addTearDown(manager.dispose);
+        await manager.download('test-model');
+        final file = await fixture.storage.manifestFile(descriptor);
+        final data =
+            jsonDecode(await file.readAsString()) as Map<String, Object?>;
+        switch (mutation) {
+          case 'invalid JSON':
+            await file.writeAsString('{');
+          case 'version':
+            data['version'] = 'other';
+          case 'modelId':
+            data['modelId'] = 'other';
+          case 'voiceFamily':
+            data['voiceFamily'] = 'other';
+          case 'speakerCount':
+            data['speakerCount'] = 999;
+          case 'integrity':
+            data['integrity'] = {
+              'algorithm': 'sha256',
+              'digest': 'bad',
+              'source': 'official'
+            };
+          case 'missing field':
+            data.remove('voiceFamily');
+          case 'size mismatch':
+            await File(manager.installed('test-model')!.modelPath)
+                .writeAsString('changed model length');
+          case 'zero model':
+            await File(manager.installed('test-model')!.modelPath)
+                .writeAsBytes([]);
+          case 'missing voices':
+            await File(manager.installed('test-model')!.voicesPath).delete();
+          case 'unsafe path':
+            data['modelFileName'] = '../outside.onnx';
+        }
+        if (mutation != 'invalid JSON') {
+          await file.writeAsString(jsonEncode(data));
+        }
+        await manager.refresh();
+        expect(manager.isModelInstalled('test-model'), isFalse);
+      });
+    }
+
+    test('should dedupe downloads and retain active state during refresh',
+        () async {
+      final payload = _payload();
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final fixture =
+          _Fixture(tempDir, payload, extractor: _MutatingExtractor((_) async {
+        entered.complete();
+        await release.future;
+      }));
+      final manager = fixture.manager(_descriptor(payload));
+      addTearDown(manager.dispose);
+      final first = manager.download('test-model');
+      await entered.future;
+      await manager.download('test-model');
+      await manager.refresh();
+      expect(fixture.client.requestCount, 1);
+      expect(manager.statusOf('test-model').state,
+          TtsModelInstallState.installing);
+      release.complete();
+      await first;
+    });
+
+    for (final action in ['cancel', 'delete']) {
+      test(
+          'should await extraction before $action and never publish late install',
+          () async {
+        final payload = _payload();
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        final fixture =
+            _Fixture(tempDir, payload, extractor: _MutatingExtractor((_) async {
+          entered.complete();
+          await release.future;
+        }));
+        final descriptor = _descriptor(payload);
+        final manager = fixture.manager(descriptor);
+        addTearDown(manager.dispose);
+        final install = manager.download('test-model');
+        await entered.future;
+        final removal = action == 'cancel'
+            ? manager.cancel('test-model')
+            : manager.delete('test-model');
+        release.complete();
+        await install;
+        await removal;
+        expect(manager.isModelInstalled('test-model'), isFalse);
+        expect(await (await fixture.storage.modelDir(descriptor)).exists(),
+            isFalse);
+        expect(await (await fixture.storage.partFile(descriptor)).exists(),
+            isFalse);
+        expect(manager.statusOf('test-model').state,
+            TtsModelInstallState.notInstalled);
+      });
+    }
   });
 
   test('initialization never makes a network request', () async {

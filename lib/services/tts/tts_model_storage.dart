@@ -19,6 +19,7 @@ class TtsInstalledManifest {
     required this.integrityDigest,
     required this.integritySource,
     required this.lexiconFileNames,
+    this.fileSizes = const {},
   });
 
   final String modelId;
@@ -34,6 +35,7 @@ class TtsInstalledManifest {
   final String integrityDigest;
   final String integritySource;
   final List<String> lexiconFileNames;
+  final Map<String, int> fileSizes;
 
   static const String fileName = 'manifest.json';
 
@@ -51,12 +53,22 @@ class TtsInstalledManifest {
           'source': integritySource,
         },
         'lexicon': lexiconFileNames,
+        'fileSizes': fileSizes,
+        'installedSizeBytes':
+            fileSizes.values.fold<int>(0, (sum, size) => sum + size),
       };
 
   static TtsInstalledManifest? fromJsonString(String raw) {
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is! Map) return null;
+      if (decoded is! Map ||
+          decoded['schema'] != 1 ||
+          decoded['voiceFamily'] is! String ||
+          decoded['speakerCount'] is! int ||
+          decoded['installedAt'] is! String ||
+          decoded['lexicon'] is! List) {
+        return null;
+      }
       final integrity = decoded['integrity'];
       final modelFileName = decoded['modelFileName'];
       final modelId = decoded['modelId'];
@@ -64,10 +76,29 @@ class TtsInstalledManifest {
       if (modelId is! String ||
           version is! String ||
           modelFileName is! String ||
-          integrity is! Map) {
+          integrity is! Map ||
+          integrity['algorithm'] is! String ||
+          integrity['digest'] is! String ||
+          integrity['source'] is! String) {
         return null;
       }
+      final sizes = <String, int>{};
+      final rawSizes = decoded['fileSizes'];
+      if (rawSizes != null) {
+        if (rawSizes is! Map || rawSizes.isEmpty) return null;
+        for (final entry in rawSizes.entries) {
+          if (entry.key is! String || entry.value is! int || entry.value < 0) {
+            return null;
+          }
+          sizes[entry.key as String] = entry.value as int;
+        }
+        if (decoded['installedSizeBytes'] !=
+            sizes.values.fold<int>(0, (a, b) => a + b)) {
+          return null;
+        }
+      }
       return TtsInstalledManifest(
+        fileSizes: sizes,
         modelId: modelId,
         version: version,
         voiceFamily: decoded['voiceFamily'] as String? ?? '',
@@ -91,8 +122,10 @@ class TtsInstalledManifest {
     TtsModelDescriptor descriptor, {
     required String modelFileName,
     required DateTime installedAt,
+    Map<String, int> fileSizes = const {},
   }) {
     return TtsInstalledManifest(
+      fileSizes: fileSizes,
       modelId: descriptor.modelId,
       version: descriptor.version,
       voiceFamily: descriptor.voiceFamily,

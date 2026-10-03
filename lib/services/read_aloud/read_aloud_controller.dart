@@ -81,6 +81,7 @@ class ReadAloudController extends ChangeNotifier {
   Future<void>? _initFuture;
 
   int _run = 0;
+  int _utterance = 0;
 
   /// 当前正在等待 completion 的 run；为 null 表示没有“在途 utterance”。
   int? _activeRun;
@@ -109,6 +110,20 @@ class ReadAloudController extends ChangeNotifier {
   ReadAloudState get state => _state;
 
   ReadAloudCapability get capability => _state.capability;
+
+  /// Reports system TTS separately from optional neural playback support.
+  ReadAloudCapability get systemCapability {
+    final engine = _engine;
+    return engine is RoutedReadAloudEngine
+        ? engine.systemCapability
+        : engine.capability;
+  }
+
+  /// Refreshes availability after model installation or mode changes.
+  void refreshCapability() {
+    if (!_disposed) _emit(capability: _engine.capability);
+  }
+
   bool get enabled => _state.enabled;
   bool get autoRead => _state.autoRead;
   double get rate => _state.rate;
@@ -233,6 +248,7 @@ class ReadAloudController extends ChangeNotifier {
     ReadAloudVoiceTarget? voiceOverride,
   }) async {
     if (_disposed) return;
+    refreshCapability();
     if (!_state.capability.supported) {
       // 平台不支持：明确进入 error 并给出原因，不静默假装成功。
       _run++;
@@ -286,6 +302,10 @@ class ReadAloudController extends ChangeNotifier {
     final run = ++_run;
     _activeRun = null;
     _fallbackNotified = false;
+    final sessionEngine = _engine;
+    if (sessionEngine is ReadAloudVoiceAwareEngine) {
+      (sessionEngine as ReadAloudVoiceAwareEngine).beginSession();
+    }
     _voiceOverride = voiceOverride;
     _queue = queue;
     _index = 0;
@@ -366,14 +386,15 @@ class ReadAloudController extends ChangeNotifier {
   /// 显式停止并清空会话。迟到的 completion 会因 run 失配被丢弃。
   Future<void> stop() async {
     final wasActive = _state.hasActiveSession;
-    _run++;
+    final run = ++_run;
+    _utterance++;
     _activeRun = null;
     _fallbackNotified = false;
     _voiceOverride = null;
     _queue = PlaybackQueue.empty;
     _index = 0;
     await _safeEngineStop();
-    if (_disposed) return;
+    if (_disposed || run != _run) return;
     _emit(
       status: wasActive ? ReadAloudStatus.stopped : ReadAloudStatus.idle,
       sourceId: null,
@@ -403,29 +424,34 @@ class ReadAloudController extends ChangeNotifier {
 
   /// 暂停。平台不支持或未生效时显式回退为“停止音频但保留当前段位置”。
   Future<void> pause() async {
+    refreshCapability();
     if (_state.status != ReadAloudStatus.playing) return;
     final run = _run;
+    final utterance = _utterance;
     if (_state.capability.supportsPause) {
       final ok = await _engine.pause();
-      if (_disposed || run != _run) return;
+      if (_disposed || run != _run || utterance != _utterance) return;
       if (ok) {
         _emit(status: ReadAloudStatus.paused, errorMessage: null);
         return;
       }
     }
-    await _safeEngineStop();
-    if (_disposed || run != _run) return;
+    final pausing = ++_utterance;
     _activeRun = null;
+    await _safeEngineStop();
+    if (_disposed || run != _run || pausing != _utterance) return;
     _emit(status: ReadAloudStatus.paused, errorMessage: null);
   }
 
   /// 继续。平台原生 resume 不可用时回退为从当前段开头重播。
   Future<void> resume() async {
+    refreshCapability();
     if (_state.status != ReadAloudStatus.paused) return;
     final run = _run;
+    final utterance = _utterance;
     if (_state.capability.supportsPause) {
       final ok = await _engine.resume();
-      if (_disposed || run != _run) return;
+      if (_disposed || run != _run || utterance != _utterance) return;
       if (ok) {
         _emit(status: ReadAloudStatus.playing, errorMessage: null);
         return;
@@ -439,9 +465,10 @@ class ReadAloudController extends ChangeNotifier {
     if (!_state.hasActiveSession || _queue.isEmpty) return;
     final run = _run;
     if (_index + 1 >= _queue.length) {
+      final completing = ++_utterance;
       _activeRun = null;
       await _safeEngineStop();
-      if (_disposed || run != _run) return;
+      if (_disposed || run != _run || completing != _utterance) return;
       _complete(run);
       return;
     }
@@ -593,6 +620,11 @@ class ReadAloudController extends ChangeNotifier {
 
   Future<void> _speakCurrent(int run) async {
     if (_disposed || run != _run) return;
+    final utterance = ++_utterance;
+    _activeRun = null;
+    bool isCurrent() => !_disposed && run == _run && utterance == _utterance;
+    await _safeEngineStop();
+    if (!isCurrent()) return;
     if (_index < 0 || _index >= _queue.length) {
       _complete(run);
       return;
@@ -606,7 +638,10 @@ class ReadAloudController extends ChangeNotifier {
       availableLanguages: _availableLanguages,
       fallbackTag: _state.languageTag,
     );
-    final resolvedLanguage = resolution.resolvedTag;
+    final voiceResolution = _resolveVoice(chunk);
+    final resolvedLanguage = voiceResolution.target?.isNeural == true
+        ? chunk.languageTag
+        : resolution.resolvedTag;
     if (resolvedLanguage == null) {
       // 系统已知语言里没有任何可接受的降级目标：显式错误，不静默换语言。
       _fail(
@@ -616,25 +651,21 @@ class ReadAloudController extends ChangeNotifier {
     }
 
     // 只有语言真正变化时才调用平台 setLanguage，避免段间通道抖动。
-    if (_appliedLanguage != resolvedLanguage) {
+    if (voiceResolution.target?.isNeural != true &&
+        _appliedLanguage != resolvedLanguage) {
       try {
         await _engine.configure(language: resolvedLanguage);
       } catch (error) {
-        if (_disposed || run != _run) return;
+        if (!isCurrent()) return;
         _fail(error);
         return;
       }
-      if (_disposed || run != _run) return;
+      if (!isCurrent()) return;
       _appliedLanguage = resolvedLanguage;
     }
 
-    // 在打断旧 utterance 之前先放弃它的 completion，这样即便某个平台在
-    // stop 时错误地发出完成回调，也不会推进队列。
-    _activeRun = null;
-
     // 解析本段 Voice：显式绑定 → 默认人物声音 → 稳定自动分配 → 旁白 → 系统。
     // Voice 解析只发生在这里，UI 不参与。降级到系统 TTS 时每个会话只提示一次。
-    final voiceResolution = _resolveVoice(chunk);
     if (voiceResolution.fallback) {
       _notifyFallback(
           voiceResolution.errorCode ?? TtsErrorCode.modelUnavailable);
@@ -642,21 +673,16 @@ class ReadAloudController extends ChangeNotifier {
     var backend = TtsBackendKind.system;
     String? voiceId;
     final engine = _engine;
-    if (engine is ReadAloudVoiceAwareEngine) {
-      final routed = engine as ReadAloudVoiceAwareEngine;
-      backend = await routed.selectVoice(voiceResolution.target);
-      if (_disposed || run != _run) return;
-      if (backend == TtsBackendKind.neural) {
-        voiceId = voiceResolution.target?.voiceId;
-      } else if (voiceResolution.target?.isNeural == true) {
-        _notifyFallback(
-          voiceResolution.errorCode ?? TtsErrorCode.modelUnavailable,
-        );
-      }
+    if (engine is ReadAloudVoiceAwareEngine &&
+        voiceResolution.target?.isNeural == true) {
+      backend = TtsBackendKind.neural;
+      voiceId = voiceResolution.target?.voiceId;
     }
 
     _emit(
-      status: ReadAloudStatus.playing,
+      status: backend == TtsBackendKind.neural
+          ? ReadAloudStatus.preparing
+          : ReadAloudStatus.playing,
       segmentIndex: _index,
       segmentCount: _queue.length,
       currentChunkId: chunk.sourceId,
@@ -670,21 +696,53 @@ class ReadAloudController extends ChangeNotifier {
       activeBackend: backend,
       errorMessage: null,
     );
+    _activeRun = run;
+    _engine.onStart = () {
+      if (isCurrent()) {
+        _emit(status: ReadAloudStatus.playing, capability: _engine.capability);
+      }
+    };
+    _engine.onComplete = () {
+      if (isCurrent()) _handleEngineComplete();
+    };
+    _engine.onCancel = () {
+      if (isCurrent()) _handleEngineCancel();
+    };
+    _engine.onError = (error) {
+      if (isCurrent()) _handleEngineError(error);
+    };
     try {
-      await _engine.speak(chunk.text);
+      if (engine is ReadAloudVoiceAwareEngine) {
+        await (engine as ReadAloudVoiceAwareEngine).speakWithVoice(
+            chunk.text, voiceResolution.target,
+            systemLanguage: resolution.resolvedTag);
+      } else {
+        await engine.speak(chunk.text);
+      }
     } catch (error) {
-      if (_disposed || run != _run) return;
+      if (!isCurrent()) return;
       _fail(error);
       return;
     }
-    if (_disposed || run != _run) return;
-    _activeRun = run;
+    if (!isCurrent()) return;
+    if (engine is ReadAloudVoiceAwareEngine) {
+      final actual = (engine as ReadAloudVoiceAwareEngine).activeBackend;
+      _emit(
+          status: _state.status == ReadAloudStatus.preparing
+              ? ReadAloudStatus.playing
+              : null,
+          capability: _engine.capability,
+          activeBackend: actual,
+          currentVoiceId: actual == TtsBackendKind.neural ? voiceId : null);
+    }
   }
 
   void _handleEngineComplete() {
     if (_disposed) return;
     final run = _activeRun;
-    if (run == null || run != _run) return; // 迟到/已作废的回调
+    if (run == null || run != _run || _state.status == ReadAloudStatus.paused) {
+      return;
+    } // 迟到/已作废或已暂停的回调
     _activeRun = null;
     if (_index + 1 >= _queue.length) {
       _complete(run);
@@ -699,7 +757,10 @@ class ReadAloudController extends ChangeNotifier {
     // 只有“没有在途 utterance 被主动放弃”的意外中断才改变状态；
     // 自身打断时 _activeRun 已被置空。
     if (_activeRun == null || _activeRun != _run) return;
-    if (_state.status != ReadAloudStatus.playing) return;
+    if (_state.status != ReadAloudStatus.playing &&
+        _state.status != ReadAloudStatus.preparing) {
+      return;
+    }
     _activeRun = null;
     _emit(status: ReadAloudStatus.stopped, errorMessage: null);
   }
@@ -777,6 +838,7 @@ class ReadAloudController extends ChangeNotifier {
   /// Called by the routing engine when a neural request degraded to system TTS
   /// mid-synthesis. At most one localized notice per session is surfaced.
   void _handleVoiceFallback(TtsErrorCode code) {
+    _emit(activeBackend: TtsBackendKind.system, currentVoiceId: null);
     _notifyFallback(code);
   }
 
@@ -834,6 +896,7 @@ class ReadAloudController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _run++;
+    _utterance++;
     _activeRun = null;
     _queue = PlaybackQueue.empty;
     _engine.onComplete = null;

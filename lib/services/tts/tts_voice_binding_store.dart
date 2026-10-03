@@ -86,6 +86,9 @@ Map<String, Object?>? _decodeMap(String raw) {
   try {
     final decoded = jsonDecode(raw);
     if (decoded is Map) {
+      // Versionless legacy objects remain readable. Unknown schemas must not
+      // activate a backend or interpret future binding formats as current data.
+      if (decoded.containsKey('schema') && decoded['schema'] != 1) return null;
       return <String, Object?>{
         for (final entry in decoded.entries)
           if (entry.key is String) entry.key as String: entry.value,
@@ -146,6 +149,7 @@ class TtsVoiceBindingStore extends ChangeNotifier {
 
   final TtsVoicePreferencesStore? _store;
   TtsVoicePreferences _preferences;
+  Future<void> _pendingSave = Future<void>.value();
 
   TtsVoicePreferences get preferences => _preferences;
 
@@ -181,15 +185,19 @@ class TtsVoiceBindingStore extends ChangeNotifier {
   Future<void> clearBinding(String resourceId) =>
       _update(_preferences.withBinding(resourceId, null));
 
-  Future<void> _update(TtsVoicePreferences next) async {
+  Future<void> _update(TtsVoicePreferences next) {
     _preferences = next;
-    notifyListeners();
     final store = _store;
-    if (store == null) return;
-    try {
-      await store.save(next);
-    } catch (error) {
-      debugPrint('[TtsVoice] 偏好写入失败: $error');
+    if (store != null) {
+      // Every save writes the entire snapshot. Serialize even failed/retried
+      // SQLite writes so an old snapshot cannot overwrite a later UI choice.
+      _pendingSave =
+          _pendingSave.then((_) => store.save(next)).catchError((Object error) {
+        debugPrint('[TtsVoice] 偏好写入失败: $error');
+      });
     }
+    final saved = _pendingSave;
+    notifyListeners();
+    return saved;
   }
 }

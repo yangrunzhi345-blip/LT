@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../domain/read_aloud/read_aloud_contracts.dart';
+import '../domain/read_aloud/read_aloud_paragraphs.dart';
 import '../domain/tts/speech_plan.dart';
 import '../models/completion_params.dart';
 import 'llm_service.dart';
@@ -52,11 +53,28 @@ class TtsService {
 
   Future<void> speak(
     String text, {
+    String? sourceId,
     NarrativeSpeakerContext speakerContext =
         const NarrativeSpeakerContext.empty(),
   }) async {
     final controller = _controller;
     if (controller == null) return;
+    if (sourceId != null) {
+      final paragraphs = ReadAloudParagraphs.split(text);
+      await controller.play(
+        sessionId: sourceId,
+        sourceType: ReadAloudSourceType.chat,
+        sources: [
+          for (var i = 0; i < paragraphs.length; i++)
+            ReadAloudSource(
+                id: ReadAloudParagraphs.chunkIdFor(sourceId, i),
+                text: paragraphs[i],
+                speakerContext: speakerContext),
+        ],
+        speakerContext: speakerContext,
+      );
+      return;
+    }
     // 兼容入口没有来源上下文，使用固定会话 id；页面级朗读应改用
     // ReadAloudController.play / AppReadAloudButton 以携带真实来源。
     await controller.playText(

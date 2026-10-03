@@ -1,97 +1,187 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../../domain/tts/tts_errors.dart';
 import 'neural_audio_player.dart';
 
-/// `audioplayers` implementation of [NeuralAudioPlayer].
+/// Plays an owned temporary WAV, freeing its player and source on termination.
 ///
-/// Generated float samples are wrapped in a small in-memory 16-bit PCM WAV and
-/// played through the platform audio backend. This keeps a single, supported
-/// audio path across Android, iOS, macOS, Windows, Linux and the web instead of
-/// hand-writing per-platform players or shelling out.
+/// audioplayers' setSourceBytes silently writes unowned files on Linux/Darwin.
+/// Explicit files and a fresh player per source also isolate delayed platform
+/// events belonging to a previous utterance.
 class AudioPlayersNeuralAudioPlayer implements NeuralAudioPlayer {
-  AudioPlayersNeuralAudioPlayer({AudioPlayer? player})
-      : _player = player ?? AudioPlayer() {
-    _completeSub = _player.onPlayerComplete.listen((_) {
-      _playing = false;
-      _onComplete?.call();
-    });
-  }
+  AudioPlayersNeuralAudioPlayer(
+      {AudioPlayer? player,
+      AudioPlayer Function()? playerFactory,
+      Future<Directory> Function()? temporaryDirectoryProvider})
+      : _initialPlayer = player,
+        _playerFactory = playerFactory ?? AudioPlayer.new,
+        _temporaryDirectoryProvider =
+            temporaryDirectoryProvider ?? getTemporaryDirectory;
 
-  final AudioPlayer _player;
+  AudioPlayer? _initialPlayer;
+  final AudioPlayer Function() _playerFactory;
+  final Future<Directory> Function() _temporaryDirectoryProvider;
+  AudioPlayer? _player;
+  Directory? _audioDirectory;
   StreamSubscription<void>? _completeSub;
   bool _initialized = false;
   bool _playing = false;
-  double _volume = 1.0;
-
+  bool _paused = false;
+  bool _disposed = false;
+  int _generation = 0;
+  Future<void> _operations = Future<void>.value();
   void Function()? _onComplete;
   void Function(Object error)? _onError;
 
   @override
   bool get isInitialized => _initialized;
-
   @override
   set onComplete(void Function()? handler) => _onComplete = handler;
-
   @override
   set onError(void Function(Object error)? handler) => _onError = handler;
 
+  bool _isCurrent(int generation) => !_disposed && generation == _generation;
+
+  Future<void> _serialize(Future<void> Function() operation) {
+    final result = _operations.then((_) => operation());
+    _operations = result.then((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+
   @override
   Future<void> initialize() async {
-    if (_initialized) return;
-    try {
-      await _player.setReleaseMode(ReleaseMode.stop);
-      _initialized = true;
-    } catch (error) {
-      throw TtsException(TtsErrorCode.audioPlaybackFailed, cause: error);
-    }
+    // Players are initialized inside play, so no platform resources are held
+    // while an utterance is still being inferred.
+    if (!_disposed) _initialized = true;
   }
 
   @override
-  Future<void> play(
-    Float32List samples,
-    int sampleRate, {
-    double volume = 1.0,
-  }) async {
-    if (samples.isEmpty || sampleRate <= 0) return;
-    await initialize();
-    _volume = volume.clamp(0.0, 1.0);
-    try {
-      await _player.stop();
-      final wav = _encodeWav(samples, sampleRate);
-      await _player.setVolume(_volume);
-      await _player.setSourceBytes(wav, mimeType: 'audio/wav');
-      await _player.resume();
-      _playing = true;
-    } catch (error) {
-      _playing = false;
-      final exception = TtsException(
-        TtsErrorCode.audioPlaybackFailed,
-        cause: error,
-      );
-      _onError?.call(exception);
-      throw exception;
-    }
+  Future<void> play(Float32List samples, int sampleRate, {double volume = 1}) {
+    final generation = ++_generation;
+    final complete = _onComplete;
+    final errorHandler = _onError;
+    return _serialize(() async {
+      await _releaseSource();
+      if (!_isCurrent(generation) || samples.isEmpty || sampleRate <= 0) return;
+      try {
+        final player = _initialPlayer ?? _playerFactory();
+        _initialPlayer = null;
+        _player = player;
+        var terminal = false;
+        final tempRoot = await _temporaryDirectoryProvider();
+        if (!_isCurrent(generation)) {
+          await _releaseSource();
+          return;
+        }
+        final directory = await tempRoot.createTemp('lt-tts-');
+        _audioDirectory = directory;
+        final file = File(p.join(directory.path, 'speech.wav'));
+        await file.writeAsBytes(_encodeWav(samples, sampleRate), flush: true);
+        if (!_isCurrent(generation)) {
+          await _releaseSource();
+          return;
+        }
+        _completeSub = player.onPlayerComplete.listen((_) {
+          if (!_isCurrent(generation) || terminal) return;
+          terminal = true;
+          _playing = false;
+          _paused = false;
+          unawaited(_serialize(() async {
+            if (!_isCurrent(generation)) return;
+            await _releaseSource();
+            if (_isCurrent(generation)) complete?.call();
+          }));
+        }, onError: (Object error) {
+          if (!_isCurrent(generation) || terminal) return;
+          terminal = true;
+          _playing = false;
+          _paused = false;
+          unawaited(_serialize(() async {
+            if (!_isCurrent(generation)) return;
+            await _releaseSource();
+            if (_isCurrent(generation)) {
+              errorHandler?.call(
+                  TtsException(TtsErrorCode.audioPlaybackFailed, cause: error));
+            }
+          }));
+        });
+        await player.setReleaseMode(ReleaseMode.stop);
+        if (!_isCurrent(generation)) return;
+        await player.setVolume(volume.clamp(0.0, 1.0));
+        if (!_isCurrent(generation)) return;
+        await player.setSourceDeviceFile(file.path, mimeType: 'audio/wav');
+        if (!_isCurrent(generation)) return;
+        await player.resume();
+        if (_isCurrent(generation)) {
+          _initialized = true;
+          _playing = true;
+        }
+      } catch (error) {
+        await _releaseSource();
+        if (!_isCurrent(generation)) return;
+        // Initial preparation failures are returned to the routing engine;
+        // only delayed playback-stream errors use onError, avoiding duplicate
+        // fallback for the same failure.
+        throw TtsException(TtsErrorCode.audioPlaybackFailed, cause: error);
+      } finally {
+        if (!_isCurrent(generation)) await _releaseSource();
+      }
+    });
   }
 
-  @override
-  Future<void> stop() async {
+  Future<void> _releaseSource() async {
+    final subscription = _completeSub;
+    final player = _player;
+    final directory = _audioDirectory;
+    _completeSub = null;
+    _player = null;
+    _audioDirectory = null;
     _playing = false;
+    _paused = false;
     try {
-      await _player.stop();
+      await subscription?.cancel();
     } catch (error) {
-      throw TtsException(TtsErrorCode.audioPlaybackFailed, cause: error);
+      debugPrint('[ReadAloud] Audio subscription release failed: $error');
     }
+    try {
+      await player?.dispose();
+    } catch (error) {
+      debugPrint('[ReadAloud] Audio resource release failed: $error');
+    } finally {
+      if (directory != null) {
+        try {
+          if (await directory.exists()) await directory.delete(recursive: true);
+        } catch (error) {
+          debugPrint('[ReadAloud] Temporary audio cleanup failed: $error');
+        }
+      }
+    }
+  }
+
+  @override
+  Future<void> stop() {
+    _generation++;
+    _playing = false;
+    _paused = false;
+    return _serialize(_releaseSource);
   }
 
   @override
   Future<bool> pause() async {
-    if (!_playing) return false;
+    if (!_playing || _disposed) return false;
+    final generation = _generation;
     try {
-      await _player.pause();
+      await _player?.pause();
+      if (!_isCurrent(generation)) return false;
+      _playing = false;
+      _paused = true;
       return true;
     } catch (_) {
       return false;
@@ -100,9 +190,13 @@ class AudioPlayersNeuralAudioPlayer implements NeuralAudioPlayer {
 
   @override
   Future<bool> resume() async {
+    if (!_paused || _disposed || _player == null) return false;
+    final generation = _generation;
     try {
-      await _player.resume();
+      await _player!.resume();
+      if (!_isCurrent(generation)) return false;
       _playing = true;
+      _paused = false;
       return true;
     } catch (_) {
       return false;
@@ -111,13 +205,14 @@ class AudioPlayersNeuralAudioPlayer implements NeuralAudioPlayer {
 
   @override
   Future<void> dispose() async {
-    await _completeSub?.cancel();
-    _completeSub = null;
-    try {
-      await _player.dispose();
-    } catch (_) {
-      // Nothing useful to do on dispose.
-    }
+    if (_disposed) return;
+    _disposed = true;
+    _onComplete = null;
+    _onError = null;
+    await stop();
+    final initial = _initialPlayer;
+    _initialPlayer = null;
+    await initial?.dispose();
   }
 
   /// Encodes mono float samples as a 16-bit PCM WAV file.

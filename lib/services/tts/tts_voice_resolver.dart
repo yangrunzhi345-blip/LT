@@ -76,8 +76,13 @@ class TtsVoiceResolver {
     final pool = voicePool();
     if (pool.isEmpty) return;
     _sessionAssignments = _assignment.assignForPlan(
-      speakerResourceIds.where((id) => id.isNotEmpty),
+      speakerResourceIds.where((id) =>
+          id.isNotEmpty && _bindings.preferences.bindingFor(id) == null),
       pool,
+      reservedVoiceIds: {
+        for (final id in speakerResourceIds)
+          if (_bindings.preferences.bindingFor(id) case final voiceId?) voiceId,
+      },
     );
   }
 
@@ -108,7 +113,9 @@ class TtsVoiceResolver {
       role: role,
       speakerResourceId: speakerResourceId,
     );
-    if (voiceId == null || voiceId.isEmpty) {
+    if (voiceId == null ||
+        voiceId.isEmpty ||
+        voiceId == VoiceBinding.systemVoiceId) {
       // No neural voice configured for this role: narrator/system handles it.
       return const TtsVoiceResolution.system();
     }
@@ -155,7 +162,7 @@ class TtsVoiceResolver {
       return prefs.defaultCharacterVoiceId;
     }
     if (prefs.autoAssignVoices) {
-      return _sessionAssignments[speakerResourceId];
+      return _sessionAssignments[speakerResourceId] ?? prefs.narratorVoiceId;
     }
     return prefs.narratorVoiceId;
   }

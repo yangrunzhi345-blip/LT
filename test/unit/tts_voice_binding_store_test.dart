@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/domain/tts/tts_models.dart';
 import 'package:lt_dialogue/domain/tts/tts_voices.dart';
@@ -20,7 +22,63 @@ class _MemorySettingsRepository implements ISettingsRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _DelayedVoiceStore implements TtsVoicePreferencesStore {
+  final firstSave = Completer<void>();
+  int writes = 0;
+  TtsVoicePreferences? persisted;
+  @override
+  Future<void> save(TtsVoicePreferences preferences) async {
+    if (++writes == 1) await firstSave.future;
+    persisted = preferences;
+  }
+}
+
 void main() {
+  test('should not overwrite a newer binding when an earlier write is delayed',
+      () async {
+    final persistence = _DelayedVoiceStore();
+    final bindings = TtsVoiceBindingStore(store: persistence);
+    addTearDown(bindings.dispose);
+    final first = bindings.setBinding('a', 'family:s1');
+    final second = bindings.setBinding('b', 'system');
+    await Future<void>.delayed(Duration.zero);
+    persistence.firstSave.complete();
+    await Future.wait([first, second]);
+    expect(persistence.persisted?.bindingFor('a'), 'family:s1');
+    expect(persistence.persisted?.bindingFor('b'), 'system');
+  });
+
+  test(
+      'should keep good fields and explicit system choices among malformed entries',
+      () {
+    final prefs = parseTtsVoicePreferences({
+      TtsVoiceSettingKeys.preferences:
+          '{"schema":1,"mode":"neural","autoAssignVoices":42,"future":true}',
+      TtsVoiceSettingKeys.bindings:
+          '{"schema":1,"bindings":{"a":"system","b":7,"c":"family:s3","d":""}}',
+      TtsVoiceSettingKeys.narrator: '{"schema":1,"voiceId":false}',
+      TtsVoiceSettingKeys.defaultCharacter: '{"schema":1,"voiceId":"system"}',
+    });
+    expect(prefs.mode, TtsBackendKind.neural);
+    expect(prefs.autoAssignVoices, isTrue);
+    expect(prefs.bindingsByResourceId, {'a': 'system', 'c': 'family:s3'});
+    expect(prefs.narratorVoiceId, isNull);
+    expect(prefs.defaultCharacterVoiceId, 'system');
+  });
+  test('should isolate unsupported schemas from otherwise valid settings', () {
+    for (final schema in ['0', '2', '"unknown"', 'null']) {
+      final prefs = parseTtsVoicePreferences({
+        TtsVoiceSettingKeys.preferences: '{"schema":$schema,"mode":"neural"}',
+        TtsVoiceSettingKeys.bindings:
+            '{"schema":1,"bindings":{"a":"family:s3"}}',
+        TtsVoiceSettingKeys.narrator: '{"schema":1,"voiceId":"system"}',
+      });
+      expect(prefs.mode, TtsBackendKind.system);
+      expect(prefs.bindingFor('a'), 'family:s3');
+      expect(prefs.narratorVoiceId, 'system');
+    }
+  });
+
   test('missing keys fall back to system mode defaults', () {
     final prefs = parseTtsVoicePreferences(const <String, String>{});
     expect(prefs.mode, TtsBackendKind.system);

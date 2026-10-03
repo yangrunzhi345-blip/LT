@@ -196,6 +196,9 @@ class FakeTtsDownloadClient implements TtsDownloadClient {
 
   @override
   Future<void> close() async {}
+
+  @override
+  void cancel(File destination) {}
 }
 
 /// Fake extractor that materializes the files a model install expects.
@@ -221,6 +224,7 @@ class FakeTtsArchiveExtractor implements TtsArchiveExtractor {
     await File('${root.path}/tokens.txt').writeAsString('tokens');
     await File('${root.path}/voices.bin').writeAsString('voices');
     await Directory('${root.path}/espeak-ng-data').create(recursive: true);
+    await File('${root.path}/espeak-ng-data/data').writeAsString('data');
     await File('${root.path}/model.onnx').writeAsString('model');
     await File('${root.path}/model.int8.onnx').writeAsString('model-int8');
   }

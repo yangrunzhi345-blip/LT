@@ -51,6 +51,9 @@ class TtsVoiceDescriptor {
 class VoiceBinding {
   const VoiceBinding({required this.resourceId, required this.voiceId});
 
+  /// Explicit system choice; absent bindings still follow default/auto casting.
+  static const String systemVoiceId = 'system';
+
   final String resourceId;
   final String voiceId;
 

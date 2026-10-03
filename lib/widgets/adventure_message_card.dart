@@ -2,6 +2,9 @@ import "../core/theme/app_colors.dart";
 import 'package:flutter/material.dart';
 import '../core/widgets/custom_attribute_icon.dart';
 import '../core/widgets/app_svg_icon.dart';
+import '../core/widgets/narrative_paragraph_read_view.dart';
+import '../domain/read_aloud/read_aloud_contracts.dart';
+import '../domain/tts/speech_plan.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/generated/app_localizations_zh.dart';
 import '../models/adventure_response.dart';
@@ -13,6 +16,8 @@ class AdventureMessageCard extends StatelessWidget {
   final void Function(String option)? onOptionTap;
   final double fontSize;
   final String? defaultCharacterName;
+  final String? readSessionId;
+  final NarrativeSpeakerContext speakerContext;
 
   const AdventureMessageCard({
     super.key,
@@ -21,6 +26,8 @@ class AdventureMessageCard extends StatelessWidget {
     this.onOptionTap,
     this.fontSize = 14.0,
     this.defaultCharacterName,
+    this.readSessionId,
+    this.speakerContext = const NarrativeSpeakerContext.empty(),
   });
 
   @override
@@ -65,15 +72,25 @@ class AdventureMessageCard extends StatelessWidget {
               ),
 
             // 1. 叙事正文
-            for (final paragraph in response.narrative)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  paragraph,
-                  style: TextStyle(
-                      fontSize: fontSize, height: 1.8, color: textColor),
+            if (readSessionId case final sessionId?)
+              NarrativeParagraphReadView(
+                baseId: sessionId,
+                text: AdventureResponse.streamingDisplayText(jsonContent),
+                sourceType: ReadAloudSourceType.chat,
+                speakerContext: speakerContext,
+                textStyle: TextStyle(
+                    fontSize: fontSize, height: 1.8, color: textColor),
+              )
+            else
+              for (final paragraph in response.narrative)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    paragraph,
+                    style: TextStyle(
+                        fontSize: fontSize, height: 1.8, color: textColor),
+                  ),
                 ),
-              ),
 
             // 2. 监测状态（默认展开，绑定角色）
             if (response.customStatus.isNotEmpty) ...[

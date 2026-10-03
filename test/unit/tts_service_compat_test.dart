@@ -61,6 +61,7 @@ void main() {
 
       expect(engine.spokenTexts, ['灯塔亮了。']);
       expect(controller.state.sourceType, ReadAloudSourceType.chat);
+      expect(controller.state.sourceId, 'legacy-tts');
     });
 
     test('stripForSpeech 与全局清洗器行为一致（只有一套规则）', () {

@@ -155,4 +155,67 @@ void main() {
     expect(resolution.target, isNull);
     expect(resolution.errorCode, TtsErrorCode.modelUnavailable);
   });
+
+  group('compatible model priority', () {
+    test('should prefer FP32 independently of catalog ordering', () {
+      final models = TtsModelCatalog().models;
+      for (final order in [models, models.reversed.toList()]) {
+        final dualCatalog = TtsModelCatalog(models: order);
+        final ids = models.map((m) => m.modelId).toSet();
+        TtsModelDescriptor? resolved() =>
+            dualCatalog.modelForVoice('kokoro-v1_1:s102',
+                isInstalled: (m) => ids.contains(m.modelId));
+        expect(resolved()?.modelId, 'kokoro-multi-lang-v1_1');
+        ids.remove('kokoro-multi-lang-v1_1');
+        expect(resolved()?.modelId, 'kokoro-int8-multi-lang-v1_1');
+        ids.add('kokoro-multi-lang-v1_1');
+        expect(resolved()?.modelId, 'kokoro-multi-lang-v1_1');
+        ids.remove('kokoro-int8-multi-lang-v1_1');
+        expect(resolved()?.modelId, 'kokoro-multi-lang-v1_1');
+      }
+    });
+    test('should reject malformed and out of range voice ids', () {
+      final defaults = TtsModelCatalog();
+      for (final sid in ['-1', '103', '999', '0:s1', '1junk']) {
+        expect(defaults.voiceById('kokoro-v1_1:s$sid'), isNull);
+      }
+      expect(defaults.voiceById('kokoro-v1_1:s0')?.speakerId, 0);
+      expect(defaults.voiceById('kokoro-v1_1:s102')?.speakerId, 102);
+    });
+  });
+
+  test('should reserve explicit voices during automatic collision avoidance',
+      () {
+    final resolver = resolverWith(const TtsVoicePreferences(
+      mode: TtsBackendKind.neural,
+      bindingsByResourceId: {'b': 'family:s0'},
+    ));
+    resolver.beginSession(['b', 'a']);
+    expect(
+        resolver
+            .resolve(role: SpeechRole.dialogue, speakerResourceId: 'b')
+            .target
+            ?.voiceId,
+        'family:s0');
+    expect(
+        resolver
+            .resolve(role: SpeechRole.dialogue, speakerResourceId: 'a')
+            .target
+            ?.voiceId,
+        isNot('family:s0'));
+  });
+
+  test('explicit system binding should override automatic assignment', () {
+    final resolver = resolverWith(const TtsVoicePreferences(
+      mode: TtsBackendKind.neural,
+      narratorVoiceId: 'family:s1',
+      defaultCharacterVoiceId: 'family:s2',
+      bindingsByResourceId: {'character': 'system'},
+    ));
+    resolver.beginSession(['character']);
+    final resolution = resolver.resolve(
+        role: SpeechRole.dialogue, speakerResourceId: 'character');
+    expect(resolution.isSystem, isTrue);
+    expect(resolution.fallback, isFalse);
+  });
 }

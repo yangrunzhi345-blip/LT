@@ -13,6 +13,7 @@ import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/read_aloud_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/tts_casting_fixture.dart';
 
 void main() {
   final l10n = AppLocalizationsZh();
@@ -52,6 +53,38 @@ void main() {
   }
 
   Finder iconButton() => find.byType(IconButton);
+
+  group('fallback notice', () {
+    testWidgets(
+        'should show once per active session despite mutable controller',
+        (tester) async {
+      final fixture = TtsCastingFixture(installed: false);
+      addTearDown(fixture.dispose);
+      final controller = fixture.controller;
+      await tester.pumpWidget(app(
+          controller,
+          const Column(children: [
+            AppReadAloudControls(sourceId: 'active'),
+            AppReadAloudControls(sourceId: 'other'),
+          ])));
+      await controller.play(
+          sessionId: 'active',
+          sourceType: ReadAloudSourceType.chat,
+          sources: const [
+            ReadAloudSource(id: 'p0', text: '第一段。'),
+            ReadAloudSource(id: 'p1', text: '第二段。')
+          ]);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.readAloudVoiceFallbackNotice), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await controller.next();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.readAloudVoiceFallbackNotice), findsNothing);
+      expect(controller.state.currentChunkId, 'p1');
+      expect(tester.takeException(), isNull);
+    });
+  });
 
   group('AppReadAloudButton', () {
     testWidgets('点击开始朗读，再点击停止，并且状态来自全局 Authority', (tester) async {

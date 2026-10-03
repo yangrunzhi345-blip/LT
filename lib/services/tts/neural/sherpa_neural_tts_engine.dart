@@ -7,92 +7,69 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import '../../../domain/tts/tts_errors.dart';
 import 'neural_tts_engine.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Worker isolate
-//
-// sherpa-onnx inference is synchronous native work. To keep the Flutter UI
-// responsive it runs entirely inside this dedicated worker isolate, which owns
-// the loaded model for the lifetime of the session.
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Entry point of the neural TTS worker isolate.
-///
-/// Must be top-level so it can be used with [Isolate.spawn]. Each isolate has
-/// its own FFI binding state, so bindings are initialized here.
+/// Serial worker owning the native model, including its acknowledged teardown.
 void sherpaTtsWorkerEntry(SendPort mainPort) {
-  final commandPort = ReceivePort();
-  mainPort.send(<String, Object?>{
-    'type': 'handshake',
-    'port': commandPort.sendPort,
-  });
-
+  final commands = ReceivePort();
+  mainPort
+      .send(<String, Object?>{'type': 'handshake', 'port': commands.sendPort});
   sherpa.OfflineTts? tts;
   String? loadedKey;
   var bindingsReady = false;
+  var tail = Future<void>.value();
 
-  Future<sherpa.OfflineTts> ensureBindings() async {
-    if (!bindingsReady) {
-      await sherpa.initBindingsAsync();
-      bindingsReady = true;
-    }
-    final current = tts;
-    if (current == null) {
-      throw StateError('model not loaded');
-    }
-    return current;
-  }
-
-  commandPort.listen((message) async {
+  Future<void> handle(Object? message) async {
     if (message is! Map) return;
-    final type = message['type'];
     final requestId = message['requestId'];
     try {
-      switch (type) {
+      switch (message['type']) {
         case 'load':
           if (!bindingsReady) {
             await sherpa.initBindingsAsync();
             bindingsReady = true;
           }
           final key = message['cacheKey'] as String;
-          if (tts != null && loadedKey == key) {
-            mainPort.send(<String, Object?>{
-              'type': 'loaded',
-              'requestId': requestId,
-              'ok': true,
-            });
-            return;
-          }
-          tts?.free();
-          tts = null;
-          final config = sherpa.OfflineTtsConfig(
-            model: sherpa.OfflineTtsModelConfig(
-              kokoro: sherpa.OfflineTtsKokoroModelConfig(
-                model: message['modelPath'] as String,
-                voices: message['voicesPath'] as String,
-                tokens: message['tokensPath'] as String,
-                dataDir: message['dataDirPath'] as String,
-                lexicon: message['lexicon'] as String? ?? '',
+          if (tts == null || loadedKey != key) {
+            tts?.free();
+            tts = null;
+            loadedKey = null;
+            tts = sherpa.OfflineTts(sherpa.OfflineTtsConfig(
+              model: sherpa.OfflineTtsModelConfig(
+                kokoro: sherpa.OfflineTtsKokoroModelConfig(
+                  model: message['modelPath'] as String,
+                  voices: message['voicesPath'] as String,
+                  tokens: message['tokensPath'] as String,
+                  dataDir: message['dataDirPath'] as String,
+                  lexicon: message['lexicon'] as String? ?? '',
+                ),
+                numThreads: 2,
+                debug: false,
               ),
-              numThreads: 2,
-              debug: false,
-            ),
-          );
-          tts = sherpa.OfflineTts(config);
-          loadedKey = key;
+            ));
+            loadedKey = key;
+          }
           mainPort.send(<String, Object?>{
             'type': 'loaded',
             'requestId': requestId,
-            'ok': true,
+            'speakerCount': tts!.numSpeakers
           });
         case 'synth':
-          final engine = await ensureBindings();
+          final engine = tts;
+          if (engine == null) {
+            throw const TtsException(TtsErrorCode.modelUnavailable);
+          }
+          if (message['cacheKey'] != loadedKey) {
+            throw const TtsException(TtsErrorCode.modelUnavailable);
+          }
+          final sid = message['sid'] as int;
+          if (sid < 0 || sid >= engine.numSpeakers) {
+            throw const TtsException(TtsErrorCode.voiceUnavailable);
+          }
           final audio = engine.generateWithConfig(
             text: message['text'] as String,
             config: sherpa.OfflineTtsGenerationConfig(
-              sid: message['sid'] as int? ?? 0,
-              speed: (message['speed'] as num?)?.toDouble() ?? 1.0,
-              silenceScale:
-                  (message['silenceScale'] as num?)?.toDouble() ?? 0.2,
+              sid: sid,
+              speed: (message['speed'] as num).toDouble(),
+              silenceScale: (message['silenceScale'] as num).toDouble(),
             ),
           );
           final samples = audio.samples;
@@ -101,157 +78,226 @@ void sherpaTtsWorkerEntry(SendPort mainPort) {
             'requestId': requestId,
             'sampleRate': audio.sampleRate,
             'samples': TransferableTypedData.fromList(<Uint8List>[
-              samples.buffer.asUint8List(
-                samples.offsetInBytes,
-                samples.lengthInBytes,
-              ),
+              samples.buffer
+                  .asUint8List(samples.offsetInBytes, samples.lengthInBytes),
             ]),
           });
         case 'dispose':
           tts?.free();
           tts = null;
           loadedKey = null;
-          commandPort.close();
+          mainPort.send(
+              <String, Object?>{'type': 'disposed', 'requestId': requestId});
+          commands.close();
         default:
-          mainPort.send(<String, Object?>{
-            'type': 'error',
-            'requestId': requestId,
-            'error': 'unknown command',
-          });
+          throw StateError('unknown worker command');
       }
     } catch (error) {
       mainPort.send(<String, Object?>{
         'type': 'error',
         'requestId': requestId,
         'error': error.toString(),
+        'code': error is TtsException
+            ? error.code.name
+            : TtsErrorCode.neuralGenerationFailed.name
       });
     }
-  });
+  }
+
+  // An async stream listener alone does not serialize commands: binding startup
+  // yields, allowing a second load to allocate and overwrite the first model.
+  commands.listen((message) => tail = tail.then((_) => handle(message)));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main-isolate facade
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// sherpa-onnx implementation of [NeuralTtsEngine].
-///
-/// This file is the single place in the app allowed to import
-/// `package:sherpa_onnx`. An architecture test enforces the boundary.
+/// Supervises the native worker and rejects results from cancelled operations.
 class SherpaOnnxNeuralTtsEngine implements NeuralTtsEngine {
-  SherpaOnnxNeuralTtsEngine({Duration? synthesisTimeout})
-      : _synthesisTimeout = synthesisTimeout ?? const Duration(seconds: 90);
+  SherpaOnnxNeuralTtsEngine(
+      {Duration? synthesisTimeout,
+      Duration? shutdownTimeout,
+      void Function(SendPort)? workerEntry})
+      : _synthesisTimeout = synthesisTimeout ?? const Duration(seconds: 90),
+        _shutdownTimeout = shutdownTimeout ??
+            (synthesisTimeout ?? const Duration(seconds: 90)) +
+                const Duration(seconds: 125),
+        _workerEntry = workerEntry ?? sherpaTtsWorkerEntry;
 
   final Duration _synthesisTimeout;
-
+  final Duration _shutdownTimeout;
+  final void Function(SendPort) _workerEntry;
   Isolate? _isolate;
   ReceivePort? _fromWorker;
+  ReceivePort? _errors;
+  ReceivePort? _exits;
   SendPort? _toWorker;
-  final Completer<SendPort> _handshake = Completer<SendPort>();
+  Completer<void>? _handshake;
+  Future<void>? _starting;
+  Future<void> _loads = Future<void>.value();
+  Future<void>? _disposing;
   final Map<int, _PendingRequest> _pending = <int, _PendingRequest>{};
   int _nextRequestId = 1;
   int _generation = 0;
+  int _workerGeneration = 0;
   bool _disposed = false;
-  String? _loadedModelId;
-  Object? _lastError;
+  NeuralTtsModelPaths? _loadedPaths;
+  int? _speakerCount;
 
   @override
-  bool get isInitialized => _isolate != null && _loadedModelId != null;
-
+  bool get isInitialized => _toWorker != null;
   @override
-  String? get loadedModelId => _loadedModelId;
+  String? get loadedModelId => _loadedPaths?.modelId;
 
   @override
   Future<void> initialize() async {
-    if (_disposed) return;
-    if (_isolate != null) {
-      await _handshake.future;
-      return;
+    if (_disposed) throw const TtsException(TtsErrorCode.cancelled);
+    if (_toWorker != null) return;
+    final starting = _starting ??= _startWorker();
+    try {
+      await starting;
+    } finally {
+      if (identical(starting, _starting)) _starting = null;
     }
+  }
+
+  Future<void> _startWorker() async {
+    final generation = ++_workerGeneration;
     final receive = ReceivePort();
+    final errors = ReceivePort();
+    final exits = ReceivePort();
+    final handshake = Completer<void>();
+    // Dispose can cancel during Isolate.spawn, before its await installs the
+    // handshake error listener. Keep this early completion observed as well.
+    handshake.future.ignore();
     _fromWorker = receive;
-    receive.listen(_handleMessage);
+    _errors = errors;
+    _exits = exits;
+    _handshake = handshake;
+    receive.listen((message) {
+      if (generation == _workerGeneration) _handleMessage(message);
+    });
+    void failed(String reason) {
+      if (generation != _workerGeneration) return;
+      _invalidateWorker(
+          TtsException(TtsErrorCode.neuralRuntimeUnavailable, detail: reason));
+    }
+
+    errors.listen((error) => failed('worker error: $error'));
+    exits.listen((_) => failed('worker exited'));
     try {
-      _isolate = await Isolate.spawn(
-        sherpaTtsWorkerEntry,
-        receive.sendPort,
-        debugName: 'lt-neural-tts',
-      );
+      final isolate = await Isolate.spawn(_workerEntry, receive.sendPort,
+          onError: errors.sendPort,
+          onExit: exits.sendPort,
+          errorsAreFatal: true,
+          debugName: 'lt-neural-tts');
+      if (_disposed || generation != _workerGeneration) {
+        isolate.kill(priority: Isolate.immediate);
+        throw TtsException(_disposed
+            ? TtsErrorCode.cancelled
+            : TtsErrorCode.neuralRuntimeUnavailable);
+      }
+      _isolate = isolate;
+      await handshake.future.timeout(const Duration(seconds: 20));
     } catch (error) {
-      _lastError = error;
-      throw TtsException(
-        TtsErrorCode.neuralRuntimeUnavailable,
-        cause: error,
-      );
+      if (generation == _workerGeneration) {
+        _invalidateWorker(error is TtsException
+            ? error
+            : TtsException(TtsErrorCode.neuralRuntimeUnavailable,
+                cause: error));
+      }
+      // _invalidateWorker may complete the handshake with an error before spawn
+      // returns. Observe it even if this branch did not reach its await above.
+      await handshake.future.catchError((Object _) {});
+      rethrow;
     }
-    await _handshake.future.timeout(
-      const Duration(seconds: 20),
-      onTimeout: () => throw const TtsException(
-        TtsErrorCode.neuralRuntimeUnavailable,
-        detail: 'worker handshake timeout',
-      ),
-    );
   }
 
   @override
-  Future<void> loadModel(NeuralTtsModelPaths paths) async {
-    if (_disposed) return;
-    if (_loadedModelId == paths.modelId) return;
-    await initialize();
-    final requestId = _nextRequestId++;
-    final pending = _PendingRequest('load', _generation);
-    _pending[requestId] = pending;
-    _send(<String, Object?>{
-      'type': 'load',
-      'requestId': requestId,
-      'cacheKey': paths.cacheKey,
-      'modelPath': paths.modelPath,
-      'voicesPath': paths.voicesPath,
-      'tokensPath': paths.tokensPath,
-      'dataDirPath': paths.dataDirPath,
-      'lexicon': paths.lexicon,
+  Future<void> loadModel(NeuralTtsModelPaths paths) {
+    final generation = _generation;
+    final loading = _loads.then((_) async {
+      _checkGeneration(generation);
+      if (_loadedPaths?.cacheKey == paths.cacheKey) return;
+      await initialize();
+      _checkGeneration(generation);
+      _loadedPaths = null;
+      _speakerCount = null;
+      await _request(
+          'load',
+          <String, Object?>{
+            'cacheKey': paths.cacheKey,
+            'modelPath': paths.modelPath,
+            'voicesPath': paths.voicesPath,
+            'tokensPath': paths.tokensPath,
+            'dataDirPath': paths.dataDirPath,
+            'lexicon': paths.lexicon,
+          },
+          const Duration(seconds: 120));
+      _checkGeneration(generation);
+      _loadedPaths = paths;
+      _speakerCount ??= paths.speakerCount;
     });
-    await pending.completer.future.timeout(
-      const Duration(seconds: 120),
-      onTimeout: () {
-        _pending.remove(requestId);
-        throw const TtsException(
-          TtsErrorCode.neuralRuntimeUnavailable,
-          detail: 'model load timeout',
-        );
-      },
-    );
-    _loadedModelId = paths.modelId;
+    // Observe failure without poisoning the serialization tail for future loads.
+    _loads = loading.then((_) {}, onError: (Object _, StackTrace __) {});
+    return loading;
+  }
+
+  void _checkGeneration(int generation) {
+    if (_disposed || generation != _generation) {
+      throw const TtsException(TtsErrorCode.cancelled);
+    }
   }
 
   @override
-  Future<NeuralSynthesisResult> synthesize({
-    required String text,
-    required int speakerId,
-    double speed = 1.0,
-    double silenceScale = 0.2,
-  }) async {
-    if (_disposed || text.trim().isEmpty) return NeuralSynthesisResult.empty;
-    if (_loadedModelId == null) {
-      throw const TtsException(TtsErrorCode.modelUnavailable);
+  Future<NeuralSynthesisResult> synthesize(
+      {required String text,
+      required int speakerId,
+      double speed = 1,
+      double silenceScale = 0.2}) async {
+    if (_disposed) throw const TtsException(TtsErrorCode.cancelled);
+    if (text.trim().isEmpty) return NeuralSynthesisResult.empty;
+    final paths = _loadedPaths;
+    if (paths == null) throw const TtsException(TtsErrorCode.modelUnavailable);
+    if (speakerId < 0 || speakerId >= (_speakerCount ?? paths.speakerCount)) {
+      throw const TtsException(TtsErrorCode.voiceUnavailable);
     }
+    if (!speed.isFinite ||
+        speed <= 0 ||
+        !silenceScale.isFinite ||
+        silenceScale < 0) {
+      throw const TtsException(TtsErrorCode.neuralGenerationFailed);
+    }
+    return _request(
+        'synth',
+        <String, Object?>{
+          'text': text,
+          'cacheKey': paths.cacheKey,
+          'sid': speakerId,
+          'speed': speed,
+          'silenceScale': silenceScale
+        },
+        _synthesisTimeout);
+  }
+
+  Future<NeuralSynthesisResult> _request(
+      String kind, Map<String, Object?> arguments, Duration timeout) async {
     final requestId = _nextRequestId++;
-    final pending = _PendingRequest('synth', _generation);
+    final pending = _PendingRequest(kind, _generation);
     _pending[requestId] = pending;
-    _send(<String, Object?>{
-      'type': 'synth',
-      'requestId': requestId,
-      'text': text,
-      'sid': speakerId,
-      'speed': speed,
-      'silenceScale': silenceScale,
-    });
     try {
-      return await pending.completer.future.timeout(_synthesisTimeout);
-    } on TimeoutException {
-      throw const TtsException(
-        TtsErrorCode.neuralGenerationFailed,
-        detail: 'synthesis timeout',
-      );
+      final port = _toWorker;
+      if (port == null) {
+        throw const TtsException(TtsErrorCode.neuralRuntimeUnavailable);
+      }
+      port.send(<String, Object?>{
+        'type': kind,
+        'requestId': requestId,
+        ...arguments
+      });
+      return await pending.completer.future.timeout(timeout);
+    } on TimeoutException catch (error) {
+      final failure = TtsException(TtsErrorCode.neuralRuntimeUnavailable,
+          detail: '$kind timeout', cause: error);
+      _invalidateWorker(failure);
+      throw failure;
     } finally {
       _pending.remove(requestId);
     }
@@ -259,115 +305,115 @@ class SherpaOnnxNeuralTtsEngine implements NeuralTtsEngine {
 
   @override
   Future<void> stop() async {
-    // Native inference cannot be aborted mid-call without threads inside the
-    // worker, so we discard its result instead: the generation bump makes any
-    // late audio resolve to nothing.
     _generation++;
     for (final entry in _pending.entries.toList()) {
-      if (entry.value.kind == 'synth' && !entry.value.completer.isCompleted) {
-        entry.value.completer.complete(NeuralSynthesisResult.empty);
-        _pending.remove(entry.key);
+      if (entry.value.kind == 'dispose') continue;
+      if (!entry.value.completer.isCompleted) {
+        entry.value.completer
+            .completeError(const TtsException(TtsErrorCode.cancelled));
       }
+      _pending.remove(entry.key);
     }
   }
 
   @override
-  Future<void> dispose() async {
-    if (_disposed) return;
+  Future<void> dispose() => _disposing ??= _disposeWorker();
+
+  Future<void> _disposeWorker() async {
     _disposed = true;
-    _generation++;
-    _send(<String, Object?>{'type': 'dispose'});
-    _isolate?.kill(priority: Isolate.immediate);
-    _isolate = null;
-    _fromWorker?.close();
-    _fromWorker = null;
-    _toWorker = null;
-    _failAllPending('disposed');
+    await stop();
+    final starting = _starting;
+    if (starting != null) {
+      _invalidateWorker(const TtsException(TtsErrorCode.cancelled));
+      try {
+        await starting;
+      } on TtsException {
+        // Startup cancellation already closes ports and its spawned isolate.
+      }
+    }
+    try {
+      if (_toWorker != null) {
+        await _request('dispose', const <String, Object?>{}, _shutdownTimeout);
+      }
+    } on TtsException {
+      // A dead or hung worker is forcibly shut down after bounded graceful free.
+    } finally {
+      _invalidateWorker(const TtsException(TtsErrorCode.cancelled));
+    }
   }
 
-  void _send(Map<String, Object?> message) {
-    final port = _toWorker;
-    if (port == null) {
-      throw TtsException(
-        TtsErrorCode.neuralRuntimeUnavailable,
-        detail:
-            'worker unavailable${_lastError == null ? '' : ': $_lastError'}',
-      );
+  void _invalidateWorker(TtsException error) {
+    _workerGeneration++;
+    _isolate?.kill(priority: Isolate.immediate);
+    _isolate = null;
+    _toWorker = null;
+    _loadedPaths = null;
+    _speakerCount = null;
+    _fromWorker?.close();
+    _errors?.close();
+    _exits?.close();
+    _fromWorker = null;
+    _errors = null;
+    _exits = null;
+    final handshake = _handshake;
+    _handshake = null;
+    if (handshake != null && !handshake.isCompleted) {
+      handshake.completeError(error);
     }
-    port.send(message);
+    for (final pending in _pending.values) {
+      if (!pending.completer.isCompleted) {
+        pending.completer.completeError(error);
+      }
+    }
+    _pending.clear();
   }
 
   void _handleMessage(Object? message) {
     if (message is! Map) return;
-    final type = message['type'];
-    if (type == 'handshake') {
+    if (message['type'] == 'handshake') {
       _toWorker = message['port'] as SendPort?;
-      if (!_handshake.isCompleted && _toWorker != null) {
-        _handshake.complete(_toWorker);
+      if (_toWorker != null && _handshake?.isCompleted == false) {
+        _handshake!.complete();
       }
       return;
     }
-    final requestId = message['requestId'];
-    if (requestId is! int) return;
-    final pending = _pending[requestId];
-    switch (type) {
+    final pending = _pending[message['requestId']];
+    if (pending == null || pending.completer.isCompleted) return;
+    if (pending.generation != _generation && pending.kind != 'dispose') {
+      pending.completer
+          .completeError(const TtsException(TtsErrorCode.cancelled));
+      return;
+    }
+    switch (message['type']) {
       case 'loaded':
-        pending?.completer.complete(NeuralSynthesisResult.empty);
+        _speakerCount = message['speakerCount'] as int?;
+        pending.completer.complete(NeuralSynthesisResult.empty);
+      case 'disposed':
+        pending.completer.complete(NeuralSynthesisResult.empty);
       case 'audio':
         final data = message['samples'];
-        if (pending == null || pending.completer.isCompleted) return;
-        if (pending.generation != _generation) {
-          // Late result from a stopped generation: drop it.
-          pending.completer.complete(NeuralSynthesisResult.empty);
-          return;
-        }
         final bytes = data is TransferableTypedData
             ? data.materialize().asUint8List()
             : Uint8List(0);
-        final samples = Float32List.view(
-          bytes.buffer,
-          bytes.offsetInBytes,
-          bytes.lengthInBytes ~/ 4,
-        );
-        pending.completer.complete(
-          NeuralSynthesisResult(
-            samples: samples,
-            sampleRate: (message['sampleRate'] as int?) ?? 0,
-          ),
-        );
+        pending.completer.complete(NeuralSynthesisResult(
+            samples: Float32List.view(
+                bytes.buffer, bytes.offsetInBytes, bytes.lengthInBytes ~/ 4),
+            sampleRate: message['sampleRate'] as int? ?? 0));
       case 'error':
-        pending?.completer.completeError(
-          TtsException(
-            TtsErrorCode.neuralGenerationFailed,
-            detail: message['error'] as String?,
-          ),
-        );
-    }
-  }
-
-  void _failAllPending(String reason) {
-    for (final pending in _pending.values) {
-      if (pending.completer.isCompleted) continue;
-      if (pending.kind == 'synth') {
-        pending.completer.complete(NeuralSynthesisResult.empty);
-      } else {
+        final name = message['code'];
+        final code = TtsErrorCode.values
+                .where((value) => value.name == name)
+                .firstOrNull ??
+            TtsErrorCode.neuralGenerationFailed;
         pending.completer.completeError(
-          TtsException(
-            TtsErrorCode.neuralRuntimeUnavailable,
-            detail: reason,
-          ),
-        );
-      }
+            TtsException(code, detail: message['error'] as String?));
     }
-    _pending.clear();
   }
 }
 
 class _PendingRequest {
   _PendingRequest(this.kind, this.generation);
-
   final String kind;
   final int generation;
-  final Completer<NeuralSynthesisResult> completer =
-      Completer<NeuralSynthesisResult>();
+  final completer = Completer<NeuralSynthesisResult>();
 }

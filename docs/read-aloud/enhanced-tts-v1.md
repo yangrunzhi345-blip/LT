@@ -21,7 +21,7 @@ UI / ChatEngineHost / Resource Studio
         │  (play / playText / toggle)
         ▼
 ReadAloudController                ← single playback state machine + run token
-        │  resolve voice → selectVoice(target) → speak(text)
+        │  resolve voice → speakWithVoice(text, immutable target)
         ▼
 RoutedReadAloudEngine implements ReadAloudEngine (and ReadAloudVoiceAwareEngine)
      ↙                                   ↘
@@ -33,9 +33,13 @@ System backend                     Neural backend
   engines and existing test fakes do not implement it, so they are unchanged.
 - The routing engine lazily creates the neural engine and audio player on first
   neural use, so building the runtime never touches native/platform audio.
-- Every neural failure degrades to the system backend **without interrupting the
-  current session**. The authority surfaces at most one localized notice per
+- Neural failures degrade to an available system backend within the current
+  session. If no system backend is available, the authority reports an error.
+  The authority surfaces at most one localized notice per
   session (`ReadAloudState.voiceFallbackCode`).
+- Session and utterance tokens reject cancelled inference, delayed callbacks and
+  superseded next/previous/stop operations. Routing stops both delegated backends
+  before replacement; failures are remembered only within the current session.
 
 ## 3. Domain model (pure Dart, `lib/domain/tts/`)
 
@@ -68,14 +72,30 @@ vs fp32 v1.1 share the same 103 voices).
   extract, install, delete, disk usage). It cannot control playback and never
   downloads on construction/refresh.
 - Install pipeline: `download → verify (size + sha256) → extract to staging →
-  validate required files → locate model root → atomic move → write manifest.json`.
+  validate nonempty required files/data/lexicons → write and flush manifest in
+  staging → atomic directory publication`. The manifest records the complete
+  extracted file-size inventory. Refresh checks identity, version, voice family,
+  integrity metadata and the inventory; older manifests without an inventory
+  retain required-file validation. Invalid trees are unavailable.
   A `.part` file is never treated as installed.
 - Download security: `package:http` streaming (no `wget`/`curl`/`tar` shell-out),
   Range resume when the server honours it (falls back to a full restart when it
-  does not), cancellation checks between chunks, and typed failures.
+  does not). A 206 response must match the requested offset, final byte and
+  catalog total before append. Oversized partial files restart; completed partial
+  files undergo full verification without a redundant HTTP request. HTTP requests
+  are abortable, response inactivity is bounded, and storage exhaustion has a
+  typed cross-platform OS-error mapping.
 - Extraction uses `package:archive` (BZip2 + TAR streaming) with strict path
   validation: absolute paths, drive letters and `..` are rejected, and the
   resolved canonical path must stay inside the staging root.
+- TAR payloads remain file-backed with bounded stream buffers; decompression and
+  writes execute on a separate isolate. Links, device/FIFO headers and unsafe
+  Windows paths are rejected. No shell extractor is used.
+- Per-model ownership deduplicates downloads and serializes cancellation,
+  immediate retry and deletion. Cleanup waits for writers/extraction; refresh
+  cannot replace an active operation's status. Startup cleans known unowned
+  staging leftovers and preserves resumable `.part` files. Deleting an active
+  model stops/releases its delegated runtime before filesystem deletion.
 - Storage layout under the app-support directory:
 
 ```
@@ -101,11 +121,21 @@ explicit per-resource binding
 ```
 
 - Narrator is a **first-class** voice; unattributed dialogue and narration use it.
+- Compatible v1.1 models use an explicit deterministic priority: installed FP32
+  before installed INT8, then stable model-id ordering. Deletion falls back to
+  the remaining compatible model; reinstall restores priority, with unchanged
+  resource voice bindings. A future version requires its own compatibility review.
 - Auto assignment uses **FNV-1a (stable hash)**, not Dart `hashCode`, and applies
   per-plan collision avoidance so co-occurring speakers get different voices
   when the pool allows. Gender is never used.
+- Explicitly bound voices are reserved from the automatic pool when possible.
+  Selecting System for a resource persists a distinct system sentinel; Auto
+  clears the binding and follows the configured default/assignment policy.
 - Unresolved/ambiguous speakers fall back to the narrator — the planner never
   guesses a character.
+- Attribution requires a local name plus speech verb/colon, respects English name
+  boundaries and rejects duplicate names/aliases. Distant mentions cannot assign
+  an unknown speaker; interrupted dialogue retains its local attribution.
 
 ## 6. Speech planner (`SpeechPlanner`)
 
@@ -118,6 +148,8 @@ explicit per-resource binding
   exactly.
 - Chat auto-read supplies the current Adventure roster
   (`buildAdventureSpeakerContext`), so dialogue can use per-character voices.
+- Manual full/paragraph reading shares this context, including structured
+  Adventure message rendering. Repeated paragraphs use positional ids.
 
 ## 7. Reading UX
 
@@ -152,6 +184,8 @@ Parsing is defensive: missing/malformed/newer JSON falls back per-field and can
 never break startup or discard other settings. Deleting a model **keeps** voice
 bindings (they are a separate store); the bound voice simply shows as
 unavailable until a compatible model is installed again.
+Full voice-setting snapshots are saved in order so an older async SQLite write
+cannot overwrite a later selection.
 
 ## 9. Platform status
 
@@ -163,10 +197,23 @@ unavailable until a compatible model is installed again.
 | macOS | flutter_tts | sherpa-onnx + audioplayers |
 | iOS | flutter_tts | sherpa-onnx + audioplayers |
 
-Neural inference runs on a dedicated worker isolate (each isolate calls
+Neural inference runs on a supervised dedicated worker isolate (each isolate calls
 `sherpa-onnx` bindings itself), the loaded model is cached, and switching
-speakers of the same model does not reload it. Native build/run smoke tests were
-NOT RUN in the authoring environment (see the task report for the explicit list).
+speakers of the same model does not reload it. Commands are serialized, worker
+exit/errors invalidate pending requests, and both descriptor/runtime speaker
+bounds are checked before inference. Model paths participate in cache identity.
+Normal shutdown acknowledges native `free()` before terminating the isolate;
+hung native work has a bounded forced shutdown fallback.
+
+Audio owns one temporary mono 16-bit PCM WAV per source and a delegated player.
+Completion, replacement, stop, errors and disposal release the player and file.
+Delayed audio errors fallback through the same global controller.
+
+The final independent audit includes production Linux model reuse/load,
+Chinese/English/mixed generation, speaker bounds and multi-speaker synthesis.
+The validation process had no audio device, so audio playback is explicitly
+`NOT RUN`; platform build/package evidence and unexecuted runtime levels are
+reported separately by the audit run.
 
 ## 10. Testing
 
@@ -187,14 +234,21 @@ NOT RUN in the authoring environment (see the task report for the explicit list)
 ## 11. Known limitations
 
 - Neural read-aloud is documented as available only where the native runtime can
-  load; if it cannot, playback falls back to system TTS (the session never
-  breaks).
+  load; if it cannot, playback falls back to available system TTS or reports an
+  explicit unavailable-backend error.
 - Cross-widget text selection ("read selection") is not implemented; per
   paragraph reading covers the requirement.
 - Whole-resource continuous reading in Resource Studio highlights at part level;
   per-paragraph highlight applies to per-part / chat reading.
 - No persistent audio cache is implemented (generated audio is played and
   released); this avoids unbounded WAV growth.
-- Real neural inference (native bindings + a downloaded model) is validated by
-  design and unit-tested through fakes; an on-device integration test is not part
-  of `flutter test`.
+- Real native validation is opt-in: run
+  `LT_TTS_REAL_MODEL=1 LT_TTS_ALLOW_DOWNLOAD=1 LT_TTS_E2E_ROOT=<dedicated-directory>
+  flutter test test/integration/enhanced_tts_real_model_test.dart`.
+  The ordinary test suite skips this network/native test; it never downloads a
+  model automatically. `test/manual/enhanced_tts_real_audio.dart` is an opt-in
+  Linux app target for actual platform audio playback.
+- Real Linux observations include roughly 1.0–1.1 RTF on this host; longer
+  chunks increase native working memory. Short reload cycles and successful free
+  acknowledgements do not establish a universal memory bound. Android/Windows
+  runtime measurements require those platforms.

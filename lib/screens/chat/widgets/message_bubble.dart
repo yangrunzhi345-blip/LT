@@ -7,6 +7,7 @@ import '../../../core/widgets/app_confirm_dialog.dart';
 import '../../../core/widgets/app_read_aloud.dart';
 import '../../../core/widgets/narrative_paragraph_read_view.dart';
 import '../../../domain/read_aloud/read_aloud_contracts.dart';
+import '../../../domain/tts/speech_plan.dart';
 import '../../../domain/events/app_event_codec.dart';
 import '../../../core/localization/app_event_localizer.dart';
 import '../../../models/adventure_response.dart';
@@ -341,18 +342,23 @@ Widget _buildAiContent(
     String content, Brightness brightness, double chatFontSize,
     {required void Function(String option) onOptionTap,
     String? defaultCharacterName,
-    String? readSessionId}) {
+    String? readSessionId,
+    NarrativeSpeakerContext speakerContext =
+        const NarrativeSpeakerContext.empty()}) {
   return _buildAiBubbleContent(content, brightness, chatFontSize,
       onOptionTap: onOptionTap,
       defaultCharacterName: defaultCharacterName,
-      readSessionId: readSessionId);
+      readSessionId: readSessionId,
+      speakerContext: speakerContext);
 }
 
 Widget _buildAiBubbleContent(
     String content, Brightness brightness, double chatFontSize,
     {required void Function(String option) onOptionTap,
     String? defaultCharacterName,
-    String? readSessionId}) {
+    String? readSessionId,
+    NarrativeSpeakerContext speakerContext =
+        const NarrativeSpeakerContext.empty()}) {
   if (AdventureResponse.tryParseSplit(content) != null) {
     return AdventureMessageCard(
       jsonContent: content,
@@ -360,6 +366,8 @@ Widget _buildAiBubbleContent(
       onOptionTap: onOptionTap,
       fontSize: chatFontSize,
       defaultCharacterName: defaultCharacterName,
+      readSessionId: readSessionId,
+      speakerContext: speakerContext,
     );
   }
   if (AdventureResponse.tryParse(content) != null) {
@@ -369,6 +377,8 @@ Widget _buildAiBubbleContent(
       onOptionTap: onOptionTap,
       fontSize: chatFontSize,
       defaultCharacterName: defaultCharacterName,
+      readSessionId: readSessionId,
+      speakerContext: speakerContext,
     );
   }
   final isDark = brightness == Brightness.dark;
@@ -380,6 +390,7 @@ Widget _buildAiBubbleContent(
         baseId: readSessionId,
         text: displayText,
         sourceType: ReadAloudSourceType.chat,
+        speakerContext: speakerContext,
         textStyle: TextStyle(
           fontSize: chatFontSize,
           height: 1.8,
@@ -533,6 +544,7 @@ class AiBubble extends StatelessWidget {
   final VoidCallback onToggleBookmark;
   final void Function(String option) onOptionTap;
   final VoidCallback? onCopy;
+  final NarrativeSpeakerContext speakerContext;
 
   /// 引擎忙碌（loading/streaming）时不展示重新生成按钮：
   /// 重新生成是先删后发，若 sendMessage 被并发守卫拦截会丢失消息。
@@ -552,6 +564,7 @@ class AiBubble extends StatelessWidget {
     required this.onToggleBookmark,
     required this.onOptionTap,
     this.onCopy,
+    this.speakerContext = const NarrativeSpeakerContext.empty(),
     this.canRegenerate = true,
   });
 
@@ -654,6 +667,7 @@ class AiBubble extends StatelessWidget {
                               onOptionTap: onOptionTap,
                               defaultCharacterName: aiName,
                               readSessionId: 'chat:${message.id}',
+                              speakerContext: speakerContext,
                             ),
                           ],
                         ),
@@ -683,6 +697,7 @@ class AiBubble extends StatelessWidget {
                                           'chat:${message.id}', i),
                                       text: readAloudParagraphs[i],
                                       label: l10n.assistantReplyLabel,
+                                      speakerContext: speakerContext,
                                     ),
                                 ],
                                 label: l10n.assistantReplyLabel,

@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
 import '../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../domain/tts/tts_errors.dart';
 import '../../domain/tts/tts_models.dart';
@@ -6,34 +10,24 @@ import '../tts/neural/neural_audio_player.dart';
 import '../tts/neural/neural_tts_engine.dart';
 import 'read_aloud_engine.dart';
 
-/// Optional capability implemented by engines that can route between the system
-/// backend and a local neural backend.
-///
-/// Keeping this separate from [ReadAloudEngine] means the system engines and all
-/// existing fakes stay unchanged, and the read-aloud authority only needs an
-/// `is` check to use voice routing when it is available.
+/// Optional voice routing capability of the global read-aloud engine.
 abstract class ReadAloudVoiceAwareEngine {
-  /// Selects the voice target for subsequent [ReadAloudEngine.speak] calls.
-  /// Returns the backend that will actually be attempted.
   Future<TtsBackendKind> selectVoice(ReadAloudVoiceTarget? target);
 
-  /// The backend used by the most recent [ReadAloudEngine.speak].
-  TtsBackendKind get activeBackend;
+  /// Delivers an immutable voice/text pair instead of sharing selection state.
+  Future<void> speakWithVoice(String text, ReadAloudVoiceTarget? target,
+      {String? systemLanguage});
 
-  /// Notified when a neural request had to fall back to system TTS, so the
-  /// authority can surface a single, localized notice per session.
+  /// Resets failures remembered for the previous session.
+  void beginSession();
+
+  TtsBackendKind get activeBackend;
   set onVoiceFallback(void Function(TtsErrorCode code)? handler);
 }
 
-/// Resolves a model id to its on-disk runtime paths.
 typedef NeuralModelPathResolver = NeuralTtsModelPaths? Function(String modelId);
 
-/// The single engine the read-aloud authority talks to.
-///
-/// It routes each utterance to either the system backend or the neural backend
-/// based on the resolved voice target. Every neural failure degrades to the
-/// system backend without interrupting the current session, so system TTS
-/// remains a reliable default.
+/// Routes utterances while invalidating all work belonging to a replaced one.
 class RoutedReadAloudEngine
     implements ReadAloudEngine, ReadAloudVoiceAwareEngine {
   RoutedReadAloudEngine({
@@ -41,40 +35,30 @@ class RoutedReadAloudEngine
     NeuralTtsEngine Function()? neuralEngineFactory,
     NeuralAudioPlayer Function()? audioPlayerFactory,
     NeuralModelPathResolver? modelPaths,
+    bool Function()? neuralAvailable,
   })  : _system = systemEngine,
         _neuralFactory = neuralEngineFactory,
         _audioFactory = audioPlayerFactory,
-        _modelPaths = modelPaths {
-    _system.onComplete = () {
-      if (_activeBackend == TtsBackendKind.system) _onComplete?.call();
-    };
-    _system.onStart = () {
-      if (_activeBackend == TtsBackendKind.system) _onStart?.call();
-    };
-    _system.onCancel = () {
-      if (_activeBackend == TtsBackendKind.system) _onCancel?.call();
-    };
-    _system.onError = (error) {
-      if (_activeBackend == TtsBackendKind.system) _onError?.call(error);
-    };
-  }
+        _modelPaths = modelPaths,
+        _neuralAvailable = neuralAvailable;
 
   final ReadAloudEngine _system;
   final NeuralTtsEngine Function()? _neuralFactory;
   final NeuralAudioPlayer Function()? _audioFactory;
   final NeuralModelPathResolver? _modelPaths;
-
+  final bool Function()? _neuralAvailable;
   NeuralTtsEngine? _neural;
   NeuralAudioPlayer? _audio;
-  bool _audioCallbacksBound = false;
-
   ReadAloudVoiceTarget? _target;
+  String? _requestedModelId;
   TtsBackendKind _activeBackend = TtsBackendKind.system;
-  double _rate = 0.5;
   double _volume = 0.9;
-  double _neuralSpeed = 1.0;
-  bool _neuralInitialized = false;
+  double _neuralSpeed = 1;
+  int _operation = 0;
+  bool _disposed = false;
+  Future<void> _stops = Future<void>.value();
   final Set<String> _neuralFailedModels = <String>{};
+  final Set<String> _releasingModels = <String>{};
 
   void Function()? _onComplete;
   void Function()? _onStart;
@@ -83,201 +67,252 @@ class RoutedReadAloudEngine
   void Function(TtsErrorCode code)? _onVoiceFallback;
 
   @override
-  ReadAloudCapability get capability => _system.capability;
+  ReadAloudCapability get capability => hasNeuralEngine &&
+          (_activeBackend == TtsBackendKind.neural ||
+              (_neuralAvailable?.call() ?? false))
+      ? ReadAloudCapability.available(
+          supportsPause: _activeBackend == TtsBackendKind.neural ||
+              _system.capability.supportsPause)
+      : _system.capability;
 
+  /// System availability is independent of an installed, enabled neural model.
+  ReadAloudCapability get systemCapability => _system.capability;
   @override
-  bool get isInitialized => _system.isInitialized;
-
+  bool get isInitialized =>
+      _system.isInitialized ||
+      (hasNeuralEngine && (_neuralAvailable?.call() ?? false)) ||
+      _neural?.isInitialized == true;
   @override
   TtsBackendKind get activeBackend => _activeBackend;
-
   @override
   set onVoiceFallback(void Function(TtsErrorCode code)? handler) =>
       _onVoiceFallback = handler;
-
   @override
   set onComplete(void Function()? handler) => _onComplete = handler;
-
   @override
   set onStart(void Function()? handler) => _onStart = handler;
-
   @override
   set onCancel(void Function()? handler) => _onCancel = handler;
-
   @override
   set onError(void Function(Object error)? handler) => _onError = handler;
 
-  /// Whether neural routing is configured at all. The neural engine and audio
-  /// player are created lazily on first use, so building the engine never
-  /// touches native/platform audio.
   bool get hasNeuralEngine => _neuralFactory != null && _audioFactory != null;
-
-  NeuralTtsEngine? _neuralEngine() {
-    final factory = _neuralFactory;
-    if (factory == null) return null;
-    return _neural ??= factory();
-  }
-
-  NeuralAudioPlayer? _audioPlayer() {
-    final factory = _audioFactory;
-    if (factory == null) return null;
-    final player = _audio ??= factory();
-    if (!_audioCallbacksBound) {
-      _audioCallbacksBound = true;
-      player.onComplete = () {
-        if (_activeBackend == TtsBackendKind.neural) _onComplete?.call();
-      };
-      player.onError = (error) {
-        if (_activeBackend == TtsBackendKind.neural) {
-          _handleNeuralFailure(TtsErrorCode.audioPlaybackFailed, error);
-        }
-      };
-    }
-    return player;
-  }
+  bool _isCurrent(int operation) => !_disposed && operation == _operation;
 
   @override
   Future<void> initialize() => _system.initialize();
-
   @override
   Future<List<String>> availableLanguages() => _system.availableLanguages();
 
   @override
-  Future<void> configure({
-    double? rate,
-    double? pitch,
-    double? volume,
-    String? language,
-  }) async {
+  Future<void> configure(
+      {double? rate, double? pitch, double? volume, String? language}) async {
     if (rate != null) {
-      _rate = rate.clamp(0.0, 1.0);
-      _neuralSpeed = (0.6 + 0.8 * _rate).clamp(0.5, 1.6);
+      _neuralSpeed = (0.6 + 0.8 * rate.clamp(0.0, 1.0)).clamp(0.5, 1.6);
     }
     if (volume != null) _volume = volume.clamp(0.0, 1.0);
-    await _system.configure(
-      rate: rate,
-      pitch: pitch,
-      volume: volume,
-      language: language,
-    );
+    if (_system.isInitialized && _system.capability.supported) {
+      await _system.configure(
+          rate: rate, pitch: pitch, volume: volume, language: language);
+    }
   }
+
+  @override
+  void beginSession() => _neuralFailedModels.clear();
 
   @override
   Future<TtsBackendKind> selectVoice(ReadAloudVoiceTarget? target) async {
     _target = target;
-    if (target == null || !target.isNeural || !hasNeuralEngine) {
-      _activeBackend = TtsBackendKind.system;
-      return TtsBackendKind.system;
-    }
-    return TtsBackendKind.neural;
+    return target?.isNeural == true && hasNeuralEngine
+        ? TtsBackendKind.neural
+        : TtsBackendKind.system;
   }
 
   @override
-  Future<void> speak(String text) async {
-    final target = _target;
-    if (target == null || !target.isNeural || !hasNeuralEngine) {
+  Future<void> speak(String text) => speakWithVoice(text, _target);
+
+  @override
+  Future<void> speakWithVoice(String text, ReadAloudVoiceTarget? target,
+      {String? systemLanguage}) async {
+    if (_disposed) return;
+    final operation = ++_operation;
+    final complete = _onComplete;
+    final start = _onStart;
+    final cancel = _onCancel;
+    final error = _onError;
+    final fallback = _onVoiceFallback;
+    _target = target;
+    _requestedModelId = target?.modelId;
+    _system.onComplete = null;
+    _system.onCancel = null;
+    _system.onError = null;
+    _audio?.onComplete = null;
+    _audio?.onError = null;
+    await _stopBackends();
+    if (!_isCurrent(operation)) return;
+
+    void bindSystem() {
       _activeBackend = TtsBackendKind.system;
+      _system.onComplete = () {
+        if (_isCurrent(operation)) complete?.call();
+      };
+      _system.onStart = () {
+        if (_isCurrent(operation)) start?.call();
+      };
+      _system.onCancel = () {
+        if (_isCurrent(operation)) cancel?.call();
+      };
+      _system.onError = (failure) {
+        if (_isCurrent(operation)) error?.call(failure);
+      };
+    }
+
+    Future<void> speakSystem([TtsErrorCode? code]) async {
+      if (!_isCurrent(operation)) return;
+      if (!_system.capability.supported) {
+        throw const ReadAloudEngineException('System speech unavailable',
+            code: ReadAloudErrorCode.engineUnavailable);
+      }
+      bindSystem();
+      if (code != null) fallback?.call(code);
+      if (systemLanguage != null) {
+        await _system.configure(language: systemLanguage);
+        if (!_isCurrent(operation)) return;
+      }
       await _system.speak(text);
+    }
+
+    final modelId = target?.modelId;
+    if (target?.isNeural != true || !hasNeuralEngine) {
+      await speakSystem();
       return;
     }
-    await _speakNeural(text, target);
-  }
-
-  Future<void> _speakNeural(String text, ReadAloudVoiceTarget target) async {
-    final modelId = target.modelId;
-    if (modelId == null) {
-      await _fallbackToSystem(text, TtsErrorCode.modelUnavailable);
+    if (modelId == null || _releasingModels.contains(modelId)) {
+      await speakSystem(TtsErrorCode.modelUnavailable);
       return;
     }
     if (_neuralFailedModels.contains(modelId)) {
-      // Already reported once this session: fall back silently so the user is
-      // not notified on every segment.
-      await _fallbackToSystem(
-        text,
-        TtsErrorCode.modelUnavailable,
-        notify: false,
-      );
+      await speakSystem();
       return;
     }
     final paths = _modelPaths?.call(modelId);
     if (paths == null) {
-      await _fallbackToSystem(text, TtsErrorCode.modelUnavailable);
+      await speakSystem(TtsErrorCode.modelUnavailable);
       return;
     }
-    final neural = _neuralEngine();
-    final audio = _audioPlayer();
-    if (neural == null || audio == null) {
-      await _fallbackToSystem(text, TtsErrorCode.neuralRuntimeUnavailable);
-      return;
-    }
+    final neural = _neural ??= _neuralFactory!();
+    final audio = _audio ??= _audioFactory!();
+    var fallingBack = false;
+    // A playback-stream error occurs after play() returned. Recover the same
+    // utterance through the system backend; its completion still owns sequencing.
+    audio.onComplete = () {
+      if (_isCurrent(operation) && !fallingBack) complete?.call();
+    };
+    audio.onError = (failure) {
+      if (!_isCurrent(operation) || fallingBack) return;
+      fallingBack = true;
+      _neuralFailedModels.add(modelId);
+      unawaited(() async {
+        try {
+          await audio.stop();
+          if (_isCurrent(operation)) {
+            await speakSystem(TtsErrorCode.audioPlaybackFailed);
+          }
+        } catch (systemError) {
+          if (_isCurrent(operation)) error?.call(systemError);
+        }
+      }());
+    };
     try {
-      if (!_neuralInitialized) {
-        await neural.initialize();
-        _neuralInitialized = true;
+      final speakerId = target?.speakerId ?? 0;
+      if (speakerId < 0 || speakerId >= paths.speakerCount) {
+        throw const TtsException(TtsErrorCode.voiceUnavailable);
       }
+      if (!neural.isInitialized) await neural.initialize();
+      if (!_isCurrent(operation)) return;
       await neural.loadModel(paths);
+      if (!_isCurrent(operation)) return;
       final result = await neural.synthesize(
-        text: text,
-        speakerId: target.speakerId ?? 0,
-        speed: _neuralSpeed,
-      );
+          text: text, speakerId: speakerId, speed: _neuralSpeed);
+      if (!_isCurrent(operation)) return;
       if (result.isEmpty) {
         throw const TtsException(TtsErrorCode.neuralGenerationFailed);
       }
       await audio.initialize();
+      if (!_isCurrent(operation)) return;
       _activeBackend = TtsBackendKind.neural;
-      _onStart?.call();
+      start?.call();
       await audio.play(result.samples, result.sampleRate, volume: _volume);
-    } on TtsException catch (error) {
-      if (error.code == TtsErrorCode.cancelled) rethrow;
-      // A model that fails repeatedly in this session is remembered so we stop
-      // trying (and stop notifying) on every subsequent segment.
+    } catch (failure) {
+      if (!_isCurrent(operation) || fallingBack) return;
+      if (failure is TtsException && failure.code == TtsErrorCode.cancelled) {
+        cancel?.call();
+        return;
+      }
       _neuralFailedModels.add(modelId);
-      await _fallbackToSystem(text, error.code);
-    } catch (error) {
-      _neuralFailedModels.add(modelId);
-      await _fallbackToSystem(text, TtsErrorCode.neuralGenerationFailed);
+      await audio.stop();
+      if (!_isCurrent(operation)) return;
+      await speakSystem(failure is TtsException
+          ? failure.code
+          : TtsErrorCode.neuralGenerationFailed);
     }
   }
 
-  Future<void> _fallbackToSystem(
-    String text,
-    TtsErrorCode code, {
-    bool notify = true,
-  }) async {
-    _activeBackend = TtsBackendKind.system;
-    if (notify) _onVoiceFallback?.call(code);
-    await _system.speak(text);
-  }
-
-  void _handleNeuralFailure(TtsErrorCode code, Object error) {
-    final target = _target;
-    if (target?.modelId != null) _neuralFailedModels.add(target!.modelId!);
-    _onVoiceFallback?.call(code);
-    // An audio error after playback started cannot be recovered by re-speaking
-    // here (the authority owns sequencing); report it so it can advance.
-    _onError?.call(
-      ReadAloudEngineException('audio playback failed', cause: error),
-    );
+  Future<void> _stopBackends() {
+    final neural = _neural;
+    final audio = _audio;
+    final stopped = _stops.then((_) async {
+      // Independent failures must not prevent stopping the other backends.
+      for (final stop in <Future<void> Function()>[
+        _system.stop,
+        if (neural != null) neural.stop,
+        if (audio != null) audio.stop,
+      ]) {
+        try {
+          await stop();
+        } catch (error) {
+          debugPrint('[ReadAloud] Backend stop failed: $error');
+        }
+      }
+    });
+    _stops = stopped;
+    return stopped;
   }
 
   @override
-  Future<void> stop() async {
-    await _system.stop();
-    if (_activeBackend == TtsBackendKind.neural) {
-      try {
-        await _neural?.stop();
-        await _audio?.stop();
-      } catch (_) {
-        // Stopping must never throw to the authority.
+  Future<void> stop() {
+    _operation++;
+    _activeBackend = TtsBackendKind.system;
+    _system.onComplete = null;
+    _system.onCancel = null;
+    _system.onError = null;
+    _audio?.onComplete = null;
+    _audio?.onError = null;
+    return _stopBackends();
+  }
+
+  /// Stops and frees a model before the install authority removes its files.
+  Future<void> releaseModel(String modelId) async {
+    _neuralFailedModels.remove(modelId);
+    if (_requestedModelId != modelId && _neural?.loadedModelId != modelId) {
+      return;
+    }
+    _releasingModels.add(modelId);
+    final neural = _neural;
+    final stopping = stop();
+    final operation = _operation;
+    // Detach the captured runtime now: another model may start while native
+    // teardown waits for an already running inference to finish.
+    _neural = null;
+    try {
+      await stopping;
+      if (_isCurrent(operation)) {
+        _requestedModelId = null;
+        _onCancel?.call();
       }
-    } else {
-      // Also stop any leftover neural audio defensively.
-      try {
-        await _audio?.stop();
-      } catch (_) {
-        // ignore
-      }
+      await neural?.dispose();
+    } finally {
+      _releasingModels.remove(modelId);
     }
   }
 
@@ -299,6 +334,10 @@ class RoutedReadAloudEngine
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    _operation++;
+    _activeBackend = TtsBackendKind.system;
     _system.onComplete = null;
     _system.onStart = null;
     _system.onCancel = null;
@@ -306,9 +345,17 @@ class RoutedReadAloudEngine
     _system.dispose();
     _audio?.onComplete = null;
     _audio?.onError = null;
-    _audio?.dispose();
-    _neural?.dispose();
+    final audio = _audio;
+    final neural = _neural;
     _audio = null;
     _neural = null;
+    unawaited(audio?.dispose().catchError((Object error) {
+          debugPrint('[ReadAloud] Audio dispose failed: $error');
+        }) ??
+        Future<void>.value());
+    unawaited(neural?.dispose().catchError((Object error) {
+          debugPrint('[ReadAloud] Neural dispose failed: $error');
+        }) ??
+        Future<void>.value());
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_svg_icon.dart';
 import '../feedback/app_feedback.dart';
 import '../../domain/read_aloud/read_aloud_contracts.dart';
+import '../../domain/tts/tts_errors.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../services/read_aloud/read_aloud_controller.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -127,10 +128,18 @@ class AppReadAloudControls extends ConsumerWidget {
 
     // Surface a single, localized notice per session when a neural voice had to
     // fall back to system TTS. The authority guarantees at most one notice.
-    ref.listen<ReadAloudController>(readAloudControllerProvider,
-        (previous, next) {
-      final code = next.state.voiceFallbackCode;
-      if (code == null || code == previous?.state.voiceFallbackCode) return;
+    ref.listen<(String?, TtsErrorCode?)>(
+        readAloudControllerProvider.select((controller) => (
+              controller.state.sourceId,
+              controller.state.voiceFallbackCode
+            )), (previous, next) {
+      final code = next.$2;
+      if (code == null ||
+          next == previous ||
+          (!controller.state.isActiveSource(sourceId) &&
+              !controller.state.isSpeakingChunk(sourceId))) {
+        return;
+      }
       AppFeedback.info(context, l10n.readAloudVoiceFallbackNotice);
     });
 

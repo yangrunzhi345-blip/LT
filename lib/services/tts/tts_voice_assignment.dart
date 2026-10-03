@@ -17,11 +17,15 @@ class TtsVoiceAssignment {
   /// mapping stable across runs.
   Map<String, String> assignForPlan(
     Iterable<String> resourceIds,
-    List<TtsVoiceDescriptor> pool,
-  ) {
+    List<TtsVoiceDescriptor> pool, {
+    Set<String> reservedVoiceIds = const <String>{},
+  }) {
     final result = <String, String>{};
     if (pool.isEmpty) return result;
-    final used = <int>{};
+    final used = <int>{
+      for (var i = 0; i < pool.length; i++)
+        if (reservedVoiceIds.contains(pool[i].voiceId)) i,
+    };
     for (final id in resourceIds) {
       if (result.containsKey(id)) continue;
       var index = stableHash32(id) % pool.length;

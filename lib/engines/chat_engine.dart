@@ -1836,6 +1836,7 @@ class ChatEngine {
         // a roster the planner keeps everything as narration (system voice).
         tts.speak(
           visibleNarrative,
+          sourceId: 'chat:${aiMsg.id}',
           speakerContext: buildAdventureSpeakerContext(_host.adventureConfig),
         );
       }

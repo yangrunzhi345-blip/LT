@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
+import 'package:lt_dialogue/domain/tts/speech_plan.dart';
+import 'package:lt_dialogue/core/widgets/narrative_paragraph_read_view.dart';
 import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/screens/chat/widgets/message_bubble.dart';
@@ -12,6 +14,7 @@ import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
 
 import '../helpers/read_aloud_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/tts_casting_fixture.dart';
 
 void main() {
   late FakeReadAloudEngine engine;
@@ -25,7 +28,7 @@ void main() {
     );
   });
 
-  Widget app(Widget child) {
+  Widget app(Widget child, {double textScale = 1}) {
     return ProviderScope(
       overrides: [
         readAloudControllerProvider.overrideWith(
@@ -33,15 +36,24 @@ void main() {
           disposeNotifier: false,
         ),
       ],
-      child: MaterialApp(home: Scaffold(body: child)),
+      child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!),
+          home: Scaffold(body: child)),
     );
   }
 
-  Widget aiBubbleWith(Message message, {required double chatFontSize}) {
+  Widget aiBubbleWith(Message message,
+      {required double chatFontSize,
+      NarrativeSpeakerContext speakerContext =
+          const NarrativeSpeakerContext.empty()}) {
     return ListView(
       children: [
         AiBubble(
           message: message,
+          speakerContext: speakerContext,
           chatFontSize: chatFontSize,
           brightness: Brightness.light,
           aiName: 'LT',
@@ -60,6 +72,76 @@ void main() {
   Widget aiBubble(Message message) => aiBubbleWith(message, chatFontSize: 14);
 
   group('Chat AI 消息朗读', () {
+    testWidgets(
+        'should preserve character voices and paragraph ids at all viewports',
+        (tester) async {
+      const context = NarrativeSpeakerContext(speakers: [
+        NarrativeSpeakerRef(resourceId: 'lin', displayName: '林雪'),
+        NarrativeSpeakerRef(resourceId: 'chen', displayName: '陈默'),
+      ]);
+      final message = Message(
+          id: 'speakers',
+          isUser: false,
+          content: '林雪说：“你好。”\n\n陈默说：“再见。”\n---JSON---\n{"options":[]}');
+      for (final size in requiredUiViewports) {
+        final casting = TtsCastingFixture();
+        addTearDown(casting.dispose);
+        controller = casting.controller;
+        setViewport(tester, width: size.width, height: size.height);
+        await tester.pumpWidget(app(
+            aiBubbleWith(message, chatFontSize: 18, speakerContext: context),
+            textScale: 1.5));
+        await tester.pump();
+        expect(find.byType(NarrativeParagraphReadView), findsOneWidget);
+        await tester.tap(find.descendant(
+            of: find.byType(AppReadAloudButton),
+            matching: find.byType(IconButton)));
+        await tester.pump();
+        for (var i = 0; i < 4; i++) {
+          casting.audio.emitComplete();
+          await tester.pump();
+        }
+        // Ignore only the segmenter's documented boundary whitespace.
+        final texts = casting.neural.synthesizedTexts
+            .map((text) => text.replaceAll(RegExp(r'\s+'), ''))
+            .toList();
+        expect(texts, contains('“你好。”'));
+        expect(texts, contains('“再见。”'));
+        expect(casting.neural.synthesizedSpeakers[texts.indexOf('“你好。”')], 3);
+        expect(casting.neural.synthesizedSpeakers[texts.indexOf('“再见。”')], 58);
+        await tester.longPress(find.text('陈默说：“再见。”'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Read this paragraph'));
+        await tester.pumpAndSettle();
+        expect(controller.state.currentChunkId, 'chat:speakers#p1');
+        expect(tester.takeException(), isNull, reason: '$size / large text');
+        await controller.stop();
+        await tester.pumpWidget(const SizedBox());
+      }
+    });
+
+    testWidgets(
+        'should distinguish repeated paragraph text when reading and highlighting',
+        (tester) async {
+      final message =
+          Message(id: 'repeat', content: '重复正文。\n\n重复正文。', isUser: false);
+      await tester.pumpWidget(app(aiBubble(message)));
+      await tester.longPress(find.text('重复正文。').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Read this paragraph'));
+      await tester.pumpAndSettle();
+      expect(controller.state.currentChunkId, 'chat:repeat#p1');
+      final active = tester.widget<AnimatedContainer>(find.ancestor(
+          of: find.text('重复正文。').last,
+          matching: find.byType(AnimatedContainer)));
+      final inactive = tester.widget<AnimatedContainer>(find.ancestor(
+          of: find.text('重复正文。').first,
+          matching: find.byType(AnimatedContainer)));
+      expect(active.decoration, isNotNull);
+      expect(inactive.decoration, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('朗读入口存在，且只朗读可见叙事正文', (tester) async {
       final message = Message(
         id: 'm1',

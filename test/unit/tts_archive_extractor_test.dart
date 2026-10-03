@@ -31,6 +31,53 @@ void main() {
     return path;
   }
 
+  group('non-regular TAR headers', () {
+    for (final type in ['1', '2', '3', '4', '6']) {
+      test('should reject TAR type $type before writing any entry', () async {
+        final tar = TarEncoder()
+            .encode(Archive()..add(ArchiveFile.string('unsafe', '')));
+        // Mutate the actual header so device/FIFO flags erased by ArchiveFile
+        // still reach the production decoder. Recompute its octal checksum.
+        tar[156] = type.codeUnitAt(0);
+        for (var i = 148; i < 156; i++) {
+          tar[i] = 32;
+        }
+        final checksum = tar
+            .take(512)
+            .fold<int>(0, (a, b) => a + b)
+            .toRadixString(8)
+            .padLeft(6, '0')
+            .codeUnits;
+        tar.setRange(148, 154, checksum);
+        tar[154] = 0;
+        tar[155] = 32;
+        final file = File('${root.path}/attack.tar.bz2')
+          ..writeAsBytesSync(BZip2Encoder().encode(tar));
+        final dest = Directory('${root.path}/stage');
+        await expectLater(
+            extractor.extract(
+                archive: file,
+                format: TtsArchiveFormat.tarBz2,
+                destinationDir: dest),
+            throwsA(isA<TtsException>().having(
+                (e) => e.code, 'code', TtsErrorCode.modelArchiveInvalid)));
+        expect(File('${dest.path}/unsafe').existsSync(), isFalse);
+      });
+    }
+    test('should reject a TAR link target outside staging', () async {
+      final archive = writeArchive([
+        ArchiveFile.string('safe_link', '')..symbolicLink = '../../outside',
+        ArchiveFile.string('safe_link/file', 'evil'),
+      ]);
+      await expectLater(
+          extractor.extract(
+              archive: archive,
+              format: TtsArchiveFormat.tarBz2,
+              destinationDir: Directory('${root.path}/stage')),
+          throwsA(isA<TtsException>()));
+    });
+  });
+
   test('a benign archive extracts with intact content', () async {
     final modelBytes = Uint8List.fromList(
       List<int>.generate(8192, (i) => (i * 7 + 1) % 256),
@@ -109,6 +156,10 @@ void main() {
       r'..\..\evil.txt',
       r'\evil.txt',
       r'\\server\share\evil.txt',
+      r'//server/share/evil.txt',
+      r'a/../../evil.txt',
+      r'a\..\..\evil.txt',
+      r'payload/file:stream',
     ]) {
       final archive = writeArchive(<ArchiveFile>[
         ArchiveFile.string(name, 'evil'),

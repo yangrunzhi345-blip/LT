@@ -10,6 +10,7 @@ import '../../../../../core/widgets/app_empty_state.dart';
 // PendingAssistantPhase 经由 ChatProvider 门面 re-export，presentation 层
 // 不直接依赖 engines。
 import '../../../../../providers/chat_provider.dart';
+import '../../../../../application/adventure/adventure_speaker_context.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/chat_dialogs.dart';
 import '../../../../../screens/chat/widgets/error_card.dart';
@@ -523,6 +524,7 @@ class _SessionMessageListState extends ConsumerState<SessionMessageList> {
     return AiBubble(
       key: ValueKey('ai_${message.id}'),
       message: message,
+      speakerContext: buildAdventureSpeakerContext(provider.adventureConfig),
       chatFontSize: provider.chatFontSize / provider.textScaleFactor,
       brightness: brightness,
       aiName: provider.selectedCharacterName ??

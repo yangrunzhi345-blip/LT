@@ -48,11 +48,13 @@ class TtsRuntime {
     final storage = TtsModelStorage(
       rootProvider: rootProvider ?? getApplicationSupportDirectory,
     );
+    late final RoutedReadAloudEngine engine;
     final manager = TtsModelManager(
       catalog: resolvedCatalog,
       storage: storage,
       downloadClient: (downloadClientFactory ?? HttpTtsDownloadClient.new)(),
       extractor: extractor ?? const ArchiveTtsArchiveExtractor(),
+      beforeDelete: (modelId) => engine.releaseModel(modelId),
     );
     final bindings = TtsVoiceBindingStore(
       store: SettingsRepoTtsVoiceStore(settingsRepo),
@@ -62,11 +64,13 @@ class TtsRuntime {
       bindings: bindings,
       registry: manager,
     );
-    final engine = RoutedReadAloudEngine(
+    engine = RoutedReadAloudEngine(
       systemEngine: (systemEngineFactory ?? createDefaultReadAloudEngine)(),
       neuralEngineFactory: neuralEngineFactory ?? SherpaOnnxNeuralTtsEngine.new,
       audioPlayerFactory:
           audioPlayerFactory ?? AudioPlayersNeuralAudioPlayer.new,
+      neuralAvailable: () =>
+          bindings.isNeuralEnabled && manager.installedModels.isNotEmpty,
       modelPaths: (modelId) {
         final installed = manager.installed(modelId);
         if (installed == null) return null;
@@ -114,6 +118,7 @@ class TtsRuntime {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    engine.dispose();
     manager.dispose();
     bindings.dispose();
   }
