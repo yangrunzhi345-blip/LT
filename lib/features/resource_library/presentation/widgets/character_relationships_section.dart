@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../domain/resources/character_relationship.dart';
+import '../../../../core/widgets/app_svg_icon.dart';
 
 /// Displays the selected character's resource relationships.
 final class CharacterRelationshipsSection extends StatelessWidget {
@@ -48,13 +49,13 @@ final class CharacterRelationshipsSection extends StatelessWidget {
                   if (onEdit != null)
                     IconButton(
                       tooltip: editLabel,
-                      icon: const Icon(Icons.edit_outlined),
+                      icon: const AppSvgIcon('edit'),
                       onPressed: () => onEdit!(relationship),
                     ),
                   if (onDelete != null)
                     IconButton(
                       tooltip: deleteLabel,
-                      icon: const Icon(Icons.delete_outline),
+                      icon: const AppSvgIcon('delete'),
                       onPressed: () => onDelete!(relationship),
                     ),
                 ],
