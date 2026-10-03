@@ -27,4 +27,33 @@ void main() {
     );
     expect(assembled.characterRelationships.single.description, 'frozen');
   });
+
+  test('a later resource edit affects only a future adventure snapshot', () {
+    final input = AdventureConfig();
+    CharacterRelationship edge(String description) => CharacterRelationship(
+          id: 'edge-1',
+          endpointAResourceId: const ResourceId('a'),
+          endpointBResourceId: const ResourceId('b'),
+          relationType: CharacterRelationshipType.friend,
+          endpointARole: 'friend',
+          endpointBRole: 'friend',
+          description: description,
+          createdAt: DateTime.utc(2026),
+          updatedAt: DateTime.utc(2026),
+        );
+
+    final first = const AdventureAssembler().assembleWithResourceRelationships(
+      input: input,
+      relationships: [edge('R1')],
+      selectedResourceIds: {'a', 'b'},
+    );
+    final second = const AdventureAssembler().assembleWithResourceRelationships(
+      input: input,
+      relationships: [edge('R2')],
+      selectedResourceIds: {'a', 'b'},
+    );
+
+    expect(first.characterRelationships.single.description, 'R1');
+    expect(second.characterRelationships.single.description, 'R2');
+  });
 }
