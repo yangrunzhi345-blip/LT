@@ -197,8 +197,8 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             relationshipType: editor.relationType,
             sourceRole: editor.sourceRole.text,
             generatedCharacterRole: editor.generatedRole.text,
+            name: editor.source.name,
             description: editor.description.text,
-            metadata: <String, String>{'name': editor.source.name},
           ),
         )
         .toList(growable: false);

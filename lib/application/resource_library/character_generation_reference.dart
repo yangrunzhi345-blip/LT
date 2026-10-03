@@ -8,6 +8,12 @@ final class CharacterGenerationReference {
     required this.relationshipType,
     required this.sourceRole,
     required this.generatedCharacterRole,
+    this.name = '',
+    this.gender = '',
+    this.profession = '',
+    this.personality = '',
+    this.background = '',
+    this.appearance = '',
     this.description = '',
     this.worldviewScope,
     Map<String, String> metadata = const <String, String>{},
@@ -30,6 +36,12 @@ final class CharacterGenerationReference {
   final CharacterRelationshipType relationshipType;
   final String sourceRole;
   final String generatedCharacterRole;
+  final String name;
+  final String gender;
+  final String profession;
+  final String personality;
+  final String background;
+  final String appearance;
   final String description;
   final String? worldviewScope;
   final Map<String, String> metadata;
@@ -39,6 +51,12 @@ final class CharacterGenerationReference {
         'relationshipType': relationshipType.storageValue,
         'sourceRole': sourceRole,
         'generatedCharacterRole': generatedCharacterRole,
+        'name': name,
+        'gender': gender,
+        'profession': profession,
+        'personality': personality,
+        'background': background,
+        'appearance': appearance,
         'description': description,
         if (worldviewScope != null) 'worldviewScope': worldviewScope,
         'metadata': Map<String, String>.unmodifiable(metadata),
@@ -60,6 +78,12 @@ final class CharacterGenerationReference {
       ),
       sourceRole: sourceRole,
       generatedCharacterRole: targetRole,
+      name: (json['name'] as String?)?.trim() ?? '',
+      gender: (json['gender'] as String?)?.trim() ?? '',
+      profession: (json['profession'] as String?)?.trim() ?? '',
+      personality: (json['personality'] as String?)?.trim() ?? '',
+      background: (json['background'] as String?)?.trim() ?? '',
+      appearance: (json['appearance'] as String?)?.trim() ?? '',
       description: (json['description'] as String?)?.trim() ?? '',
       worldviewScope: (json['worldviewScope'] as String?)?.trim(),
       metadata: rawMetadata is Map
@@ -99,6 +123,16 @@ final class CharacterGenerationRelationship {
             'relationType': reference.relationshipType.storageValue,
             'sourceRole': reference.sourceRole,
             'targetRole': reference.generatedCharacterRole,
+            if (reference.name.isNotEmpty) 'name': reference.name,
+            if (reference.gender.isNotEmpty) 'gender': reference.gender,
+            if (reference.profession.isNotEmpty)
+              'profession': reference.profession,
+            if (reference.personality.isNotEmpty)
+              'personality': reference.personality,
+            if (reference.background.isNotEmpty)
+              'background': reference.background,
+            if (reference.appearance.isNotEmpty)
+              'appearance': reference.appearance,
             'description': reference.description,
             if (reference.worldviewScope != null)
               'worldviewScope': reference.worldviewScope,
@@ -121,6 +155,12 @@ final class CharacterGenerationRelationship {
       final line = StringBuffer()
         ..write(
             '${index + 1}. sourceResourceId=${reference.sourceResourceId.value}; ')
+        ..write('name=${_bounded(reference.name, 120)}; ')
+        ..write('gender=${_bounded(reference.gender, 40)}; ')
+        ..write('profession=${_bounded(reference.profession, 120)}; ')
+        ..write('personality=${_bounded(reference.personality, 280)}; ')
+        ..write('background=${_bounded(reference.background, 400)}; ')
+        ..write('appearance=${_bounded(reference.appearance, 280)}; ')
         ..write('relationType=${reference.relationshipType.storageValue}; ')
         ..write('sourceRole=${reference.sourceRole}; ')
         ..write('generatedCharacterRole=${reference.generatedCharacterRole}; ');
@@ -133,6 +173,12 @@ final class CharacterGenerationRelationship {
       lines.add(line.toString());
     }
     return lines.join('\n');
+  }
+
+  static String _bounded(String value, int maxLength) {
+    final normalized = value.trim();
+    if (normalized.length <= maxLength) return normalized;
+    return '${normalized.substring(0, maxLength)}…';
   }
 }
 
