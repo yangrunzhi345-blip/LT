@@ -120,6 +120,15 @@ abstract final class PartGenerationPromptBuilder {
       buffer.writeln();
     }
 
+    if (ctx.relationshipConstraints.trim().isNotEmpty) {
+      buffer.writeln('【关系约束（用户确认）】');
+      buffer.writeln(ctx.relationshipConstraints.trim());
+      buffer.writeln(
+        '以上约束必须保持不变。只能据此创作当前角色内容，不得新增、删除或改写关系；持久化关系以创建会话草稿为准。',
+      );
+      buffer.writeln();
+    }
+
     final instruction = request.userInstruction.trim();
     if (instruction.isNotEmpty) {
       // The directive is user-authored text, so it is bounded and explicitly

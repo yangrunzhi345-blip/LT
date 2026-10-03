@@ -303,6 +303,8 @@ final class PartGenerationCoordinator {
     // Retrieve the reference source from creation session if available
     final session = await _pipeline.findSession(blueprint.sessionId);
     final referenceBody = session?.referenceSource.body ?? '';
+    final relationshipConstraints =
+        session?.relationshipDraft?.relationship.toPromptConstraints() ?? '';
     final referenceIndexWatch = Stopwatch()..start();
     final referenceIndex = ReferenceContextIndex(referenceBody);
     referenceIndexWatch.stop();
@@ -565,6 +567,7 @@ final class PartGenerationCoordinator {
             taskHandle: taskHandle,
             callbacks: callbacks,
             cancelTasksOnCancellation: cancelTasksOnCancellation,
+            relationshipConstraints: relationshipConstraints,
           ).then((_) {
             lastCompletedPartId = task.partId;
           }).catchError((Object error) {
@@ -810,6 +813,8 @@ final class PartGenerationCoordinator {
       taskHandle: taskHandle,
       callbacks: callbacks,
       cancelTasksOnCancellation: cancelTasksOnCancellation,
+      relationshipConstraints:
+          session?.relationshipDraft?.relationship.toPromptConstraints() ?? '',
       userInstruction: userInstruction,
     );
 
@@ -827,6 +832,7 @@ final class PartGenerationCoordinator {
     GenerationTaskHandle? taskHandle,
     PartGenerationLifecycleCallbacks? callbacks,
     required bool cancelTasksOnCancellation,
+    String relationshipConstraints = '',
     String userInstruction = '',
   }) async {
     if (taskHandle?.isCancelled == true) {
@@ -954,6 +960,7 @@ final class PartGenerationCoordinator {
         partTitle: partTitle,
         dependencySummaries: depSummaries,
         referenceExcerpt: referenceExcerpt,
+        relationshipConstraints: relationshipConstraints,
       );
 
       final request = PartGenerationRequest(

@@ -3,8 +3,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
+import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
+import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
@@ -80,6 +82,7 @@ void main() {
     ResourceType type = ResourceType.worldview,
     String origin = 'library',
     int? targetCharacters,
+    CharacterRelationshipDraft? relationshipDraft,
   }) =>
       ResourceCreationRequest(
         resourceType: type,
@@ -91,6 +94,7 @@ void main() {
         initialSections: sections,
         origin: origin,
         targetCharacters: targetCharacters,
+        relationshipDraft: relationshipDraft,
       );
 
   group('request validation', () {
@@ -518,6 +522,43 @@ void main() {
       final retried = await pipeline.create(request(key: 'retry'));
       expect(retried.status, CreationSessionStatus.persisted);
       expect((await treeCounts())['resources'], 1);
+    });
+  });
+
+  group('related character session recovery', () {
+    test('persists typed relationship draft across planning session reads',
+        () async {
+      final draft = CharacterRelationshipDraft(
+        relationship: CharacterGenerationRelationship.fromReferences([
+          CharacterGenerationReference(
+            sourceResourceId: const ResourceId('res_source'),
+            relationshipType: CharacterRelationshipType.mentorStudent,
+            sourceRole: 'mentor',
+            generatedCharacterRole: 'student',
+            description: 'A fixed bond',
+          ),
+        ]),
+      );
+      final result = await pipeline.create(request(
+        method: CreationMethod.aiReference,
+        type: ResourceType.character,
+        name: 'Related character',
+        key: 'related-session',
+        targetCharacters: ResourceLimits.minimumGenerationTargetCharacters,
+        relationshipDraft: draft,
+      ));
+
+      final restored = await pipeline.findSession(result.sessionId!);
+      expect(
+          restored!.relationshipDraft!.relationship.references, hasLength(1));
+      final reference =
+          restored.relationshipDraft!.relationship.references.single;
+      expect(reference.sourceResourceId, const ResourceId('res_source'));
+      expect(
+          reference.relationshipType, CharacterRelationshipType.mentorStudent);
+      expect(reference.sourceRole, 'mentor');
+      expect(reference.generatedCharacterRole, 'student');
+      expect(reference.description, 'A fixed bond');
     });
   });
 

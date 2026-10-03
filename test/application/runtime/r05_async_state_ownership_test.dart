@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/localization/app_error_localizer.dart';
 import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
+import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/domain/resources/resource_capacity.dart';
@@ -619,6 +620,7 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
     String? idempotencyKey,
     ResourceId? targetResourceId,
     String originWorldviewId = '',
+    CharacterRelationshipDraft? relationshipDraft,
   }) {
     createAndStartCalls += 1;
     return onCreateAndStart?.call() ?? (throw UnimplementedError());

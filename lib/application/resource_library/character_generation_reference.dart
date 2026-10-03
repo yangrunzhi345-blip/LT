@@ -104,6 +104,36 @@ final class CharacterGenerationRelationship {
               'worldviewScope': reference.worldviewScope,
           })
       .toList(growable: false);
+
+  /// Stable, bounded prompt projection for the Resource Studio pipeline.
+  ///
+  /// The projection intentionally contains only the typed, user-authored
+  /// relationship constraints. It does not expose a model-returned relation
+  /// field and it never mutates the draft. Every Blueprint/Part retry can
+  /// rebuild the same text from the persisted session draft.
+  String toPromptConstraints() {
+    if (references.isEmpty) return '';
+    final lines = <String>[
+      '以下关系约束由用户确认，必须保持不变；模型不得新增、删除或改写关系：',
+    ];
+    for (var index = 0; index < references.length; index++) {
+      final reference = references[index];
+      final line = StringBuffer()
+        ..write(
+            '${index + 1}. sourceResourceId=${reference.sourceResourceId.value}; ')
+        ..write('relationType=${reference.relationshipType.storageValue}; ')
+        ..write('sourceRole=${reference.sourceRole}; ')
+        ..write('generatedCharacterRole=${reference.generatedCharacterRole}; ');
+      if (reference.description.trim().isNotEmpty) {
+        line.write('description=${reference.description.trim()}; ');
+      }
+      if (reference.worldviewScope?.trim().isNotEmpty == true) {
+        line.write('worldviewScope=${reference.worldviewScope!.trim()};');
+      }
+      lines.add(line.toString());
+    }
+    return lines.join('\n');
+  }
 }
 
 /// Candidate-only draft. It cannot be used as a persisted relationship row.

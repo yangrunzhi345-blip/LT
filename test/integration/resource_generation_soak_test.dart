@@ -8,6 +8,7 @@ import 'package:lt_dialogue/application/llm/llm_gateway.dart';
 import 'package:lt_dialogue/application/resources/part_generation_coordinator.dart';
 import 'package:lt_dialogue/application/resources/resource_blueprint_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
+import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
 import 'package:lt_dialogue/application/resources/resource_generation_task_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_revision_repository.dart';
@@ -787,6 +788,7 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
     String? idempotencyKey,
     ResourceId? targetResourceId,
     String? originWorldviewId,
+    CharacterRelationshipDraft? relationshipDraft,
   }) =>
       throw UnimplementedError('not used in soak tests');
 

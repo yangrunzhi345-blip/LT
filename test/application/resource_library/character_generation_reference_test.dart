@@ -114,4 +114,26 @@ void main() {
       },
     ]);
   });
+
+  test('projects only typed constraints for every studio prompt attempt', () {
+    final relationship = CharacterGenerationRelationship.fromReferences([
+      CharacterGenerationReference(
+        sourceResourceId: const ResourceId('res_source'),
+        relationshipType: CharacterRelationshipType.mentorStudent,
+        sourceRole: 'mentor',
+        generatedCharacterRole: 'student',
+        description: 'A guarded apprenticeship',
+        worldviewScope: 'world_main',
+      ),
+    ]);
+
+    final constraints = relationship.toPromptConstraints();
+    expect(constraints, contains('sourceResourceId=res_source'));
+    expect(constraints, contains('relationType=mentor_student'));
+    expect(constraints, contains('sourceRole=mentor'));
+    expect(constraints, contains('generatedCharacterRole=student'));
+    expect(constraints, contains('description=A guarded apprenticeship'));
+    expect(constraints, contains('worldviewScope=world_main'));
+    expect(constraints, isNot(contains('targetRole')));
+  });
 }

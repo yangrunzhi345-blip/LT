@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/blueprint_parser.dart';
 import 'package:lt_dialogue/application/resources/blueprint_prompt_builder.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
+import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
+import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 
@@ -31,6 +33,31 @@ void main() {
       expect(sysPrompt,
           contains('part_1, part_2, part_3, part_4, part_5, part_6'));
       expect(sysPrompt, contains('核心主角/主要角色卡'));
+    });
+
+    test('keeps typed relationship constraints in initial planning prompt', () {
+      final draft = CharacterRelationshipDraft(
+        relationship: CharacterGenerationRelationship.fromReferences([
+          CharacterGenerationReference(
+            sourceResourceId: const ResourceId('res_a'),
+            relationshipType: CharacterRelationshipType.friend,
+            sourceRole: '盟友',
+            generatedCharacterRole: '盟友',
+            description: '共同守城',
+          ),
+        ]),
+      );
+      final instruction = BlueprintPromptBuilder.buildUserInstruction(
+        resourceName: '相关角色',
+        resourceType: ResourceType.character,
+        referenceSource: ReferenceSource.text('角色资料'),
+        relationshipDraft: draft,
+      );
+
+      expect(instruction, contains('【关系约束（用户确认）】'));
+      expect(instruction, contains('sourceResourceId=res_a'));
+      expect(instruction, contains('generatedCharacterRole=盟友'));
+      expect(instruction, contains('不得把模型输出的关系字段当作持久化关系'));
     });
   });
 

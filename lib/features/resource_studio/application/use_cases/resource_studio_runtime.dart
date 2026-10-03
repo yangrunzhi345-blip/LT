@@ -4,6 +4,7 @@ import '../../../../application/resources/streaming_generation_session_repositor
 import '../../../../application/resources/resource_blueprint_repository.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../application/resources/resource_creation_pipeline.dart';
+import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../controllers/streaming_resource_generation_controller.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/resource_blueprint.dart';
@@ -57,6 +58,7 @@ abstract interface class ResourceStudioRuntime {
     String? idempotencyKey,
     ResourceId? targetResourceId,
     String originWorldviewId = '',
+    CharacterRelationshipDraft? relationshipDraft,
   });
 
   Future<ResourceAiCreationPlan> createAndPlan(
@@ -216,6 +218,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     String? idempotencyKey,
     ResourceId? targetResourceId,
     String originWorldviewId = '',
+    CharacterRelationshipDraft? relationshipDraft,
   }) async {
     final operationId = idempotencyKey?.trim().isNotEmpty == true
         ? idempotencyKey!.trim()
@@ -231,6 +234,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         libraryMode: libraryMode,
         targetResourceId: targetResourceId,
         originWorldviewId: originWorldviewId,
+        relationshipDraft: relationshipDraft,
       ),
     );
     final session =

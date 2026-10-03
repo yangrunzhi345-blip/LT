@@ -141,6 +141,7 @@ final class PartGenerationContext {
     required this.partTitle,
     this.dependencySummaries = const <DependencyPartSummary>[],
     this.referenceExcerpt = '',
+    this.relationshipConstraints = '',
   });
 
   final String resourceName;
@@ -151,6 +152,11 @@ final class PartGenerationContext {
   final String partTitle;
   final List<DependencyPartSummary> dependencySummaries;
   final String referenceExcerpt;
+
+  /// User-authored relationship constraints projected from the creation
+  /// session. This is prompt context only; permanent edges are written by the
+  /// acceptance use case after review.
+  final String relationshipConstraints;
 }
 
 /// Strongly typed request for generating prose of exactly one Part.

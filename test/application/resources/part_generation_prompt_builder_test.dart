@@ -30,6 +30,10 @@ void main() {
           ),
         ],
         referenceExcerpt: '参考资料：星渊大陆北临冰霜之海，南接无尽炎域。',
+        relationshipConstraints:
+            '1. sourceResourceId=res_source; relationType=friend; '
+            'sourceRole=ally; generatedCharacterRole=ally; '
+            'description=共同守城。',
       ),
     );
 
@@ -64,6 +68,9 @@ void main() {
       expect(instruction, contains('创世神话'));
       expect(instruction, contains('远古神灵在混沌中劈开光与暗'));
       expect(instruction, contains('参考资料：星渊大陆北临冰霜之海'));
+      expect(instruction, contains('【关系约束（用户确认）】'));
+      expect(instruction, contains('sourceResourceId=res_source'));
+      expect(instruction, contains('generatedCharacterRole=ally'));
     });
 
     test('truncates long dependency context to bounds', () {

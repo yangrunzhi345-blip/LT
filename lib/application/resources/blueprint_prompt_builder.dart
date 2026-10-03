@@ -1,6 +1,7 @@
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_limits.dart';
+import '../resource_library/character_generation_reference.dart';
 import 'resource_creation_contracts.dart';
 
 /// Builder for unified, bounded planning prompts for [ResourceBlueprint].
@@ -78,6 +79,7 @@ dependencies 是依赖的 Part ID 列表（表示必须先生成哪些 Part，�
     required ResourceType resourceType,
     required ReferenceSource referenceSource,
     String intentSummary = '',
+    CharacterRelationshipDraft? relationshipDraft,
   }) {
     final buffer = StringBuffer();
     buffer.writeln('请为以下资源进行自适应大纲规划（Blueprint）：');
@@ -99,6 +101,16 @@ dependencies 是依赖的 Part ID 列表（表示必须先生成哪些 Part，�
       }
     }
 
+    final relationshipConstraints =
+        relationshipDraft?.relationship.toPromptConstraints() ?? '';
+    if (relationshipConstraints.isNotEmpty) {
+      buffer.writeln('\n【关系约束（用户确认）】');
+      buffer.writeln(relationshipConstraints);
+      buffer.writeln(
+        '关系约束仅用于规划角色内容；不得把模型输出的关系字段当作持久化关系，持久化必须使用创建会话中的原始草稿。',
+      );
+    }
+
     buffer.writeln('\n请根据上述需求，生成结构清晰、适合该资源特点、依赖清晰的动态 Section 与 Part 规划 JSON。');
     return buffer.toString();
   }
@@ -107,6 +119,7 @@ dependencies 是依赖的 Part ID 列表（表示必须先生成哪些 Part，�
   static String buildReplanInstruction({
     required ResourceBlueprint previousBlueprint,
     required String userFeedback,
+    CharacterRelationshipDraft? relationshipDraft,
   }) {
     final buffer = StringBuffer();
     buffer.writeln('用户希望对现有的 Blueprint 大纲进行重新规划与调整。');
@@ -125,6 +138,13 @@ dependencies 是依赖的 Part ID 列表（表示必须先生成哪些 Part，�
     buffer.writeln('\n【用户的修改意见与反馈】');
     buffer.writeln(
         userFeedback.trim().isEmpty ? '请优化大纲结构与内容分布。' : userFeedback.trim());
+
+    final relationshipConstraints =
+        relationshipDraft?.relationship.toPromptConstraints() ?? '';
+    if (relationshipConstraints.isNotEmpty) {
+      buffer.writeln('\n【关系约束（用户确认，重新规划时保持不变）】');
+      buffer.writeln(relationshipConstraints);
+    }
 
     buffer.writeln('\n请根据修改意见重新生成完整的 Blueprint JSON。');
     return buffer.toString();

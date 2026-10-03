@@ -95,6 +95,7 @@ final class BlueprintPlanner {
       resourceName: session.name,
       resourceType: session.resourceType,
       referenceSource: session.referenceSource,
+      relationshipDraft: session.relationshipDraft,
     );
     GenerationDiagnostics.instance.mark('PLAN[$sessionId] PROMPT_BUILT', {
       'systemLength': systemPrompt.length,
@@ -217,6 +218,7 @@ final class BlueprintPlanner {
     final userInstruction = BlueprintPromptBuilder.buildReplanInstruction(
       previousBlueprint: latest,
       userFeedback: userFeedback,
+      relationshipDraft: session.relationshipDraft,
     );
 
     _checkCancellation(taskHandle);

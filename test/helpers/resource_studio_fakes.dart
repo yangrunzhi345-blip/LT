@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
+import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 
@@ -105,6 +106,7 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     String? idempotencyKey,
     ResourceId? targetResourceId,
     String originWorldviewId = '',
+    CharacterRelationshipDraft? relationshipDraft,
   }) async {
     createCalled = true;
     createdTargetCharacters = targetCharacters;

@@ -6,6 +6,7 @@ import '../../../../core/config/generation_limits.dart';
 import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
+import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../domain/resources/resource_generation_patch.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../application/use_cases/resource_studio_runtime.dart';
@@ -195,6 +196,7 @@ final class ResourceStudioController extends ChangeNotifier {
     String? idempotencyKey,
     ResourceId? targetResourceId,
     String originWorldviewId = '',
+    CharacterRelationshipDraft? relationshipDraft,
   }) =>
       _runCommand(() async {
         final session = await _runtime.createAndStart(
@@ -207,6 +209,7 @@ final class ResourceStudioController extends ChangeNotifier {
           idempotencyKey: idempotencyKey,
           targetResourceId: targetResourceId,
           originWorldviewId: originWorldviewId,
+          relationshipDraft: relationshipDraft,
         );
         final tree = await _runtime.readTree(session.resourceId);
         _errorPartId = null;
