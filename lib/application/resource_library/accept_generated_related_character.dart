@@ -102,6 +102,42 @@ final class AcceptGeneratedRelatedCharacter {
         }
         final existingMetadata =
             ResourceTreeRowMapper.decodeMetadata(row['metadata_json']);
+        final isGeneratedCandidate = candidate != null &&
+            existingMetadata['creation_session_id'] ==
+                candidate.creationSessionId;
+        if (isGeneratedCandidate) {
+          final acceptedMetadata = <String, Object?>{
+            ...existingMetadata,
+            if (normalizedKey != null)
+              acceptanceIdempotencyKeyMetadata: normalizedKey,
+            if (normalizedSession != null)
+              acceptanceSessionIdMetadata: normalizedSession,
+            'related_character_candidate_id': candidate.candidateId,
+            'related_character_candidate_revision': candidate.revision,
+          };
+          await txn.update(
+            'resources',
+            {
+              'metadata_json':
+                  ResourceTreeRowMapper.encodeMetadata(acceptedMetadata),
+              'updated_at': DateTime.now().toIso8601String(),
+            },
+            where: 'id = ?',
+            whereArgs: [resource.id.value],
+          );
+          for (final relationship in requestedRelationships) {
+            await _relationshipRepository.createInTransaction(
+              txn,
+              firstResourceId: relationship.firstResourceId,
+              firstRole: relationship.firstRole,
+              secondResourceId: relationship.secondResourceId,
+              secondRole: relationship.secondRole,
+              relationType: relationship.relationType,
+              description: relationship.description,
+            );
+          }
+          return resource.id;
+        }
         if (normalizedKey == null && normalizedSession == null) {
           throw const ResourceTreeConflictException(
             'An accepted resource with this identity already exists; '

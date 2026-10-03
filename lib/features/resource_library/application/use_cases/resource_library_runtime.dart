@@ -95,11 +95,20 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
           isStudioAvailable: resource != null,
           isConsumable: projection.isConsumable,
           lifecycleState: projection.state,
+          originWorldviewId: _originWorldviewId(row, resource),
         ));
       }
     }
     items.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return items;
+  }
+
+  String _originWorldviewId(Map<String, dynamic> row, Resource? resource) {
+    final rowValue = row['matching_worldview_id']?.toString().trim();
+    if (rowValue != null && rowValue.isNotEmpty) return rowValue;
+    final resourceValue =
+        resource?.metadata['matching_worldview_id']?.toString().trim();
+    return resourceValue ?? '';
   }
 
   @override

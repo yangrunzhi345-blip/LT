@@ -59,6 +59,7 @@ final class ResourceLibraryItem {
     required this.isStudioAvailable,
     this.isConsumable = false,
     this.lifecycleState,
+    this.originWorldviewId = '',
   });
 
   final String id;
@@ -70,6 +71,9 @@ final class ResourceLibraryItem {
   final bool isStudioAvailable;
   final bool isConsumable;
   final ResourceLifecycleState? lifecycleState;
+
+  /// Native worldview identity used to validate related-character generation.
+  final String originWorldviewId;
 
   String localizedName(AppLocalizations l10n) =>
       name.trim().isEmpty ? l10n.resourceUnnamed : name;

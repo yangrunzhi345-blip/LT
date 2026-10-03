@@ -4,12 +4,16 @@ import '../../../../application/resources/streaming_generation_session_repositor
 import '../../../../application/resources/resource_blueprint_repository.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../application/resources/resource_creation_pipeline.dart';
+import '../../../../application/resource_library/accept_generated_related_character.dart';
 import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../controllers/streaming_resource_generation_controller.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/resource_blueprint.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../../../services/repositories/resource_tree_repository_impl.dart';
+import '../../../../services/repositories/character_relationship_repository.dart';
+import '../../../../services/database_service.dart';
+import '../../../../services/repositories/resource_tree_repository.dart';
 import '../../../../application/llm/llm_gateway.dart';
 import 'resource_ai_creation_orchestrator.dart';
 
@@ -61,6 +65,13 @@ abstract interface class ResourceStudioRuntime {
     CharacterRelationshipDraft? relationshipDraft,
   });
 
+  /// Commits a reviewed generated character and its relationship edges.
+  Future<ResourceId> acceptGeneratedCharacter({
+    required ResourceId resourceId,
+    required String creationSessionId,
+    required String idempotencyKey,
+  });
+
   Future<ResourceAiCreationPlan> createAndPlan(
     ResourceStudioCreationDraft draft,
   );
@@ -89,11 +100,19 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     required IResourceBlueprintRepository blueprintRepository,
     required ResourceCreationPipeline pipeline,
     required LlmGateway gateway,
+    AcceptGeneratedRelatedCharacter? acceptance,
   })  : _controller = controller,
         _sessionRepository = sessionRepository,
         _treeRepository = treeRepository,
         _blueprintRepository = blueprintRepository,
         _pipeline = pipeline,
+        _acceptance = acceptance ??
+            AcceptGeneratedRelatedCharacter(
+              resourceRepository: treeRepository,
+              relationshipRepository: CharacterRelationshipRepositoryImpl(
+                getDb: () => DatabaseService.database,
+              ),
+            ),
         _creationOrchestrator = ResourceAiCreationOrchestrator(
           controller: controller,
           sessionRepository: sessionRepository,
@@ -108,6 +127,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
   final ResourceTreeRepositoryImpl _treeRepository;
   final IResourceBlueprintRepository _blueprintRepository;
   final ResourceCreationPipeline _pipeline;
+  final AcceptGeneratedRelatedCharacter _acceptance;
   final ResourceAiCreationOrchestrator _creationOrchestrator;
 
   /// Shared AI creation authority used by Studio and legacy import adapters.
@@ -272,6 +292,86 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         creationSessionId,
         selectedPartIds: selectedPartIds,
       );
+
+  @override
+  Future<ResourceId> acceptGeneratedCharacter({
+    required ResourceId resourceId,
+    required String creationSessionId,
+    required String idempotencyKey,
+  }) async {
+    final creation = await _pipeline.findSession(creationSessionId);
+    if (creation == null || creation.resourceId != resourceId) {
+      throw StateError('生成会话与候选资源不匹配');
+    }
+    final relationshipDraft = creation.relationshipDraft;
+    if (relationshipDraft == null || relationshipDraft.isEmpty) {
+      throw StateError('生成会话没有可接受的关系草稿');
+    }
+    final blueprint =
+        await _blueprintRepository.findLatestBlueprint(creationSessionId);
+    if (blueprint == null ||
+        blueprint.status != BlueprintStatus.confirmed ||
+        blueprint.resourceId != resourceId) {
+      throw StateError('生成候选尚未完成确认或已过期');
+    }
+    final tree = await readTree(resourceId);
+    if (tree == null) {
+      throw ResourceTreeNotFoundException(
+        '生成候选资源不存在：${resourceId.value}',
+      );
+    }
+    final revision = blueprint.revision;
+    final candidate = CharacterGenerationCandidate(
+      candidateId: 'candidate_${creationSessionId}_r$revision',
+      creationSessionId: creationSessionId,
+      revision: revision,
+      resourceId: resourceId,
+    );
+    final resource = ResourceTreeDraft(
+      id: tree.resource.id,
+      type: tree.resource.type,
+      name: tree.resource.name,
+      summary: tree.resource.summary,
+      metadata: tree.resource.metadata,
+      status: tree.resource.status,
+      sections: [
+        for (final section in tree.orderedSections)
+          ResourceTreeSectionDraft(
+            id: section.id,
+            title: section.title,
+            summary: section.summary,
+            status: section.status,
+            parts: [
+              for (final part in tree.orderedPartsOf(section.id))
+                ResourceTreePartDraft(
+                  id: part.id,
+                  title: part.title,
+                  content: part.content,
+                  status: part.status,
+                ),
+            ],
+          ),
+      ],
+    );
+    final edges = [
+      for (final reference in relationshipDraft.relationship.references)
+        CharacterRelationshipDraftInput(
+          firstResourceId: reference.sourceResourceId,
+          firstRole: reference.sourceRole,
+          secondResourceId: resourceId,
+          secondRole: reference.generatedCharacterRole,
+          relationType: reference.relationshipType,
+          description: reference.description,
+        ),
+    ];
+    return _acceptance(
+      resource: resource,
+      relationships: edges,
+      idempotencyKey: idempotencyKey,
+      creationSessionId: creationSessionId,
+      candidate: candidate,
+    );
+  }
 
   @override
   Future<Resource> createManual({

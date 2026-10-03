@@ -115,6 +115,14 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   }
 
   @override
+  Future<ResourceId> acceptGeneratedCharacter({
+    required ResourceId resourceId,
+    required String creationSessionId,
+    required String idempotencyKey,
+  }) async =>
+      resourceId;
+
+  @override
   Future<ResourceAiCreationPlan> createAndPlan(
     ResourceStudioCreationDraft draft,
   ) =>

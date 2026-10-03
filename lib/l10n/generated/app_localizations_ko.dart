@@ -2120,6 +2120,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get resourceStudioConfirmAndStart => '확인을 계속하고 생성을 시작';
 
   @override
+  String get resourceStudioAcceptGeneratedCharacter => '생성된 캐릭터 적용';
+
+  @override
+  String get resourceStudioAcceptGeneratedCharacterSuccess => '캐릭터와 관계를 저장했습니다';
+
+  @override
+  String resourceStudioAcceptGeneratedCharacterFailed(Object error) {
+    return '캐릭터 관계 저장 실패: $error';
+  }
+
+  @override
   String resourceStudioUnfinishedTask(Object index) {
     return '미완료 생성 작업 $index';
   }

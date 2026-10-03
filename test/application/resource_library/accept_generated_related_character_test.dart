@@ -65,6 +65,65 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  test('attaches relationships to a generated candidate resource atomically',
+      () async {
+    final fixture = await _openFixture('lt_accept_candidate_resource_');
+    try {
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_source'),
+        type: ResourceType.character,
+        name: 'Source',
+      ));
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_generated'),
+        type: ResourceType.character,
+        name: 'Generated',
+        metadata: {'creation_session_id': 'session-1'},
+      ));
+
+      final candidate = CharacterGenerationCandidate(
+        candidateId: 'candidate_session-1_r1',
+        creationSessionId: 'session-1',
+        revision: 1,
+        resourceId: const ResourceId('res_generated'),
+      );
+      final accepted = await fixture.accept(
+        resource: const ResourceTreeDraft(
+          id: ResourceId('res_generated'),
+          type: ResourceType.character,
+          name: 'Generated',
+          metadata: {'creation_session_id': 'session-1'},
+        ),
+        relationships: const [
+          CharacterRelationshipDraftInput(
+            firstResourceId: ResourceId('res_source'),
+            firstRole: 'mentor',
+            secondResourceId: ResourceId('res_generated'),
+            secondRole: 'student',
+            relationType: CharacterRelationshipType.mentorStudent,
+          ),
+        ],
+        idempotencyKey: 'accept-candidate-1',
+        creationSessionId: 'session-1',
+        candidate: candidate,
+      );
+
+      expect(accepted, const ResourceId('res_generated'));
+      expect(
+        await fixture.relationships
+            .listForResource(const ResourceId('res_source')),
+        hasLength(1),
+      );
+      final saved = await fixture.trees.findResource(
+        const ResourceId('res_generated'),
+      );
+      expect(saved?.metadata['related_character_candidate_id'],
+          'candidate_session-1_r1');
+    } finally {
+      await fixture.close();
+    }
+  });
+
   test('accept rejects non-character resource types', () async {
     final fixture = await _openFixture('lt_accept_type_');
     try {
@@ -81,6 +140,42 @@ void main() {
       );
       expect(await fixture.trees.findResource(const ResourceId('res_world')),
           isNull);
+    } finally {
+      await fixture.close();
+    }
+  });
+
+  test('rejects a worldview resource used as a relationship endpoint',
+      () async {
+    final fixture = await _openFixture('lt_accept_worldview_endpoint_');
+    try {
+      await fixture.trees.createResourceTree(const ResourceTreeDraft(
+        id: ResourceId('res_world'),
+        type: ResourceType.worldview,
+        name: 'World',
+      ));
+
+      await expectLater(
+        fixture.accept(
+          resource: const ResourceTreeDraft(
+            id: ResourceId('res_b'),
+            type: ResourceType.character,
+            name: 'B',
+          ),
+          relationships: const [
+            CharacterRelationshipDraftInput(
+              firstResourceId: ResourceId('res_world'),
+              firstRole: 'setting',
+              secondResourceId: ResourceId('res_b'),
+              secondRole: 'resident',
+              relationType: CharacterRelationshipType.friend,
+            ),
+          ],
+        ),
+        throwsA(isA<CharacterRelationshipValidationException>()),
+      );
+      expect(
+          await fixture.trees.findResource(const ResourceId('res_b')), isNull);
     } finally {
       await fixture.close();
     }

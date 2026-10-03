@@ -2197,6 +2197,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resourceStudioConfirmAndStart => 'Confirm and start generation';
 
   @override
+  String get resourceStudioAcceptGeneratedCharacter =>
+      'Accept generated character';
+
+  @override
+  String get resourceStudioAcceptGeneratedCharacterSuccess =>
+      'Character and relationships saved';
+
+  @override
+  String resourceStudioAcceptGeneratedCharacterFailed(Object error) {
+    return 'Failed to save character relationships: $error';
+  }
+
+  @override
   String resourceStudioUnfinishedTask(Object index) {
     return 'Unfinished Generation Task $index';
   }

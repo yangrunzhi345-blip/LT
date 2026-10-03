@@ -1007,6 +1007,13 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     if (session == null) return const <Widget>[];
     final l10n = _l10n(context);
     return [
+      if (state.status == ResourceStudioStatus.completed &&
+          (state.tree?.resource.type == ResourceType.character ||
+              state.tree?.resource.type == ResourceType.npc))
+        FilledButton(
+          onPressed: () => unawaited(_acceptGeneratedCharacter()),
+          child: Text(l10n.resourceStudioAcceptGeneratedCharacter),
+        ),
       if (state.status == ResourceStudioStatus.paused ||
           state.status == ResourceStudioStatus.ready)
         FilledButton(
@@ -1033,6 +1040,33 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           child: Text(l10n.resourceStudioRetryGenerating),
         ),
     ];
+  }
+
+  Future<void> _acceptGeneratedCharacter() async {
+    final session = _controller.state.session;
+    final resourceId = _controller.state.resourceId;
+    if (session == null || resourceId == null) return;
+    final l10n = _l10n(context);
+    try {
+      await ref.read(resourceStudioRuntimeProvider).acceptGeneratedCharacter(
+            resourceId: resourceId,
+            creationSessionId: session.creationSessionId,
+            idempotencyKey: 'accept_${session.creationSessionId}',
+          );
+      if (!mounted) return;
+      AppFeedback.success(
+        context,
+        l10n.resourceStudioAcceptGeneratedCharacterSuccess,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      AppFeedback.error(
+        context,
+        l10n.resourceStudioAcceptGeneratedCharacterFailed(
+          resourceStudioUserMessage(error, l10n),
+        ),
+      );
+    }
   }
 
   /// Transient creation state shown while the draft is being persisted and the

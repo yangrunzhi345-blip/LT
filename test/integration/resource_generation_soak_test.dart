@@ -793,6 +793,14 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
       throw UnimplementedError('not used in soak tests');
 
   @override
+  Future<ResourceId> acceptGeneratedCharacter({
+    required ResourceId resourceId,
+    required String creationSessionId,
+    required String idempotencyKey,
+  }) =>
+      throw UnimplementedError('not used in soak tests');
+
+  @override
   Future<ResourceAiCreationPlan> createAndPlan(
     ResourceStudioCreationDraft draft,
   ) =>

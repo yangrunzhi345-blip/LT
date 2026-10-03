@@ -2102,6 +2102,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get resourceStudioConfirmAndStart => '確認を続けて生成を開始';
 
   @override
+  String get resourceStudioAcceptGeneratedCharacter => '生成キャラクターを採用';
+
+  @override
+  String get resourceStudioAcceptGeneratedCharacterSuccess =>
+      'キャラクターと関係を保存しました';
+
+  @override
+  String resourceStudioAcceptGeneratedCharacterFailed(Object error) {
+    return 'キャラクター関係の保存に失敗しました: $error';
+  }
+
+  @override
   String resourceStudioUnfinishedTask(Object index) {
     return '未完了の生成タスク $index';
   }

@@ -4041,6 +4041,24 @@ abstract class AppLocalizations {
   /// **'Confirm and start generation'**
   String get resourceStudioConfirmAndStart;
 
+  /// No description provided for @resourceStudioAcceptGeneratedCharacter.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept generated character'**
+  String get resourceStudioAcceptGeneratedCharacter;
+
+  /// No description provided for @resourceStudioAcceptGeneratedCharacterSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Character and relationships saved'**
+  String get resourceStudioAcceptGeneratedCharacterSuccess;
+
+  /// No description provided for @resourceStudioAcceptGeneratedCharacterFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save character relationships: {error}'**
+  String resourceStudioAcceptGeneratedCharacterFailed(Object error);
+
   /// No description provided for @resourceStudioUnfinishedTask.
   ///
   /// In en, this message translates to:

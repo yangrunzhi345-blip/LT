@@ -33,17 +33,14 @@
   `AdventureAssembler.assembleWithResourceRelationships` create an Adventure
   snapshot only when both endpoints are selected.
 
-## Remaining acceptance work
+## Current status
 
-- Connect the aggregate accept use case to the production candidate review
-  callback.
-- Connect relationship management to the Character Detail UI with localized,
-  responsive controls.
-- Connect Resource relationship projection to the production Adventure wizard
-  application boundary.
-- Add durable idempotency-key semantics and duplicate-submit integration tests.
-- Complete Phase 9 adversarial review, mutation probes, and final acceptance
-  report.
+Phases 2–8 are implemented. Relationship editing is available from Character
+Detail, Adventure creation projects a frozen relationship snapshot, the
+Resource Studio carries typed relationship drafts through planning and resume,
+and candidate acceptance is routed through the atomic application boundary.
+Phase 9 acceptance evidence is recorded in
+`phase-09-integrated-acceptance.md`.
 
 ## Commits
 

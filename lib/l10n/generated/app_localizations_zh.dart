@@ -2085,6 +2085,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resourceStudioConfirmAndStart => '继续确认并开始生成';
 
   @override
+  String get resourceStudioAcceptGeneratedCharacter => '接受生成角色';
+
+  @override
+  String get resourceStudioAcceptGeneratedCharacterSuccess => '角色及关系已保存';
+
+  @override
+  String resourceStudioAcceptGeneratedCharacterFailed(Object error) {
+    return '保存角色关系失败：$error';
+  }
+
+  @override
   String resourceStudioUnfinishedTask(Object index) {
     return '未完成的生成任务 $index';
   }
@@ -8102,6 +8113,17 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get resourceStudioConfirmAndStart => '继续确认并开始生成';
 
   @override
+  String get resourceStudioAcceptGeneratedCharacter => '接受生成角色';
+
+  @override
+  String get resourceStudioAcceptGeneratedCharacterSuccess => '角色及关系已保存';
+
+  @override
+  String resourceStudioAcceptGeneratedCharacterFailed(Object error) {
+    return '保存角色关系失败：$error';
+  }
+
+  @override
   String resourceStudioUnfinishedTask(Object index) {
     return '未完成的生成任务 $index';
   }
@@ -14117,6 +14139,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceStudioConfirmAndStart => '繼續確認並開始生成';
+
+  @override
+  String get resourceStudioAcceptGeneratedCharacter => '接受生成角色';
+
+  @override
+  String get resourceStudioAcceptGeneratedCharacterSuccess => '角色及關係已儲存';
+
+  @override
+  String resourceStudioAcceptGeneratedCharacterFailed(Object error) {
+    return '儲存角色關係失敗：$error';
+  }
 
   @override
   String resourceStudioUnfinishedTask(Object index) {

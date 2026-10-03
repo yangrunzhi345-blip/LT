@@ -179,9 +179,27 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             sourceRole: editor.sourceRole.text,
             generatedCharacterRole: editor.generatedRole.text,
             description: editor.description.text,
+            worldviewScope: editor.source.originWorldviewId,
           );
         }
+        CharacterGenerationScopeValidator.validate(
+          references: [
+            for (final editor in _relationshipEditors)
+              CharacterGenerationReference(
+                sourceResourceId: ResourceId(editor.source.id),
+                relationshipType: editor.relationType,
+                sourceRole: editor.sourceRole.text,
+                generatedCharacterRole: editor.generatedRole.text,
+                description: editor.description.text,
+                worldviewScope: editor.source.originWorldviewId,
+              ),
+          ],
+          targetWorldviewId: _originWorldview?.id ?? '',
+        );
         _relationshipError = null;
+      } on CharacterGenerationScopeException catch (error) {
+        _relationshipError = error.message;
+        hasError = true;
       } on Object {
         _relationshipError = l10n.relationshipNetworkDescription;
         hasError = true;
@@ -199,6 +217,7 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             generatedCharacterRole: editor.generatedRole.text,
             name: editor.source.name,
             description: editor.description.text,
+            worldviewScope: editor.source.originWorldviewId,
           ),
         )
         .toList(growable: false);
@@ -575,29 +594,20 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: DropdownButtonFormField<ResourceLibraryItem>(
-                  initialValue: editor.source,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: l10n.resourceTypeCharacter,
-                  ),
-                  items: choices
-                      .map(
-                        (resource) => DropdownMenuItem(
-                          value: resource,
-                          child: Text(
-                            resource.localizedName(l10n),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: isLocked
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          setState(() => editor.source = value);
-                        },
+                child: AppSelect<ResourceLibraryItem>(
+                  value: editor.source,
+                  label: l10n.resourceTypeCharacter,
+                  enabled: !isLocked,
+                  items: [
+                    for (final resource in choices)
+                      AppSelectItem(
+                        value: resource,
+                        label: resource.localizedName(l10n),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => editor.source = value);
+                  },
                 ),
               ),
               if (!isLocked)
@@ -609,20 +619,16 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
             ],
           ),
           const SizedBox(height: 8),
-          DropdownButtonFormField<CharacterRelationshipType>(
-            initialValue: editor.relationType,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: l10n.relationshipLabel(''),
-            ),
-            items: CharacterRelationshipType.values
-                .map(
-                  (type) => DropdownMenuItem(
-                    value: type,
-                    child: Text(_relationshipTypeLabel(l10n, type)),
-                  ),
-                )
-                .toList(growable: false),
+          AppSelect<CharacterRelationshipType>(
+            value: editor.relationType,
+            label: l10n.relationshipLabel(''),
+            items: [
+              for (final type in CharacterRelationshipType.values)
+                AppSelectItem(
+                  value: type,
+                  label: _relationshipTypeLabel(l10n, type),
+                ),
+            ],
             onChanged: (value) {
               if (value == null) return;
               setState(() {

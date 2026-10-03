@@ -32,6 +32,8 @@ import '../core/localization/app_locale_controller.dart';
 import '../core/refresh/page_refresh_controller.dart';
 
 import '../application/llm/llm_gateway.dart';
+import '../application/resource_library/character_relationship_management.dart';
+import '../services/repositories/character_relationship_repository.dart';
 import '../application/llm/ai_generator_llm_gateway.dart';
 import '../services/ai_generator_service.dart';
 import '../application/adventure/adventure_setup_use_case.dart';
@@ -43,6 +45,7 @@ import '../controllers/adventure_template_controller.dart';
 import '../controllers/adventure_game_controller.dart';
 import '../services/ai_import_service.dart';
 import '../services/read_aloud/read_aloud_controller.dart';
+
 import '../services/read_aloud/read_aloud_settings_store.dart';
 import '../services/tts/tts_model_catalog.dart';
 import '../services/tts/tts_model_manager.dart';
@@ -94,6 +97,15 @@ import '../controllers/streaming_resource_generation_controller.dart';
 // ═══════════════════════════════════════════════════════════════
 // Repository Providers
 // ═══════════════════════════════════════════════════════════════
+
+final characterRelationshipManagementProvider =
+    Provider<CharacterRelationshipManagement>((ref) {
+  return CharacterRelationshipManagement(
+    CharacterRelationshipRepositoryImpl(
+      getDb: () => DatabaseService.database,
+    ),
+  );
+});
 
 final adventureRepoProvider = Provider<IAdventureRepository>((ref) {
   return AdventureRepositoryImpl(getDb: () => DatabaseService.database);

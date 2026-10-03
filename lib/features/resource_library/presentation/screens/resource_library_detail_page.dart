@@ -9,6 +9,7 @@ import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/app_expansion_tile.dart';
 import '../../../../core/widgets/workbench_section.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/app_select.dart';
 import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../application/resource_library/edit_drafts.dart';
 import '../../../../models/tracked_state_definition.dart';
@@ -27,7 +28,6 @@ import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_voice_setting_section.dart';
 import '../widgets/character_relationships_section.dart';
 import '../../../../application/resource_library/character_relationship_management.dart';
-import '../../../../services/database_service.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -100,9 +100,7 @@ final class _ResourceLibraryDetailPageState
       return;
     }
     try {
-      final management = CharacterRelationshipManagement(
-        DatabaseService.characterRelationshipRepo,
-      );
+      final management = ref.read(characterRelationshipManagementProvider);
       final relationships =
           await management.listFor(ResourceId(widget.item.id));
       if (mounted) setState(() => _relationships = relationships);
@@ -112,8 +110,7 @@ final class _ResourceLibraryDetailPageState
   }
 
   CharacterRelationshipManagement get _relationshipManagement =>
-      CharacterRelationshipManagement(
-          DatabaseService.characterRelationshipRepo);
+      ref.read(characterRelationshipManagementProvider);
 
   Future<void> _editRelationship(
       CharacterRelationshipPerspective relationship) async {
@@ -133,16 +130,16 @@ final class _ResourceLibraryDetailPageState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButtonFormField<CharacterRelationshipType>(
-                    initialValue: relationType,
-                    decoration:
-                        InputDecoration(labelText: l10n.relationshipLabel('')),
-                    items: CharacterRelationshipType.values
-                        .map((value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(_relationshipTypeLabel(l10n, value)),
-                            ))
-                        .toList(growable: false),
+                  AppSelect<CharacterRelationshipType>(
+                    value: relationType,
+                    label: l10n.relationshipLabel(''),
+                    items: [
+                      for (final value in CharacterRelationshipType.values)
+                        AppSelectItem(
+                          value: value,
+                          label: _relationshipTypeLabel(l10n, value),
+                        ),
+                    ],
                     onChanged: (value) {
                       if (value != null) {
                         setDialogState(() => relationType = value);
