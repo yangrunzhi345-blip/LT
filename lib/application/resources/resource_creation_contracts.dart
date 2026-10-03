@@ -15,6 +15,7 @@ final class ResourceStudioCreationDraft {
     this.idempotencyKey,
     this.targetResourceId,
     this.originWorldviewId = '',
+    this.relationshipDraft,
   });
 
   final ResourceType type;
@@ -33,6 +34,7 @@ final class ResourceStudioCreationDraft {
 
   /// The native/origin worldview for a character or NPC.
   final String originWorldviewId;
+  final CharacterRelationshipDraft? relationshipDraft;
 }
 
 /// Input shared by every AI resource-creation entry point.

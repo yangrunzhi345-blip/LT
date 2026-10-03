@@ -255,6 +255,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
           libraryMode: draft.libraryMode,
           targetResourceId: draft.targetResourceId,
           originWorldviewId: draft.originWorldviewId,
+          relationshipDraft: draft.relationshipDraft,
         ),
       );
 
