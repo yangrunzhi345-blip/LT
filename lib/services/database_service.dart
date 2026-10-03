@@ -46,7 +46,8 @@ class DatabaseService {
   /// resource target length used by blueprint planning; v45 adds scene
   /// revision tracking and idempotent presence mutation requests; v46 adds
   /// branch-local runtime checkpoint metadata; v47 adds resource character
-  /// relationships.
+  /// relationships; v48 persists related-character generation drafts for
+  /// restart-safe Resource Studio recovery.
   static const int schemaVersion = 48;
 
   static Database? _db;
