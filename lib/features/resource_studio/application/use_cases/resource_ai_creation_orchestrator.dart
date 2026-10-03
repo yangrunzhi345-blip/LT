@@ -123,6 +123,7 @@ final class ResourceAiCreationOrchestrator {
       origin: origin.encode(),
       libraryMode: draft.libraryMode,
       targetCharacters: draft.targetCharacters,
+      relationshipDraft: draft.relationshipDraft,
     ));
     pipelineWatch.stop();
     GenerationDiagnostics.instance

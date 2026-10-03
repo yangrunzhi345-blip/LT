@@ -51,6 +51,7 @@ final class ResourceAiCreationDraft {
     required this.libraryMode,
     this.targetResourceId,
     this.originWorldviewId = '',
+    this.relationshipDraft,
   });
 
   final ResourceType resourceType;
@@ -64,6 +65,7 @@ final class ResourceAiCreationDraft {
 
   /// The native/origin worldview for a character or NPC.
   final String originWorldviewId;
+  final CharacterRelationshipDraft? relationshipDraft;
 }
 
 /// Persisted planning result exposed for workflows that review Blueprint Parts
