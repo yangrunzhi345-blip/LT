@@ -21,23 +21,25 @@ final class AcceptGeneratedRelatedCharacter {
   Future<ResourceId> call({
     required ResourceTreeDraft resource,
     required Iterable<CharacterRelationshipDraftInput> relationships,
-  }) =>
-      _resourceRepository.runInTransaction((DatabaseExecutor txn) async {
-        await _resourceRepository.createResourceTreeInTransaction(
-            txn, resource);
-        for (final relationship in relationships) {
-          await _relationshipRepository.createInTransaction(
-            txn,
-            firstResourceId: relationship.firstResourceId,
-            firstRole: relationship.firstRole,
-            secondResourceId: relationship.secondResourceId,
-            secondRole: relationship.secondRole,
-            relationType: relationship.relationType,
-            description: relationship.description,
-          );
-        }
-        return resource.id;
-      });
+  }) async {
+    final existing = await _resourceRepository.findResource(resource.id);
+    if (existing != null) return resource.id;
+    return _resourceRepository.runInTransaction((DatabaseExecutor txn) async {
+      await _resourceRepository.createResourceTreeInTransaction(txn, resource);
+      for (final relationship in relationships) {
+        await _relationshipRepository.createInTransaction(
+          txn,
+          firstResourceId: relationship.firstResourceId,
+          firstRole: relationship.firstRole,
+          secondResourceId: relationship.secondResourceId,
+          secondRole: relationship.secondRole,
+          relationType: relationship.relationType,
+          description: relationship.description,
+        );
+      }
+      return resource.id;
+    });
+  }
 }
 
 /// Validated relationship input for the accept aggregate.
