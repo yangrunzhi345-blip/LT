@@ -169,6 +169,7 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
   static const String metadataReferenceKind = 'reference_kind';
   static const String metadataReferenceLabel = 'reference_label';
   static const String metadataReferenceCharCount = 'reference_char_count';
+  static const String metadataRelationshipDraft = 'relationship_draft';
 
   /// Submits a creation request.
   ///
@@ -713,6 +714,9 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
       metadataReferenceKind: reference.kind.storageValue,
       if (reference.label.isNotEmpty) metadataReferenceLabel: reference.label,
       metadataReferenceCharCount: reference.characterCount,
+      if (request.relationshipDraft != null)
+        metadataRelationshipDraft:
+            request.relationshipDraft!.relationship.toJson(),
       if (reference.existingResourceId.isNotEmpty)
         'reference_resource_id': reference.existingResourceId,
     };
@@ -877,6 +881,8 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
       if (request.targetCharacters != null)
         'targetCharacters': request.targetCharacters,
       'metadata': request.initialMetadata,
+      if (request.relationshipDraft != null)
+        'relationshipDraft': request.relationshipDraft!.relationship.toJson(),
       'sections': request.initialSections
           .map((section) => {
                 'id': section.id?.value,

@@ -2,6 +2,7 @@ import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_limits.dart';
 import '../../services/repositories/resource_tree_repository.dart';
+import '../resource_library/character_generation_reference.dart';
 
 final class ResourceStudioCreationDraft {
   const ResourceStudioCreationDraft({
@@ -444,6 +445,7 @@ final class ResourceCreationRequest {
     this.resourceId,
     this.initialMetadata = const <String, Object?>{},
     this.targetCharacters,
+    this.relationshipDraft,
   });
 
   final ResourceType resourceType;
@@ -485,6 +487,10 @@ final class ResourceCreationRequest {
   /// capacity. The pipeline resolves and persists the effective value before
   /// planning so retries cannot silently change the requested size.
   final int? targetCharacters;
+
+  /// Typed relationship intent carried by related-character sessions.
+  /// This is candidate/session metadata; it is never a permanent edge.
+  final CharacterRelationshipDraft? relationshipDraft;
 
   /// Which resource-library partition the resource belongs to
   /// (conversation / adventure / creation). Persisted in metadata so the
