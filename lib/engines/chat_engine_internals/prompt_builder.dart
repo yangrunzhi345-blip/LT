@@ -1,5 +1,6 @@
 import '../../application/narrative/narrative_context.dart';
 import '../../application/narrative/prompt_compiler.dart';
+import '../../application/narrative/relationship_context.dart';
 import '../../config/app_config.dart';
 import '../../models/dialogue_level.dart';
 import '../../models/model_capabilities.dart';
@@ -16,6 +17,8 @@ class PromptBuilder {
   final PromptCompiler _compiler = const PromptCompiler();
   ContextTrace? lastContextTrace;
   SceneState? lastSceneState;
+  RelationshipNarrativeContext lastRelationships =
+      const RelationshipNarrativeContext();
 
   /// Current player turn, accounting for an already-appended current input.
   int? lastRound;
@@ -126,6 +129,7 @@ class PromptBuilder {
     );
     lastContextTrace = compiled.trace;
     lastSceneState = context.sceneState;
+    lastRelationships = context.plannedRelationships;
     lastHistoryItems = [
       for (final message in context.recentHistory)
         {'id': message.id, 'role': message.isUser ? 'user' : 'assistant'},
@@ -163,14 +167,20 @@ options 还不得重复或高度相似于最近几轮已经出现过的选项；
   List<Map<String, String>> getFullPromptPreview(
     ChatEngineHost host,
     List<Message> messages,
-    String? chatSummary,
-  ) {
+    String? chatSummary, {
+    int runtimeRevision = 0,
+    List<RuntimeEntityState> runtimeEntities = const [],
+    List<String> archiveRetrievalFacts = const [],
+  }) {
     return buildMessages(
       host,
       '（Prompt 预览：当前玩家输入将在此处）',
       messages,
       chatSummary,
       null,
+      runtimeRevision: runtimeRevision,
+      runtimeEntities: runtimeEntities,
+      archiveRetrievalFacts: archiveRetrievalFacts,
     );
   }
 

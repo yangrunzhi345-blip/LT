@@ -96,7 +96,7 @@ class _ControlledAdventureRepository implements IAdventureRepository {
   Future<List<RuntimeEntityState>> getRuntimeEntities(
     int adventureId,
     int branchId, {
-    int limit = 32,
+    int? limit,
   }) async =>
       const <RuntimeEntityState>[];
 

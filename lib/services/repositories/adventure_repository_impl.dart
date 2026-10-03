@@ -211,14 +211,16 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   Future<List<RuntimeEntityState>> getRuntimeEntities(
     int adventureId,
     int branchId, {
-    int limit = 256,
+    int? limit,
   }) async {
     final db = await _getDb();
     final rows = await db.query('adventure_runtime_entities',
         where: 'adventure_id = ? AND branch_id = ?',
         whereArgs: [adventureId, branchId],
         orderBy: 'updated_at DESC',
-        limit: limit.clamp(1, 512));
+        // Complete state reads must not silently fall back to snapshot values
+        // when an older overlay falls outside a display/retrieval limit.
+        limit: limit?.clamp(1, 512));
     // Runtime tables are persisted state, so a single legacy/corrupt row must
     // not block the whole adventure's runtime overlay. Skip malformed rows
     // (unknown entity_type, bad state_json) and keep the readable ones.
@@ -453,18 +455,35 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   }) async {
     if (revision < 0) throw ArgumentError.value(revision, 'revision');
     final db = await _getDb();
+    // The branch head freezes its ancestry at fork time. Follow commit
+    // parents, rather than the parent branch's mutable current head, to replay
+    // inherited fields without including later sibling/ancestor changes.
     final rows = await db.rawQuery('''
+      WITH RECURSIVE lineage(id, parent_commit_id, revision) AS (
+        SELECT c.id, c.parent_commit_id, c.revision
+        FROM adventure_state_commits c
+        JOIN adventure_runtime_heads h ON h.head_commit_id = c.id
+        WHERE h.adventure_id = ? AND h.branch_id = ? AND c.adventure_id = ?
+        UNION
+        SELECT c.id, c.parent_commit_id, c.revision
+        FROM adventure_state_commits c
+        JOIN lineage child ON child.parent_commit_id = c.id
+        WHERE c.adventure_id = ?
+      )
       SELECT c.id AS commit_id, c.revision, s.entity_type, s.entity_id,
              s.operation, s.path, s.after_json, s.provenance_json
       FROM adventure_state_changes s
       JOIN adventure_state_commits c ON c.id = s.commit_id
-      WHERE c.adventure_id = ? AND c.branch_id = ? AND c.revision <= ?
+      JOIN lineage ON lineage.id = c.id
+      WHERE c.revision <= ?
         ${entityType == null ? '' : 'AND s.entity_type = ?'}
         ${entityId == null ? '' : 'AND s.entity_id = ?'}
       ORDER BY c.revision ASC, s.change_index ASC
     ''', [
       adventureId,
       branchId,
+      adventureId,
+      adventureId,
       revision,
       if (entityType != null) entityType.name,
       if (entityId != null) entityId,
@@ -1547,7 +1566,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     // entity/path or make the validator reject the whole atomic turn.
     final explicitPaths = <String>{
       for (final change in explicit.changes)
-        '${change.entityType.name}:${change.entityId}:${change.path}',
+        '${change.entityType.name}:${change.entityId}:${RuntimeStateSchemaRegistry.canonicalPath(change.entityType, change.path)}',
     };
     return RuntimeStateCommitDraft(
       expectedRevision: explicit.expectedRevision,
@@ -1555,7 +1574,7 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         ...explicit.changes,
         ...legacy.changes.where(
           (change) => !explicitPaths.contains(
-            '${change.entityType.name}:${change.entityId}:${change.path}',
+            '${change.entityType.name}:${change.entityId}:${RuntimeStateSchemaRegistry.canonicalPath(change.entityType, change.path)}',
           ),
         ),
       ]),
@@ -1733,11 +1752,12 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           : trackedRegistry
               .find(proposal.entityType, proposal.entityId, customAttributeId)
               ?.definition;
+      final schemaDefinition = RuntimeStateSchemaRegistry.find(proposal.path);
       final after = _applyRuntimeOperation(
         before,
         proposal,
-        minimum: trackedDefinition?.minimum,
-        maximum: trackedDefinition?.maximum,
+        minimum: trackedDefinition?.minimum ?? schemaDefinition?.minimum,
+        maximum: trackedDefinition?.maximum ?? schemaDefinition?.maximum,
       );
       if (_runtimeEquals(before, after)) continue;
       if (after == null) {
@@ -1954,10 +1974,9 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           throw ArgumentError('Invalid runtime operation for ${change.path}'),
       };
     }
-    // A tracked monitor declared a numeric range in the frozen definition;
-    // an increment (or an out-of-range set that slipped through) is clamped to
-    // it, matching the existing runtime policy that a value never exceeds its
-    // bounds.
+    // Apply frozen monitor or typed schema bounds before creating events and
+    // persisting the overlay, so live state, timeline and replay share the
+    // same settled value.
     if (result is num) {
       var clamped = result;
       if (minimum != null && clamped < minimum) clamped = minimum;

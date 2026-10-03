@@ -6030,6 +6030,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ttsModelDownloadStarted => '已开始下载';
+
+  @override
+  String get runtimeStateFieldRelationshipStrength => '关系强度';
+
+  @override
+  String get runtimeStateFieldRelationshipNotes => '关系备注';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -12058,6 +12064,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get ttsModelDownloadStarted => '已开始下载';
+
+  @override
+  String get runtimeStateFieldRelationshipStrength => '关系强度';
+
+  @override
+  String get runtimeStateFieldRelationshipNotes => '关系备注';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18086,4 +18098,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get ttsModelDownloadStarted => '已開始下載';
+
+  @override
+  String get runtimeStateFieldRelationshipStrength => '關係強度';
+
+  @override
+  String get runtimeStateFieldRelationshipNotes => '關係備註';
 }

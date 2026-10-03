@@ -88,14 +88,14 @@ void main() {
           relationship: CharacterGenerationRelationship.fromReferences([
             // Distinct scopes must not silently inherit the first reference.
             CharacterGenerationReference(
-              sourceResourceId: ResourceId('res_a'),
+              sourceResourceId: const ResourceId('res_a'),
               relationshipType: CharacterRelationshipType.friend,
               sourceRole: 'friend',
               generatedCharacterRole: 'friend',
               worldviewScope: 'world_a',
             ),
             CharacterGenerationReference(
-              sourceResourceId: ResourceId('res_b'),
+              sourceResourceId: const ResourceId('res_b'),
               relationshipType: CharacterRelationshipType.friend,
               sourceRole: 'friend',
               generatedCharacterRole: 'friend',

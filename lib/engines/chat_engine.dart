@@ -21,6 +21,7 @@ import '../models/scene_dialogue_effects.dart';
 import '../models/scene_state.dart';
 import '../models/supporting_character.dart';
 import '../models/turn_settlement.dart';
+import '../models/typed_runtime_state.dart';
 import '../models/worldview_details.dart';
 import '../application/adventure/adventure_tracked_state_registry.dart';
 import '../application/adventure/adventure_speaker_context.dart';
@@ -362,10 +363,14 @@ class ChatEngine {
   }
 
   List<Map<String, String>> getFullPromptPreview() {
-    return _promptBuilder.getFullPromptPreview(
+    // Preview must not replace an active turn's planned records or trace.
+    return PromptBuilder().getFullPromptPreview(
       _host,
       _host.messages,
       chatSummary,
+      runtimeRevision: _promptBuilder.lastRelationships.runtimeRevision,
+      runtimeEntities: _runtimeEntities,
+      archiveRetrievalFacts: _runtimeArchiveFacts,
     );
   }
 
@@ -624,6 +629,7 @@ class ChatEngine {
               finalNarrative: finalNarrative,
             ),
             runtimeFacts: _settlementRuntimeFacts(),
+            relationships: _promptBuilder.lastRelationships,
           ),
           taskType: ContextTaskType.adventureTurnSettlement,
           intent: userInput,
@@ -841,7 +847,9 @@ class ChatEngine {
     final seen = <String>{};
     final kept = <RuntimeStateChangeProposal>[];
     for (final change in changes) {
-      final key = '${change.entityType.name}:${change.entityId}:${change.path}';
+      final path = RuntimeStateSchemaRegistry.canonicalPath(
+          change.entityType, change.path);
+      final key = '${change.entityType.name}:${change.entityId}:$path';
       if (!seen.add(key)) {
         diagnostics.add('runtime_state_change:duplicate:$key');
         continue;

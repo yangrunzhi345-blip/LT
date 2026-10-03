@@ -6140,4 +6140,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ttsModelDownloadStarted => '다운로드를 시작했습니다';
+
+  @override
+  String get runtimeStateFieldRelationshipStrength => '관계 강도';
+
+  @override
+  String get runtimeStateFieldRelationshipNotes => '관계 메모';
 }

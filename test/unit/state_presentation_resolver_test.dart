@@ -109,8 +109,31 @@ void main() {
         l10n.runtimeStateConfigured,
       );
       expect(
-        RuntimeStatePresentation.valueLabel('relationship', 'friend', l10n),
+        RuntimeStatePresentation.valueLabel(
+            'relationship', 'char_internal_1234', l10n),
         l10n.runtimeStateConfigured,
+      );
+    });
+
+    test('exposes relationship labels and their before-after changes', () {
+      for (final path in [
+        'relationship',
+        'relation_type',
+        'relationship_type',
+        'type',
+        'notes',
+      ]) {
+        expect(RuntimeStatePresentation.valueLabel(path, 'friend', l10n),
+            'friend');
+        expect(
+          RuntimeStatePresentation.valueLabel(path, 'char_internal_1234', l10n),
+          l10n.runtimeStateConfigured,
+        );
+      }
+      expect(
+        RuntimeStatePresentation.formatDiff(
+            'relationship', 'ally', 'enemy', l10n),
+        'ally → enemy',
       );
     });
 

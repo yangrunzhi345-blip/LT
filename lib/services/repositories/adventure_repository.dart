@@ -115,7 +115,7 @@ abstract class IAdventureRepository {
       throw UnimplementedError();
   Future<List<RuntimeEntityState>> getRuntimeEntities(
           int adventureId, int branchId,
-          {int limit = 256}) =>
+          {int? limit}) =>
       throw UnimplementedError();
   Future<List<Map<String, dynamic>>> getRecentStateChangesForEntity(
           int adventureId,

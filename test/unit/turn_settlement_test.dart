@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/custom_attribute_item.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
@@ -52,6 +54,7 @@ final class _ScriptedLlmService extends LLMService {
 
   /// Synchronous hook, invoked when call [callIndex] starts.
   void Function(int callIndex)? onCallStart;
+  Future<void> Function(int callIndex)? beforeResponse;
 
   /// Synchronous hook, invoked immediately before each `onChunk` delivery.
   void Function(int callIndex, String chunk)? onChunkObserved;
@@ -84,6 +87,7 @@ final class _ScriptedLlmService extends LLMService {
     reasoningCallbacks.add(onReasoningChunk != null);
     requestIds.add(taskHandle?.requestId);
     onCallStart?.call(index);
+    await beforeResponse?.call(index);
 
     if (index >= script.length) {
       throw StateError('unscripted LLM call #$index');
@@ -247,6 +251,166 @@ void main() {
         customAttributes: protagonistAttributes,
         supportingCharacters: companions,
       );
+
+  group('Relationship turn settlement closed loop', () {
+    test(
+        'should settle frozen identities and clamp strength for the next prompt',
+        () async {
+      final config = AdventureConfig(name: 'Alice', selectedCharacters: [
+        AdventureSelectedCharacter(
+            id: 'a',
+            characterId: 'a',
+            characterName: 'Alice',
+            isProtagonist: true),
+        AdventureSelectedCharacter(
+            id: 'b', characterId: 'b', characterName: 'Bob'),
+        AdventureSelectedCharacter(
+            id: 'c', characterId: 'c', characterName: 'Carol'),
+        AdventureSelectedCharacter(
+            id: 'd', characterId: 'd', characterName: 'David'),
+      ], characterRelationships: [
+        AdventureCharacterRelationship(
+          id: 'rel_ab',
+          sourceCharacterId: 'a',
+          targetCharacterId: 'b',
+          relationType: AdventureRelationType.friend,
+          description: 'original note',
+        ),
+        ...List.generate(
+          300,
+          (index) => AdventureCharacterRelationship(
+            id: 'other_relationship_$index',
+            sourceCharacterId: 'c',
+            targetCharacterId: 'd',
+            relationType: AdventureRelationType.friend,
+          ),
+        ),
+      ]);
+      final id =
+          await repository.createAdventure('Relationship closed loop', config);
+      await repository.seedRuntimeEntity(
+          adventureId: id,
+          branchId: 0,
+          entityType: RuntimeEntityType.relationship,
+          entityId: 'rel_ab');
+      Map<String, dynamic> change(
+              String path, Object value, String operation) =>
+          {
+            'entity_type': 'relationship',
+            'entity_id': 'rel_ab',
+            'change_kind': 'primary',
+            'operation': operation,
+            'path': path,
+            'value': value,
+            'reason': 'Story changed the bond',
+          };
+      final llm = _ScriptedLlmService([
+        _narrative,
+        _settlementJson(runtimeChanges: [
+          change('relationship', 'enemy', 'set'),
+          change('type', 'enemy', 'set'),
+          change('strength', 90, 'set'),
+          change('notes', '', 'set'),
+        ]),
+        _narrative,
+        _settlementJson(runtimeChanges: [change('strength', 20, 'increment')]),
+        _narrative,
+        _settlementJson(),
+      ]);
+      final harness = _SettlementHarness(
+          adventureId: id, repository: repository, config: config);
+      final engine = harness.build(llm);
+      addTearDown(engine.dispose);
+      final previewReady = Completer<void>();
+      final resumeNarrative = Completer<void>();
+      llm.beforeResponse = (index) async {
+        if (index != 2) return;
+        previewReady.complete();
+        await resumeNarrative.future;
+      };
+      await engine.sendMessage('Alice confronts Bob');
+      expect(llm.settlementCalls, [1]);
+      final settlement = llm.messages[1].last['content']!;
+      expect(settlement, contains('"relationship_id":"rel_ab"'));
+      expect(settlement, contains('"source_name":"Alice"'));
+      expect(settlement, contains('"target_name":"Bob"'));
+      expect(settlement, contains('"path":"strength"'));
+      expect(settlement, contains('"minimum":-100'));
+      expect(settlement, contains('"maximum":100'));
+      expect(settlement, isNot(contains('runtime_state_changes 必须返回空数组')));
+      expect(settlement, contains('不可信资料'));
+      final first =
+          await repository.getRuntimeTimeline(adventureId: id, branchId: 0);
+      expect(first.single.diffs, hasLength(3));
+      expect(first.single.diffs.where((d) => d.path == 'relationship'),
+          hasLength(1));
+      final db = await DatabaseService.database;
+      await db.update('adventure_runtime_entities',
+          {'updated_at': '2000-01-01T00:00:00.000Z'},
+          where: 'adventure_id = ? AND branch_id = ? AND entity_id = ?',
+          whereArgs: [id, 0, 'rel_ab']);
+      for (final relationship in config.characterRelationships.skip(1)) {
+        await repository.seedRuntimeEntity(
+            adventureId: id,
+            branchId: 0,
+            entityType: RuntimeEntityType.relationship,
+            entityId: relationship.id);
+      }
+      expect(await repository.getRuntimeEntities(id, 0), hasLength(301));
+      expect(
+          await repository.getRuntimeEntities(id, 0, limit: 64), hasLength(64));
+      final filteredCurrent = await repository.getCurrentRuntimeState(
+          adventureId: id,
+          branchId: 0,
+          entityType: RuntimeEntityType.relationship,
+          entityId: 'rel_ab');
+      expect(filteredCurrent.entities.values.single.overlay,
+          {'relationship': 'enemy', 'strength': 90, 'notes': ''});
+      final inherited = await repository.getRuntimeStateAtRevision(
+          adventureId: id, branchId: 0, revision: 1);
+      expect(inherited.entities['relationship:rel_ab']!.overlay,
+          filteredCurrent.entities.values.single.overlay);
+      final pending = engine.sendMessage('Alice and Bob continue');
+      await previewReady.future;
+      try {
+        final before = engine.lastSceneSnapshot?.runtimeRevision;
+        final preview = engine.getFullPromptPreview();
+        expect(preview.first['content'], contains('strength = 90'));
+        expect(engine.lastSceneSnapshot?.runtimeRevision, before);
+      } finally {
+        resumeNarrative.complete();
+      }
+      await pending;
+      expect(llm.messages[3].last['content'], contains('"strength":90'));
+      expect(llm.messages[2].first['content'],
+          contains('current relationship = "enemy"'));
+      expect(
+          llm.messages[2].first['content'], isNot(contains('original note')));
+      final turnRows = await db.query('scene_dialogue_turns',
+          where: 'adventure_id = ?', whereArgs: [id], orderBy: 'rowid');
+      final diagnostics = jsonDecode(turnRows[1]['diagnostics_json'] as String)
+          as Map<String, dynamic>;
+      final trace = diagnostics['context_trace'] as Map<String, dynamic>;
+      final relationshipEntry = (trace['sources'] as List)
+          .cast<Map<String, dynamic>>()
+          .singleWhere((entry) => entry['relationship_id'] == 'rel_ab');
+      expect(relationshipEntry['effective_value'], 'enemy');
+      expect(relationshipEntry['runtime_revision'], 1);
+      await engine.sendMessage('Alice and Bob reconsider');
+      expect(llm.messages[4].first['content'], contains('strength = 100'));
+      expect((await repository.getRuntimeHead(id, 0)).revision, 2);
+      expect(await turnsPersisted(id), 3);
+      final reopened = await reopenSqlite();
+      final current =
+          await reopened.getCurrentRuntimeState(adventureId: id, branchId: 0);
+      expect(current.entities['relationship:rel_ab']!.overlay,
+          {'relationship': 'enemy', 'strength': 100, 'notes': ''});
+      final replay = await reopened.getRuntimeStateAtRevision(
+          adventureId: id, branchId: 0, revision: 2);
+      expect(replay.entities['relationship:rel_ab']!.overlay,
+          current.entities['relationship:rel_ab']!.overlay);
+    });
+  });
 
   for (final recoveryStage in [1, 2, 4]) {
     test('L5 stage$recoveryStage recovery commits one turn and one revision',

@@ -488,10 +488,20 @@ class _RuntimeStateHubPageState extends ConsumerState<RuntimeStateHubPage> {
 
   Map<String, String> _knownCharacterNames() {
     final config = ref.read(chatProvider).adventureConfig;
-    return RuntimeStatePresentation.resolveKnownNames(
+    final names = RuntimeStatePresentation.resolveKnownNames(
       config: config,
       dynamicCharacters: _dynamicCharacters,
     );
+    if (config != null) {
+      for (final relationship in config.characterRelationships) {
+        final source = names[relationship.sourceCharacterId] ??
+            relationship.sourceCharacterId;
+        final target = names[relationship.targetCharacterId] ??
+            relationship.targetCharacterId;
+        names[relationship.id] = '$source → $target';
+      }
+    }
+    return names;
   }
 
   Widget _buildDashboard(BuildContext context, AppLocalizations l10n) {
@@ -2505,7 +2515,10 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
   late final List<RuntimeStatePathDefinition> _definitions =
       RuntimeStateSchemaRegistry.definitions
           .where((definition) =>
-              definition.entities.contains(widget.entity.entityType))
+              definition.entities.contains(widget.entity.entityType) &&
+              RuntimeStateSchemaRegistry.canonicalPath(
+                      widget.entity.entityType, definition.id) ==
+                  definition.id)
           .toList(growable: false);
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, Object?> _values = {};
@@ -2519,6 +2532,7 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
   bool get _hasChanges => _definitions.any((definition) {
         final path = definition.id;
         if (_resetRequested.contains(path)) return true;
+        if (!_touched.contains(path)) return false;
         final original = widget.entity.overlay[path];
         if (original == null && !_touched.contains(path)) return false;
         final value = _draftValue(definition);
@@ -2597,7 +2611,9 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
         final value = operation == RuntimeChangeOperation.remove
             ? null
             : _draftValue(definition);
-        if (original == null && !_touched.contains(path)) continue;
+        if (!_resetRequested.contains(path) && !_touched.contains(path)) {
+          continue;
+        }
         if (operation == RuntimeChangeOperation.remove || value != original) {
           changes.add(RuntimeStateChangeProposal(
             entityType: widget.entity.entityType,
@@ -2664,7 +2680,13 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
         'faction_id' => _labelText(l10n, 'faction_id'),
         'former_faction_id' => _labelText(l10n, 'former_faction_id'),
         'controller_id' => _labelText(l10n, 'controller_id'),
-        'relationship' => _labelText(l10n, 'relationship'),
+        'relationship' ||
+        'relation_type' ||
+        'relationship_type' ||
+        'type' =>
+          _labelText(l10n, 'relationship'),
+        'strength' => l10n.runtimeStateFieldRelationshipStrength,
+        'notes' => l10n.runtimeStateFieldRelationshipNotes,
         'goal' => _labelText(l10n, 'goal'),
         'status' => _labelText(l10n, 'status'),
         'control' => _labelText(l10n, 'control'),
@@ -2771,13 +2793,14 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
       case RuntimeStateValueKind.text:
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           AppTextField(
+            key: ValueKey('runtime-edit-$path'),
             controller: _controllers[path],
             label: label,
             enabled: !reset,
             maxLines:
                 definition.valueKind == RuntimeStateValueKind.text ? 3 : 1,
             keyboardType: definition.valueKind == RuntimeStateValueKind.text
-                ? TextInputType.text
+                ? TextInputType.multiline
                 : const TextInputType.numberWithOptions(
                     decimal: true, signed: true),
             validator: validator,
@@ -2846,7 +2869,13 @@ class _RuntimeStateEditPageState extends ConsumerState<RuntimeStateEditPage> {
       'faction_id' => l10n.runtimeStateFieldFactionId,
       'former_faction_id' => l10n.runtimeStateFieldFormerFactionId,
       'controller_id' => l10n.runtimeStateFieldControllerId,
-      'relationship' => l10n.runtimeStateFieldRelationship,
+      'relationship' ||
+      'relation_type' ||
+      'relationship_type' ||
+      'type' =>
+        l10n.runtimeStateFieldRelationship,
+      'strength' => l10n.runtimeStateFieldRelationshipStrength,
+      'notes' => l10n.runtimeStateFieldRelationshipNotes,
       'goal' => l10n.runtimeStateFieldGoal,
       'status' => l10n.runtimeStateFieldStatus,
       'control' => l10n.runtimeStateFieldControl,

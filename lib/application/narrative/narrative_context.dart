@@ -9,12 +9,14 @@ import '../../models/scene_state.dart';
 import '../../models/supporting_character.dart';
 import '../../models/world_entry.dart';
 import '../../models/worldview_details.dart';
+import '../../models/runtime_relationship_state.dart';
 import '../../services/embedding/semantic_embedding_service.dart';
 import '../../utils/token_estimator.dart';
 import 'conflict_resolver.dart';
 import 'user_intent.dart';
 import 'world_semantic_retrieval.dart';
 import 'context_weighting.dart';
+import 'relationship_context.dart';
 
 enum WorldContextKind { constraint, fact, lore }
 
@@ -183,6 +185,13 @@ final class ContextTraceEntry {
   final String? classifiedKind;
   final String? retrievalSource;
   final double? semanticSimilarity;
+  final String? relationshipId;
+  final String? sourceCharacterId;
+  final String? targetCharacterId;
+  final String? effectiveValue;
+  final String? selectionReason;
+  final int? runtimeRevision;
+  final int? weight;
 
   const ContextTraceEntry({
     required this.source,
@@ -197,6 +206,13 @@ final class ContextTraceEntry {
     this.classifiedKind,
     this.retrievalSource,
     this.semanticSimilarity,
+    this.relationshipId,
+    this.sourceCharacterId,
+    this.targetCharacterId,
+    this.effectiveValue,
+    this.selectionReason,
+    this.runtimeRevision,
+    this.weight,
   });
 }
 
@@ -242,6 +258,19 @@ final class ContextTrace {
               if (entry.semanticSimilarity != null)
                 'semantic_similarity':
                     double.parse(entry.semanticSimilarity!.toStringAsFixed(4)),
+              if (entry.relationshipId != null)
+                'relationship_id': entry.relationshipId,
+              if (entry.sourceCharacterId != null)
+                'source_character_id': entry.sourceCharacterId,
+              if (entry.targetCharacterId != null)
+                'target_character_id': entry.targetCharacterId,
+              if (entry.effectiveValue != null)
+                'effective_value': entry.effectiveValue,
+              if (entry.selectionReason != null)
+                'selection_reason': entry.selectionReason,
+              if (entry.runtimeRevision != null)
+                'runtime_revision': entry.runtimeRevision,
+              if (entry.weight != null) 'weight': entry.weight,
             },
         ],
         if (worldRetrieval.isNotEmpty)
@@ -262,6 +291,11 @@ final class NarrativeContext {
   /// intact unless the configured hard input limit cannot contain it.
   final String plannedUserInput;
   final String characterContext;
+  final RelationshipNarrativeContext relationships;
+  final RelationshipNarrativeContext plannedRelationships;
+
+  /// Planner-approved rendering of relationship records selected for this turn.
+  final String plannedRelationshipContext;
 
   /// Planner-approved rendering of the current scene source.
   final String plannedSceneContext;
@@ -283,6 +317,9 @@ final class NarrativeContext {
     required this.world,
     required this.plannedUserInput,
     required this.characterContext,
+    this.relationships = const RelationshipNarrativeContext(),
+    this.plannedRelationships = const RelationshipNarrativeContext(),
+    this.plannedRelationshipContext = '',
     required this.plannedSceneContext,
     required this.plannedWorldContext,
     required this.personaContext,
@@ -330,7 +367,9 @@ final class RuntimeMemoryProjector {
     List<String> archiveRetrievalFacts = const [],
   }) {
     final relevant = entities
-        .where((entity) => relevantEntityIds.contains(entity.entityId))
+        .where((entity) =>
+            entity.entityType != RuntimeEntityType.relationship &&
+            relevantEntityIds.contains(entity.entityId))
         .take(maximumEntities)
         .toList(growable: false);
     String render(Iterable<RuntimeEntityState> source) {
@@ -1000,6 +1039,7 @@ final class ContextOrchestrator {
     ContextWeightProfile weightProfile = const ContextWeightProfile(),
   }) {
     final knownCharacters = <String, String>{
+      ...adventureCharacterNames(config),
       'protagonist': config?.name ?? '主角',
       for (final character in _legacySupportingCharacters(config))
         character.id: character.name,
@@ -1083,6 +1123,7 @@ final class ContextOrchestrator {
     ContextWeightProfile weightProfile = const ContextWeightProfile(),
   }) async {
     final knownCharacters = <String, String>{
+      ...adventureCharacterNames(config),
       'protagonist': config?.name ?? '主角',
       for (final character in _legacySupportingCharacters(config))
         character.id: character.name,
@@ -1194,6 +1235,24 @@ final class ContextOrchestrator {
       },
       archiveRetrievalFacts: archiveRetrievalFacts,
     );
+    final relationshipStates = RuntimeRelationshipProjection.project(
+      snapshot: config?.characterRelationships ?? const [],
+      runtimeEntities: runtimeEntities,
+      runtimeRevision: runtimeRevision,
+    );
+    final mentionedCharacterIds = <String>{
+      for (final entry in knownCharacters.entries)
+        if (rawInput.contains(entry.value)) entry.key,
+    };
+    final relationshipContext = const RelationshipRelevancePlanner().plan(
+      relationships: relationshipStates,
+      characterNames: knownCharacters,
+      presentCharacterIds: conflict.sceneState.presentCharacterIds.toSet(),
+      protagonistId: config?.protagonistCharacter?.characterId ?? 'protagonist',
+      mentionedCharacterIds: mentionedCharacterIds,
+      runtimeRevision: runtimeRevision,
+    );
+    final relationshipText = relationshipContext.render();
     const planner = WeightedContextPlanner();
     final worldText = _renderWorldPrompt(world);
     final archiveText = runtime.archiveRetrievalFacts.join('\n');
@@ -1267,6 +1326,15 @@ final class ContextOrchestrator {
           ),
         ),
         ContextCandidate(
+          source: ContextSourceId.relationship,
+          content: relationshipText,
+          policy: const ContextSourcePolicy(
+            priority: ContextSourcePriority.core,
+            minimumTokens: 0,
+            maximumTokens: 1536,
+          ),
+        ),
+        ContextCandidate(
           source: ContextSourceId.historicalSummary,
           content: summary ?? '',
           policy: const ContextSourcePolicy(
@@ -1312,6 +1380,16 @@ final class ContextOrchestrator {
         fallback;
     final characterContext =
         planned(ContextSourceId.characterProfile, characterFallback);
+    final relationshipAllocation = allocationPlan.allocations
+        .where((entry) => entry.source == ContextSourceId.relationship)
+        .firstOrNull;
+    final plannedRelationships = relationshipContext
+        .fitWithinTokens(relationshipAllocation?.allocatedTokens ?? 0);
+    final plannedRelationshipContext = plannedRelationships.render();
+    final includedRelationshipIds = {
+      for (final entry in plannedRelationships.selected)
+        entry.state.relationshipId,
+    };
     final plannedUserInput = planned(ContextSourceId.userControl, rawInput);
     final plannedSceneContext =
         planned(ContextSourceId.currentScene, sceneText);
@@ -1332,6 +1410,7 @@ final class ContextOrchestrator {
         mandatoryTokens -
         worldTokens -
         TokenEstimator(characterContext).tokens -
+        TokenEstimator(plannedRelationshipContext).tokens -
         TokenEstimator(runtimeMemory).tokens -
         archiveFacts.fold<int>(
           0,
@@ -1363,6 +1442,7 @@ final class ContextOrchestrator {
     );
     final fixedTokens = worldTokens +
         TokenEstimator(characterContext).tokens +
+        TokenEstimator(plannedRelationshipContext).tokens +
         TokenEstimator(runtimeMemory).tokens +
         archiveFacts.fold<int>(
           0,
@@ -1462,6 +1542,36 @@ final class ContextOrchestrator {
                 ? 'included'
                 : 'truncated',
       ),
+      for (final entry in relationshipContext.selected)
+        ContextTraceEntry(
+          source: 'relationship:${entry.state.relationshipId}',
+          estimatedTokens: includedRelationshipIds
+                  .contains(entry.state.relationshipId)
+              ? TokenEstimator(relationshipContext.renderRecord(entry)).tokens
+              : 0,
+          decision:
+              !includedRelationshipIds.contains(entry.state.relationshipId)
+                  ? 'selected_but_budgeted_out'
+                  : 'included:${entry.selectionReason}',
+          relationshipId: entry.state.relationshipId,
+          sourceCharacterId: entry.state.sourceCharacterId,
+          targetCharacterId: entry.state.targetCharacterId,
+          effectiveValue: entry.state.effectiveRelation,
+          selectionReason: entry.selectionReason,
+          runtimeRevision: entry.state.runtimeRevision,
+          weight: weightProfile[ContextSourceId.relationship],
+        ),
+      ContextTraceEntry(
+        source: 'relationship_runtime',
+        estimatedTokens: 0,
+        decision: relationshipContext.isEmpty
+            ? 'empty'
+            : plannedRelationshipContext.isEmpty
+                ? 'budgeted_out'
+                : 'included:${plannedRelationships.length}',
+        runtimeRevision: runtimeRevision,
+        weight: weightProfile[ContextSourceId.relationship],
+      ),
       ContextTraceEntry(
         source: 'runtime_head',
         estimatedTokens: TokenEstimator(runtimeMemory).tokens,
@@ -1508,10 +1618,12 @@ final class ContextOrchestrator {
         decision: 'protected',
       ),
     ];
-    final total = traceEntries.fold<int>(
-      0,
-      (sum, entry) => sum + entry.estimatedTokens,
-    );
+    // Count the actual relationship source once, including its data framing.
+    // Excluded candidates do not consume the compiled prompt's budget.
+    final total = traceEntries
+            .where((entry) => entry.relationshipId == null)
+            .fold<int>(0, (sum, entry) => sum + entry.estimatedTokens) +
+        TokenEstimator(plannedRelationshipContext).tokens;
     final trace = ContextTrace(
       entries: List.unmodifiable(traceEntries),
       conflictRules: conflict.triggeredRules,
@@ -1531,6 +1643,8 @@ final class ContextOrchestrator {
               TokenEstimator(plannedWorldContext).tokens,
           ContextSourceId.characterProfile.value:
               TokenEstimator(characterContext).tokens,
+          ContextSourceId.relationship.value:
+              TokenEstimator(plannedRelationshipContext).tokens,
           ContextSourceId.runtimeCharacterState.value:
               TokenEstimator(runtimeMemory).tokens,
           ContextSourceId.runtimeWorldState.value:
@@ -1549,6 +1663,9 @@ final class ContextOrchestrator {
       world: world,
       plannedUserInput: plannedUserInput,
       characterContext: characterContext,
+      relationships: relationshipContext,
+      plannedRelationships: plannedRelationships,
+      plannedRelationshipContext: plannedRelationshipContext,
       plannedSceneContext: plannedSceneContext,
       plannedWorldContext: plannedWorldContext,
       personaContext: personaContext,

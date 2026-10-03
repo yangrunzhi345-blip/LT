@@ -3899,5 +3899,7 @@
   "ttsErrorCancelled": "キャンセルしました。",
   "ttsVoiceFilterAll": "すべて",
   "ttsVoicePreviewSentence": "これは選択した音声の試聴サンプルです。",
-  "ttsModelDownloadStarted": "ダウンロードを開始しました"
+  "ttsModelDownloadStarted": "ダウンロードを開始しました",
+  "runtimeStateFieldRelationshipStrength": "関係の強さ",
+  "runtimeStateFieldRelationshipNotes": "関係のメモ"
 }

@@ -26,6 +26,7 @@ String _sourceLabel(AppLocalizations l10n, ContextSourceId source) =>
         l10n.contextSourceRuntimeCharacterState,
       ContextSourceId.worldview => l10n.contextSourceWorldview,
       ContextSourceId.runtimeWorldState => l10n.contextSourceRuntimeWorldState,
+      ContextSourceId.relationship => l10n.relationshipNetworkTitle,
       ContextSourceId.recentDialogue => l10n.contextSourceRecentDialogue,
       ContextSourceId.historicalSummary => l10n.contextSourceHistoricalSummary,
       ContextSourceId.archiveRetrieval => l10n.contextSourceArchiveRetrieval,

@@ -11190,6 +11190,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Download started'**
   String get ttsModelDownloadStarted;
+
+  /// No description provided for @runtimeStateFieldRelationshipStrength.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship strength'**
+  String get runtimeStateFieldRelationshipStrength;
+
+  /// No description provided for @runtimeStateFieldRelationshipNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationship notes'**
+  String get runtimeStateFieldRelationshipNotes;
 }
 
 class _AppLocalizationsDelegate

@@ -432,8 +432,9 @@ class AdventureProvider extends ChangeNotifier {
   /// seeded row.
   Future<void> _seedRuntimeEntities(
     int adventureId,
-    AdventureConfig? config,
-  ) async {
+    AdventureConfig? config, {
+    int branchId = 0,
+  }) async {
     if (config == null) return;
     final protagonistId =
         config.protagonistCharacter?.characterId ?? 'protagonist';
@@ -466,9 +467,27 @@ class AdventureProvider extends ChangeNotifier {
     for (final id in ids) {
       await _adventureRepo.seedRuntimeEntity(
         adventureId: adventureId,
-        branchId: 0,
+        branchId: branchId,
         entityType: RuntimeEntityType.character,
         entityId: id,
+      );
+    }
+    // Relationship entities are keyed by the frozen snapshot id. Their
+    // overlays remain branch-local typed state; the snapshot itself is never
+    // copied into or written from the resource library at runtime.
+    for (final relationship in config.characterRelationships) {
+      final relationshipId = relationship.id.trim();
+      if (relationshipId.isEmpty) continue;
+      final endpoints = {
+        relationship.sourceCharacterId.trim(),
+        relationship.targetCharacterId.trim(),
+      };
+      if (endpoints.length != 2 || !ids.containsAll(endpoints)) continue;
+      await _adventureRepo.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: branchId,
+        entityType: RuntimeEntityType.relationship,
+        entityId: relationshipId,
       );
     }
     // Seed non-character entities that own a monitoring definition so the
@@ -482,7 +501,7 @@ class AdventureProvider extends ChangeNotifier {
       if (!seeded.add(key)) continue;
       await _adventureRepo.seedRuntimeEntity(
         adventureId: adventureId,
-        branchId: 0,
+        branchId: branchId,
         entityType: binding.entityType,
         entityId: binding.entityId,
       );
@@ -810,6 +829,20 @@ class AdventureProvider extends ChangeNotifier {
         adventureId, branchId);
     await _loadScenePresence(generation: generation);
     await _loadSceneState(generation: generation);
+    if (generation != _sceneGeneration ||
+        adventureId != _currentAdventureId ||
+        branchId != _currentBranchId) {
+      return;
+    }
+    // Older forks predate relationship seeding. Register frozen identities
+    // idempotently in the target branch without reading the resource library.
+    await _seedRuntimeEntities(adventureId, _adventureConfig,
+        branchId: branchId);
+    if (generation != _sceneGeneration ||
+        adventureId != _currentAdventureId ||
+        branchId != _currentBranchId) {
+      return;
+    }
     _runtimeEntities =
         await _adventureRepo.getRuntimeEntities(adventureId, branchId);
     await refreshSceneCandidates(generation: generation);

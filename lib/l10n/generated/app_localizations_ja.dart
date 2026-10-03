@@ -6113,4 +6113,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get ttsModelDownloadStarted => 'ダウンロードを開始しました';
+
+  @override
+  String get runtimeStateFieldRelationshipStrength => '関係の強さ';
+
+  @override
+  String get runtimeStateFieldRelationshipNotes => '関係のメモ';
 }

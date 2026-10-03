@@ -3899,5 +3899,7 @@
   "ttsErrorCancelled": "Cancelled.",
   "ttsVoiceFilterAll": "All",
   "ttsVoicePreviewSentence": "This is a preview of the selected voice.",
-  "ttsModelDownloadStarted": "Download started"
+  "ttsModelDownloadStarted": "Download started",
+  "runtimeStateFieldRelationshipStrength": "Relationship strength",
+  "runtimeStateFieldRelationshipNotes": "Relationship notes"
 }

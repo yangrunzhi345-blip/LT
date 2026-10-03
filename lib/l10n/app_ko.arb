@@ -3899,5 +3899,7 @@
   "ttsErrorCancelled": "취소되었습니다.",
   "ttsVoiceFilterAll": "전체",
   "ttsVoicePreviewSentence": "선택한 음성의 미리 듣기 예시입니다.",
-  "ttsModelDownloadStarted": "다운로드를 시작했습니다"
+  "ttsModelDownloadStarted": "다운로드를 시작했습니다",
+  "runtimeStateFieldRelationshipStrength": "관계 강도",
+  "runtimeStateFieldRelationshipNotes": "관계 메모"
 }

@@ -6437,4 +6437,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsModelDownloadStarted => 'Download started';
+
+  @override
+  String get runtimeStateFieldRelationshipStrength => 'Relationship strength';
+
+  @override
+  String get runtimeStateFieldRelationshipNotes => 'Relationship notes';
 }

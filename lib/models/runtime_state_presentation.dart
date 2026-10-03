@@ -60,6 +60,31 @@ final class RuntimeStatePresentationRegistry {
       category: RuntimeStateFieldCategory.relationship,
     ),
     RuntimeStateFieldPresentationDefinition(
+      path: 'relation_type',
+      entityTypes: {RuntimeEntityType.relationship},
+      category: RuntimeStateFieldCategory.relationship,
+    ),
+    RuntimeStateFieldPresentationDefinition(
+      path: 'relationship_type',
+      entityTypes: {RuntimeEntityType.relationship},
+      category: RuntimeStateFieldCategory.relationship,
+    ),
+    RuntimeStateFieldPresentationDefinition(
+      path: 'type',
+      entityTypes: {RuntimeEntityType.relationship},
+      category: RuntimeStateFieldCategory.relationship,
+    ),
+    RuntimeStateFieldPresentationDefinition(
+      path: 'strength',
+      entityTypes: {RuntimeEntityType.relationship},
+      category: RuntimeStateFieldCategory.relationship,
+    ),
+    RuntimeStateFieldPresentationDefinition(
+      path: 'notes',
+      entityTypes: {RuntimeEntityType.relationship},
+      category: RuntimeStateFieldCategory.relationship,
+    ),
+    RuntimeStateFieldPresentationDefinition(
       path: 'goal',
       entityTypes: {RuntimeEntityType.character, RuntimeEntityType.npc},
       category: RuntimeStateFieldCategory.goal,

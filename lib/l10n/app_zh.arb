@@ -3899,5 +3899,7 @@
   "ttsErrorCancelled": "已取消。",
   "ttsVoiceFilterAll": "全部",
   "ttsVoicePreviewSentence": "这是所选声音的试听示例。",
-  "ttsModelDownloadStarted": "已开始下载"
+  "ttsModelDownloadStarted": "已开始下载",
+  "runtimeStateFieldRelationshipStrength": "关系强度",
+  "runtimeStateFieldRelationshipNotes": "关系备注"
 }

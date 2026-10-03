@@ -43,7 +43,23 @@ class _FakeAdventureRepository implements IAdventureRepository {
   List<TurnStateChangeGroup> mockTurns = [];
   List<RuntimeStateCheckpoint> mockCheckpoints = [];
   bool shouldThrow = false;
+  final List<RuntimeStateMutation> mutations = [];
   int turnHistoryCallCount = 0;
+
+  @override
+  Future<RuntimeHead> getRuntimeHead(int adventureId, int branchId) async =>
+      RuntimeHead(
+          adventureId: adventureId,
+          branchId: branchId,
+          revision: mockSnapshot?.revision ?? 0);
+
+  @override
+  Future<RuntimeStateMutationResult> commitRuntimeMutation(
+      RuntimeStateMutation mutation) async {
+    mutations.add(mutation);
+    return RuntimeStateMutationResult(
+        commitId: 'ui-test', revision: mutation.draft.expectedRevision + 1);
+  }
 
   @override
   Future<RuntimeStateSnapshot> getCurrentRuntimeState({
@@ -240,6 +256,133 @@ void main() {
   }
 
   group('Phase 4: RuntimeStateHubPage Rendering and Responsive Layouts', () {
+    for (final size in [...requiredUiViewports, const Size(1280, 900)]) {
+      testWidgets('should expose relationship state and actions at $size',
+          (tester) async {
+        setViewport(tester, width: size.width, height: size.height);
+        final repository = _FakeAdventureRepository();
+        final chat = _TestPhase4ChatProvider();
+        final sourceName = 'Alice ${'long character name ' * 4}';
+        final targetName = 'Bob ${'另一个很长的角色名称' * 4}';
+        chat.mockConfig = AdventureConfig(
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+                id: 'a',
+                characterId: 'a',
+                characterName: sourceName,
+                isProtagonist: true),
+            AdventureSelectedCharacter(
+                id: 'b', characterId: 'b', characterName: targetName),
+          ],
+          characterRelationships: [
+            AdventureCharacterRelationship(
+              id: 'rel_internal',
+              sourceCharacterId: 'a',
+              targetCharacterId: 'b',
+              relationType: AdventureRelationType.friend,
+            )
+          ],
+        );
+        final entity = RuntimeEntityState(
+          entityType: RuntimeEntityType.relationship,
+          entityId: 'rel_internal',
+          overlay: {
+            'relationship': 'enemy',
+            'strength': -100,
+            'notes': 'A long relationship note ${'narrative detail ' * 12}'
+          },
+        );
+        repository.mockSnapshot = RuntimeStateSnapshot(
+          adventureId: 1,
+          branchId: 0,
+          revision: 2,
+          entities: {'relationship:rel_internal': entity},
+        );
+        final container = ProviderContainer(overrides: [
+          adventureRepoProvider.overrideWithValue(repository),
+          chatProvider.overrideWith((ref) => chat),
+        ]);
+        addTearDown(container.dispose);
+        await tester
+            .pumpWidget(buildTestApp(container: container, textScale: 1.5));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('runtime-view-world')));
+        await tester.pumpAndSettle();
+        final row = find
+            .byKey(const ValueKey('runtime-entity-relationship-rel_internal'));
+        await tester.ensureVisible(row);
+        await tester.pumpAndSettle();
+        expect(row, findsOneWidget);
+        expect(find.text('${sourceName.trim()} → ${targetName.trim()}'),
+            findsWidgets);
+        expect(find.textContaining('rel_internal'), findsNothing);
+        final label = find.descendant(
+          of: row,
+          matching: find.text('${sourceName.trim()} → ${targetName.trim()}'),
+        );
+        await tester.ensureVisible(label);
+        await tester.pumpAndSettle();
+        await tester.tap(label);
+        await tester.pumpAndSettle();
+        expect(find.byType(RuntimeEntityStatePage), findsOneWidget);
+        expect(find.text('enemy'), findsWidgets);
+        expect(tester.takeException(), isNull);
+        assertNoForbiddenTokens(tester);
+        final navigator =
+            tester.state<NavigatorState>(find.byType(Navigator).last);
+        if (navigator.canPop()) {
+          navigator.pop();
+          await tester.pumpAndSettle();
+        }
+        final edit =
+            find.descendant(of: row, matching: find.byTooltip(l10n.editAction));
+        await tester.ensureVisible(edit);
+        await tester.pumpAndSettle();
+        await tester.tap(edit);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('runtime-edit-relationship')),
+            findsOneWidget);
+        expect(find.byKey(const ValueKey('runtime-edit-type')), findsNothing);
+        expect(find.byKey(const ValueKey('runtime-edit-relation_type')),
+            findsNothing);
+        expect(find.byKey(const ValueKey('runtime-edit-relationship_type')),
+            findsNothing);
+        final field = find.descendant(
+          of: find.byKey(const ValueKey('runtime-edit-relationship')),
+          matching: find.byType(TextFormField),
+        );
+        await tester.ensureVisible(field);
+        await tester.pumpAndSettle();
+        await tester.enterText(field, 'ally');
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        final save = find.widgetWithText(FilledButton, l10n.saveAction);
+        final scrollable = find
+            .descendant(
+                of: find.byType(RuntimeStateEditPage),
+                matching: find.byType(Scrollable))
+            .first;
+        // Drag the form's padding so multiline inputs do not consume the gesture.
+        for (var attempt = 0;
+            save.evaluate().isEmpty && attempt < 10;
+            attempt++) {
+          await tester.dragFrom(
+              tester.getTopLeft(scrollable) + const Offset(8, 100),
+              const Offset(0, -250));
+          await tester.pumpAndSettle();
+        }
+        await tester.ensureVisible(save);
+        await tester.pumpAndSettle();
+        await tester.tap(save);
+        await tester.pumpAndSettle();
+        expect(repository.mutations, hasLength(1));
+        expect(repository.mutations.single.draft.changes.single.path,
+            'relationship');
+        expect(repository.mutations.single.draft.changes.single.value, 'ally');
+        expect(tester.takeException(), isNull);
+      });
+    }
+
     testWidgets('1. Normal rendering on Light and Dark theme (Req 1, 29, 30)',
         (tester) async {
       final fakeRepo = _FakeAdventureRepository();

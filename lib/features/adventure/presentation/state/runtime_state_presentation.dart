@@ -50,7 +50,13 @@ final class RuntimeStatePresentation {
       'faction_id' => l10n.runtimeStateFieldFactionId,
       'former_faction_id' => l10n.runtimeStateFieldFormerFactionId,
       'controller_id' => l10n.runtimeStateFieldControllerId,
-      'relationship' => l10n.runtimeStateFieldRelationship,
+      'relationship' ||
+      'relation_type' ||
+      'relationship_type' ||
+      'type' =>
+        l10n.runtimeStateFieldRelationship,
+      'strength' => l10n.runtimeStateFieldRelationshipStrength,
+      'notes' => l10n.runtimeStateFieldRelationshipNotes,
       'goal' => l10n.runtimeStateFieldGoal,
       'status' => l10n.runtimeStateFieldStatus,
       'control' => l10n.runtimeStateFieldControl,
@@ -222,8 +228,7 @@ final class RuntimeStatePresentation {
     }
     if (path == 'faction_id' ||
         path == 'former_faction_id' ||
-        path == 'controller_id' ||
-        path == 'relationship') {
+        path == 'controller_id') {
       return l10n.runtimeStateConfigured;
     }
     if (value is Map || value is List) {

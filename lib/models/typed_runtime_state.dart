@@ -50,6 +50,14 @@ final class RuntimeStatePathDefinition {
 /// The single registry for controlled paths. Custom attributes are validated
 /// by the existing AdventureConfig-specific validator.
 final class RuntimeStateSchemaRegistry {
+  /// Relationship type spellings share one persisted path and event history.
+  static String canonicalPath(RuntimeEntityType entityType, String path) =>
+      entityType == RuntimeEntityType.relationship &&
+              const {'relation_type', 'relationship_type', 'type'}
+                  .contains(path)
+          ? 'relationship'
+          : path;
+
   static const definitions = <RuntimeStatePathDefinition>[
     RuntimeStatePathDefinition(
         id: 'hp',
@@ -121,6 +129,28 @@ final class RuntimeStateSchemaRegistry {
           RuntimeEntityType.npc,
           RuntimeEntityType.relationship
         },
+        valueKind: RuntimeStateValueKind.text),
+    RuntimeStatePathDefinition(
+        id: 'relation_type',
+        entities: {RuntimeEntityType.relationship},
+        valueKind: RuntimeStateValueKind.text),
+    RuntimeStatePathDefinition(
+        id: 'relationship_type',
+        entities: {RuntimeEntityType.relationship},
+        valueKind: RuntimeStateValueKind.text),
+    RuntimeStatePathDefinition(
+        id: 'type',
+        entities: {RuntimeEntityType.relationship},
+        valueKind: RuntimeStateValueKind.text),
+    RuntimeStatePathDefinition(
+        id: 'strength',
+        entities: {RuntimeEntityType.relationship},
+        valueKind: RuntimeStateValueKind.number,
+        minimum: -100,
+        maximum: 100),
+    RuntimeStatePathDefinition(
+        id: 'notes',
+        entities: {RuntimeEntityType.relationship},
         valueKind: RuntimeStateValueKind.text),
     RuntimeStatePathDefinition(
         id: 'faction_id',
@@ -305,7 +335,11 @@ final class RuntimeTimelineEntry {
 }
 
 String runtimeEventTypeFor(RuntimeEntityType entityType, String path) {
-  if (path == 'affinity' || path == 'relationship') {
+  if (entityType == RuntimeEntityType.relationship ||
+      path == 'affinity' ||
+      path == 'relationship' ||
+      path == 'relation_type' ||
+      path == 'relationship_type') {
     return 'relationship_changed';
   }
   if (entityType == RuntimeEntityType.character ||

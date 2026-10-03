@@ -95,6 +95,18 @@ void main() {
       'reason': 'branch test',
       'provenance_json': '{}',
     });
+    for (final (branchId, commitId, revision) in [
+      (0, 'commit-3', 3),
+      (1, 'branch-commit-1', 1),
+    ]) {
+      await db.insert('adventure_runtime_heads', {
+        'adventure_id': adventureId,
+        'branch_id': branchId,
+        'head_commit_id': commitId,
+        'revision': revision,
+        'updated_at': '2026-01-01T00:01:00.000Z',
+      });
+    }
   });
 
   tearDown(() async {
