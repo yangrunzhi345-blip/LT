@@ -1,6 +1,6 @@
 # Phase 10 — Runtime Relationship and Narrative Integration
 
-Status: implementation scope
+Status: implemented; final evidence is in the corresponding acceptance record.
 
 This phase extends the existing branch-local typed runtime state archive. It
 does not create a relationship repository, relationship timeline, or database

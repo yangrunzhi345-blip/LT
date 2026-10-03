@@ -2,7 +2,7 @@
 
 ## STATUS
 
-Status: RELEASE READY; acceptance pending push verification.
+Status: ACCEPTED.
 Acceptance Mode: Independent Review.
 
 ## BASELINE
@@ -235,11 +235,17 @@ Independent Review by the implementing agent.
 
 Existing history is preserved. Task artifacts alone are staged; logs, user
 databases, build outputs, dependencies, credentials and unrelated files are
-excluded. Implementation commit/push and fetched HEAD equality: PENDING.
-The acceptance record will be finalized after successful remote verification.
+excluded. Implementation commit:
+`637c1b1d2599242a6cd4bd9963e5e504b47d9b2a`
+(`feat(relationships): complete runtime narrative integration`).
+Push to origin/main: PASS. Subsequent git fetch confirmed implementation HEAD
+equals origin/main and git status --short was empty. The final acceptance-only
+documentation commit follows this verified implementation; its final SHA and
+remote equality are reported in the delivery message after a second fetch.
 
 ## FINAL VERDICT
 
-Relationship Runtime Integration Phase 10: implementation, validation, builds
-and Independent Review passed. Final ACCEPTED awaits commit/push and fetched
-clean-worktree/HEAD equality verification.
+Relationship Runtime Integration Phase 10: ACCEPTED.
+Implementation, final validation, builds, Independent Review, push and fetched
+clean-worktree/HEAD equality passed. Closed loop: YES. No remaining BLOCKER,
+MAJOR, MINOR or INFO findings. No database migration or authority contamination.
