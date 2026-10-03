@@ -14,6 +14,7 @@ import '../../../../application/resource_library/edit_drafts.dart';
 import '../../../../models/tracked_state_definition.dart';
 import '../../../../models/typed_runtime_state.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/character_relationship.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -23,6 +24,9 @@ import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_voice_setting_section.dart';
+import '../widgets/character_relationships_section.dart';
+import '../../../../application/resource_library/character_relationship_management.dart';
+import '../../../../services/database_service.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -70,6 +74,7 @@ final class _ResourceLibraryDetailPageState
   /// definitions only — a resource never stores a current value.
   List<TrackedStateDefinition> _trackedStateDefinitions = const [];
   bool _loadingTrackedDefinitions = true;
+  List<CharacterRelationshipPerspective> _relationships = const [];
 
   bool get _isConsumable =>
       widget.isConsumableOverride ?? widget.item.isConsumable;
@@ -85,6 +90,24 @@ final class _ResourceLibraryDetailPageState
       _loadingTree = false;
     }
     _loadTrackedStateDefinitions();
+    _loadRelationships();
+  }
+
+  Future<void> _loadRelationships() async {
+    if (widget.item.type != ResourceType.character &&
+        widget.item.type != ResourceType.npc) {
+      return;
+    }
+    try {
+      final management = CharacterRelationshipManagement(
+        DatabaseService.characterRelationshipRepo,
+      );
+      final relationships =
+          await management.listFor(ResourceId(widget.item.id));
+      if (mounted) setState(() => _relationships = relationships);
+    } catch (_) {
+      // Legacy resources without a unified ResourceId have no relationship view.
+    }
   }
 
   Future<void> _loadTrackedStateDefinitions() async {
@@ -420,6 +443,18 @@ final class _ResourceLibraryDetailPageState
 
                 // Resource -> Section -> Part Tree
                 _buildTreeCard(context, l10n),
+
+                if (widget.item.type == ResourceType.character ||
+                    widget.item.type == ResourceType.npc) ...<Widget>[
+                  const SizedBox(height: 24),
+                  CharacterRelationshipsSection(
+                    relationships: _relationships,
+                    title: l10n.relationshipNetworkTitle,
+                    emptyLabel: l10n.relationshipNetworkDescription,
+                    editLabel: l10n.relationDetailsHint,
+                    deleteLabel: l10n.relationDetailsHint,
+                  ),
+                ],
 
                 const SizedBox(height: 24),
 
