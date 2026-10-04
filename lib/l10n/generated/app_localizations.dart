@@ -10249,6 +10249,12 @@ abstract class AppLocalizations {
   /// **'Task recovery failed'**
   String get resourceDetailRecoverFailed;
 
+  /// No description provided for @resourceDetailRevalidate.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-validate'**
+  String get resourceDetailRevalidate;
+
   /// No description provided for @resourceDetailActionFailed.
   ///
   /// In en, this message translates to:

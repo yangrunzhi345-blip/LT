@@ -5647,6 +5647,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get resourceDetailRecoverFailed => '작업 복구에 실패했습니다';
 
   @override
+  String get resourceDetailRevalidate => '재검증';
+
+  @override
   String resourceDetailActionFailed(String error) {
     return '작업 실패: $error';
   }

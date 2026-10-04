@@ -5919,6 +5919,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resourceDetailRecoverFailed => 'Task recovery failed';
 
   @override
+  String get resourceDetailRevalidate => 'Re-validate';
+
+  @override
   String resourceDetailActionFailed(String error) {
     return 'Operation failed: $error';
   }

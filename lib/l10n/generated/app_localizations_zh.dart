@@ -5547,6 +5547,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resourceDetailRecoverFailed => '任务恢复失败';
 
   @override
+  String get resourceDetailRevalidate => '重新校验';
+
+  @override
   String resourceDetailActionFailed(String error) {
     return '操作失败：$error';
   }
@@ -11608,6 +11611,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get resourceDetailRecoverFailed => '任务恢复失败';
 
   @override
+  String get resourceDetailRevalidate => '重新校验';
+
+  @override
   String resourceDetailActionFailed(String error) {
     return '操作失败：$error';
   }
@@ -17667,6 +17673,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceDetailRecoverFailed => '任務恢復失敗';
+
+  @override
+  String get resourceDetailRevalidate => '重新校驗';
 
   @override
   String resourceDetailActionFailed(String error) {

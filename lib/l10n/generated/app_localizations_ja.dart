@@ -5622,6 +5622,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get resourceDetailRecoverFailed => 'タスクの復旧に失敗しました';
 
   @override
+  String get resourceDetailRevalidate => '再検証';
+
+  @override
   String resourceDetailActionFailed(String error) {
     return '操作に失敗しました: $error';
   }

@@ -1,5 +1,6 @@
 import '../../../../../application/resources/assembly_readiness_repository.dart';
 import '../../../../../application/resources/resource_lifecycle_projection.dart';
+import '../../../../../application/resources/resource_lifecycle_reconciler.dart';
 import '../../../../../controllers/resource_crud_controller.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
 import '../../../../../domain/resources/streaming_generation_runtime_contracts.dart';
@@ -52,14 +53,14 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
   const ProductionResourceLibraryRuntime({
     required ResourceCrudController crud,
     required ResourceStudioRuntime studio,
-    required ResourceLifecycleProjection lifecycle,
+    required ResourceLifecycleReconciler reconciler,
   })  : _crud = crud,
         _studio = studio,
-        _lifecycle = lifecycle;
+        _reconciler = reconciler;
 
   final ResourceCrudController _crud;
   final ResourceStudioRuntime _studio;
-  final ResourceLifecycleProjection _lifecycle;
+  final ResourceLifecycleReconciler _reconciler;
 
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async {
@@ -82,7 +83,10 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
         final id = row['id']?.toString() ?? '';
         if (id.isEmpty) continue;
         final resource = studioById[id];
-        final projection = await _lifecycle.read(ResourceId(id));
+        // One reconciled read drives both the lifecycle state and consumability;
+        // it never manufactures `ready` — a completed-but-stuck resource is
+        // converged through the assembly readiness authority here.
+        final projection = await _reconciler.read(ResourceId(id));
         items.add(ResourceLibraryItem(
           id: id,
           type: entry.$1,
@@ -91,7 +95,7 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
               : '',
           summary: _summary(entry.$1, row, resource),
           updatedAt: row['updated_at']?.toString() ?? '',
-          status: await _displayStatus(id, resource != null),
+          status: _displayStatusOf(projection.state),
           isStudioAvailable: resource != null,
           isConsumable: projection.isConsumable,
           lifecycleState: projection.state,
@@ -140,10 +144,8 @@ final class ProductionResourceLibraryRuntime implements ResourceLibraryRuntime {
         ResourceType.npc => _crud.deleteNpcCard(item.id, mode: mode),
       };
 
-  Future<ResourceDisplayStatus> _displayStatus(
-      String resourceId, bool _) async {
-    final projection = await _lifecycle.read(ResourceId(resourceId));
-    return switch (projection.state) {
+  ResourceDisplayStatus _displayStatusOf(ResourceLifecycleState state) {
+    return switch (state) {
       ResourceLifecycleState.ready => ResourceDisplayStatus.ready,
       ResourceLifecycleState.validating => ResourceDisplayStatus.optimizing,
       ResourceLifecycleState.generating ||

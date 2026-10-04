@@ -3698,6 +3698,7 @@
   "resourceDetailCancelSuccess": "Generation cancelled",
   "resourceDetailRecoverSuccess": "Task recovered successfully",
   "resourceDetailRecoverFailed": "Task recovery failed",
+  "resourceDetailRevalidate": "Re-validate",
   "resourceDetailActionFailed": "Operation failed: {error}",
   "@resourceDetailActionFailed": {
     "placeholders": {

@@ -366,6 +366,50 @@ void main() {
     });
 
     test(
+        'completion triggers assembly preparation exactly once, after the '
+        'session is durably completed', () async {
+      final setup = await setupResourceAndBlueprint(autoConfirm: true);
+      final completer = createMockCompleter();
+      final coordinator = PartGenerationCoordinator(
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        completer: completer,
+        maxConcurrency: 1,
+      );
+
+      final prepared = <String>[];
+      var statusWhenPrepared = StreamingLifecycleStatus.created;
+      final service = StreamingResourceGenerationService(
+        sessionRepository: sessionRepo,
+        taskRepository: taskRepo,
+        blueprintRepository: blueprintRepo,
+        pipeline: pipeline,
+        coordinator: coordinator,
+        onGenerationCompletedForAssembly: (ResourceId resourceId) async {
+          final persisted = await sessionRepo.findLatestSessionForResource(
+            resourceId.value,
+          );
+          statusWhenPrepared = persisted!.status;
+          prepared.add(resourceId.value);
+        },
+      );
+
+      final session = await service.createSession(
+        resourceId: setup.resourceId,
+        blueprintId: setup.blueprintId,
+        creationSessionId: setup.sessionId,
+      );
+      expect(
+          await service.startGeneration(sessionId: session.sessionId), isTrue);
+
+      expect(prepared, <String>[setup.resourceId]);
+      // The hook must observe a `completed` session, never an in-flight one.
+      expect(statusWhenPrepared, StreamingLifecycleStatus.completed);
+      service.dispose();
+    });
+
+    test(
         'Planning integration: confirms draft blueprint during startGeneration',
         () async {
       // Leave blueprint unconfirmed in setup

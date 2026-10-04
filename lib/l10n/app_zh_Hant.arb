@@ -3768,6 +3768,7 @@
   "resourceDetailCancelSuccess": "生成已取消",
   "resourceDetailRecoverSuccess": "任務恢復成功",
   "resourceDetailRecoverFailed": "任務恢復失敗",
+  "resourceDetailRevalidate": "重新校驗",
   "resourceDetailActionFailed": "操作失敗：{error}",
   "@resourceDetailActionFailed": {
     "placeholders": {

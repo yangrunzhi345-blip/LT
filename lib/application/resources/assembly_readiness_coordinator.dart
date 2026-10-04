@@ -97,6 +97,20 @@ final class AssemblyReadinessCoordinator {
   /// resource share one run instead of racing each other for the token.
   final Map<String, Future<AssemblyPrepareOutcome>> _inFlight = {};
 
+  /// True while a [prepare] run for [resourceId] is owned by this coordinator.
+  ///
+  /// Used by read-side reconciliation to distinguish a genuinely running
+  /// validation from a persisted/tombstoned state, so it never starts a second
+  /// validator for the same resource.
+  bool isPreparationInFlight(String resourceId) =>
+      _inFlight.containsKey(resourceId);
+
+  /// The in-flight [prepare] future for [resourceId], if one is owned by this
+  /// coordinator. Callers can await it to coalesce with — instead of racing —
+  /// an already running run.
+  Future<AssemblyPrepareOutcome>? pendingPreparation(String resourceId) =>
+      _inFlight[resourceId];
+
   static int _tokenSeq = 0;
 
   /// Test seam invoked after the build and before the head re-validation, so

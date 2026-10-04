@@ -3768,6 +3768,7 @@
   "resourceDetailCancelSuccess": "생성이 취소되었습니다",
   "resourceDetailRecoverSuccess": "작업이 성공적으로 복구되었습니다",
   "resourceDetailRecoverFailed": "작업 복구에 실패했습니다",
+  "resourceDetailRevalidate": "재검증",
   "resourceDetailActionFailed": "작업 실패: {error}",
   "@resourceDetailActionFailed": {
     "placeholders": {

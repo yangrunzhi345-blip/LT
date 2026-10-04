@@ -12,6 +12,7 @@ import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_select.dart';
 import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../application/resource_library/edit_drafts.dart';
+import '../../../../application/resources/resource_lifecycle_projection.dart';
 import '../../../../models/tracked_state_definition.dart';
 import '../../../../models/typed_runtime_state.dart';
 import '../../../../domain/resources/resource_contracts.dart';
@@ -82,8 +83,22 @@ final class _ResourceLibraryDetailPageState
   bool _loadingTrackedDefinitions = true;
   List<CharacterRelationshipPerspective> _relationships = const [];
 
-  bool get _isConsumable =>
-      widget.isConsumableOverride ?? widget.item.isConsumable;
+  /// Latest lifecycle read from the single authority, so a validation that is
+  /// still converging (or just converged) is reflected without leaving the page.
+  AsyncValue<ResourceLifecycleProjectionResult> get _reconciledLifecycle =>
+      ref.read(resourceLifecycleSnapshotProvider(widget.item.id));
+
+  /// Consumability resolved from the reconciled lifecycle; the explicit
+  /// override (embedded Studio preview) always wins.
+  bool _resolveConsumable(
+    AsyncValue<ResourceLifecycleProjectionResult> reconciled,
+  ) {
+    final override = widget.isConsumableOverride;
+    if (override != null) return override;
+    return reconciled.value?.isConsumable ?? widget.item.isConsumable;
+  }
+
+  bool get _isConsumable => _resolveConsumable(_reconciledLifecycle);
 
   @override
   void initState() {
@@ -480,6 +495,29 @@ final class _ResourceLibraryDetailPageState
     }
   }
 
+  /// Explicitly re-runs assembly readiness validation for a resource whose
+  /// content is intact but whose validation ended in a terminal failure. Goes
+  /// through the same reconciler/authority as automatic recovery.
+  Future<void> _revalidate() async {
+    final l10n = _l10n(context);
+    setState(() => _actionInProgress = true);
+    try {
+      final reconciler = ref.read(resourceLifecycleReconcilerProvider);
+      await reconciler.revalidate(ResourceId(widget.item.id));
+      if (!mounted) return;
+      ref.invalidate(resourceLifecycleSnapshotProvider(widget.item.id));
+    } catch (_) {
+      if (mounted) {
+        AppFeedback.error(
+          context,
+          l10n.resourceDetailActionFailed(l10n.resourceDetailRevalidate),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actionInProgress = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
@@ -487,10 +525,22 @@ final class _ResourceLibraryDetailPageState
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Live lifecycle from the reconciled authority. While the read is in
+    // flight, the item snapshot is shown; once the pending validation finishes
+    // the chip/badge update in place — no need to leave and re-enter.
+    final reconciled = ref.watch(resourceLifecycleSnapshotProvider(item.id));
+    final reconciledResult = reconciled.value;
+    final lifecycleState = reconciledResult?.state ?? item.lifecycleState;
+    final isConsumable = _resolveConsumable(reconciled);
+    final isReadinessFailed =
+        reconciledResult?.state == ResourceLifecycleState.failed &&
+            reconciledResult?.generationSession?.status ==
+                StreamingLifecycleStatus.completed;
+
     final lifecycle = ResourcePresentationResolver.resolveLifecycle(
-      lifecycleState: item.lifecycleState,
+      lifecycleState: lifecycleState,
       displayStatus: item.status,
-      isConsumable: _isConsumable,
+      isConsumable: isConsumable,
     );
     final inFlightText =
         ResourcePresentationResolver.inFlightStatusLabel(lifecycle, l10n);
@@ -539,7 +589,7 @@ final class _ResourceLibraryDetailPageState
                           l10n,
                         ),
                         style: TextStyle(
-                          color: _isConsumable
+                          color: isConsumable
                               ? colorScheme.primary
                               : colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
@@ -549,11 +599,11 @@ final class _ResourceLibraryDetailPageState
                     Chip(
                       label: Text(
                         ResourcePresentationResolver.isConsumableLabel(
-                          _isConsumable,
+                          isConsumable,
                           l10n,
                         ),
                         style: TextStyle(
-                          color: _isConsumable
+                          color: isConsumable
                               ? colorScheme.primary
                               : colorScheme.outline,
                         ),
@@ -706,10 +756,10 @@ final class _ResourceLibraryDetailPageState
                   key: const Key('resource-use-for-adventure-button'),
                   label: l10n.resourceUseForAdventure,
                   fullWidth: true,
-                  enabled: _isConsumable,
-                  onPressed: _isConsumable ? _useForAdventure : null,
+                  enabled: isConsumable,
+                  onPressed: isConsumable ? _useForAdventure : null,
                 ),
-                if (!_isConsumable)
+                if (!isConsumable)
                   Padding(
                     padding: const EdgeInsets.only(top: 4, left: 4),
                     child: Text(
@@ -749,6 +799,19 @@ final class _ResourceLibraryDetailPageState
                     fullWidth: true,
                     isLoading: _actionInProgress,
                     onPressed: _recoverTask,
+                  ),
+                ],
+                // Generation finished but readiness validation failed: the
+                // content is intact, so offer an explicit re-validation that
+                // goes through the same assembly readiness authority.
+                if (isReadinessFailed) ...[
+                  const SizedBox(height: 10),
+                  AppSecondaryButton(
+                    key: const Key('resource-revalidate-button'),
+                    label: l10n.resourceDetailRevalidate,
+                    fullWidth: true,
+                    isLoading: _actionInProgress,
+                    onPressed: _revalidate,
                   ),
                 ],
 

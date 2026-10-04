@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../services/database_service.dart';
+import '../domain/resources/resource_contracts.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/repositories/adventure_repository_impl.dart';
 import '../services/repositories/world_entry_repository.dart';
@@ -77,6 +78,7 @@ import '../application/resources/resource_revision_maintenance.dart';
 import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
 import '../application/resources/resource_lifecycle_projection.dart';
+import '../application/resources/resource_lifecycle_reconciler.dart';
 import '../application/resources/resource_trash_repository.dart';
 import '../application/resources/resource_trash_service.dart';
 import '../application/resources/section_control_service.dart';
@@ -288,6 +290,33 @@ final resourceLifecycleProjectionProvider =
     readinessReader: ref.read(assemblyReadinessRepositoryProvider),
   );
 });
+
+/// Read-side lifecycle convergence: composes the projection with the assembly
+/// readiness authority so a completed-but-stuck post-generation state is
+/// deterministically re-prepared once (single-flight, idempotent) instead of
+/// rendering「质量校验中」forever.
+final resourceLifecycleReconcilerProvider =
+    Provider<ResourceLifecycleReconciler>((ref) {
+  return ResourceLifecycleReconciler(
+    projection: ref.watch(resourceLifecycleProjectionProvider),
+    readiness: ref.watch(assemblyReadinessCoordinatorProvider),
+  );
+});
+
+/// Reconciled lifecycle slice of one resource, consumed by Resource Detail.
+///
+/// Watching this makes the detail page update automatically when a pending
+/// validation finishes: the read coalesces with / runs the readiness authority
+/// and returns the persisted terminal state. `autoDispose` so re-entering a
+/// resource always re-reads rather than reusing a stale snapshot.
+final resourceLifecycleSnapshotProvider =
+    FutureProvider.family<ResourceLifecycleProjectionResult, String>(
+  (ref, resourceId) {
+    final reconciler = ref.watch(resourceLifecycleReconcilerProvider);
+    return reconciler.read(ResourceId(resourceId));
+  },
+  isAutoDispose: true,
+);
 
 final resourceCrudControllerProvider =
     ChangeNotifierProvider<ResourceCrudController>((ref) {
@@ -679,7 +708,7 @@ final resourceLibraryRuntimeProvider = Provider<ResourceLibraryRuntime>((ref) {
   return ProductionResourceLibraryRuntime(
     crud: ref.read(resourceCrudControllerProvider),
     studio: ref.read(resourceStudioRuntimeProvider),
-    lifecycle: ref.read(resourceLifecycleProjectionProvider),
+    reconciler: ref.read(resourceLifecycleReconcilerProvider),
   );
 });
 

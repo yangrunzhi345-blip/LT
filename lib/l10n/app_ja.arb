@@ -3768,6 +3768,7 @@
   "resourceDetailCancelSuccess": "生成がキャンセルされました",
   "resourceDetailRecoverSuccess": "タスクが正常に復旧しました",
   "resourceDetailRecoverFailed": "タスクの復旧に失敗しました",
+  "resourceDetailRevalidate": "再検証",
   "resourceDetailActionFailed": "操作に失敗しました: {error}",
   "@resourceDetailActionFailed": {
     "placeholders": {

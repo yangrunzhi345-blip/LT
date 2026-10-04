@@ -92,6 +92,54 @@ final class StreamingResourceGenerationService {
     return false;
   }
 
+  /// Converges a requested stop and, when that convergence actually completed
+  /// the whole generation (all Parts done), runs assembly readiness once.
+  ///
+  /// The paused→all-parts-completed path marks the session `completed` without
+  /// going through the ordinary success branch; without this hook the resource
+  /// would finish generation with no readiness row and stay permanently
+  /// "validating". Readiness preparation is idempotent and single-flight.
+  Future<bool> _convergeRequestedStopAndPrepare({
+    required String sessionId,
+    required ResourceId resourceId,
+    required StreamingLifecycleStatus requestedStatus,
+  }) async {
+    final completed = await _convergeRequestedStop(
+      sessionId: sessionId,
+      resourceId: resourceId.value,
+      requestedStatus: requestedStatus,
+    );
+    if (completed) {
+      await _prepareAssemblyAfterCompletion(resourceId);
+    }
+    return completed;
+  }
+
+  /// Runs the single assembly-readiness boundary after a generation reaches
+  /// `completed`. Never throws into the generation path: readiness is a
+  /// separate authority and a failed preparation stays retryable via the
+  /// lifecycle reconciler.
+  Future<void> _prepareAssemblyAfterCompletion(ResourceId resourceId) async {
+    final prepare = _onGenerationCompletedForAssembly;
+    if (prepare == null) return;
+    GenerationDiagnostics.instance.mark(
+      'ASSEMBLY_PREPARE_BEGIN',
+      {'resource': resourceId.value},
+    );
+    try {
+      await prepare(resourceId);
+      GenerationDiagnostics.instance.mark(
+        'ASSEMBLY_PREPARE_END',
+        {'resource': resourceId.value},
+      );
+    } catch (error) {
+      GenerationDiagnostics.instance.mark(
+        'ASSEMBLY_PREPARE_FAILED',
+        {'resource': resourceId.value, 'error': '$error'},
+      );
+    }
+  }
+
   /// Broadcast stream of generation runtime events for UI or observers.
   Stream<GenerationRuntimeEvent> get eventStream => _eventController.stream;
 
@@ -464,9 +512,9 @@ final class StreamingResourceGenerationService {
       final requestedStop = _requestedStops[sessionId] ??
           (taskHandle.isCancelled ? StreamingLifecycleStatus.cancelled : null);
       if (requestedStop != null) {
-        final completed = await _convergeRequestedStop(
+        final completed = await _convergeRequestedStopAndPrepare(
           sessionId: sessionId,
-          resourceId: session.resourceId.value,
+          resourceId: session.resourceId,
           requestedStatus: requestedStop,
         );
         if (completed) {
@@ -491,25 +539,7 @@ final class StreamingResourceGenerationService {
         // Generation and assembly readiness are separate authorities. The
         // completed session is durable before readiness is attempted; a
         // readiness failure must never rewrite successful generation state.
-        final prepare = _onGenerationCompletedForAssembly;
-        if (prepare != null) {
-          GenerationDiagnostics.instance.mark(
-            'ASSEMBLY_PREPARE_BEGIN',
-            {'resource': session.resourceId.value},
-          );
-          try {
-            await prepare(session.resourceId);
-            GenerationDiagnostics.instance.mark(
-              'ASSEMBLY_PREPARE_END',
-              {'resource': session.resourceId.value},
-            );
-          } catch (error) {
-            GenerationDiagnostics.instance.mark(
-              'ASSEMBLY_PREPARE_FAILED',
-              {'resource': session.resourceId.value, 'error': '$error'},
-            );
-          }
-        }
+        await _prepareAssemblyAfterCompletion(session.resourceId);
 
         GenerationDiagnostics.instance
           ..runtimeHeartbeat('service.generationCompleted')
@@ -549,9 +579,9 @@ final class StreamingResourceGenerationService {
       if (requestedStop != null) {
         final persisted = await _sessionRepository.findSession(sessionId);
         if (persisted?.status != StreamingLifecycleStatus.committing) {
-          return _convergeRequestedStop(
+          return _convergeRequestedStopAndPrepare(
             sessionId: sessionId,
-            resourceId: session.resourceId.value,
+            resourceId: session.resourceId,
             requestedStatus: requestedStop,
           );
         }
@@ -599,11 +629,17 @@ final class StreamingResourceGenerationService {
           session.status.isTerminal) {
         return;
       }
-      await _convergeRequestedStop(
+      final completed = await _convergeRequestedStopAndPrepare(
         sessionId: sessionId,
-        resourceId: session.resourceId.value,
+        resourceId: session.resourceId,
         requestedStatus: StreamingLifecycleStatus.paused,
       );
+      if (completed) {
+        GenerationDiagnostics.instance.mark(
+          'SESSION[$sessionId] GENERATION_COMPLETED_EVENT',
+          {'resource': session.resourceId.value, 'via': 'pauseConverged'},
+        );
+      }
     } finally {
       _requestedStops.remove(sessionId);
     }
