@@ -409,8 +409,14 @@ class ResourceCrudController extends ChangeNotifier {
             description: draft.description,
             details: details,
           );
+          // Pin the generated id back onto the draft so a second save from the
+          // same editor updates the resource instead of creating a duplicate.
+          // Mirrors [saveCharacterCardDraft].
+          final assignedId =
+              draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+          draft.id = assignedId;
           await _requireCreationPort().saveWorldview(
-            id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            id: assignedId,
             name: draft.name,
             description: draft.description,
             detailJson: details.encode(),

@@ -8,6 +8,7 @@ import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../domain/resources/resource_generation_patch.dart';
+import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../application/use_cases/resource_studio_runtime.dart';
 import '../../domain/models/resource_studio_state.dart';
@@ -53,6 +54,15 @@ final class ResourceStudioController extends ChangeNotifier {
   /// banner is not Part-scoped. Lets a new attempt / a successful retry clear
   /// exactly its own error instead of clobbering another Part's failure.
   String? _errorPartId;
+
+  /// Parts whose targeted regeneration is currently in flight. Drives the
+  /// "regenerating" affordance and keeps a second tap from issuing a second
+  /// request for the same Part.
+  final Set<String> _retryingPartIds = <String>{};
+
+  /// Monotonic token for [_refreshPartTaskStatuses] so a late read cannot
+  /// publish a stale per-Part status map over a newer one.
+  int _taskStatusGeneration = 0;
 
   StreamSubscription<GenerationRuntimeEvent>? _eventsSubscription;
   Timer? _patchFlushTimer;
@@ -100,6 +110,7 @@ final class ResourceStudioController extends ChangeNotifier {
 
   Future<void> load() async {
     final generation = ++_stateGeneration;
+    _retryingPartIds.clear();
     _setState(_state.copyWith(status: ResourceStudioStatus.loading));
     try {
       final sessionId = _sessionId;
@@ -137,6 +148,7 @@ final class ResourceStudioController extends ChangeNotifier {
       ));
       _syncPartPreviewNotifiers();
       _eventsSubscription ??= _runtime.events.listen(_handleEvent);
+      unawaited(_refreshPartTaskStatuses());
     } catch (error) {
       if (_disposed || generation != _stateGeneration) return;
       _setState(_state.copyWith(
@@ -181,11 +193,105 @@ final class ResourceStudioController extends ChangeNotifier {
         await _runtime.cancel(session.sessionId);
       });
 
-  Future<void> retry() => _runCommand(() async {
-        final session = _state.session;
-        if (session == null) throw StateError('没有可重试的生成会话');
-        await _runtime.resume(session.sessionId);
-      }, status: ResourceStudioStatus.retrying);
+  /// Retries exactly one failed Part, leaving every other Part untouched.
+  ///
+  /// Reuses the runtime's single-Part retry (attempt lease + source-token CAS),
+  /// so committed Parts and their attempts/revisions are never rewritten.
+  Future<void> retryPart(PartId partId) {
+    final session = _state.session;
+    if (session == null || _state.tree == null) return Future<void>.value();
+    if (_retryingPartIds.contains(partId.value)) return Future<void>.value();
+    return _runCommand(() async {
+      _clearPartError(partId.value);
+      _setRetrying(partId.value, active: true);
+      _applyPartStatus(partId.value, PartTaskStatus.generating);
+      try {
+        await _runtime.retryPart(session.sessionId, partId.value);
+      } finally {
+        _setRetrying(partId.value, active: false);
+        await _refreshPartTaskStatuses();
+      }
+    }, status: ResourceStudioStatus.retrying);
+  }
+
+  /// The Parts the persisted task rows currently report as failed, in tree
+  /// order. This is the exact set a batch retry is allowed to touch.
+  List<PartId> failedPartIds() => [
+        for (final part in _state.tree?.parts ?? const <ResourcePart>[])
+          if (_state.partTaskStatuses[part.id.value] == PartTaskStatus.failed)
+            part.id,
+      ];
+
+  /// Retries every currently-failed Part and nothing else.
+  ///
+  /// Sequential by design: each Part enters the same coordinator/attempt
+  /// authority, so the production max-concurrency of 1 is preserved instead of
+  /// fanning out with `Future.wait`. A Part that fails again is simply left
+  /// failed for a later retry.
+  Future<void> retryFailedParts() {
+    final session = _state.session;
+    if (session == null || _state.tree == null) return Future<void>.value();
+    final targets = failedPartIds();
+    if (targets.isEmpty) return Future<void>.value();
+    return _runCommand(() async {
+      for (final partId in targets) {
+        if (_disposed) break;
+        _clearPartError(partId.value);
+        _setRetrying(partId.value, active: true);
+        _applyPartStatus(partId.value, PartTaskStatus.generating);
+        try {
+          await _runtime.retryPart(session.sessionId, partId.value);
+        } catch (_) {
+          // One Part failing again must not abort the remaining retries.
+        } finally {
+          _setRetrying(partId.value, active: false);
+          await _refreshPartTaskStatuses();
+        }
+      }
+    }, status: ResourceStudioStatus.retrying);
+  }
+
+  /// Optimistically records a Part's live lifecycle status so the Outline and
+  /// the Part card react immediately; [_refreshPartTaskStatuses] then reconciles
+  /// it against the persisted task rows.
+  void _applyPartStatus(String partId, PartTaskStatus status) {
+    final next = Map<String, PartTaskStatus>.from(_state.partTaskStatuses)
+      ..[partId] = status;
+    _setState(_state.copyWith(partTaskStatuses: next));
+  }
+
+  void _setRetrying(String partId, {required bool active}) {
+    if (active) {
+      _retryingPartIds.add(partId);
+    } else {
+      _retryingPartIds.remove(partId);
+    }
+    _setState(_state.copyWith(
+      retryingPartIds: Set<String>.of(_retryingPartIds),
+    ));
+  }
+
+  void _clearPartError(String partId) {
+    if (_errorPartId != partId) return;
+    _errorPartId = null;
+    _setState(_state.copyWith(clearError: true, errorMessage: ''));
+  }
+
+  /// Reconciles [ResourceStudioState.partTaskStatuses] with the persisted task
+  /// rows, which stay the single authority for per-Part generation status.
+  Future<void> _refreshPartTaskStatuses() async {
+    final resourceId = _state.resourceId;
+    if (resourceId == null || _disposed) return;
+    final generation = ++_taskStatusGeneration;
+    try {
+      final statuses = await _runtime.readPartTaskStatuses(resourceId);
+      if (_disposed || generation != _taskStatusGeneration) return;
+      _setState(_state.copyWith(partTaskStatuses: statuses));
+    } catch (_) {
+      // A status read failure must not blank the Studio; the Outline falls back
+      // to content-derived labels.
+    }
+  }
 
   Future<void> recover() => _runCommand(() async {
         final session = _state.session;
@@ -230,6 +336,7 @@ final class ResourceStudioController extends ChangeNotifier {
           errorMessage: '',
         ));
         _syncPartPreviewNotifiers();
+        unawaited(_refreshPartTaskStatuses());
       });
 
   void selectPart(PartId partId) {
@@ -246,6 +353,8 @@ final class ResourceStudioController extends ChangeNotifier {
     final session = _state.session;
     if (session == null && _resourceId != event.resourceId) return;
     var partContents = Map<String, String>.from(_state.partContents);
+    var partTaskStatuses =
+        Map<String, PartTaskStatus>.from(_state.partTaskStatuses);
     var status = _state.status;
     var errorMessage = _state.errorMessage;
     PartId? selectedPartId = _state.selectedPartId;
@@ -256,6 +365,7 @@ final class ResourceStudioController extends ChangeNotifier {
     } else if (event is PartStarted) {
       selectedPartId = event.partId;
       status = ResourceStudioStatus.generating;
+      partTaskStatuses[event.partId.value] = PartTaskStatus.generating;
       _buffers[event.partId.value] = StringBuffer();
       _currentAttemptByPart[event.partId.value] = event.attemptId;
       // A new attempt supersedes the previous attempt of THIS Part, including
@@ -290,6 +400,7 @@ final class ResourceStudioController extends ChangeNotifier {
       return;
     } else if (event is ValidationStarted) {
       status = ResourceStudioStatus.validating;
+      partTaskStatuses[event.partId.value] = PartTaskStatus.validating;
       refreshSession = true;
     } else if (event is ValidationFailed) {
       // Stale-event guard (P0 residual-state fix): a failure only describes
@@ -302,11 +413,13 @@ final class ResourceStudioController extends ChangeNotifier {
       status = ResourceStudioStatus.failed;
       final typedError = event.error ?? resourceStudioError(event.errorMessage);
       _errorPartId = event.partId.value;
+      partTaskStatuses[event.partId.value] = PartTaskStatus.failed;
       final contents = _discardUncommittedPart(event.partId);
       _setState(_state.copyWith(
         status: status,
         selectedPartId: selectedPartId,
         partContents: contents,
+        partTaskStatuses: partTaskStatuses,
         errorMessage: '',
         error: typedError,
       ));
@@ -319,6 +432,7 @@ final class ResourceStudioController extends ChangeNotifier {
       _dirtyPartIds.remove(event.partId.value);
       _completedPartIds.add(event.partId.value);
       _currentAttemptByPart.remove(event.partId.value);
+      partTaskStatuses[event.partId.value] = PartTaskStatus.completed;
       // A recovered Part must not keep its earlier failure on screen.
       if (_errorPartId == event.partId.value) {
         errorMessage = '';
@@ -340,11 +454,15 @@ final class ResourceStudioController extends ChangeNotifier {
       status = ResourceStudioStatus.failed;
       final typedError = event.error ?? resourceStudioError(event.errorMessage);
       _errorPartId = event.failedPartId?.value;
+      if (event.failedPartId case final failedPartId?) {
+        partTaskStatuses[failedPartId.value] = PartTaskStatus.failed;
+      }
       final contents = _discardAllUncommittedParts();
       _setState(_state.copyWith(
         status: status,
         selectedPartId: event.failedPartId ?? selectedPartId,
         partContents: contents,
+        partTaskStatuses: partTaskStatuses,
         errorMessage: '',
         error: typedError,
       ));
@@ -356,11 +474,13 @@ final class ResourceStudioController extends ChangeNotifier {
       status: status,
       selectedPartId: selectedPartId,
       partContents: partContents,
+      partTaskStatuses: partTaskStatuses,
       errorMessage: errorMessage,
       clearError: event is GenerationCompleted || event is PartStarted,
     ));
     if (event is GenerationCompleted) {
       unawaited(_refreshCommittedTree(event.resourceId));
+      unawaited(_refreshPartTaskStatuses());
     } else if (refreshSession) {
       unawaited(_refreshSession());
     }

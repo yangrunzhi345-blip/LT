@@ -117,13 +117,11 @@ void main() {
 
   /// Source token observed when the attempt acquired its lease (R02-B).
   var sourceToken = '';
-  var attemptSequence = 1;
 
   Future<void> startAttempt() async {
     final attempt = await tasks.startAttempt(
       taskId: 'task_bound',
       generationId: 'gen_bound',
-      attemptNumber: attemptSequence++,
     );
     attemptId = attempt.attemptId;
     sourceToken = attempt.sourceToken;

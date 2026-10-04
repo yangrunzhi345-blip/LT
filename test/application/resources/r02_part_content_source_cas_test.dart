@@ -177,7 +177,6 @@ void main() {
       final attempt = await tasks.startAttempt(
         taskId: 'task_r02b',
         generationId: 'gen_r02b',
-        attemptNumber: 1,
       );
       final t0 = attempt.sourceToken;
       expect(t0, isNotEmpty);
@@ -211,7 +210,6 @@ void main() {
       final attempt = await tasks.startAttempt(
         taskId: 'task_r02b',
         generationId: 'gen_r02b',
-        attemptNumber: 1,
       );
 
       await tasks.commitPartContent(
@@ -232,7 +230,6 @@ void main() {
       final first = await tasks.startAttempt(
         taskId: 'task_r02b',
         generationId: 'gen_r02b',
-        attemptNumber: 1,
       );
       await tasks.recordFailedAttempt(
         taskId: 'task_r02b',
@@ -243,7 +240,6 @@ void main() {
       final second = await tasks.startAttempt(
         taskId: 'task_r02b',
         generationId: 'gen_r02b',
-        attemptNumber: 2,
       );
       expect(second.sourceToken, first.sourceToken, reason: 'Part unchanged');
 
@@ -272,7 +268,6 @@ void main() {
       final attempt = await tasks.startAttempt(
         taskId: 'task_r02b',
         generationId: 'gen_r02b',
-        attemptNumber: 1,
       );
       await tasks.cancelTasks(resourceId: _resourceId.value);
 
@@ -294,7 +289,6 @@ void main() {
       final attempt = await tasks.startAttempt(
         taskId: 'task_r02b',
         generationId: 'gen_r02b',
-        attemptNumber: 1,
       );
       await manualEdit('用户手改的正文', token: attempt.sourceToken);
 

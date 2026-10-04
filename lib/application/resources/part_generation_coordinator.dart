@@ -547,12 +547,16 @@ final class PartGenerationCoordinator {
             continue;
           }
 
-          final attemptNumber = consumeAttempt(taskId);
+          // Per-pass retry budget only. The persisted `attempt_number` is owned
+          // by the task repository (`startAttempt`), not by this scheduler
+          // counter, so a resume that restarts the budget still continues the
+          // real attempt ordinal.
+          final dispatchOrdinal = consumeAttempt(taskId);
 
           GenerationDiagnostics.instance.mark(
             'PART[${task.partId}] READY -> DISPATCH',
             {
-              'attempt': attemptNumber,
+              'dispatchOrdinal': dispatchOrdinal,
               'budget': attemptBudgetFor(taskId),
               'deps': task.dependencies,
             },
@@ -562,7 +566,6 @@ final class PartGenerationCoordinator {
             blueprint: blueprint,
             task: task,
             generationId: generationId,
-            attemptNumber: attemptNumber,
             referenceIndex: referenceIndex,
             taskHandle: taskHandle,
             callbacks: callbacks,
@@ -808,7 +811,6 @@ final class PartGenerationCoordinator {
       blueprint: blueprint,
       task: readyTask,
       generationId: generationId,
-      attemptNumber: 1,
       referenceIndex: referenceIndex,
       taskHandle: taskHandle,
       callbacks: callbacks,
@@ -827,7 +829,6 @@ final class PartGenerationCoordinator {
     required ResourceBlueprint blueprint,
     required ResourceGenerationTask task,
     required String generationId,
-    required int attemptNumber,
     required ReferenceContextIndex referenceIndex,
     GenerationTaskHandle? taskHandle,
     PartGenerationLifecycleCallbacks? callbacks,
@@ -859,14 +860,20 @@ final class PartGenerationCoordinator {
     // therefore opens BEFORE the callback and `attemptId` is captured first.
     PartGenerationAttempt? attempt;
     var attemptId = '';
+    var attemptNumber = 0;
     var commitOwned = false;
     try {
+      // The repository owns the attempt ordinal: it computes and persists
+      // `attempt_number` inside the same transaction that creates the row, so
+      // the value is authoritative (initial → 1, each later attempt +1) and
+      // race-free. The caller reads it back for diagnostics, callbacks and the
+      // generation request instead of guessing it.
       attempt = await _taskRepository.startAttempt(
         taskId: task.taskId,
         generationId: generationId,
-        attemptNumber: attemptNumber,
       );
       attemptId = attempt.attemptId;
+      attemptNumber = attempt.attemptNumber;
 
       GenerationDiagnostics.instance
         ..runtimeHeartbeat('part.attemptStarted')

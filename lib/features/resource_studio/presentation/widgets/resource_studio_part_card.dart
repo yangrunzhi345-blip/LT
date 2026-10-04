@@ -19,6 +19,7 @@ final class ResourceStudioPartCard extends StatelessWidget {
     required this.isValidating,
     required this.hasError,
     required this.onRetry,
+    this.isRetrying = false,
     super.key,
   });
 
@@ -26,8 +27,15 @@ final class ResourceStudioPartCard extends StatelessWidget {
   final String content;
   final bool isActive;
   final bool isValidating;
+
+  /// True when this Part's persisted generation task is failed.
   final bool hasError;
+
+  /// Invoked to regenerate exactly this Part. Only used when [hasError].
   final VoidCallback? onRetry;
+
+  /// True while a targeted regeneration of this Part is in flight.
+  final bool isRetrying;
 
   /// 单个 Part 的朗读会话/段落 id。
   ///
@@ -113,11 +121,28 @@ final class ResourceStudioPartCard extends StatelessWidget {
             const SizedBox(height: 4),
             AppReadAloudControls(sourceId: readAloudSourceId),
           ],
-          if (hasError) ...[
+          if (isRetrying) ...[
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: null,
+              child: Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  Text(l10n.retryingGeneration),
+                ],
+              ),
+            ),
+          ] else if (hasError) ...[
             const SizedBox(height: 16),
             OutlinedButton(
               onPressed: onRetry,
-              child: Text(l10n.retryAction),
+              child: Text(l10n.retryGeneration),
             ),
           ],
         ],

@@ -45,6 +45,13 @@ final class StreamingResourceGenerationService {
       StreamController<GenerationRuntimeEvent>.broadcast();
   final Map<String, GenerationTaskHandle> _activeTaskHandles = {};
   final Map<String, Future<bool>> _activeRuns = {};
+
+  /// In-flight Part-scoped retries, keyed `sessionId::partId`.
+  ///
+  /// The application-level duplicate guard: at most one active regeneration may
+  /// exist per (session, Part), so two rapid triggers can never create two
+  /// attempts for the same Part.
+  final Set<String> _activeRetryParts = <String>{};
   final Map<String, StreamingLifecycleStatus> _requestedStops = {};
 
   void _requestStop(
@@ -719,8 +726,52 @@ final class StreamingResourceGenerationService {
     }
   }
 
+  /// Reads the persisted per-Part generation task status for [resourceId].
+  ///
+  /// Read-only projection so the Studio can offer a retry that targets only the
+  /// Parts that actually failed. The task rows remain the single authority —
+  /// no parallel status store is introduced.
+  Future<Map<String, PartTaskStatus>> listPartTaskStatuses(
+    String resourceId,
+  ) async {
+    final tasks = await _taskRepository.findTasksForResource(resourceId);
+    return <String, PartTaskStatus>{
+      for (final task in tasks)
+        task.partId: PartTaskStatus.fromStorage(task.status),
+    };
+  }
+
   /// Retries generating a specific failed Part.
+  ///
+  /// Duplicate protection is enforced here, not only by UI disabling: at most
+  /// one active regeneration may exist per (session, Part). The in-flight retry
+  /// is registered synchronously, so a second concurrent trigger is rejected
+  /// before it can touch the session or create an attempt. The task `ready`
+  /// lease inside the coordinator is the second, persistent guard.
   Future<bool> retryPart(
+    String sessionId,
+    String partId, {
+    GenerationTaskHandle? taskHandle,
+    String userInstruction = '',
+  }) {
+    // A full run in flight is the max-concurrency owner; a Part-scoped retry
+    // must never interleave with it (max concurrency stays 1).
+    if (_activeRuns.containsKey(sessionId)) {
+      throw StateError('生成会话正在运行，禁止并发重试: $sessionId');
+    }
+    final retryKey = '$sessionId::$partId';
+    if (!_activeRetryParts.add(retryKey)) {
+      throw StateError('该 Part 正在重新生成，禁止重复触发: $partId');
+    }
+    return _retryPartOnce(
+      sessionId,
+      partId,
+      taskHandle: taskHandle,
+      userInstruction: userInstruction,
+    ).whenComplete(() => _activeRetryParts.remove(retryKey));
+  }
+
+  Future<bool> _retryPartOnce(
     String sessionId,
     String partId, {
     GenerationTaskHandle? taskHandle,
@@ -917,6 +968,17 @@ final class StreamingResourceGenerationService {
           timestamp: DateTime.now(),
         ));
       } else {
+        // A successful commit leaves the session in `committing`; leave that
+        // state through its one legal backward edge before parking the run, so
+        // a retry that does not finish every Part still settles as paused.
+        final current = await _sessionRepository.findSession(sessionId);
+        if (current?.status == StreamingLifecycleStatus.committing) {
+          await _sessionRepository.updateStatus(
+            sessionId,
+            StreamingLifecycleStatus.generatingPart,
+            clearActiveTask: true,
+          );
+        }
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.paused,

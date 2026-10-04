@@ -193,7 +193,6 @@ void main() {
       await fixture.taskRepository.startAttempt(
         taskId: ready.taskId,
         generationId: session.sessionId,
-        attemptNumber: 1,
       );
 
       await service.pauseGeneration(session.sessionId);
@@ -566,7 +565,6 @@ void main() {
       final attempt1 = await fixture.taskRepository.startAttempt(
         taskId: ready.taskId,
         generationId: 'generation_1',
-        attemptNumber: 1,
       );
       await fixture.taskRepository.recordFailedAttempt(
         taskId: ready.taskId,
@@ -577,7 +575,6 @@ void main() {
       final attempt2 = await fixture.taskRepository.startAttempt(
         taskId: ready.taskId,
         generationId: 'generation_2',
-        attemptNumber: 2,
       );
 
       final lateResponse = PartGenerationResponse(
@@ -634,7 +631,6 @@ void main() {
       await fixture.taskRepository.startAttempt(
         taskId: ready.taskId,
         generationId: session.sessionId,
-        attemptNumber: 1,
       );
 
       expect(

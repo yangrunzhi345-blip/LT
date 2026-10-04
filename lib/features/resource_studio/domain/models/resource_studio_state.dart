@@ -1,4 +1,5 @@
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../../../domain/errors/app_error.dart';
 
@@ -25,6 +26,8 @@ final class ResourceStudioState {
     this.tree,
     this.selectedPartId,
     this.partContents = const <String, String>{},
+    this.partTaskStatuses = const <String, PartTaskStatus>{},
+    this.retryingPartIds = const <String>{},
     this.errorMessage = '',
     this.error,
   });
@@ -39,6 +42,15 @@ final class ResourceStudioState {
   final ResourceTree? tree;
   final PartId? selectedPartId;
   final Map<String, String> partContents;
+
+  /// Persisted per-Part generation task status, keyed by Part id.
+  ///
+  /// Absent for a Part with no generation task (e.g. a manually authored one);
+  /// the UI then falls back to content-derived labels.
+  final Map<String, PartTaskStatus> partTaskStatuses;
+
+  /// Parts whose targeted regeneration is currently in flight.
+  final Set<String> retryingPartIds;
   final String errorMessage;
   final AppDomainError? error;
 
@@ -59,6 +71,8 @@ final class ResourceStudioState {
     ResourceTree? tree,
     PartId? selectedPartId,
     Map<String, String>? partContents,
+    Map<String, PartTaskStatus>? partTaskStatuses,
+    Set<String>? retryingPartIds,
     String? errorMessage,
     AppDomainError? error,
     bool clearError = false,
@@ -72,6 +86,8 @@ final class ResourceStudioState {
       tree: tree ?? this.tree,
       selectedPartId: selectedPartId ?? this.selectedPartId,
       partContents: partContents ?? this.partContents,
+      partTaskStatuses: partTaskStatuses ?? this.partTaskStatuses,
+      retryingPartIds: retryingPartIds ?? this.retryingPartIds,
       errorMessage: errorMessage ?? this.errorMessage,
       error: clearError ? null : (error ?? this.error),
     );

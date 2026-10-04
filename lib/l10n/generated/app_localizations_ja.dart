@@ -118,6 +118,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get saveAction => '保存';
 
   @override
+  String get savedAction => '保存済み';
+
+  @override
+  String get savingAction => '保存中...';
+
+  @override
+  String get saveFailedAction => '保存に失敗しました';
+
+  @override
   String get continueAction => '次へ';
 
   @override
@@ -2068,6 +2077,21 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceStudioRetryGenerating => '再試行';
+
+  @override
+  String get generationFailed => '生成に失敗しました';
+
+  @override
+  String get retryGeneration => '再生成';
+
+  @override
+  String get retryingGeneration => '再生成中…';
+
+  @override
+  String get retryFailedParts => '失敗した項目を再生成';
+
+  @override
+  String get retryGenerationFailed => '再生成に失敗しました';
 
   @override
   String get resourceStudioCreatingAndStarting => 'リソースを作成して生成を開始しています';

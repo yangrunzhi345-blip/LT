@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 
@@ -16,6 +18,9 @@ final class ResourceStudioOutline extends StatefulWidget {
     required this.parts,
     required this.selectedPartId,
     required this.onPartSelected,
+    this.partTaskStatuses = const <String, PartTaskStatus>{},
+    this.retryingPartIds = const <String>{},
+    this.onRetryPart,
     super.key,
   });
 
@@ -23,6 +28,17 @@ final class ResourceStudioOutline extends StatefulWidget {
   final List<ResourcePart> parts;
   final PartId? selectedPartId;
   final ValueChanged<PartId> onPartSelected;
+
+  /// Persisted per-Part generation status; absent entries fall back to
+  /// content-derived labels.
+  final Map<String, PartTaskStatus> partTaskStatuses;
+
+  /// Parts whose targeted regeneration is in flight.
+  final Set<String> retryingPartIds;
+
+  /// Retries exactly the Part whose id is passed. Only offered for failed
+  /// Parts; null hides the action (e.g. read-only hosts).
+  final ValueChanged<PartId>? onRetryPart;
 
   @override
   State<ResourceStudioOutline> createState() => _ResourceStudioOutlineState();
@@ -108,6 +124,9 @@ final class _ResourceStudioOutlineState extends State<ResourceStudioOutline> {
             selectedPartId: widget.selectedPartId,
             onPartSelected: widget.onPartSelected,
             partKeys: _partKeys,
+            partTaskStatuses: widget.partTaskStatuses,
+            retryingPartIds: widget.retryingPartIds,
+            onRetryPart: widget.onRetryPart,
           ),
       ],
     );
@@ -121,6 +140,9 @@ final class _SectionGroup extends StatelessWidget {
     required this.selectedPartId,
     required this.onPartSelected,
     required this.partKeys,
+    required this.partTaskStatuses,
+    required this.retryingPartIds,
+    required this.onRetryPart,
   });
 
   final ResourceSection section;
@@ -128,11 +150,34 @@ final class _SectionGroup extends StatelessWidget {
   final PartId? selectedPartId;
   final ValueChanged<PartId> onPartSelected;
   final Map<String, GlobalKey> partKeys;
+  final Map<String, PartTaskStatus> partTaskStatuses;
+  final Set<String> retryingPartIds;
+  final ValueChanged<PartId>? onRetryPart;
+
+  /// The label under a Part title.
+  ///
+  /// A known task status wins over content emptiness so a failed Part is never
+  /// confused with a not-yet-generated one.
+  String _statusLabel(BuildContext context, ResourcePart part) {
+    final l10n = _l10n(context);
+    if (retryingPartIds.contains(part.id.value)) {
+      return l10n.retryingGeneration;
+    }
+    return switch (partTaskStatuses[part.id.value]) {
+      PartTaskStatus.failed => l10n.generationFailed,
+      PartTaskStatus.generating ||
+      PartTaskStatus.validating =>
+        l10n.resourceStatusGenerating,
+      PartTaskStatus.completed => l10n.outlinePartGenerated,
+      _ => part.content.isEmpty
+          ? l10n.outlinePartPending
+          : l10n.outlinePartGenerated,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = _l10n(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -160,12 +205,41 @@ final class _SectionGroup extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            subtitle: Text(part.content.isEmpty
-                ? l10n.outlinePartPending
-                : l10n.outlinePartGenerated),
+            subtitle: Text(
+              _statusLabel(context, part),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: partTaskStatuses[part.id.value] == PartTaskStatus.failed
+                  ? TextStyle(color: theme.colorScheme.error)
+                  : null,
+            ),
+            trailing: _trailing(context, part),
             onTap: () => onPartSelected(part.id),
           ),
       ],
+    );
+  }
+
+  /// A failed Part offers "regenerate"; a retrying Part shows a spinner.
+  /// Generated / pending Parts carry no action.
+  Widget? _trailing(BuildContext context, ResourcePart part) {
+    if (retryingPartIds.contains(part.id.value)) {
+      return const SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    if (partTaskStatuses[part.id.value] != PartTaskStatus.failed) return null;
+    final retry = onRetryPart;
+    if (retry == null) return null;
+    return IconButton(
+      key: ValueKey<String>('outline-retry-${part.id.value}'),
+      tooltip: _l10n(context).retryGeneration,
+      onPressed: () => retry(part.id),
+      visualDensity: VisualDensity.compact,
+      iconSize: 18,
+      icon: const AppSvgIcon('refresh', size: 18),
     );
   }
 }

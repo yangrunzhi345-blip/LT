@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
@@ -31,6 +32,13 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   Object? nextSessionError;
   final List<String> resumeCalls = <String>[];
   final List<(String, String)> retryPartCalls = <(String, String)>[];
+
+  /// Persisted per-Part task statuses reported to the Studio. Tests set this to
+  /// mark a Part failed so the retry affordance can be exercised.
+  Map<String, PartTaskStatus> partTaskStatuses = <String, PartTaskStatus>{};
+
+  /// When set, [retryPart] waits on it — used to observe the retrying state.
+  Completer<void>? retryPartGate;
 
   @override
   Stream<GenerationRuntimeEvent> get events => eventsController.stream;
@@ -95,8 +103,16 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   @override
   Future<bool> retryPart(String sessionId, String partId) async {
     retryPartCalls.add((sessionId, partId));
+    final gate = retryPartGate;
+    if (gate != null) await gate.future;
     return true;
   }
+
+  @override
+  Future<Map<String, PartTaskStatus>> readPartTaskStatuses(
+    ResourceId resourceId,
+  ) async =>
+      Map<String, PartTaskStatus>.from(partTaskStatuses);
 
   @override
   Future<bool> recover(String sessionId) async => true;

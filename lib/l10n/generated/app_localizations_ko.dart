@@ -119,6 +119,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get saveAction => '저장';
 
   @override
+  String get savedAction => '저장됨';
+
+  @override
+  String get savingAction => '저장 중...';
+
+  @override
+  String get saveFailedAction => '저장 실패';
+
+  @override
   String get continueAction => '계속';
 
   @override
@@ -2086,6 +2095,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceStudioRetryGenerating => '다시 시도';
+
+  @override
+  String get generationFailed => '생성 실패';
+
+  @override
+  String get retryGeneration => '다시 생성';
+
+  @override
+  String get retryingGeneration => '다시 생성 중...';
+
+  @override
+  String get retryFailedParts => '실패한 항목 다시 생성';
+
+  @override
+  String get retryGenerationFailed => '다시 생성 실패';
 
   @override
   String get resourceStudioCreatingAndStarting => '리소스를 생성하고 생성을 시작하는 중입니다';

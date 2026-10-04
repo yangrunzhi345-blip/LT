@@ -173,6 +173,101 @@ class WorkbenchBackAction extends StatelessWidget {
   }
 }
 
+/// Visual state of a manual save action shared by workbench editors.
+///
+/// These mirror the manual-save contract: an untouched or already-persisted
+/// editor offers "Save"; an editor with edits also offers "Save"; a running
+/// write shows a spinner and refuses re-entry; a finished write reads "Saved";
+/// a refused write reads "Save failed" and stays actionable so the user can
+/// retry instead of the UI pretending the write succeeded.
+enum WorkbenchSavePhase { idle, dirty, saving, saved, failed }
+
+/// Manual save action for editor toolbars.
+///
+/// Follows the [WorkbenchBackAction] responsive contract: a labelled
+/// primary-coloured text action on desktop and a tooltip-bearing icon button on
+/// compact widths. Both forms carry the current state as their accessible name,
+/// so the save affordance is never an unlabelled icon. A save in flight is the
+/// only state that disables the control — that is what prevents a double tap
+/// from issuing a second write.
+class WorkbenchSaveAction extends StatelessWidget {
+  const WorkbenchSaveAction({
+    super.key,
+    required this.phase,
+    required this.onPressed,
+    required this.saveLabel,
+    required this.savedLabel,
+    required this.savingLabel,
+    required this.failedLabel,
+    this.compact,
+  });
+
+  final WorkbenchSavePhase phase;
+
+  /// Invoked on a real save request. Never called while [phase] is
+  /// [WorkbenchSavePhase.saving]; the action disables itself instead.
+  final VoidCallback onPressed;
+
+  final String saveLabel;
+  final String savedLabel;
+  final String savingLabel;
+  final String failedLabel;
+
+  /// Overrides the responsive decision for shells that resolve their own
+  /// content width; defaults to the page breakpoint.
+  final bool? compact;
+
+  String get _label => switch (phase) {
+        WorkbenchSavePhase.idle => saveLabel,
+        WorkbenchSavePhase.dirty => saveLabel,
+        WorkbenchSavePhase.saving => savingLabel,
+        WorkbenchSavePhase.saved => savedLabel,
+        WorkbenchSavePhase.failed => failedLabel,
+      };
+
+  bool get _enabled => phase != WorkbenchSavePhase.saving;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isCompact = compact ?? AppBreakpoints.isCompact(context);
+    final busy = phase == WorkbenchSavePhase.saving;
+    if (isCompact) {
+      return IconButton(
+        onPressed: _enabled ? onPressed : null,
+        tooltip: _label,
+        visualDensity: VisualDensity.compact,
+        iconSize: 20,
+        icon: busy
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const AppSvgIcon('save', size: 20),
+      );
+    }
+    return TextButton.icon(
+      onPressed: _enabled ? onPressed : null,
+      icon: busy
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const AppSvgIcon('save', size: 16),
+      label: Text(_label),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(0, AppDimensions.controlHeightSm),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+        textStyle: theme.textTheme.labelLarge,
+      ),
+    );
+  }
+}
+
 /// Compact single-line search input for workbench page toolbars.
 ///
 /// Owns the search-field visual contract (34 px height, radius 6,

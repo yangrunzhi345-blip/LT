@@ -778,6 +778,12 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
       _streamingController.retryPart(sessionId: sessionId, partId: partId);
 
   @override
+  Future<Map<String, PartTaskStatus>> readPartTaskStatuses(
+    ResourceId resourceId,
+  ) =>
+      _streamingController.listPartTaskStatuses(resourceId.value);
+
+  @override
   Future<bool> recover(String sessionId) =>
       _streamingController.recover(sessionId: sessionId);
 
@@ -1063,7 +1069,6 @@ final class _SoakRig {
     final attempt = await taskRepository.startAttempt(
       taskId: task.taskId,
       generationId: 'curve_${DateTime.now().microsecondsSinceEpoch}',
-      attemptNumber: 1,
     );
     final response = PartGenerationResponse(
       protocolVersion: 1,

@@ -122,6 +122,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveAction => 'Save';
 
   @override
+  String get savedAction => 'Saved';
+
+  @override
+  String get savingAction => 'Saving...';
+
+  @override
+  String get saveFailedAction => 'Save failed';
+
+  @override
   String get continueAction => 'Continue';
 
   @override
@@ -2161,6 +2170,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceStudioRetryGenerating => 'Retry';
+
+  @override
+  String get generationFailed => 'Generation failed';
+
+  @override
+  String get retryGeneration => 'Regenerate';
+
+  @override
+  String get retryingGeneration => 'Regenerating...';
+
+  @override
+  String get retryFailedParts => 'Regenerate failed parts';
+
+  @override
+  String get retryGenerationFailed => 'Regeneration failed';
 
   @override
   String get resourceStudioCreatingAndStarting =>

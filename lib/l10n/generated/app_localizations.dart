@@ -314,6 +314,24 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get saveAction;
 
+  /// No description provided for @savedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savedAction;
+
+  /// No description provided for @savingAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get savingAction;
+
+  /// No description provided for @saveFailedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed'**
+  String get saveFailedAction;
+
   /// No description provided for @continueAction.
   ///
   /// In en, this message translates to:
@@ -3980,6 +3998,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get resourceStudioRetryGenerating;
+
+  /// No description provided for @generationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation failed'**
+  String get generationFailed;
+
+  /// No description provided for @retryGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate'**
+  String get retryGeneration;
+
+  /// No description provided for @retryingGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerating...'**
+  String get retryingGeneration;
+
+  /// No description provided for @retryFailedParts.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate failed parts'**
+  String get retryFailedParts;
+
+  /// No description provided for @retryGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Regeneration failed'**
+  String get retryGenerationFailed;
 
   /// No description provided for @resourceStudioCreatingAndStarting.
   ///

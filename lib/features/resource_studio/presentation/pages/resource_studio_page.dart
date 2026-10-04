@@ -13,12 +13,14 @@ import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
+import '../../../../core/widgets/workbench_chrome.dart';
 import '../../../../core/widgets/app_read_aloud.dart';
 import '../../../../application/resources/resource_autosave_service.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/models/resource_studio_state.dart';
@@ -84,6 +86,20 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
 
   /// Optimistic-locking token the open editor writes under.
   String _editingUpdatedAt = '';
+
+  /// Key to the open [ResourceStudioPartEditorState].
+  ///
+  /// The toolbar Save button is a second entry point for the same flush the
+  /// editor's own button runs, so it must reach that one instance instead of
+  /// building a second save path.
+  GlobalKey<ResourceStudioPartEditorState>? _editorKey;
+
+  /// Manual-save phase mirrored from the open editor for the toolbar action.
+  ResourceStudioPartSavePhase _editorSavePhase =
+      ResourceStudioPartSavePhase.idle;
+
+  /// Reentrancy guard for the toolbar save command.
+  bool _toolbarSaveInFlight = false;
 
   /// True while the Studio is turning [widget.creationDraft] into a resource
   /// and a generation session.
@@ -364,6 +380,15 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           : null,
       title: Text(l10n.resourceStudioTitle),
       actions: [
+        WorkbenchSaveAction(
+          key: const Key('studio-save-action'),
+          phase: _toolbarSavePhase,
+          onPressed: _saveFromToolbar,
+          saveLabel: l10n.saveAction,
+          savedLabel: l10n.savedAction,
+          savingLabel: l10n.savingAction,
+          failedLabel: l10n.saveFailedAction,
+        ),
         IconButton(
             key: const Key('studio-inspector-toggle'),
             tooltip: l10n.workbenchInspector,
@@ -461,6 +486,9 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         sections: state.tree!.orderedSections,
         parts: state.tree!.parts,
         selectedPartId: state.selectedPartId,
+        partTaskStatuses: state.partTaskStatuses,
+        retryingPartIds: state.retryingPartIds,
+        onRetryPart: (partId) => unawaited(_controller.retryPart(partId)),
         onPartSelected: (partId) {
           if (closeOnSelection) Navigator.of(context).pop();
           unawaited(_scrollToPart(partId));
@@ -748,7 +776,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         previewContent ?? state.partContents[part.id.value] ?? part.content;
     if (_editingPartId == part.id.value) {
       return ResourceStudioPartEditor(
-        key: ValueKey<String>('editor_${part.id.value}'),
+        key: _editorKey ?? ValueKey<String>('editor_${part.id.value}'),
         resourceId:
             ResourceId(state.resourceId?.value ?? tree.resource.id.value),
         partId: part.id,
@@ -757,22 +785,37 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         updatedAt: _editingUpdatedAt,
         autosaveFactory: _autosaveFactory,
         onSaved: _onPartContentSaved,
+        onSavePhaseChanged: _onEditorSavePhaseChanged,
         onClose: _finishEditing,
       );
     }
     final isSelected = part.id == state.selectedPartId;
+    final taskStatus = state.partTaskStatuses[part.id.value];
+    final isRetrying = state.retryingPartIds.contains(part.id.value);
+    // Prefer the persisted per-Part task status; fall back to the global status
+    // for a Part with no generation task (e.g. a manually authored resource).
+    final isRunning = taskStatus != null
+        ? taskStatus == PartTaskStatus.generating ||
+            taskStatus == PartTaskStatus.validating
+        : state.status == ResourceStudioStatus.generating ||
+            state.status == ResourceStudioStatus.validating;
+    final isValidating = taskStatus == PartTaskStatus.validating ||
+        (taskStatus == null && state.status == ResourceStudioStatus.validating);
+    final hasError = taskStatus == PartTaskStatus.failed ||
+        (taskStatus == null &&
+            isSelected &&
+            state.status == ResourceStudioStatus.failed);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ResourceStudioPartCard(
           part: part,
           content: content,
-          isActive:
-              isSelected && state.status == ResourceStudioStatus.generating,
-          isValidating:
-              isSelected && state.status == ResourceStudioStatus.validating,
-          hasError: isSelected && state.status == ResourceStudioStatus.failed,
-          onRetry: _controller.retry,
+          isActive: isSelected && isRunning,
+          isValidating: isSelected && isValidating,
+          hasError: hasError,
+          isRetrying: isRetrying,
+          onRetry: () => unawaited(_controller.retryPart(part.id)),
         ),
         const SizedBox(height: 8),
         Align(
@@ -816,7 +859,66 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     setState(() {
       _editingPartId = part.id.value;
       _editingUpdatedAt = token;
+      _editorKey = GlobalKey<ResourceStudioPartEditorState>();
+      _editorSavePhase = ResourceStudioPartSavePhase.idle;
     });
+  }
+
+  /// Mirrors the open editor's manual-save phase into the toolbar action.
+  void _onEditorSavePhaseChanged(ResourceStudioPartSavePhase phase) {
+    if (!mounted || _editorSavePhase == phase) return;
+    setState(() => _editorSavePhase = phase);
+  }
+
+  /// Toolbar phase: with no editor open every shown Part is already persisted,
+  /// so the action stays an enabled no-op that confirms "Saved".
+  WorkbenchSavePhase get _toolbarSavePhase {
+    if (_editingPartId.isEmpty) return WorkbenchSavePhase.idle;
+    return switch (_editorSavePhase) {
+      ResourceStudioPartSavePhase.idle => WorkbenchSavePhase.idle,
+      ResourceStudioPartSavePhase.dirty => WorkbenchSavePhase.dirty,
+      ResourceStudioPartSavePhase.saving => WorkbenchSavePhase.saving,
+      ResourceStudioPartSavePhase.saved => WorkbenchSavePhase.saved,
+      ResourceStudioPartSavePhase.failed => WorkbenchSavePhase.failed,
+    };
+  }
+
+  /// Manual save from the Studio toolbar.
+  ///
+  /// This is an explicit flush of the open editor's autosave session — the same
+  /// single writer the debounce checkpoints use — so it can never race autosave
+  /// or commit a stale body. With no editor open there is nothing buffered.
+  void _saveFromToolbar() {
+    unawaited(_runToolbarSave());
+  }
+
+  Future<void> _runToolbarSave() async {
+    if (_toolbarSaveInFlight) return;
+    final l10n = _l10n(context);
+    final editor = _editorKey?.currentState;
+    if (editor == null) {
+      AppFeedback.success(context, l10n.savedAction);
+      return;
+    }
+    _toolbarSaveInFlight = true;
+    try {
+      final phase = await editor.saveNow();
+      if (!mounted || phase == ResourceStudioPartSavePhase.saving) return;
+      if (phase == ResourceStudioPartSavePhase.failed) {
+        final message = editor.saveMessage.isEmpty
+            ? l10n.saveFailedAction
+            : editor.saveMessage;
+        AppFeedback.error(context, message);
+      } else {
+        AppFeedback.success(context, l10n.savedAction);
+      }
+    } catch (error) {
+      if (mounted) {
+        AppFeedback.error(context, resourceStudioUserMessage(error, l10n));
+      }
+    } finally {
+      _toolbarSaveInFlight = false;
+    }
   }
 
   void _finishEditing() {
@@ -824,6 +926,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     setState(() {
       _editingPartId = '';
       _editingUpdatedAt = '';
+      _editorKey = null;
+      _editorSavePhase = ResourceStudioPartSavePhase.idle;
     });
     // The saved text is the new truth: refresh the tree view, the section
     // verdicts and the revision history that this edit just added to.
@@ -914,6 +1018,8 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     setState(() {
       _editingPartId = '';
       _editingUpdatedAt = '';
+      _editorKey = null;
+      _editorSavePhase = ResourceStudioPartSavePhase.idle;
     });
     unawaited(_controller.load());
     unawaited(_sectionController.refresh());
@@ -1006,6 +1112,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
     final session = state.session;
     if (session == null) return const <Widget>[];
     final l10n = _l10n(context);
+    final failedPartIds = _controller.failedPartIds();
     final resource = state.tree?.resource;
     final isGeneratedCharacter = resource != null &&
         (resource.type == ResourceType.character ||
@@ -1043,9 +1150,23 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
           onPressed: _controller.cancel,
           child: Text(l10n.resourceStudioCancelGenerating),
         ),
-      if (state.status == ResourceStudioStatus.failed)
+      // Page-level "regenerate failed parts": shown only when at least one Part
+      // is actually failed, and it retries exactly those Parts.
+      if (state.status != ResourceStudioStatus.generating &&
+          state.status != ResourceStudioStatus.validating &&
+          failedPartIds.isNotEmpty)
         FilledButton(
-          onPressed: _controller.retry,
+          key: const Key('studio-retry-failed-parts'),
+          onPressed: state.retryingPartIds.isEmpty
+              ? () => unawaited(_controller.retryFailedParts())
+              : null,
+          child: Text(l10n.retryFailedParts),
+        ),
+      // A session-level failure with no failed task (rare) falls back to the
+      // session resume escape hatch.
+      if (state.status == ResourceStudioStatus.failed && failedPartIds.isEmpty)
+        FilledButton(
+          onPressed: _controller.resume,
           child: Text(l10n.resourceStudioRetryGenerating),
         ),
     ];

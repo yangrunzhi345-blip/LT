@@ -21,6 +21,7 @@ final class PartGenerationAttempt {
   const PartGenerationAttempt({
     required this.attemptId,
     required this.sourceToken,
+    this.attemptNumber = 0,
   });
 
   final String attemptId;
@@ -29,8 +30,16 @@ final class PartGenerationAttempt {
   /// the Part row did not exist at that moment (the commit then refuses).
   final String sourceToken;
 
+  /// The 1-based ordinal of this attempt within its task.
+  ///
+  /// Assigned by [IPartGenerationTaskRepository.startAttempt]; it is the single
+  /// authority for the persisted `attempt_number` (initial generation → 1, then
+  /// 2, 3, … for each new attempt row).
+  final int attemptNumber;
+
   @override
-  String toString() => 'PartGenerationAttempt($attemptId, source=$sourceToken)';
+  String toString() =>
+      'PartGenerationAttempt($attemptId, #$attemptNumber, source=$sourceToken)';
 }
 
 /// Persisted execution details used to diagnose and recover an owned attempt.
@@ -64,10 +73,15 @@ abstract interface class IPartGenerationTaskRepository {
   /// Starts a new generation attempt for [taskId], marking task status as
   /// `generating`, and captures the Part's source token atomically with the
   /// lease acquisition.
+  ///
+  /// The attempt number is assigned by this repository — inside the same
+  /// transaction that creates the row — so it is authoritative and race-free.
+  /// Callers cannot supply it, which is what keeps two concurrent leases from
+  /// sharing a number and keeps the ordinal correct after a retry, a resume or
+  /// an app restart.
   Future<PartGenerationAttempt> startAttempt({
     required String taskId,
     required String generationId,
-    required int attemptNumber,
   });
 
   /// Transitions task status from `generating` to `validating`.
@@ -240,12 +254,11 @@ class PartGenerationTaskRepositoryImpl
   Future<PartGenerationAttempt> startAttempt({
     required String taskId,
     required String generationId,
-    required int attemptNumber,
   }) async {
     final db = await _getDb();
     final now = _now();
-    final attemptId =
-        'att_${taskId}_${attemptNumber}_${DateTime.now().microsecondsSinceEpoch}';
+    var attemptId = '';
+    var attemptNumber = 0;
     var sourceToken = '';
 
     await db.transaction((txn) async {
@@ -284,6 +297,24 @@ class PartGenerationTaskRepositoryImpl
           'partId=${task.partId} unmetDependencies=$unmetDependencies',
         );
       }
+
+      // The attempt ordinal is derived here, inside the lease transaction, so
+      // no caller can pass a stale or duplicated value and two concurrent
+      // leases can never share a number.
+      //
+      // It is `COUNT(*) + 1` rather than `MAX + 1`: attempt rows are
+      // append-only per task (no row is ever deleted, and a task row is never
+      // removed during its life), so the count *is* the true ordinal. Legacy
+      // databases whose retries all stored `1` keep their history untouched and
+      // the next attempt becomes 4 — the real 4th attempt — instead of a
+      // misleading 2 that `MAX + 1` would produce.
+      final countRows = await txn.rawQuery(
+        'SELECT COUNT(*) AS c FROM $attemptsTable WHERE task_id = ?',
+        [taskId],
+      );
+      attemptNumber = (countRows.first['c'] as int? ?? 0) + 1;
+      attemptId = 'att_${taskId}_${attemptNumber}_'
+          '${DateTime.now().microsecondsSinceEpoch}';
 
       // R02-B: capture the Part's source token in the same transaction that
       // grants this attempt its lease. Reading it before any model work starts
@@ -331,6 +362,7 @@ class PartGenerationTaskRepositoryImpl
 
     return PartGenerationAttempt(
       attemptId: attemptId,
+      attemptNumber: attemptNumber,
       sourceToken: sourceToken,
     );
   }

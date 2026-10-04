@@ -288,7 +288,9 @@ void main() {
 
       await controller.load();
       controller.selectPart(completedPart);
-      await controller.retry();
+      // Resuming a failed session continues the session; it is deliberately
+      // separate from the Part-scoped retry that only re-runs failed Parts.
+      await controller.resume();
 
       expect(runtime.resumeCalls, [session.sessionId]);
       expect(runtime.retryPartCalls, isEmpty);
@@ -395,7 +397,8 @@ void main() {
       });
     }
 
-    testWidgets('should expose generating, optimizing, error and retry states',
+    testWidgets(
+        'should expose generating, optimizing, error and failed-part retry states',
         (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -433,10 +436,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('优化失败'), findsOneWidget);
       await openStudioInspector(tester);
+      // The failed Part is retried by the page-level "regenerate failed parts"
+      // action, which targets exactly the Parts whose task is failed.
       expect(
           find.descendant(
               of: find.byKey(const Key('resource-studio-inspector')),
-              matching: find.text('重试')),
+              matching: find.text('重新生成失败项')),
           findsOneWidget);
       expect(tester.takeException(), isNull);
     });

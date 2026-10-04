@@ -8,6 +8,7 @@ import '../../../../application/resource_library/accept_generated_related_charac
 import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../controllers/streaming_resource_generation_controller.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../domain/resources/resource_blueprint.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../../../services/repositories/resource_tree_repository_impl.dart';
@@ -53,6 +54,13 @@ abstract interface class ResourceStudioRuntime {
   Future<void> cancel(String sessionId);
 
   Future<bool> retryPart(String sessionId, String partId);
+
+  /// Persisted per-Part generation task status for [resourceId], keyed by Part
+  /// id. Read-only projection used to offer a retry that targets only the Parts
+  /// that actually failed; the task rows stay the single authority.
+  Future<Map<String, PartTaskStatus>> readPartTaskStatuses(
+    ResourceId resourceId,
+  );
 
   Future<bool> recover(String sessionId);
 
@@ -234,6 +242,12 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
   @override
   Future<bool> retryPart(String sessionId, String partId) =>
       _controller.retryPart(sessionId: sessionId, partId: partId);
+
+  @override
+  Future<Map<String, PartTaskStatus>> readPartTaskStatuses(
+    ResourceId resourceId,
+  ) =>
+      _controller.listPartTaskStatuses(resourceId.value);
 
   @override
   Future<bool> recover(String sessionId) =>

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../application/resources/streaming_generation_session_repository.dart';
 import '../application/resources/streaming_resource_generation_service.dart';
+import '../domain/resources/resource_generation_protocol.dart';
 import '../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../services/llm_service.dart';
 
@@ -96,6 +97,13 @@ class StreamingResourceGenerationController {
       taskHandle: taskHandle,
       userInstruction: userInstruction,
     );
+  }
+
+  /// Reads the persisted per-Part generation task status for [resourceId].
+  Future<Map<String, PartTaskStatus>> listPartTaskStatuses(
+    String resourceId,
+  ) {
+    return _service.listPartTaskStatuses(resourceId);
   }
 
   /// Recovers an interrupted session and its underlying tasks after app restart.

@@ -136,7 +136,6 @@ void main() {
       final att1 = await taskRepo.startAttempt(
         taskId: ready1.first.taskId,
         generationId: 'gen_run_1',
-        attemptNumber: 1,
       );
       expect(att1.attemptId, isNotEmpty);
       expect(att1.sourceToken, isNotEmpty);
@@ -187,7 +186,6 @@ void main() {
       final att = await taskRepo.startAttempt(
         taskId: task1.taskId,
         generationId: 'gen_1',
-        attemptNumber: 1,
       );
 
       // User cancels task
@@ -229,7 +227,6 @@ void main() {
       final att1 = await taskRepo.startAttempt(
         taskId: task1.taskId,
         generationId: 'gen_1',
-        attemptNumber: 1,
       );
 
       // Exclusive lease check: starting another attempt while generating is forbidden
@@ -237,7 +234,6 @@ void main() {
         () => taskRepo.startAttempt(
           taskId: task1.taskId,
           generationId: 'gen_1',
-          attemptNumber: 2,
         ),
         throwsA(isA<StateError>()),
       );
@@ -254,7 +250,6 @@ void main() {
       final att2 = await taskRepo.startAttempt(
         taskId: task1.taskId,
         generationId: 'gen_1',
-        attemptNumber: 2,
       );
 
       // Attempt 1 arrives late
@@ -309,7 +304,6 @@ void main() {
       final att = await taskRepo.startAttempt(
         taskId: task1.taskId,
         generationId: 'gen_1',
-        attemptNumber: 1,
       );
 
       await taskRepo.recordFailedAttempt(
@@ -334,7 +328,6 @@ void main() {
       await taskRepo.startAttempt(
         taskId: task1.taskId,
         generationId: 'gen_crash',
-        attemptNumber: 1,
       );
 
       // System restarts: task1 was in 'generating' status
@@ -387,7 +380,6 @@ void main() {
         taskRepo.startAttempt(
           taskId: child.taskId,
           generationId: 'must_not_start',
-          attemptNumber: 1,
         ),
         throwsA(isA<StateError>()),
       );
@@ -403,7 +395,6 @@ void main() {
       await taskRepo.startAttempt(
         taskId: task.taskId,
         generationId: 'directed_retry_${resourceId}_1',
-        attemptNumber: 1,
       );
 
       expect(await taskRepo.recoverInterruptedTasks(resourceId), 1);
@@ -454,7 +445,6 @@ void main() {
       final attempt = await taskRepo.startAttempt(
         taskId: taskId,
         generationId: 'gen_b1',
-        attemptNumber: 1,
       );
       await taskRepo.commitPartContent(
         response: PartGenerationResponse(
@@ -575,7 +565,6 @@ void main() {
       final attempt = await taskRepo.startAttempt(
         taskId: fixture.taskId,
         generationId: 'gen_b1',
-        attemptNumber: 1,
       );
 
       // Force the section sync inside the transaction to fail, so the Part

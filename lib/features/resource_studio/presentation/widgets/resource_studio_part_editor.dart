@@ -12,6 +12,12 @@ import '../../../../l10n/generated/app_localizations_zh.dart';
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
+/// Manual-save phase of one Part editor, mirrored into the Studio toolbar.
+///
+/// The toolbar button is a second entry point for the same flush the editor's
+/// own "立即保存" button runs; it never opens a second persistence path.
+enum ResourceStudioPartSavePhase { idle, dirty, saving, saved, failed }
+
 String _autosaveTriggerLabel(
   AutosaveFlushTrigger trigger,
   AppLocalizations l10n,
@@ -47,6 +53,7 @@ final class ResourceStudioPartEditor extends StatefulWidget {
     required this.autosaveFactory,
     required this.onSaved,
     required this.onClose,
+    this.onSavePhaseChanged,
     super.key,
   });
 
@@ -66,14 +73,18 @@ final class ResourceStudioPartEditor extends StatefulWidget {
   /// Reports persisted content so the page can refresh what it displays.
   final void Function(String content) onSaved;
 
+  /// Reports the manual-save phase so a host toolbar can render its own save
+  /// action without reaching into this editor's private state.
+  final ValueChanged<ResourceStudioPartSavePhase>? onSavePhaseChanged;
+
   final VoidCallback onClose;
 
   @override
   State<ResourceStudioPartEditor> createState() =>
-      _ResourceStudioPartEditorState();
+      ResourceStudioPartEditorState();
 }
 
-class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
+class ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
     with WidgetsBindingObserver {
   late final AutosaveSession _autosave = widget.autosaveFactory();
   late final TextEditingController _controller =
@@ -101,6 +112,23 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   /// body, so text that never reached the tree would be invisible and would be
   /// overwritten by the next successful save.
   ResourceAutosaveDraft? _pendingDraft;
+
+  /// Manual-save phase reported to the host toolbar.
+  ResourceStudioPartSavePhase _savePhase = ResourceStudioPartSavePhase.idle;
+  String _savePhaseMessage = '';
+
+  /// Manual-save phase for a host toolbar (e.g. the Studio AppBar).
+  ResourceStudioPartSavePhase get savePhase => _savePhase;
+
+  /// User-facing text describing the last failed manual save.
+  String get saveMessage => _savePhaseMessage;
+
+  void _setSavePhase(ResourceStudioPartSavePhase phase, {String message = ''}) {
+    if (_savePhase == phase && _savePhaseMessage == message) return;
+    _savePhase = phase;
+    _savePhaseMessage = message;
+    widget.onSavePhaseChanged?.call(phase);
+  }
 
   @override
   void initState() {
@@ -190,6 +218,11 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
       content: _controller.text,
       expectedUpdatedAt: widget.updatedAt,
     );
+    // Do not overwrite an in-flight manual save's spinner: the newer text stays
+    // buffered and is reported dirty when the flush completes.
+    if (_savePhase != ResourceStudioPartSavePhase.saving) {
+      _setSavePhase(ResourceStudioPartSavePhase.dirty);
+    }
     if (!mounted || _saving) return;
     setState(() {
       // A conflict is not cleared by typing: it stays visible until a save
@@ -202,14 +235,17 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
   void _onFlushed(AutosaveFlushResult result) {
     if (!mounted) return;
     final l10n = _l10n(context);
+    String failureMessage = '';
     setState(() {
       if (result.outcomes.any((outcome) => outcome.requiresUserResolution)) {
         _hasConflict = true;
         _hasUnresolvedConflict = true;
         _status = l10n.partEditorConflictOtherSaved;
+        failureMessage = _status;
       } else if (result.hasUnsavedConflict) {
         _hasConflict = true;
         _status = l10n.partEditorConflictDraftRetained;
+        failureMessage = _status;
       } else if (result.applied > 0) {
         _hasConflict = false;
         _hasUnresolvedConflict = false;
@@ -218,9 +254,29 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
         );
       } else if (result.discarded > 0) {
         _status = l10n.partEditorTargetPartMissing;
+        failureMessage = _status;
+      } else if (result.failed > 0) {
+        final failed = result.outcomes.firstWhere(
+          (outcome) => outcome.status == AutosaveWriteStatus.failed,
+        );
+        _status = localizeAutosaveOutcome(failed, l10n);
+        failureMessage = _status;
       }
     });
     if (result.applied > 0) widget.onSaved(_controller.text);
+
+    if (failureMessage.isNotEmpty) {
+      _setSavePhase(ResourceStudioPartSavePhase.failed,
+          message: failureMessage);
+    } else if (result.applied > 0 && _autosave.pendingCount > 0) {
+      // Newer text was buffered while this flush ran; it is not on disk yet.
+      _setSavePhase(ResourceStudioPartSavePhase.dirty);
+    } else if (result.applied > 0) {
+      _setSavePhase(ResourceStudioPartSavePhase.saved);
+    } else if (_savePhase == ResourceStudioPartSavePhase.saving) {
+      // A manual save with nothing buffered still confirms the saved state.
+      _setSavePhase(ResourceStudioPartSavePhase.saved);
+    }
   }
 
   /// R2-M1: the user keeps their draft. The write still runs through the CAS
@@ -249,7 +305,12 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           _status = localizeAutosaveOutcome(outcome, l10n);
         }
       });
-      if (outcome.persisted) widget.onSaved(_controller.text);
+      if (outcome.persisted) {
+        widget.onSaved(_controller.text);
+        _setSavePhase(ResourceStudioPartSavePhase.saved);
+      } else {
+        _setSavePhase(ResourceStudioPartSavePhase.failed, message: _status);
+      }
     } catch (error) {
       if (!mounted) return;
       final l10n = _l10n(context);
@@ -259,6 +320,7 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           resourceStudioUserMessage(error, l10n),
         );
       });
+      _setSavePhase(ResourceStudioPartSavePhase.failed, message: _status);
     } finally {
       _resolvingConflict = false;
     }
@@ -287,6 +349,11 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           _status = localizeAutosaveOutcome(outcome, l10n);
         }
       });
+      if (outcome.status == AutosaveWriteStatus.adoptedLive) {
+        _setSavePhase(ResourceStudioPartSavePhase.saved);
+      } else {
+        _setSavePhase(ResourceStudioPartSavePhase.failed, message: _status);
+      }
     } catch (error) {
       if (!mounted) return;
       final l10n = _l10n(context);
@@ -296,17 +363,17 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
           resourceStudioUserMessage(error, l10n),
         );
       });
+      _setSavePhase(ResourceStudioPartSavePhase.failed, message: _status);
     } finally {
       _resolvingConflict = false;
     }
   }
 
-  Future<void> _flush(AutosaveFlushTrigger trigger) async {
+  Future<AutosaveFlushResult?> _flush(AutosaveFlushTrigger trigger) async {
     if (!mounted) {
       // The widget is gone but its buffer is not: write it out anyway so the
       // text survives a page exit.
-      await _autosave.flush(trigger: trigger);
-      return;
+      return await _autosave.flush(trigger: trigger);
     }
     setState(() {
       _saving = true;
@@ -315,11 +382,28 @@ class _ResourceStudioPartEditorState extends State<ResourceStudioPartEditor>
         _status = l10n.partEditorSaving(_autosaveTriggerLabel(trigger, l10n));
       }
     });
+    // Only an explicit save drives the toolbar spinner; a debounce checkpoint
+    // must not make the toolbar flicker.
+    if (trigger == AutosaveFlushTrigger.manual) {
+      _setSavePhase(ResourceStudioPartSavePhase.saving);
+    }
     try {
-      await _autosave.flush(trigger: trigger);
+      return await _autosave.flush(trigger: trigger);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// Explicit manual save invoked by a host toolbar.
+  ///
+  /// Delegates to the same [AutosaveSession.flush] the editor's own save button
+  /// uses, so the manual path and autosave share one writer, one CAS token and
+  /// one revision boundary. Re-entrant calls are ignored while a save is in
+  /// flight, which is what keeps a double tap from issuing a second write.
+  Future<ResourceStudioPartSavePhase> saveNow() async {
+    if (_saving) return _savePhase;
+    await _flush(AutosaveFlushTrigger.manual);
+    return _savePhase;
   }
 
   Future<void> _close() async {

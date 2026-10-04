@@ -118,6 +118,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get saveAction => '保存';
 
   @override
+  String get savedAction => '已保存';
+
+  @override
+  String get savingAction => '保存中...';
+
+  @override
+  String get saveFailedAction => '保存失败';
+
+  @override
   String get continueAction => '继续';
 
   @override
@@ -2051,6 +2060,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceStudioRetryGenerating => '重试';
+
+  @override
+  String get generationFailed => '生成失败';
+
+  @override
+  String get retryGeneration => '重新生成';
+
+  @override
+  String get retryingGeneration => '重新生成中…';
+
+  @override
+  String get retryFailedParts => '重新生成失败项';
+
+  @override
+  String get retryGenerationFailed => '重新生成失败';
 
   @override
   String get resourceStudioCreatingAndStarting => '正在创建资源并启动生成';
@@ -6182,6 +6206,15 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get saveAction => '保存';
 
   @override
+  String get savedAction => '已保存';
+
+  @override
+  String get savingAction => '保存中...';
+
+  @override
+  String get saveFailedAction => '保存失败';
+
+  @override
   String get continueAction => '继续';
 
   @override
@@ -8115,6 +8148,21 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get resourceStudioRetryGenerating => '重试';
+
+  @override
+  String get generationFailed => '生成失败';
+
+  @override
+  String get retryGeneration => '重新生成';
+
+  @override
+  String get retryingGeneration => '重新生成中…';
+
+  @override
+  String get retryFailedParts => '重新生成失败项';
+
+  @override
+  String get retryGenerationFailed => '重新生成失败';
 
   @override
   String get resourceStudioCreatingAndStarting => '正在创建资源并启动生成';
@@ -12246,6 +12294,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get saveAction => '儲存';
 
   @override
+  String get savedAction => '已儲存';
+
+  @override
+  String get savingAction => '儲存中...';
+
+  @override
+  String get saveFailedAction => '儲存失敗';
+
+  @override
   String get continueAction => '繼續';
 
   @override
@@ -14179,6 +14236,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceStudioRetryGenerating => '重試';
+
+  @override
+  String get generationFailed => '生成失敗';
+
+  @override
+  String get retryGeneration => '重新生成';
+
+  @override
+  String get retryingGeneration => '重新生成中…';
+
+  @override
+  String get retryFailedParts => '重新生成失敗項';
+
+  @override
+  String get retryGenerationFailed => '重新生成失敗';
 
   @override
   String get resourceStudioCreatingAndStarting => '正在建立資源並啟動生成';

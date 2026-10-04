@@ -12,6 +12,7 @@ import '../../core/widgets/custom_attribute_editor_section.dart';
 import '../../core/widgets/tracked_state_definition_editor_section.dart';
 import '../../core/widgets/app_confirm_dialog.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
+import '../../core/widgets/workbench_chrome.dart';
 import '../../core/widgets/narr_aitor_dropdown.dart';
 import '../../models/custom_attribute_item.dart';
 import '../../models/tracked_state_definition.dart';
@@ -37,20 +38,16 @@ Future<CharacterCardEditDraft?> showCharacterCardEditPage(
   String? activeWorldviewDescription,
   ResourceLibraryMode mode = ResourceLibraryMode.adventure,
 }) {
-  final l10n = _l10n(context);
-  final isEdit =
-      existingCard != null || (existingId != null && existingId.isNotEmpty);
-  return showFormSubPage<CharacterCardEditDraft>(
-    context: context,
-    title: isEdit ? l10n.characterCardEditTitle : l10n.characterCardCreateTitle,
-    maxWidth: 760,
-    builder: (ctx) => CharacterCardEditPage(
-      existingCard: existingCard,
-      existingId: existingId,
-      defaultMatchingWorldviewId: defaultMatchingWorldviewId,
-      worldviewPresets: worldviewPresets,
-      activeWorldviewDescription: activeWorldviewDescription,
-      mode: mode,
+  return Navigator.of(context).push<CharacterCardEditDraft>(
+    MaterialPageRoute(
+      builder: (_) => CharacterCardEditPage(
+        existingCard: existingCard,
+        existingId: existingId,
+        defaultMatchingWorldviewId: defaultMatchingWorldviewId,
+        worldviewPresets: worldviewPresets,
+        activeWorldviewDescription: activeWorldviewDescription,
+        mode: mode,
+      ),
     ),
   );
 }
@@ -100,6 +97,14 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   late final aiPromptCtrl = TextEditingController();
 
   bool _openingAiStudio = false;
+
+  /// Manual-save phase shown by the toolbar Save action.
+  WorkbenchSavePhase _savePhase = WorkbenchSavePhase.idle;
+
+  /// True while a save is in flight, so the action and bottom button disable
+  /// and a second tap cannot issue a second write.
+  bool _saving = false;
+
   bool isDetailedMode = true;
   int _targetTotalCharacters =
       GenerationLimits.detailedCharacterDefaultCharacters;
@@ -152,6 +157,10 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
         widget.existingCard?['matching_worldview_id'] as String? ??
             widget.defaultMatchingWorldviewId ??
             '';
+
+    for (final controller in _dirtyTrackedControllers) {
+      controller.addListener(_markDirty);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -238,7 +247,47 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
 
   Future<void> _saveCard() => _persistCard(closeOnSuccess: true);
 
+  /// Controllers whose text is persisted. The AI prompt and the AI relation
+  /// helper are intentionally excluded: they only shape a generation request.
+  List<TextEditingController> get _dirtyTrackedControllers => [
+        nameCtrl,
+        ageCtrl,
+        profCtrl,
+        persCtrl,
+        bgCtrl,
+        appearCtrl,
+        bodyCtrl,
+        factionCtrl,
+        locationCtrl,
+        goalCtrl,
+        motivationCtrl,
+        abilitySourceCtrl,
+        abilityCostCtrl,
+        tabooCtrl,
+        relationshipCtrl,
+        customGenderCtrl,
+      ];
+
+  /// Marks the form dirty after any persisted field changes.
+  ///
+  /// An in-flight save keeps its spinner; the change is reported dirty by the
+  /// next keystroke once that save settles, so the button never lies about a
+  /// body that is not on disk.
+  void _markDirty() {
+    if (!mounted || _savePhase == WorkbenchSavePhase.saving) return;
+    if (_savePhase == WorkbenchSavePhase.dirty) return;
+    setState(() => _savePhase = WorkbenchSavePhase.dirty);
+  }
+
+  /// Toolbar entry point: persists without leaving the page.
+  Future<void> _saveFromToolbar() async {
+    final saved = await _persistCard(closeOnSuccess: false);
+    if (!mounted || !saved) return;
+    AppFeedback.success(context, _l10n(context).savedAction);
+  }
+
   Future<bool> _persistCard({required bool closeOnSuccess}) async {
+    if (_saving) return false;
     final l10n = _l10n(context);
     final name = nameCtrl.text.trim();
     if (name.isEmpty) {
@@ -266,25 +315,37 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     draft.customAttributes = customAttributes;
     draft.trackedStateDefinitions = trackedStateDefinitions;
 
-    final result = await ProviderScope.containerOf(
-      context,
-      listen: false,
-    ).read(resourceCrudControllerProvider).saveCharacterCardDraft(
-          draft,
-          mode: widget.mode,
-        );
-    if (!result.success) {
-      final message = result.error == null
-          ? (result.errorMessage ?? l10n.errorUnknown)
-          : localizeAppError(l10n, result.error!);
-      debugPrint('[CharacterCardEditPage] 保存失败: $message');
-      if (mounted) {
-        AppFeedback.error(context, l10n.characterCardSaveFailed(message));
+    setState(() {
+      _saving = true;
+      _savePhase = WorkbenchSavePhase.saving;
+    });
+    try {
+      final result = await ProviderScope.containerOf(
+        context,
+        listen: false,
+      ).read(resourceCrudControllerProvider).saveCharacterCardDraft(
+            draft,
+            mode: widget.mode,
+          );
+      if (!result.success) {
+        final message = result.error == null
+            ? (result.errorMessage ?? l10n.errorUnknown)
+            : localizeAppError(l10n, result.error!);
+        debugPrint('[CharacterCardEditPage] 保存失败: $message');
+        if (mounted) {
+          setState(() => _savePhase = WorkbenchSavePhase.failed);
+          AppFeedback.error(context, l10n.characterCardSaveFailed(message));
+        }
+        return false;
       }
-      return false;
+      if (mounted) {
+        setState(() => _savePhase = WorkbenchSavePhase.saved);
+        if (closeOnSuccess) Navigator.pop(context, draft);
+      }
+      return true;
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-    if (mounted && closeOnSuccess) Navigator.pop(context, draft);
-    return true;
   }
 
   Future<void> _openManagedAiStudio() async {
@@ -373,554 +434,583 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
     final worldviewList = widget.worldviewPresets ?? [];
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(children: [
-              AppSvgIcon(isEdit ? 'edit' : 'person_add',
-                  size: 20, color: AppColors.accent),
-              const SizedBox(width: 8),
-              Text(l10n.characterCardInfoSection,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w600)),
-            ]),
-            const SizedBox(height: 16),
-            // Worldview dropdown
-            NarrAItorDropdown<String>(
-              value: matchingWorldviewId.isEmpty ? null : matchingWorldviewId,
-              label: l10n.characterCardWorldviewOptional,
-              options: [
-                NarrAItorDropdownOption<String>(
-                    value: null, label: l10n.noneOption),
-                ...worldviewList.map((wv) => NarrAItorDropdownOption<String>(
-                      value: wv['id'] as String?,
-                      label: wv['name'] as String? ?? '',
-                    )),
-              ],
-              onChanged: (v) => setState(() => matchingWorldviewId = v ?? ''),
-            ),
-            const SizedBox(height: 10),
-            // AI 辅助编写角色卡
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
+    return FormSubPageScaffold(
+      title:
+          isEdit ? l10n.characterCardEditTitle : l10n.characterCardCreateTitle,
+      maxWidth: 760,
+      actions: [
+        WorkbenchSaveAction(
+          key: const Key('character-card-save-action'),
+          phase: _savePhase,
+          onPressed: _saveFromToolbar,
+          saveLabel: l10n.saveAction,
+          savedLabel: l10n.savedAction,
+          savingLabel: l10n.savingAction,
+          failedLabel: l10n.saveFailedAction,
+        ),
+      ],
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(children: [
+                AppSvgIcon(isEdit ? 'edit' : 'person_add',
+                    size: 20, color: AppColors.accent),
+                const SizedBox(width: 8),
+                Text(l10n.characterCardInfoSection,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w600)),
+              ]),
+              const SizedBox(height: 16),
+              // Worldview dropdown
+              NarrAItorDropdown<String>(
+                value: matchingWorldviewId.isEmpty ? null : matchingWorldviewId,
+                label: l10n.characterCardWorldviewOptional,
+                options: [
+                  NarrAItorDropdownOption<String>(
+                      value: null, label: l10n.noneOption),
+                  ...worldviewList.map((wv) => NarrAItorDropdownOption<String>(
+                        value: wv['id'] as String?,
+                        label: wv['name'] as String? ?? '',
+                      )),
+                ],
+                onChanged: (v) {
+                  setState(() => matchingWorldviewId = v ?? '');
+                  _markDirty();
+                },
+              ),
+              const SizedBox(height: 10),
+              // AI 辅助编写角色卡
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
                   color: Theme.of(context)
                       .colorScheme
-                      .primary
-                      .withValues(alpha: 0.28),
+                      .primaryContainer
+                      .withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.28),
+                  ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      AppSvgIcon(
-                        'generation',
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.characterCardAiAssistedCreation,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        AppSvgIcon(
+                          'generation',
+                          size: 16,
                           color: Theme.of(context).colorScheme.primary,
                         ),
-                      ),
-                      const Spacer(),
-                      InkWell(
-                        onTap: _openingAiStudio
-                            ? null
-                            : () => setState(
-                                () => isDetailedMode = !isDetailedMode),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: isDetailedMode
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.15)
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
+                        const SizedBox(width: 6),
+                        Text(
+                          l10n.characterCardAiAssistedCreation,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const Spacer(),
+                        InkWell(
+                          onTap: _openingAiStudio
+                              ? null
+                              : () => setState(
+                                  () => isDetailedMode = !isDetailedMode),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
                               color: isDetailedMode
                                   ? Theme.of(context)
                                       .colorScheme
                                       .primary
-                                      .withValues(alpha: 0.5)
-                                  : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppSvgIcon(
-                                isDetailedMode ? 'book' : 'bolt',
-                                size: 12,
+                                      .withValues(alpha: 0.15)
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
                                 color: isDetailedMode
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context)
+                                    ? Theme.of(context)
                                         .colorScheme
-                                        .onSurfaceVariant,
+                                        .primary
+                                        .withValues(alpha: 0.5)
+                                    : Colors.transparent,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                isDetailedMode
-                                    ? l10n.detailedMode
-                                    : l10n.conciseMode,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AppSvgIcon(
+                                  isDetailedMode ? 'book' : 'bolt',
+                                  size: 12,
                                   color: isDetailedMode
                                       ? Theme.of(context).colorScheme.primary
                                       : Theme.of(context)
                                           .colorScheme
                                           .onSurfaceVariant,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (isDetailedMode) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.characterCardTargetValidChars(_targetTotalCharacters,
-                          GenerationLimits.detailedCharacterMaximumCharacters),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    Slider(
-                      value: _targetTotalCharacters.toDouble(),
-                      min: GenerationLimits.detailedCharacterMinimumCharacters
-                          .toDouble(),
-                      max: GenerationLimits.detailedCharacterMaximumCharacters
-                          .toDouble(),
-                      divisions:
-                          GenerationLimits.detailedCharacterTargetDivisions,
-                      label: '$_targetTotalCharacters',
-                      onChanged: _openingAiStudio
-                          ? null
-                          : (value) => setState(
-                                () => _targetTotalCharacters = value.round(),
-                              ),
-                    ),
-                    Text(
-                      l10n.characterCardSavedInStudioTip,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                  if (_existingCharacterCards.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    AppMultiSelectDropdown<String>(
-                      values: _aiSelectedAssociatedIds,
-                      label: l10n.characterCardRelateCharacterOptional,
-                      hintText: l10n.characterCardRelateCharacterHint,
-                      emptyText: l10n.characterCardNoOtherCharacters,
-                      triggerHeight: 38,
-                      triggerPadding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      direction: AppDropdownDirection.down,
-                      selectedBuilder: (values) => values.isEmpty
-                          ? l10n.characterCardIndependentRole
-                          : l10n.characterCardRelatedCount(values.length),
-                      options: _existingCharacterCards.map((card) {
-                        return AppDropdownOption(
-                          value: card['id']?.toString() ?? '',
-                          label: card['name']?.toString() ??
-                              l10n.characterCardUnnamed,
-                        );
-                      }).toList(),
-                      onChanged: _openingAiStudio
-                          ? null
-                          : (values) => setState(() {
-                                _aiSelectedAssociatedIds
-                                  ..clear()
-                                  ..addAll(values);
-                              }),
-                    ),
-                    if (_aiSelectedAssociatedIds.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Text(
-                            l10n.characterCardBondRelation,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          AppDropdown<String>.compact(
-                            value: _aiRelationType,
-                            direction: AppDropdownDirection.down,
-                            options: [
-                              AppDropdownOption(
-                                  value: '同伴', label: l10n.relationCompanion),
-                              AppDropdownOption(
-                                  value: '青梅竹马',
-                                  label: l10n.relationChildhoodFriend),
-                              AppDropdownOption(
-                                  value: '恋人', label: l10n.relationLover),
-                              AppDropdownOption(
-                                  value: '师徒', label: l10n.relationMentor),
-                              AppDropdownOption(
-                                  value: '宿敌', label: l10n.relationRival),
-                              AppDropdownOption(
-                                  value: '亲人', label: l10n.relationKin),
-                              AppDropdownOption(
-                                  value: '救命恩人',
-                                  label: l10n.relationBenefactor),
-                              AppDropdownOption(
-                                  value: '雇佣关系',
-                                  label: l10n.relationEmployment),
-                              AppDropdownOption(
-                                  value: '自定义', label: l10n.relationCustom),
-                            ],
-                            onChanged: _openingAiStudio
-                                ? null
-                                : (val) {
-                                    if (val != null) {
-                                      setState(() => _aiRelationType = val);
-                                    }
-                                  },
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  ('同伴', l10n.relationCompanion),
-                                  ('青梅竹马', l10n.relationChildhoodFriend),
-                                  ('恋人', l10n.relationLover),
-                                  ('师徒', l10n.relationMentor),
-                                  ('宿敌', l10n.relationRival),
-                                ].map((preset) {
-                                  final isSel = _aiRelationType == preset.$1;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: ChoiceChip(
-                                      label: Text(preset.$2,
-                                          style: const TextStyle(fontSize: 11)),
-                                      selected: isSel,
-                                      visualDensity: VisualDensity.compact,
-                                      materialTapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                      onSelected: _openingAiStudio
-                                          ? null
-                                          : (selected) {
-                                              if (selected) {
-                                                setState(() => _aiRelationType =
-                                                    preset.$1);
-                                              }
-                                            },
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_aiRelationType == '自定义') ...[
-                        const SizedBox(height: 6),
-                        SizedBox(
-                          height: 34,
-                          child: TextField(
-                            controller: _aiCustomRelationCtrl,
-                            enabled: !_openingAiStudio,
-                            style: const TextStyle(fontSize: 12),
-                            decoration: InputDecoration(
-                              labelText: l10n.relationCustomDescLabel,
-                              hintText: l10n.relationCustomDescHint,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isDetailedMode
+                                      ? l10n.detailedMode
+                                      : l10n.conciseMode,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDetailedMode
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
+                    ),
+                    if (isDetailedMode) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.characterCardTargetValidChars(
+                            _targetTotalCharacters,
+                            GenerationLimits
+                                .detailedCharacterMaximumCharacters),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Slider(
+                        value: _targetTotalCharacters.toDouble(),
+                        min: GenerationLimits.detailedCharacterMinimumCharacters
+                            .toDouble(),
+                        max: GenerationLimits.detailedCharacterMaximumCharacters
+                            .toDouble(),
+                        divisions:
+                            GenerationLimits.detailedCharacterTargetDivisions,
+                        label: '$_targetTotalCharacters',
+                        onChanged: _openingAiStudio
+                            ? null
+                            : (value) => setState(
+                                  () => _targetTotalCharacters = value.round(),
+                                ),
+                      ),
+                      Text(
+                        l10n.characterCardSavedInStudioTip,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
-                  ],
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: aiPromptCtrl,
-                          enabled: !_openingAiStudio,
-                          decoration: InputDecoration(
-                            hintText: l10n.characterCardCoreKeywordHint,
-                            border: const OutlineInputBorder(),
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
+                    if (_existingCharacterCards.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      AppMultiSelectDropdown<String>(
+                        values: _aiSelectedAssociatedIds,
+                        label: l10n.characterCardRelateCharacterOptional,
+                        hintText: l10n.characterCardRelateCharacterHint,
+                        emptyText: l10n.characterCardNoOtherCharacters,
+                        triggerHeight: 38,
+                        triggerPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        direction: AppDropdownDirection.down,
+                        selectedBuilder: (values) => values.isEmpty
+                            ? l10n.characterCardIndependentRole
+                            : l10n.characterCardRelatedCount(values.length),
+                        options: _existingCharacterCards.map((card) {
+                          return AppDropdownOption(
+                            value: card['id']?.toString() ?? '',
+                            label: card['name']?.toString() ??
+                                l10n.characterCardUnnamed,
+                          );
+                        }).toList(),
+                        onChanged: _openingAiStudio
+                            ? null
+                            : (values) => setState(() {
+                                  _aiSelectedAssociatedIds
+                                    ..clear()
+                                    ..addAll(values);
+                                }),
+                      ),
+                      if (_aiSelectedAssociatedIds.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text(
+                              l10n.characterCardBondRelation,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            AppDropdown<String>.compact(
+                              value: _aiRelationType,
+                              direction: AppDropdownDirection.down,
+                              options: [
+                                AppDropdownOption(
+                                    value: '同伴', label: l10n.relationCompanion),
+                                AppDropdownOption(
+                                    value: '青梅竹马',
+                                    label: l10n.relationChildhoodFriend),
+                                AppDropdownOption(
+                                    value: '恋人', label: l10n.relationLover),
+                                AppDropdownOption(
+                                    value: '师徒', label: l10n.relationMentor),
+                                AppDropdownOption(
+                                    value: '宿敌', label: l10n.relationRival),
+                                AppDropdownOption(
+                                    value: '亲人', label: l10n.relationKin),
+                                AppDropdownOption(
+                                    value: '救命恩人',
+                                    label: l10n.relationBenefactor),
+                                AppDropdownOption(
+                                    value: '雇佣关系',
+                                    label: l10n.relationEmployment),
+                                AppDropdownOption(
+                                    value: '自定义', label: l10n.relationCustom),
+                              ],
+                              onChanged: _openingAiStudio
+                                  ? null
+                                  : (val) {
+                                      if (val != null) {
+                                        setState(() => _aiRelationType = val);
+                                      }
+                                    },
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Row(
+                                  children: [
+                                    ('同伴', l10n.relationCompanion),
+                                    ('青梅竹马', l10n.relationChildhoodFriend),
+                                    ('恋人', l10n.relationLover),
+                                    ('师徒', l10n.relationMentor),
+                                    ('宿敌', l10n.relationRival),
+                                  ].map((preset) {
+                                    final isSel = _aiRelationType == preset.$1;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: ChoiceChip(
+                                        label: Text(preset.$2,
+                                            style:
+                                                const TextStyle(fontSize: 11)),
+                                        selected: isSel,
+                                        visualDensity: VisualDensity.compact,
+                                        materialTapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                        onSelected: _openingAiStudio
+                                            ? null
+                                            : (selected) {
+                                                if (selected) {
+                                                  setState(() =>
+                                                      _aiRelationType =
+                                                          preset.$1);
+                                                }
+                                              },
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_aiRelationType == '自定义') ...[
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            height: 34,
+                            child: TextField(
+                              controller: _aiCustomRelationCtrl,
+                              enabled: !_openingAiStudio,
+                              style: const TextStyle(fontSize: 12),
+                              decoration: InputDecoration(
+                                labelText: l10n.relationCustomDescLabel,
+                                hintText: l10n.relationCustomDescHint,
+                                border: const OutlineInputBorder(),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                              ),
                             ),
                           ),
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton.icon(
-                        onPressed:
-                            _openingAiStudio ? null : _openManagedAiStudio,
-                        icon: _openingAiStudio
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const AppSvgIcon('generation', size: 16),
-                        label: Text(
-                          _openingAiStudio
-                              ? l10n.opening
-                              : (isEdit ? l10n.aiRegenerate : l10n.aiFillIn),
-                        ),
-                      ),
+                        ],
+                      ],
                     ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nameCtrl,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: InputDecoration(
-                  labelText: '${l10n.characterNameLabel} *',
-                  border: const OutlineInputBorder(),
-                  isDense: true),
-              style: const TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(
-                child: NarrAItorDropdown<String>(
-                  value: gender,
-                  label: l10n.genderLabel,
-                  options: [
-                    NarrAItorDropdownOption(value: '男', label: l10n.genderMale),
-                    NarrAItorDropdownOption(
-                        value: '女', label: l10n.genderFemale),
-                    NarrAItorDropdownOption(
-                        value: '其他', label: l10n.genderOther),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: aiPromptCtrl,
+                            enabled: !_openingAiStudio,
+                            decoration: InputDecoration(
+                              hintText: l10n.characterCardCoreKeywordHint,
+                              border: const OutlineInputBorder(),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(
+                          onPressed:
+                              _openingAiStudio ? null : _openManagedAiStudio,
+                          icon: _openingAiStudio
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const AppSvgIcon('generation', size: 16),
+                          label: Text(
+                            _openingAiStudio
+                                ? l10n.opening
+                                : (isEdit ? l10n.aiRegenerate : l10n.aiFillIn),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                  onChanged: (v) => setState(() {
-                    gender = v ?? '男';
-                    isCustomGender = gender == '其他';
-                  }),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: ageCtrl,
-                  scrollPadding: const EdgeInsets.only(bottom: 120),
-                  decoration: InputDecoration(
-                      labelText: l10n.ageLabel,
-                      border: const OutlineInputBorder(),
-                      isDense: true),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ]),
-            if (isCustomGender) ...[
               const SizedBox(height: 10),
               TextField(
-                controller: customGenderCtrl,
+                controller: nameCtrl,
+                scrollPadding: const EdgeInsets.only(bottom: 120),
                 decoration: InputDecoration(
-                    labelText: l10n.customGenderLabel,
+                    labelText: '${l10n.characterNameLabel} *',
+                    border: const OutlineInputBorder(),
+                    isDense: true),
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                  child: NarrAItorDropdown<String>(
+                    value: gender,
+                    label: l10n.genderLabel,
+                    options: [
+                      NarrAItorDropdownOption(
+                          value: '男', label: l10n.genderMale),
+                      NarrAItorDropdownOption(
+                          value: '女', label: l10n.genderFemale),
+                      NarrAItorDropdownOption(
+                          value: '其他', label: l10n.genderOther),
+                    ],
+                    onChanged: (v) {
+                      setState(() {
+                        gender = v ?? '男';
+                        isCustomGender = gender == '其他';
+                      });
+                      _markDirty();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: ageCtrl,
+                    scrollPadding: const EdgeInsets.only(bottom: 120),
+                    decoration: InputDecoration(
+                        labelText: l10n.ageLabel,
+                        border: const OutlineInputBorder(),
+                        isDense: true),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ]),
+              if (isCustomGender) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: customGenderCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.customGenderLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true),
+                ),
+              ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: profCtrl,
+                scrollPadding: const EdgeInsets.only(bottom: 120),
+                decoration: InputDecoration(
+                    labelText: l10n.occupationLabel,
                     border: const OutlineInputBorder(),
                     isDense: true),
               ),
-            ],
-            const SizedBox(height: 10),
-            TextField(
-              controller: profCtrl,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: InputDecoration(
-                  labelText: l10n.occupationLabel,
-                  border: const OutlineInputBorder(),
-                  isDense: true),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: persCtrl,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: InputDecoration(
-                  labelText: l10n.personalityLabel,
-                  border: const OutlineInputBorder(),
-                  isDense: true),
-              maxLines: 3,
-              minLines: 2,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: bgCtrl,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: InputDecoration(
-                  labelText: l10n.backgroundStoryLabel,
-                  alignLabelWithHint: true,
-                  border: const OutlineInputBorder(),
-                  isDense: true),
-              maxLines: 6,
-              minLines: 3,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: appearCtrl,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: InputDecoration(
-                  labelText: l10n.appearanceLabel,
-                  alignLabelWithHint: true,
-                  border: const OutlineInputBorder(),
-                  isDense: true),
-              maxLines: 3,
-              minLines: 2,
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: bodyCtrl,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
-              decoration: InputDecoration(
-                  labelText: l10n.physiqueFeaturesLabel,
-                  alignLabelWithHint: true,
-                  border: const OutlineInputBorder(),
-                  isDense: true),
-              maxLines: 2,
-              minLines: 1,
-            ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(l10n.inWorldSettingSection,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-                controller: factionCtrl,
+              const SizedBox(height: 10),
+              TextField(
+                controller: persCtrl,
+                scrollPadding: const EdgeInsets.only(bottom: 120),
                 decoration: InputDecoration(
-                    labelText: l10n.factionLabel,
+                    labelText: l10n.personalityLabel,
                     border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 10),
-            TextField(
-                controller: locationCtrl,
+                    isDense: true),
+                maxLines: 3,
+                minLines: 2,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bgCtrl,
+                scrollPadding: const EdgeInsets.only(bottom: 120),
                 decoration: InputDecoration(
-                    labelText: l10n.locationLabel,
+                    labelText: l10n.backgroundStoryLabel,
+                    alignLabelWithHint: true,
                     border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 10),
-            TextField(
-                controller: goalCtrl,
+                    isDense: true),
+                maxLines: 6,
+                minLines: 3,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: appearCtrl,
+                scrollPadding: const EdgeInsets.only(bottom: 120),
                 decoration: InputDecoration(
-                    labelText: l10n.publicGoalLabel,
+                    labelText: l10n.appearanceLabel,
+                    alignLabelWithHint: true,
                     border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 10),
-            TextField(
-                controller: motivationCtrl,
+                    isDense: true),
+                maxLines: 3,
+                minLines: 2,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: bodyCtrl,
+                scrollPadding: const EdgeInsets.only(bottom: 120),
+                decoration: InputDecoration(
+                    labelText: l10n.physiqueFeaturesLabel,
+                    alignLabelWithHint: true,
+                    border: const OutlineInputBorder(),
+                    isDense: true),
                 maxLines: 2,
-                decoration: InputDecoration(
-                    labelText: l10n.hiddenMotiveLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 10),
-            TextField(
-                controller: abilitySourceCtrl,
-                decoration: InputDecoration(
-                    labelText: l10n.abilitySourceLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 10),
-            TextField(
-                controller: abilityCostCtrl,
-                decoration: InputDecoration(
-                    labelText: l10n.abilityCostLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 10),
-            TextField(
-                controller: tabooCtrl,
-                decoration: InputDecoration(
-                    labelText: l10n.taboosLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 10),
-            TextField(
-                controller: relationshipCtrl,
-                maxLines: 2,
-                decoration: InputDecoration(
-                    labelText: l10n.relationsNoteLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true)),
-            const SizedBox(height: 16),
-            CustomAttributeEditorSection(
-              initialItems: customAttributes,
-              onChanged: (items) {
-                customAttributes = items;
-              },
-            ),
-            const SizedBox(height: 16),
-            TrackedStateDefinitionEditorSection(
-              initialItems: trackedStateDefinitions,
-              onChanged: (items) {
-                trackedStateDefinitions = items;
-              },
-            ),
-            const SizedBox(height: 20),
-            // Bottom buttons
-            Row(children: [
-              if (isEdit)
+                minLines: 1,
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(l10n.inWorldSettingSection,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                  controller: factionCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.factionLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: locationCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.locationLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: goalCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.publicGoalLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: motivationCtrl,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                      labelText: l10n.hiddenMotiveLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: abilitySourceCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.abilitySourceLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: abilityCostCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.abilityCostLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: tabooCtrl,
+                  decoration: InputDecoration(
+                      labelText: l10n.taboosLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 10),
+              TextField(
+                  controller: relationshipCtrl,
+                  maxLines: 2,
+                  decoration: InputDecoration(
+                      labelText: l10n.relationsNoteLabel,
+                      border: const OutlineInputBorder(),
+                      isDense: true)),
+              const SizedBox(height: 16),
+              CustomAttributeEditorSection(
+                initialItems: customAttributes,
+                onChanged: (items) {
+                  customAttributes = items;
+                  _markDirty();
+                },
+              ),
+              const SizedBox(height: 16),
+              TrackedStateDefinitionEditorSection(
+                initialItems: trackedStateDefinitions,
+                onChanged: (items) {
+                  trackedStateDefinitions = items;
+                  _markDirty();
+                },
+              ),
+              const SizedBox(height: 20),
+              // Bottom buttons
+              Row(children: [
+                if (isEdit)
+                  TextButton(
+                    onPressed: _deleteCard,
+                    child: Text(l10n.deleteAction,
+                        style: const TextStyle(color: AppColors.error)),
+                  ),
+                const Spacer(),
                 TextButton(
-                  onPressed: _deleteCard,
-                  child: Text(l10n.deleteAction,
-                      style: const TextStyle(color: AppColors.error)),
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.cancelAction),
                 ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(l10n.cancelAction),
-              ),
-              const SizedBox(width: 8),
-              FilledButton(
-                onPressed: _saveCard,
-                child: Text(isEdit ? l10n.saveAction : l10n.createAction),
-              ),
-            ]),
-          ],
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _saving ? null : _saveCard,
+                  child: Text(isEdit ? l10n.saveAction : l10n.createAction),
+                ),
+              ]),
+            ],
+          ),
         ),
       ),
     );
