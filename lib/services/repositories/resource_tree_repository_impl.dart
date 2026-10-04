@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_contracts.dart';
@@ -239,7 +240,45 @@ final class ResourceTreeRepositoryImpl
       whereArgs: [type.storageValue],
       orderBy: 'updated_at DESC, id ASC',
     );
-    return rows.map(ResourceTreeRowMapper.resourceFromRow).toList();
+    final resources = <Resource>[];
+    for (final row in rows) {
+      try {
+        resources.add(ResourceTreeRowMapper.resourceFromRow(row));
+      } on ResourceTreeCorruptedException catch (error) {
+        // A stored row that cannot be mapped (corrupt / legacy-incompatible
+        // metadata or an unknown type/status) has no `Resource` representation.
+        // It is deliberately *quarantined*, not silently filtered: skip just
+        // that row so one bad resource can never blind the whole enumeration,
+        // and emit a structured diagnostic naming the exact row.
+        _reportUnrepresentableRow(row, error);
+      }
+    }
+    return resources;
+  }
+
+  /// Stable diagnostic code emitted when a stored resource row cannot be mapped
+  /// onto the domain model and is therefore quarantined.
+  static const String unrepresentableRowDiagnosticCode =
+      'unrepresentableResourceRow';
+
+  /// Emits a structured, greppable line for a quarantined row.
+  ///
+  /// Carries the resource id (= the row primary key), the declared `type`
+  /// column and the exception type so the isolated row is identifiable from
+  /// logs alone. Deliberately logs **no** row content: the mapper's message can
+  /// embed the raw `metadata_json` (a `FormatException` stringifies its source),
+  /// so only identifiers and the fault type are safe to emit.
+  void _reportUnrepresentableRow(
+    Map<String, Object?> row,
+    ResourceTreeCorruptedException error,
+  ) {
+    final rowId = row['id']?.toString() ?? '';
+    final declaredType = row['type']?.toString() ?? '';
+    debugPrint(
+      '[ResourceTree] $unrepresentableRowDiagnosticCode '
+      'table=$_resources resourceId=$rowId rowId=$rowId '
+      'declaredType=$declaredType error=${error.runtimeType}',
+    );
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -148,6 +149,63 @@ void main() {
         ),
         hasLength(1),
       );
+    });
+
+    test(
+        'quarantines an unmappable stored row as unrepresentable and reports '
+        'it (not silent filtering)', () async {
+      final valid = await repo.createResource(
+        type: ResourceType.worldview,
+        name: '正常资源',
+      );
+      final db = await DatabaseService.database;
+      const corruptId = 'res_corrupt_row';
+      await db.insert('resources', <String, Object?>{
+        'id': corruptId,
+        'type': ResourceType.worldview.storageValue,
+        'name': '损坏资源',
+        'summary': '',
+        'status': 'draft',
+        'metadata_json': '{not valid json',
+        'schema_version': 1,
+        'created_at': '2026-01-01T00:00:00',
+        'updated_at': '2026-01-01T00:00:00',
+      });
+
+      final captured = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) captured.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      final List<Resource> listed;
+      try {
+        listed = await repo.listResources(type: ResourceType.worldview);
+      } finally {
+        // Restore before asserting so a failure still reports normally.
+        debugPrint = original;
+      }
+
+      // The valid row still enumerates; the corrupt row is quarantined instead
+      // of escalating into a repository-wide failure.
+      expect(listed.map((resource) => resource.id.value), [valid.id.value]);
+      // The isolation is diagnosable from logs alone: the exact row and the
+      // fault type are named, so it is quarantine — not ordinary filtering.
+      final diagnostic = captured.firstWhere(
+        (line) => line.contains(
+          ResourceTreeRepositoryImpl.unrepresentableRowDiagnosticCode,
+        ),
+        orElse: () => '',
+      );
+      expect(diagnostic, isNotEmpty);
+      expect(diagnostic, contains('resourceId=$corruptId'));
+      expect(diagnostic, contains('rowId=$corruptId'));
+      expect(diagnostic, contains('error=ResourceTreeCorruptedException'));
+      // No row content may leak: the mapper message would embed the raw
+      // `metadata_json` (FormatException stringifies its source).
+      expect(diagnostic, isNot(contains('not valid json')));
+      expect(diagnostic, isNot(contains('不是有效 JSON')));
     });
   });
 

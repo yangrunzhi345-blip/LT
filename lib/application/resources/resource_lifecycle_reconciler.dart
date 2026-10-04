@@ -1,7 +1,25 @@
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/streaming_generation_runtime_contracts.dart';
+import '../../services/repositories/resource_tree_repository.dart';
 import 'assembly_readiness_coordinator.dart';
+import 'assembly_readiness_repository.dart';
 import 'resource_lifecycle_projection.dart';
+
+/// Whether [error] is a per-resource data fault that can be isolated into a
+/// terminal `failed` snapshot.
+///
+/// Only "this stored resource cannot be projected" failures qualify: an
+/// unmappable tree row, an unknown readiness/generation status, or a domain
+/// contract violation while decoding stored rows. Everything else — a database
+/// failure, a repository that is unavailable, or an invariant violation — is
+/// **not** isolatable and must propagate so a genuinely broken library is never
+/// masked as a collection of failed rows.
+bool isIsolatableLifecycleReadError(Object error) {
+  if (error is ResourceStateTransitionException) return false;
+  return error is ResourceTreeCorruptedException ||
+      error is ResourceContractException ||
+      error is AssemblyReadinessException;
+}
 
 /// Read-side convergence of the resource lifecycle.
 ///
@@ -34,6 +52,12 @@ final class ResourceLifecycleReconciler {
   final AssemblyReadinessCoordinator _readiness;
 
   /// Reads the lifecycle, converging a stuck post-generation state first.
+  ///
+  /// The read is fault-isolated: a per-resource projection failure (a corrupt
+  /// or legacy-incompatible row) yields a terminal `failed` snapshot instead of
+  /// throwing, while a database/repository failure still propagates so a
+  /// genuinely unreadable library surfaces as an error rather than silently
+  /// hiding resources.
   Future<ResourceLifecycleProjectionResult> read(ResourceId resourceId) async {
     // Coalesce with an already running preparation instead of racing it. The
     // run owns the CAS token, so awaiting it yields the persisted terminal
@@ -41,14 +65,14 @@ final class ResourceLifecycleReconciler {
     final pending = _readiness.pendingPreparation(resourceId.value);
     if (pending != null) {
       await _ignoreFailure(pending);
-      return _projection.read(resourceId);
+      return _readOrFailed(resourceId);
     }
 
-    final result = await _projection.read(resourceId);
+    final result = await _readOrFailed(resourceId);
     if (!needsPreparation(result)) return result;
 
     await _prepare(resourceId);
-    return _projection.read(resourceId);
+    return _readOrFailed(resourceId);
   }
 
   /// Reads many resources, converging each before returning.
@@ -74,7 +98,7 @@ final class ResourceLifecycleReconciler {
     } else {
       await _prepare(resourceId);
     }
-    return _projection.read(resourceId);
+    return _readOrFailed(resourceId);
   }
 
   /// Whether [result] is a stuck post-generation state that needs one
@@ -97,6 +121,24 @@ final class ResourceLifecycleReconciler {
       // A preparation failure is persisted by the coordinator as a terminal
       // `failed` row; the following projection read reflects it. Never throw
       // into a list/detail read.
+    }
+  }
+
+  /// Reads the projection, converting a per-resource data fault into a terminal
+  /// `failed` snapshot. Database / repository failures and invariant violations
+  /// are rethrown so a truly unreadable library is never masked as a row of
+  /// failed resources.
+  Future<ResourceLifecycleProjectionResult> _readOrFailed(
+    ResourceId resourceId,
+  ) async {
+    try {
+      return await _projection.read(resourceId);
+    } catch (error) {
+      if (!isIsolatableLifecycleReadError(error)) rethrow;
+      return ResourceLifecycleProjectionResult(
+        resourceId: resourceId,
+        state: ResourceLifecycleState.failed,
+      );
     }
   }
 
