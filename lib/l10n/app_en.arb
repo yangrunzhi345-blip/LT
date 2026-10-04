@@ -3901,5 +3901,14 @@
   "ttsVoicePreviewSentence": "This is a preview of the selected voice.",
   "ttsModelDownloadStarted": "Download started",
   "runtimeStateFieldRelationshipStrength": "Relationship strength",
-  "runtimeStateFieldRelationshipNotes": "Relationship notes"
+  "runtimeStateFieldRelationshipNotes": "Relationship notes",
+  "sidebarRenameAdventure": "Rename",
+  "sidebarAdventureActions": "Adventure actions",
+  "sidebarToday": "Today",
+  "sidebarYesterday": "Yesterday",
+  "sidebarPastWeek": "Past 7 days",
+  "sidebarEarlier": "Earlier",
+  "sidebarRenameFailed": "Could not rename adventure",
+  "sidebarAdventureRestored": "Restored to adventures",
+  "sidebarAdventureKind": "Adventure"
 }

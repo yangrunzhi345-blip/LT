@@ -63,6 +63,9 @@ enum TrashRestorePlacement {
   /// put the row back in the library. Nothing in the content tree moved.
   restoredToLibrary,
 
+  /// Clearing an adventure marker restores its untouched session data.
+  restoredToAdventures,
+
   /// The node was already restored by an earlier call; this call changed
   /// nothing (idempotent repeat).
   alreadyRestored;
@@ -75,6 +78,7 @@ enum TrashRestorePlacement {
         TrashRestorePlacement.recreatedSectionUnderRoot =>
           '原所属章节已不存在，已恢复到资源根下的新章节',
         TrashRestorePlacement.restoredToLibrary => '已恢复到资源库',
+        TrashRestorePlacement.restoredToAdventures => '已恢复到冒险',
         TrashRestorePlacement.alreadyRestored => '该条目已恢复，本次未改变任何内容',
       };
 }

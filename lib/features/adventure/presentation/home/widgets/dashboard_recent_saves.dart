@@ -24,15 +24,19 @@ class DashboardRecentSaves extends ConsumerWidget {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final confirmed = await AppConfirmDialog.show(
       context: context,
-      title: l10n.dashboardDeleteAdventureTitle,
-      message: l10n.dashboardDeleteAdventureMessage(title),
-      confirmLabel: l10n.deleteAction,
+      title: l10n.moveToTrashAction,
+      message: l10n.moveToTrashMessage(title),
+      confirmLabel: l10n.moveToTrashAction,
       isDanger: true,
     );
     if (confirmed && context.mounted) {
-      await ref.read(chatProvider).deleteAdventure(id);
-      if (context.mounted) {
-        AppFeedback.success(context, l10n.dashboardAdventureDeleted(title));
+      try {
+        await ref.read(chatProvider).moveAdventureToTrash(id);
+        if (context.mounted) {
+          AppFeedback.success(context, l10n.moveToTrashAction);
+        }
+      } catch (_) {
+        if (context.mounted) AppFeedback.error(context, l10n.moveToTrashFailed);
       }
     }
   }
@@ -59,23 +63,6 @@ class DashboardRecentSaves extends ConsumerWidget {
             ),
           ),
         ),
-        if (adventures.length > 1) ...[
-          const SizedBox(height: DashboardMetrics.subsectionGap),
-          DashboardSubsection(
-            key: const Key('dashboard-subsection-recent'),
-            title: l10n.workbenchRecentAdventures,
-            child: Column(
-              children: [
-                for (final item in adventures.skip(1))
-                  _AdventureRow(
-                      item: item,
-                      onOpen: (id) => chat.openAdventure(id),
-                      onDelete: (id, title) =>
-                          _delete(context, ref, id, title)),
-              ],
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -132,7 +119,7 @@ class _AdventureRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium))),
           IconButton(
-              tooltip: l10n.dashboardDeleteAdventureTooltip,
+              tooltip: l10n.moveToTrashAction,
               onPressed: id == null ? null : () => onDelete(id, title),
               icon: const AppSvgIcon('delete', size: 18)),
         ]),

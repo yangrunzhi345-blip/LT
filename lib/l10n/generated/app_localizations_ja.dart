@@ -6119,4 +6119,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runtimeStateFieldRelationshipNotes => '関係のメモ';
+
+  @override
+  String get sidebarRenameAdventure => '名前を変更';
+
+  @override
+  String get sidebarAdventureActions => '冒険の操作';
+
+  @override
+  String get sidebarToday => '今日';
+
+  @override
+  String get sidebarYesterday => '昨日';
+
+  @override
+  String get sidebarPastWeek => '過去7日間';
+
+  @override
+  String get sidebarEarlier => '以前';
+
+  @override
+  String get sidebarRenameFailed => '名前の変更に失敗しました';
+
+  @override
+  String get sidebarAdventureRestored => '冒険一覧に復元しました';
+
+  @override
+  String get sidebarAdventureKind => '冒険';
 }

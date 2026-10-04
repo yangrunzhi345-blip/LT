@@ -30,10 +30,12 @@ final class ResourceTrashServiceRuntime implements ResourceTrashRuntime {
   ResourceTrashServiceRuntime({
     required ResourceTrashService service,
     this.listLimit = 200,
+    this.onAdventureRestored,
   }) : _service = service;
 
   final ResourceTrashService _service;
   final int listLimit;
+  final Future<void> Function()? onAdventureRestored;
 
   @override
   Future<List<ResourceTrashItem>> list() async {
@@ -44,6 +46,10 @@ final class ResourceTrashServiceRuntime implements ResourceTrashRuntime {
   @override
   Future<TrashRestoreSummary> restore(String trashId) async {
     final result = await _service.restore(trashId);
+    if (result.entry.isLegacyOrigin &&
+        result.entry.linkedSourceTable == 'adventures') {
+      await onAdventureRestored?.call();
+    }
     return TrashRestoreSummary(
       alreadyRestored: result.isIdempotentRepeat,
       usedFallback: result.placement.isFallback,

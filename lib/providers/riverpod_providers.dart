@@ -108,7 +108,10 @@ final characterRelationshipManagementProvider =
 });
 
 final adventureRepoProvider = Provider<IAdventureRepository>((ref) {
-  return AdventureRepositoryImpl(getDb: () => DatabaseService.database);
+  return AdventureRepositoryImpl(
+    getDb: () => DatabaseService.database,
+    trashService: ref.read(resourceTrashServiceProvider),
+  );
 });
 
 final worldEntryRepoProvider = Provider<IWorldEntryRepository>((ref) {
@@ -667,6 +670,7 @@ final resourceRevisionRuntimeProvider =
 final resourceTrashRuntimeProvider = Provider<ResourceTrashRuntime>((ref) {
   return ResourceTrashServiceRuntime(
     service: ref.read(resourceTrashServiceProvider),
+    onAdventureRestored: () => ref.read(chatProvider).loadAdventureList(),
   );
 });
 

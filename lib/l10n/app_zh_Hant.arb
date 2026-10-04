@@ -3901,5 +3901,14 @@
   "ttsVoicePreviewSentence": "這是所選聲音的試聽範例。",
   "ttsModelDownloadStarted": "已開始下載",
   "runtimeStateFieldRelationshipStrength": "關係強度",
-  "runtimeStateFieldRelationshipNotes": "關係備註"
+  "runtimeStateFieldRelationshipNotes": "關係備註",
+  "sidebarRenameAdventure": "重新命名",
+  "sidebarAdventureActions": "冒險操作",
+  "sidebarToday": "今天",
+  "sidebarYesterday": "昨天",
+  "sidebarPastWeek": "過去 7 天",
+  "sidebarEarlier": "更早",
+  "sidebarRenameFailed": "重新命名失敗，請重試",
+  "sidebarAdventureRestored": "已恢復到冒險列表",
+  "sidebarAdventureKind": "冒險"
 }

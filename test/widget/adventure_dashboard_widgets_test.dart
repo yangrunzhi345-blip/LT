@@ -18,6 +18,7 @@ import 'package:lt_dialogue/features/adventure/presentation/home/widgets/dashboa
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/app_section.dart';
+import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -35,6 +36,13 @@ class _FakeKeyChatProvider extends ChatProvider {
 
 class _RecordingAdventureChatProvider extends ChatProvider {
   Future<void>? openedAdventure;
+  Future<void>? movedAdventure;
+  @override
+  Future<void> moveAdventureToTrash(int id) {
+    final operation = super.moveAdventureToTrash(id);
+    movedAdventure = operation;
+    return operation;
+  }
 
   @override
   Future<void> openAdventure(int id) {
@@ -251,18 +259,30 @@ void main() {
     );
 
     testWidgets(
-      'DashboardRecentSaves renders saves list with long titles and delete action',
+      'DashboardRecentSaves keeps main CTA and moves long-title story to recoverable trash',
       (tester) async {
         setViewport(tester, width: 320, height: 640);
 
-        final container = ProviderContainer();
+        late _RecordingAdventureChatProvider recordingChat;
+        late ProviderContainer container;
+        await tester.runAsync(() async {
+          await DatabaseService.database;
+          recordingChat = _RecordingAdventureChatProvider();
+          container = ProviderContainer(
+              overrides: [chatProvider.overrideWith((ref) => recordingChat)]);
+          await recordingChat.loadApiKey();
+        });
         addTearDown(container.dispose);
-
         final chat = container.read(chatProvider);
-        chat.adventureProvider.adventureList.add({
-          'id': 1,
-          'title': '暮色边境 · 遗失遗迹深处古老卷轴与巨龙叹息之夜未尽物语超长标题测试，确保两行换行不溢出',
-          'updated_at': '2026-09-26 14:00',
+        final repo = container.read(adventureRepoProvider);
+        const title = '暮色边境 · 遗失遗迹深处古老卷轴与巨龙叹息之夜未尽物语超长标题测试，确保两行换行不溢出';
+        late int id;
+        await tester.runAsync(() async {
+          await chat.loadApiKey();
+          id = await repo.createAdventure(title, AdventureConfig());
+          await repo.insertMessage(id,
+              Message(id: 'kept-message', content: '保留的叙事正文', isUser: false));
+          await chat.loadAdventureList();
         });
 
         await tester.pumpWidget(
@@ -284,21 +304,47 @@ void main() {
         );
         expect(find.text('继续探索'), findsOneWidget);
 
-        // Tap card to open adventure
-        await tester.tap(find.text('继续探索'));
-        await tester.pump();
-
-        // Delete button opens confirmation dialog
-        expect(find.byTooltip('删除冒险记录'), findsOneWidget);
-        await tester.tap(find.byTooltip('删除冒险记录'));
+        // The confirmation itself must not mutate any persisted story data.
+        expect(find.byTooltip('移入回收站'), findsOneWidget);
+        await tester.tap(find.byTooltip('移入回收站'));
         await tester.pumpAndSettle();
-
-        expect(find.text('删除冒险记录'), findsOneWidget);
-        expect(find.text('删除'), findsWidgets);
         expect(find.text('取消'), findsOneWidget);
-
+        await tester.runAsync(() async {
+          expect(await repo.getAdventureById(id), isNotNull);
+          expect(await container.read(resourceTrashServiceProvider).list(),
+              isEmpty);
+        });
         await tester.tap(find.text('取消'));
         await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          expect(await repo.getAdventureById(id), isNotNull);
+        });
+
+        await tester.tap(find.byTooltip('移入回收站'));
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          await tester.tap(find.text('移入回收站').last);
+          await recordingChat.movedAdventure;
+        });
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          expect(await repo.getAdventureById(id), isNull);
+          final db = await DatabaseService.database;
+          expect(await db.query('adventures', where: 'id = ?', whereArgs: [id]),
+              hasLength(1));
+          expect(await repo.getMessages(id), hasLength(1));
+          final marker =
+              (await container.read(resourceTrashServiceProvider).list())
+                  .single;
+          await container
+              .read(resourceTrashRuntimeProvider)
+              .restore(marker.trashId);
+          expect(await repo.getAdventureById(id), isNotNull);
+          expect((await repo.getMessages(id)).single.content, '保留的叙事正文');
+          expect(chat.adventureList.single['id'], id);
+        });
+        await tester.pump();
+        expect(find.text('继续探索'), findsOneWidget);
 
         expect(tester.takeException(), isNull);
       },

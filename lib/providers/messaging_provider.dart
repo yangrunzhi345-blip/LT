@@ -289,16 +289,22 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
     Future<String> Function(String content)? promptTransformer,
   }) async {
     if (content.trim().isEmpty) return;
-    await _chatMgr.sendMessage(
-      content,
-      promptTransformer: promptTransformer,
-    );
+    try {
+      await _chatMgr.sendMessage(content, promptTransformer: promptTransformer);
+    } finally {
+      await _adventureProv.loadAdventureList();
+    }
   }
 
   Future<void> retryLast(
-          {LLMProvider? overrideProvider, String? overrideModel}) =>
-      _chatMgr.retryLast(
+      {LLMProvider? overrideProvider, String? overrideModel}) async {
+    try {
+      await _chatMgr.retryLast(
           overrideProvider: overrideProvider, overrideModel: overrideModel);
+    } finally {
+      await _adventureProv.loadAdventureList();
+    }
+  }
 
   void cancelStreaming() => _chatMgr.cancelStreaming();
   void chatManagerResetState() => _chatMgr.resetState();

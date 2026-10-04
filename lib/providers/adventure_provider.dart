@@ -420,6 +420,7 @@ class AdventureProvider extends ChangeNotifier {
     notifyListeners();
     if (_currentAdventureId != id) return true;
     await _adventureRepo.insertMessage(id, message);
+    await loadAdventureList();
     return true;
   }
 
@@ -676,6 +677,34 @@ class AdventureProvider extends ChangeNotifier {
     _sceneState = const SceneState();
     _inGame = false;
     notifyListeners();
+  }
+
+  Future<void> renameAdventure(int id, String title) async {
+    await _adventureRepo.renameAdventure(id, title);
+    if (_currentAdventureId == id) _currentTitle = title.trim();
+    await loadAdventureList();
+  }
+
+  Future<void> markAdventureOpened(int id) async {
+    await _adventureRepo.markAdventureOpened(id);
+    await loadAdventureList();
+  }
+
+  Future<void> moveAdventureToTrash(int id) async {
+    await _adventureRepo.moveAdventureToTrash(id);
+    if (_currentAdventureId == id) {
+      _currentAdventureId = null;
+      _currentTitle = '';
+      _messages.clear();
+      _gameState = GameState();
+      _sceneState = const SceneState();
+      _adventureConfig = null;
+      _inGame = false;
+      _currentBranchId = 0;
+      _branches = [];
+      _worldMgr.setEntries([]);
+    }
+    await loadAdventureList();
   }
 
   Future<void> deleteAdventure(int id) async {

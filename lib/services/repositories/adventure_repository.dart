@@ -56,6 +56,16 @@ abstract class IAdventureRepository {
   Future<int> createAdventure(String title, AdventureConfig config);
   Future<List<Map<String, dynamic>>> getAdventures();
   Future<Map<String, dynamic>?> getAdventureById(int id);
+
+  /// Persists a non-empty title without changing the narrative configuration.
+  Future<void> renameAdventure(int id, String title) =>
+      throw UnimplementedError();
+
+  /// Records a successful open in the existing adventure activity timestamp.
+  Future<void> markAdventureOpened(int id) => throw UnimplementedError();
+
+  /// Hides the adventure using the existing recoverable trash lifecycle.
+  Future<void> moveAdventureToTrash(int id) => throw UnimplementedError();
   Future<void> updateAdventureConfig(int id, AdventureConfig config) =>
       throw UnimplementedError();
   Future<void> deleteAdventure(int id);

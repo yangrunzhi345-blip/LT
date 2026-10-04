@@ -6443,4 +6443,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get runtimeStateFieldRelationshipNotes => 'Relationship notes';
+
+  @override
+  String get sidebarRenameAdventure => 'Rename';
+
+  @override
+  String get sidebarAdventureActions => 'Adventure actions';
+
+  @override
+  String get sidebarToday => 'Today';
+
+  @override
+  String get sidebarYesterday => 'Yesterday';
+
+  @override
+  String get sidebarPastWeek => 'Past 7 days';
+
+  @override
+  String get sidebarEarlier => 'Earlier';
+
+  @override
+  String get sidebarRenameFailed => 'Could not rename adventure';
+
+  @override
+  String get sidebarAdventureRestored => 'Restored to adventures';
+
+  @override
+  String get sidebarAdventureKind => 'Adventure';
 }

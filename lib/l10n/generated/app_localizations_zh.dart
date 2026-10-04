@@ -6036,6 +6036,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get runtimeStateFieldRelationshipNotes => '关系备注';
+
+  @override
+  String get sidebarRenameAdventure => '重命名';
+
+  @override
+  String get sidebarAdventureActions => '冒险操作';
+
+  @override
+  String get sidebarToday => '今天';
+
+  @override
+  String get sidebarYesterday => '昨天';
+
+  @override
+  String get sidebarPastWeek => '过去 7 天';
+
+  @override
+  String get sidebarEarlier => '更早';
+
+  @override
+  String get sidebarRenameFailed => '重命名失败，请重试';
+
+  @override
+  String get sidebarAdventureRestored => '已恢复到冒险列表';
+
+  @override
+  String get sidebarAdventureKind => '冒险';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -12070,6 +12097,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get runtimeStateFieldRelationshipNotes => '关系备注';
+
+  @override
+  String get sidebarRenameAdventure => '重命名';
+
+  @override
+  String get sidebarAdventureActions => '冒险操作';
+
+  @override
+  String get sidebarToday => '今天';
+
+  @override
+  String get sidebarYesterday => '昨天';
+
+  @override
+  String get sidebarPastWeek => '过去 7 天';
+
+  @override
+  String get sidebarEarlier => '更早';
+
+  @override
+  String get sidebarRenameFailed => '重命名失败，请重试';
+
+  @override
+  String get sidebarAdventureRestored => '已恢复到冒险列表';
+
+  @override
+  String get sidebarAdventureKind => '冒险';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18104,4 +18158,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get runtimeStateFieldRelationshipNotes => '關係備註';
+
+  @override
+  String get sidebarRenameAdventure => '重新命名';
+
+  @override
+  String get sidebarAdventureActions => '冒險操作';
+
+  @override
+  String get sidebarToday => '今天';
+
+  @override
+  String get sidebarYesterday => '昨天';
+
+  @override
+  String get sidebarPastWeek => '過去 7 天';
+
+  @override
+  String get sidebarEarlier => '更早';
+
+  @override
+  String get sidebarRenameFailed => '重新命名失敗，請重試';
+
+  @override
+  String get sidebarAdventureRestored => '已恢復到冒險列表';
+
+  @override
+  String get sidebarAdventureKind => '冒險';
 }

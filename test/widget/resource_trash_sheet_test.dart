@@ -16,6 +16,7 @@ ResourceTrashItem _item({
   String title = '开场段落',
   RevisionNodeKindRef nodeKind = RevisionNodeKindRef.part,
   TrashReason reason = TrashReason.userDelete,
+  bool isAdventure = false,
 }) =>
     ResourceTrashItem(
       trashId: trashId,
@@ -26,6 +27,7 @@ ResourceTrashItem _item({
       deletedAt: DateTime(2026, 9, 17, 10),
       expiresAt: DateTime(2026, 10, 17, 10),
       isRestored: false,
+      isAdventure: isAdventure,
     );
 
 ResourceTrashViewState _ready({List<ResourceTrashItem>? items}) =>
@@ -36,6 +38,39 @@ ResourceTrashViewState _ready({List<ResourceTrashItem>? items}) =>
 
 void main() {
   final zh = lookupAppLocalizations(const Locale('zh'));
+  group('ResourceTrashView adventure semantics', () {
+    testWidgets('should name adventure entries and their restore destination',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ResourceTrashView(
+              state: ResourceTrashViewState(
+                status: ResourceTrashViewStatus.ready,
+                items: [_item(isAdventure: true)],
+                notice: const ResourceTrashNotice(
+                  kind: ResourceTrashNoticeKind.restored,
+                  placement: TrashRestorePlacement.restoredToAdventures,
+                ),
+              ),
+              onRefresh: () {},
+              onRestore: (_) {},
+              onPermanentDelete: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(zh.sidebarAdventureRestored), findsOneWidget);
+      expect(find.textContaining(zh.sidebarAdventureKind), findsWidgets);
+      expect(find.text(zh.resourceTrashRestoreToLibrary), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
   group('ResourceTrashView — responsive', () {
     for (final viewport in requiredUiViewports) {
       testWidgets(

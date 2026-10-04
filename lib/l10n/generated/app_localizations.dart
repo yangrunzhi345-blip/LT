@@ -11202,6 +11202,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Relationship notes'**
   String get runtimeStateFieldRelationshipNotes;
+
+  /// No description provided for @sidebarRenameAdventure.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get sidebarRenameAdventure;
+
+  /// No description provided for @sidebarAdventureActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventure actions'**
+  String get sidebarAdventureActions;
+
+  /// No description provided for @sidebarToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get sidebarToday;
+
+  /// No description provided for @sidebarYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get sidebarYesterday;
+
+  /// No description provided for @sidebarPastWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Past 7 days'**
+  String get sidebarPastWeek;
+
+  /// No description provided for @sidebarEarlier.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier'**
+  String get sidebarEarlier;
+
+  /// No description provided for @sidebarRenameFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not rename adventure'**
+  String get sidebarRenameFailed;
+
+  /// No description provided for @sidebarAdventureRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored to adventures'**
+  String get sidebarAdventureRestored;
+
+  /// No description provided for @sidebarAdventureKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Adventure'**
+  String get sidebarAdventureKind;
 }
 
 class _AppLocalizationsDelegate

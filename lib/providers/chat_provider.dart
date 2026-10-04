@@ -194,8 +194,9 @@ class ChatProvider extends ChangeNotifier {
   /// 默认构造函数 — 内部创建 Repository 实例（向后兼容）
   ChatProvider()
       : this.withRepos(
-          adventureRepo:
-              AdventureRepositoryImpl(getDb: () => DatabaseService.database),
+          adventureRepo: AdventureRepositoryImpl(
+              getDb: () => DatabaseService.database,
+              trashService: DatabaseService.resourceTrashService),
           worldEntryRepo:
               WorldEntryRepositoryImpl(getDb: () => DatabaseService.database),
           libraryRepo: LibraryRepositoryImpl(
@@ -564,6 +565,7 @@ class ChatProvider extends ChangeNotifier {
     if (_isOpeningAdventure) return;
     if (_adventure.currentAdventureId == id && _isAdventureChatOpen) {
       _currentSection = AppSection.adventure;
+      await _adventure.markAdventureOpened(id);
       notifyListeners();
       return;
     }
@@ -585,6 +587,7 @@ class ChatProvider extends ChangeNotifier {
       _messaging.clearParsedOptions();
       await _messaging.loadBookmarks();
       _isAdventureChatOpen = true;
+      await _adventure.markAdventureOpened(id);
       _triggerTitleBarRebuild(); // title 已变更
       notifyListeners();
     } finally {
@@ -724,6 +727,24 @@ class ChatProvider extends ChangeNotifier {
       counter++;
     }
     return '$baseTitle$counter';
+  }
+
+  Future<void> renameAdventure(int id, String title) async {
+    await _adventure.renameAdventure(id, title);
+    _triggerTitleBarRebuild();
+  }
+
+  Future<void> moveAdventureToTrash(int id) async {
+    final isCurrent = _adventure.currentAdventureId == id;
+    if (isCurrent) _messaging.cancelStreaming();
+    await _adventure.moveAdventureToTrash(id);
+    if (isCurrent && _adventure.currentAdventureId == null) {
+      _messaging.chatManagerResetState();
+      _isAdventureChatOpen = false;
+      _currentSection = AppSection.adventure;
+      _triggerTitleBarRebuild();
+      notifyListeners();
+    }
   }
 
   Future<void> deleteAdventure(int id) async {

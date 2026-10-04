@@ -22,11 +22,13 @@ String _formatTrashDate(DateTime? value, AppLocalizations l10n) {
 }
 
 String _trashItemSubtitle(ResourceTrashItem item, AppLocalizations l10n) {
-  final kind = switch (item.nodeKind) {
-    RevisionNodeKindRef.resource => l10n.resourceTrashKindResource,
-    RevisionNodeKindRef.section => l10n.resourceTrashKindSection,
-    RevisionNodeKindRef.part => l10n.resourceTrashKindPart,
-  };
+  final kind = item.isAdventure
+      ? l10n.sidebarAdventureKind
+      : switch (item.nodeKind) {
+          RevisionNodeKindRef.resource => l10n.resourceTrashKindResource,
+          RevisionNodeKindRef.section => l10n.resourceTrashKindSection,
+          RevisionNodeKindRef.part => l10n.resourceTrashKindPart,
+        };
   final reason = switch (item.reason) {
     TrashReason.userDelete => l10n.resourceTrashReasonUserDelete,
   };
@@ -48,6 +50,7 @@ String _trashNoticeText(ResourceTrashNotice notice, AppLocalizations l10n) {
       l10n.resourceTrashRestoreFallback,
     TrashRestorePlacement.restoredToLibrary =>
       l10n.resourceTrashRestoreToLibrary,
+    TrashRestorePlacement.restoredToAdventures => l10n.sidebarAdventureRestored,
     TrashRestorePlacement.alreadyRestored => l10n.resourceTrashAlreadyRestored,
     null => l10n.operationFailedRetry,
   };

@@ -70,6 +70,7 @@ class DatabaseService {
     __worldEmbeddingRepo = null;
     __libraryRepo = null;
     __libraryTrash = null;
+    __resourceTrashService = null;
     __characterRelationshipRepo = null;
   }
 
@@ -113,7 +114,15 @@ class DatabaseService {
   /// [database], so it stays valid across `resetDatabase()`.
   static ResourceLibraryTrashBridge get libraryTrashBridge => _libraryTrash;
 
-  static ResourceLibraryTrashBridge _buildLibraryTrash() {
+  static ResourceTrashService? __resourceTrashService;
+  static ResourceTrashService get resourceTrashService =>
+      __resourceTrashService ??= _buildResourceTrashService();
+
+  static ResourceLibraryTrashBridge _buildLibraryTrash() =>
+      ResourceLibraryTrashBridge(
+          getDb: () => database, trashService: resourceTrashService);
+
+  static ResourceTrashService _buildResourceTrashService() {
     Future<Database> getDb() => database;
     final tree = ResourceTreeRepositoryImpl(getDb: getDb);
     final revisions = ResourceRevisionRepositoryImpl(getDb: getDb);
@@ -132,7 +141,7 @@ class DatabaseService {
       // assembly) is discharged inside the purge transaction itself.
       ownedStatePort: ResourceOwnedStatePurger(),
     );
-    return ResourceLibraryTrashBridge(getDb: getDb, trashService: trash);
+    return trash;
   }
 
   static Future<Database> get database async {

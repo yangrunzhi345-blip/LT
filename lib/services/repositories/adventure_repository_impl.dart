@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import '../../application/resources/resource_trash_service.dart';
 import '../../application/adventure/adventure_character_identity.dart';
 import '../../application/adventure/adventure_tracked_state_registry.dart';
 import '../../core/utils/json_value_reader.dart';
@@ -25,19 +26,57 @@ import 'adventure_repository.dart';
 class AdventureRepositoryImpl implements IAdventureRepository {
   final Future<Database> Function() _getDb;
 
-  AdventureRepositoryImpl({required Future<Database> Function() getDb})
-      : _getDb = getDb;
+  AdventureRepositoryImpl({
+    required Future<Database> Function() getDb,
+    ResourceTrashService? trashService,
+  })  : _getDb = getDb,
+        _trashService = trashService;
+
+  final ResourceTrashService? _trashService;
+
+  // Markers share the existing trash lifecycle, but never share resource ids.
+  static const _liveAdventure = """
+    NOT EXISTS (
+      SELECT 1 FROM resource_trash t
+      WHERE t.node_id = 'adventure:' || adventures.id
+        AND t.restored_at IS NULL
+        AND t.resource_id = 'adventure:' || adventures.id
+    )
+  """;
+
+  Future<String> _liveAdventureFilter(DatabaseExecutor db) async {
+    // Migration acceptance and recovery can read pre-v41 databases. Those
+    // databases cannot contain trash markers, so keep their read path valid.
+    final tables = await db.query('sqlite_master',
+        columns: ['name'],
+        where: 'type = ? AND name = ?',
+        whereArgs: ['table', 'resource_trash'],
+        limit: 1);
+    return tables.isEmpty ? '1 = 1' : _liveAdventure;
+  }
+
+  // Legacy Dart ISO timestamps omit the local offset. SQLite otherwise treats
+  // them as UTC, shifting the calendar date when the UI converts back to local.
+  // Explicit offsets/Z already describe an instant and must not be converted.
+  static String _activityInstant(String column) => """
+    CASE WHEN upper(substr($column, -1)) = 'Z'
+      OR (substr($column, -6, 1) IN ('+', '-')
+          AND substr($column, -3, 1) = ':')
+      THEN julianday($column)
+      ELSE julianday($column, 'utc') END
+  """;
 
   // ─── Adventures ───
 
   @override
   Future<int> createAdventure(String title, AdventureConfig config) async {
     final db = await _getDb();
-    final now = DateTime.now().toIso8601String();
+    final now = DateTime.now().toUtc().toIso8601String();
     final id = await db.insert('adventures', {
       'title': title,
       'config': jsonEncode(config.toJson()),
       'created_at': now,
+      'updated_at': now,
     });
     return id;
   }
@@ -45,20 +84,75 @@ class AdventureRepositoryImpl implements IAdventureRepository {
   @override
   Future<List<Map<String, dynamic>>> getAdventures() async {
     final db = await _getDb();
-    return db.query('adventures', orderBy: 'created_at DESC');
+    final liveAdventure = await _liveAdventureFilter(db);
+    // Compare instants rather than ISO strings, which may use different offsets.
+    // The empty updated_at written by old migrations falls back to creation.
+    return db.rawQuery("""
+      SELECT recent.*, strftime('%Y-%m-%dT%H:%M:%fZ', activity, 'julianday')
+        AS recent_activity_at
+      FROM (
+        SELECT adventures.*, MAX(
+          COALESCE(${_activityInstant('adventures.updated_at')}, 0),
+          COALESCE((SELECT MAX(${_activityInstant('timestamp')}) FROM messages
+            WHERE adventure_id = adventures.id), 0),
+          COALESCE(${_activityInstant('adventures.created_at')}, 0)
+        ) AS activity
+        FROM adventures WHERE $liveAdventure
+      ) recent
+      ORDER BY activity DESC, id DESC
+    """);
   }
 
   @override
   Future<Map<String, dynamic>?> getAdventureById(int id) async {
     final db = await _getDb();
+    final liveAdventure = await _liveAdventureFilter(db);
     final rows = await db.query(
       'adventures',
-      where: 'id = ?',
+      where: 'id = ? AND $liveAdventure',
       whereArgs: [id],
       limit: 1,
     );
     if (rows.isEmpty) return null;
     return rows.first;
+  }
+
+  @override
+  Future<void> renameAdventure(int id, String title) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) throw ArgumentError.value(title, 'title');
+    final db = await _getDb();
+    final liveAdventure = await _liveAdventureFilter(db);
+    final changed = await db.update('adventures', {'title': trimmed},
+        where: 'id = ? AND $liveAdventure', whereArgs: [id]);
+    if (changed == 0) throw StateError('冒险不存在或已移至回收站');
+  }
+
+  @override
+  Future<void> markAdventureOpened(int id) async {
+    final db = await _getDb();
+    final liveAdventure = await _liveAdventureFilter(db);
+    final changed = await db.update(
+        'adventures', {'updated_at': DateTime.now().toUtc().toIso8601String()},
+        where: 'id = ? AND $liveAdventure', whereArgs: [id]);
+    if (changed == 0) throw StateError('冒险不存在或已移至回收站');
+  }
+
+  @override
+  Future<void> moveAdventureToTrash(int id) async {
+    final trash = _trashService;
+    if (trash == null) throw StateError('冒险回收站服务未配置');
+    final db = await _getDb();
+    final rows = await db.query('adventures',
+        where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isEmpty) throw StateError('冒险不存在');
+    await trash.deleteLegacyOnlyResource(
+      resourceId: 'adventure:$id',
+      markerNodeId: 'adventure:$id',
+      sourceTable: 'adventures',
+      sourceId: '$id',
+      title: rows.single['title'] as String,
+    );
   }
 
   @override

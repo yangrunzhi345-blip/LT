@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/responsive/app_breakpoints.dart';
-import '../core/router/app_router.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/widgets/app_confirm_dialog.dart';
 import '../core/widgets/app_svg_icon.dart';
-import '../features/adventure/presentation/session/screens/conversation_manage_page.dart';
+import '../core/feedback/app_feedback.dart';
+import 'recent_adventure_list.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/generated/app_localizations_zh.dart';
 import '../models/app_section.dart';
@@ -55,16 +55,70 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
     action();
   }
 
-  Future<void> _delete(int id, String title) async {
+  Future<void> _trash(int id, String title) async {
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final confirmed = await AppConfirmDialog.show(
-      context: context,
-      title: l10n.sidebarDeleteDialogTitle,
-      message: l10n.sidebarDeleteDialogMessage(title),
-      confirmLabel: l10n.deleteAction,
-      isDanger: true,
-    );
-    if (confirmed && mounted) await ref.read(chatProvider).deleteAdventure(id);
+        context: context,
+        title: l10n.moveToTrashAction,
+        message: l10n.moveToTrashMessage(title),
+        confirmLabel: l10n.moveToTrashAction,
+        isDanger: true);
+    if (!confirmed || !mounted) return;
+    try {
+      await ref.read(chatProvider).moveAdventureToTrash(id);
+    } catch (_) {
+      if (mounted) AppFeedback.error(context, l10n.moveToTrashFailed);
+    }
+  }
+
+  Future<void> _rename(int id, String title) async {
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+    final result = await showDialog<String>(
+        context: context, builder: (_) => _RenameAdventureDialog(title: title));
+    if (result == null || !mounted) return;
+    try {
+      await ref.read(chatProvider).renameAdventure(id, result);
+    } catch (_) {
+      if (mounted) AppFeedback.error(context, l10n.sidebarRenameFailed);
+    }
+  }
+
+  Widget _recents({bool touchTargets = false, VoidCallback? close}) {
+    final chat = ref.watch(chatProvider);
+    return RecentAdventureList(
+        adventures: chat.adventureList,
+        selectedId: chat.currentAdventureId,
+        touchTargets: touchTargets,
+        onOpen: (id) {
+          close?.call();
+          _navigate(() => unawaited(chat.openAdventure(id)));
+        },
+        onRename: (id, title) => unawaited(_rename(id, title)),
+        onTrash: (id, title) => unawaited(_trash(id, title)));
+  }
+
+  void _showRecentSheet() {
+    widget.scaffoldKey.currentState?.closeDrawer();
+    showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (context) => FractionallySizedBox(
+            heightFactor: .8,
+            child: Consumer(builder: (context, ref, _) {
+              ref.watch(chatProvider);
+              final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
+              return SafeArea(
+                  child: Column(children: [
+                Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(l10n.workbenchRecentAdventures)),
+                Expanded(
+                    child: _recents(
+                        touchTargets: true,
+                        close: () => Navigator.pop(context)))
+              ]));
+            })));
   }
 
   @override
@@ -81,7 +135,7 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
           )
         : WorkbenchSidebarMode.full;
     final expanded = mode != WorkbenchSidebarMode.rail;
-    final showRecents = mode == WorkbenchSidebarMode.full;
+    final showRecents = widget.permanent && expanded;
 
     final content = Material(
       color: scheme.surfaceContainerLow,
@@ -89,9 +143,10 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
         child: Column(
           children: [
             _buildBrandRow(context, l10n, chat, expanded),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   _SidebarSectionBoundary(
                     title: l10n.workbenchWorkspace,
@@ -163,53 +218,26 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                           chat.setCurrentSection(AppSection.sceneCharacters)),
                     ),
                   ],
-                  if (showRecents) ...[
-                    _NavigationHeading(l10n.workbenchRecentAdventures),
-                    if (chat.adventureList.isEmpty)
-                      Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(8, 0, 8, AppSpacing.sm),
-                        child: Text(l10n.noRecentAdventures,
-                            style: theme.textTheme.bodySmall),
-                      ),
-                    for (final item in chat.adventureList)
-                      if (item['id'] case final int id)
-                        _RecentAdventureRow(
-                          title: item['title'] as String? ??
-                              l10n.sidebarUnnamedScene,
-                          selected: chat.currentAdventureId == id &&
-                              chat.currentSection == AppSection.adventure &&
-                              chat.isAdventureChatOpen,
-                          onTap: () => _navigate(
-                              () => unawaited(chat.openAdventure(id))),
-                          onDelete: () => _delete(
-                              id,
-                              item['title'] as String? ??
-                                  l10n.sidebarUnnamedScene),
-                        ),
-                    if (chat.adventureList.isNotEmpty)
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: TextButton(
-                          onPressed: () => _navigate(() => unawaited(
-                              AppRouter.push<void>(context,
-                                  pageBuilder: (_) =>
-                                      const ConversationManagePage()))),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            minimumSize: const Size(0, 30),
-                          ),
-                          child: Text(
-                            l10n.sidebarManageConversations,
-                            style: theme.textTheme.labelMedium,
-                          ),
-                        ),
-                      ),
-                  ],
+                  if (!showRecents)
+                    _NavItem(
+                        key: const Key('sidebar-nav-recent'),
+                        icon: 'history',
+                        label: l10n.workbenchRecentAdventures,
+                        expanded: expanded,
+                        onTap: _showRecentSheet),
                 ],
               ),
             ),
+            if (showRecents) ...[
+              Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child:
+                          _NavigationHeading(l10n.workbenchRecentAdventures))),
+              Expanded(child: _recents()),
+            ] else
+              const Spacer(),
             Divider(height: 1, color: scheme.outlineVariant),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.sm),
@@ -227,18 +255,13 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                     key: const Key('sidebar-nav-settings'),
                     icon: 'settings',
                     label: l10n.sidebarSystemSettings,
+                    tooltip:
+                        chat.isKeyConfigured ? null : l10n.serviceNotConfigured,
                     expanded: expanded,
                     selected: chat.currentSection == AppSection.settings,
                     onTap: () => _navigate(
                         () => chat.setCurrentSection(AppSection.settings)),
                   ),
-                  if (expanded && !chat.isKeyConfigured)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-                      child: Text(l10n.serviceNotConfigured,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: scheme.error)),
-                    ),
                 ],
               ),
             ),
@@ -384,7 +407,9 @@ class _SidebarSectionBoundary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (expanded) return _NavigationHeading(title);
+    if (expanded && MediaQuery.sizeOf(context).width >= 600) {
+      return _NavigationHeading(title);
+    }
     if (!showRailDivider) return const SizedBox.shrink();
     return _SidebarRailSectionDivider(key: railDividerKey);
   }
@@ -428,6 +453,7 @@ class _NavItem extends StatelessWidget {
     required this.expanded,
     required this.onTap,
     this.selected = false,
+    this.tooltip,
     super.key,
   });
 
@@ -435,6 +461,7 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool expanded;
   final bool selected;
+  final String? tooltip;
   final VoidCallback onTap;
 
   @override
@@ -451,7 +478,7 @@ class _NavItem extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 1),
           child: Tooltip(
-            message: label,
+            message: tooltip == null ? label : '$label: $tooltip',
             child: Material(
               color: selected
                   ? scheme.primary.withValues(alpha: 0.10)
@@ -473,7 +500,7 @@ class _NavItem extends StatelessWidget {
       );
     }
 
-    return Semantics(
+    final row = Semantics(
       selected: selected,
       button: true,
       child: Padding(
@@ -488,7 +515,9 @@ class _NavItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             hoverColor: scheme.onSurface.withValues(alpha: 0.04),
             child: SizedBox(
-              height: 32,
+              height: MediaQuery.sizeOf(context).width < 600
+                  ? 48
+                  : 32 * MediaQuery.textScalerOf(context).scale(1).clamp(1, 2),
               child: Row(
                 children: [
                   SizedBox(
@@ -524,63 +553,47 @@ class _NavItem extends StatelessWidget {
         ),
       ),
     );
+    return tooltip == null ? row : Tooltip(message: tooltip!, child: row);
   }
 }
 
-/// A saved adventure inside the sidebar's recent list.
-class _RecentAdventureRow extends StatelessWidget {
-  const _RecentAdventureRow(
-      {required this.title,
-      required this.selected,
-      required this.onTap,
-      required this.onDelete});
+class _RenameAdventureDialog extends StatefulWidget {
+  const _RenameAdventureDialog({required this.title});
   final String title;
-  final bool selected;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
+  @override
+  State<_RenameAdventureDialog> createState() => _RenameAdventureDialogState();
+}
+
+class _RenameAdventureDialogState extends State<_RenameAdventureDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.title);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final value = _controller.text.trim();
+    if (value.isNotEmpty) Navigator.pop(context, value);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Material(
-        color: selected
-            ? scheme.primary.withValues(alpha: 0.10)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(6),
-          hoverColor: scheme.onSurface.withValues(alpha: 0.04),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 4, 2, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color:
-                          selected ? scheme.onSurface : scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                IconButton(
-                    tooltip: l10n.sidebarDeleteTooltip,
-                    onPressed: onDelete,
-                    visualDensity: VisualDensity.compact,
-                    iconSize: 16,
-                    icon: const AppSvgIcon('delete', size: 16)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    return AlertDialog(
+        title: Text(l10n.sidebarRenameAdventure),
+        content: TextField(
+            controller: _controller,
+            autofocus: true,
+            maxLength: 200,
+            decoration: InputDecoration(labelText: l10n.nameLabel),
+            onSubmitted: (_) => _save()),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancelAction)),
+          TextButton(onPressed: _save, child: Text(l10n.saveAction))
+        ]);
   }
 }

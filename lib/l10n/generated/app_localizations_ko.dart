@@ -6146,4 +6146,31 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get runtimeStateFieldRelationshipNotes => '관계 메모';
+
+  @override
+  String get sidebarRenameAdventure => '이름 변경';
+
+  @override
+  String get sidebarAdventureActions => '모험 작업';
+
+  @override
+  String get sidebarToday => '오늘';
+
+  @override
+  String get sidebarYesterday => '어제';
+
+  @override
+  String get sidebarPastWeek => '지난 7일';
+
+  @override
+  String get sidebarEarlier => '이전';
+
+  @override
+  String get sidebarRenameFailed => '이름을 변경하지 못했습니다';
+
+  @override
+  String get sidebarAdventureRestored => '모험 목록에 복원했습니다';
+
+  @override
+  String get sidebarAdventureKind => '모험';
 }

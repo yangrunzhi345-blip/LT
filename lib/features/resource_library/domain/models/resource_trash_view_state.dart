@@ -32,6 +32,7 @@ final class ResourceTrashItem {
     required this.deletedAt,
     required this.expiresAt,
     required this.isRestored,
+    this.isAdventure = false,
   });
 
   final String trashId;
@@ -42,6 +43,7 @@ final class ResourceTrashItem {
   final DateTime? deletedAt;
   final DateTime? expiresAt;
   final bool isRestored;
+  final bool isAdventure;
 }
 
 /// What the recycle-bin sheet shows.
@@ -133,4 +135,6 @@ ResourceTrashItem trashItemOf(ResourceTrashEntry entry) => ResourceTrashItem(
       deletedAt: DateTime.tryParse(entry.deletedAtToken)?.toLocal(),
       expiresAt: DateTime.tryParse(entry.expiresAtToken)?.toLocal(),
       isRestored: entry.isRestored,
+      isAdventure:
+          entry.isLegacyOrigin && entry.linkedSourceTable == 'adventures',
     );

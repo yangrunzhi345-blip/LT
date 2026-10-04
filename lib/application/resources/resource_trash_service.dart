@@ -222,6 +222,7 @@ final class ResourceTrashService {
     required String sourceTable,
     required String sourceId,
     String title = '',
+    String? markerNodeId,
     TrashReason reason = TrashReason.userDelete,
   }) async {
     if (sourceTable.isEmpty || sourceId.isEmpty) {
@@ -235,7 +236,7 @@ final class ResourceTrashService {
     return db.transaction((txn) async {
       final existing = await _repository.findActiveEntryForNodeInTransaction(
         txn,
-        sourceId,
+        markerNodeId ?? sourceId,
       );
       if (existing != null) {
         // Idempotent repeat: the marker already exists.
@@ -245,7 +246,7 @@ final class ResourceTrashService {
       final entry = await _repository.insertEntryInTransaction(
         txn,
         resourceId: ResourceId(resourceId),
-        nodeId: ResourceId(sourceId),
+        nodeId: ResourceId(markerNodeId ?? sourceId),
         reason: reason,
         parentNodeId: '',
         originalSortOrder: 0,
@@ -377,9 +378,12 @@ final class ResourceTrashService {
     // restore. Touching the tree here would be wrong — the row was never
     // soft deleted, and the content is still in the legacy table untouched.
     if (entry.isLegacyOrigin) {
+      final placement = entry.linkedSourceTable == 'adventures'
+          ? TrashRestorePlacement.restoredToAdventures
+          : TrashRestorePlacement.restoredToLibrary;
       return (
-        placement: TrashRestorePlacement.restoredToLibrary,
-        label: TrashRestorePlacement.restoredToLibrary.displayLabel,
+        placement: placement,
+        label: placement.displayLabel,
         createdSectionId: null,
       );
     }

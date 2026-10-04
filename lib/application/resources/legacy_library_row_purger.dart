@@ -36,11 +36,22 @@ final class LegacyLibraryRowPurger implements ILegacyLibraryRowPort {
     required String sourceTable,
     required String sourceId,
   }) async {
-    if (!isResourceTable(sourceTable)) {
+    if (!isResourceTable(sourceTable) && sourceTable != 'adventures') {
       throw const ResourceTrashException('拒绝从非资源库表永久删除');
     }
     if (sourceId.isEmpty) {
       throw const ResourceTrashException('永久删除缺少目标 id');
+    }
+    if (sourceTable == 'adventures') {
+      final id = int.tryParse(sourceId);
+      if (id == null || id <= 0) {
+        throw const ResourceTrashException('冒险永久删除目标 id 无效');
+      }
+      // Other current owned rows use ON DELETE CASCADE (legacy map/quest
+      // tables were removed in v43). Embeddings have only an entry FK and can
+      // carry an adventure scope on a shared entry.
+      await txn.delete('world_entry_embeddings',
+          where: 'adventure_id = ?', whereArgs: <Object?>[id]);
     }
     await txn
         .delete(sourceTable, where: 'id = ?', whereArgs: <Object?>[sourceId]);

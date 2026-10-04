@@ -3901,5 +3901,14 @@
   "ttsVoicePreviewSentence": "これは選択した音声の試聴サンプルです。",
   "ttsModelDownloadStarted": "ダウンロードを開始しました",
   "runtimeStateFieldRelationshipStrength": "関係の強さ",
-  "runtimeStateFieldRelationshipNotes": "関係のメモ"
+  "runtimeStateFieldRelationshipNotes": "関係のメモ",
+  "sidebarRenameAdventure": "名前を変更",
+  "sidebarAdventureActions": "冒険の操作",
+  "sidebarToday": "今日",
+  "sidebarYesterday": "昨日",
+  "sidebarPastWeek": "過去7日間",
+  "sidebarEarlier": "以前",
+  "sidebarRenameFailed": "名前の変更に失敗しました",
+  "sidebarAdventureRestored": "冒険一覧に復元しました",
+  "sidebarAdventureKind": "冒険"
 }
