@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag to publish (for example v1.1.1)
+        description: Version tag matching pubspec (for example v1.1.18)
         required: true
         type: string
+      verify_only:
+        description: Validate current main and upload artifacts without publishing a Release
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -24,11 +29,11 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
-      - name: Check out the release source
+      - name: Check out the release or validation source
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ inputs.verify_only && 'main' || inputs.tag || github.ref }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -51,6 +56,9 @@ jobs:
       - name: Test
         run: flutter test --reporter compact
 
+      - name: Test release signing verification gate
+        run: python3 -m unittest discover -s scripts -p test_android_release_signing.py
+
       - name: Read version from pubspec
         id: version
         shell: bash
@@ -70,12 +78,53 @@ jobs:
             exit 1
           fi
 
+      - name: Configure LT release signing from Secrets
+        env:
+          LT_ANDROID_KEYSTORE_BASE64: ${{ secrets.LT_ANDROID_KEYSTORE_BASE64 }}
+          LT_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.LT_ANDROID_KEYSTORE_PASSWORD }}
+          LT_ANDROID_KEY_ALIAS: ${{ secrets.LT_ANDROID_KEY_ALIAS }}
+          LT_ANDROID_KEY_PASSWORD: ${{ secrets.LT_ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          names = ("LT_ANDROID_KEYSTORE_BASE64", "LT_ANDROID_KEYSTORE_PASSWORD",
+                   "LT_ANDROID_KEY_ALIAS", "LT_ANDROID_KEY_PASSWORD")
+          if any(not os.environ.get(name) for name in names):
+              raise SystemExit("Missing LT Android signing Secrets; release build refused")
+          os.umask(0o077)
+          keystore = Path(os.environ["RUNNER_TEMP"]) / "lt-release.p12"
+          keystore.write_bytes(base64.b64decode(
+              os.environ["LT_ANDROID_KEYSTORE_BASE64"], validate=True))
+          if not keystore.stat().st_size:
+              raise SystemExit("Empty LT release keystore; release build refused")
+          values = {
+              "storeFile": str(keystore),
+              "storePassword": os.environ["LT_ANDROID_KEYSTORE_PASSWORD"],
+              "keyAlias": os.environ["LT_ANDROID_KEY_ALIAS"],
+              "keyPassword": os.environ["LT_ANDROID_KEY_PASSWORD"],
+          }
+          def escape(value):
+              return (value.replace("\\", "\\\\").replace("\n", "\\n")
+                      .replace("\r", "\\r").replace("\t", "\\t")
+                      .replace(" ", "\\ ").replace("=", "\\=")
+                      .replace(":", "\\:").replace("#", "\\#")
+                      .replace("!", "\\!"))
+          Path("android/key.properties").write_text("".join(
+              f"{key}={escape(value)}\n" for key, value in values.items()))
+          PY
+
       - name: Build ARM64 APK
         run: >-
           flutter build apk --release
           --target-platform android-arm64
           --build-name "${{ steps.version.outputs.name }}"
           --build-number "${{ steps.version.outputs.build_number }}"
+
+      - name: Verify LT release certificate and APK signature schemes
+        run: python3 scripts/verify_android_release_signing.py build/app/outputs/flutter-apk/app-release.apk
 
       - name: Verify APK contains only ARM64 native libraries
         shell: bash
@@ -94,6 +143,7 @@ jobs:
           path: release/
 
       - name: Create GitHub Release
+        if: ${{ !inputs.verify_only }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -109,3 +159,8 @@ jobs:
             --title "LT Dialogue $RELEASE_TAG" \
             --notes "Android only. ARM64 only. Neural TTS available; downloadable neural models are managed in Read Aloud settings. System TTS fallback retained." \
             --generate-notes
+
+      - name: Remove ephemeral signing material
+        if: always()
+        run: |
+          rm -f android/key.properties "$RUNNER_TEMP/lt-release.p12"

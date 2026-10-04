@@ -45,6 +45,14 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Android release signing material (also protected by android/.gitignore).
+*.jks
+*.keystore
+*.p12
+*.pfx
+**/key.properties
+**/signing-secrets.json
+
 # Enhanced TTS: downloaded neural model artifacts must never be committed.
 # Models live under the app-support directory in production; these patterns
 # protect against accidental test/dev artifacts inside the repo.
