@@ -10,7 +10,7 @@ import '../../../../../models/adventure_config.dart';
 import '../../../../../models/app_section.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../widgets/app_dialogs.dart';
+import '../../../../resource_library/domain/models/resource_library_view_state.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../templates/screens/preset_scenes_screen.dart';
@@ -39,25 +39,38 @@ class AdventureDashboardScreen extends ConsumerWidget {
     this.onMenuPressed,
   });
 
-  void _handleOpenWizard(
-    BuildContext context, {
-    AdventureConfig? initialConfig,
-    String? initialWorldviewId,
-    String? initialCharacterId,
-  }) {
+  /// Launches the Adventure setup wizard. This is the *only* home entry that
+  /// may start a new adventure; existing resources are browsed via the library.
+  void _handleOpenWizard(BuildContext context) {
     AppRouter.push<void>(
       context,
       pageBuilder: (_) => AssemblyCreatePage(
         onStartAdventure: onStartAdventure,
-        initialConfig: initialConfig,
-        initialWorldviewId: initialWorldviewId,
-        initialCharacterId: initialCharacterId,
       ),
     );
   }
 
-  void _handleOpenLibrary(WidgetRef ref) {
-    ref.read(chatProvider).openResourceLibrary(ResourceLibraryMode.adventure);
+  /// Opens the Resource Library on the given top-level view (e.g. 世界观 / 角色)
+  /// for an *existing* resource. This is browsing, never creation.
+  void _handleOpenLibrary(WidgetRef ref, ResourceLibraryFilter filter) {
+    ref.read(chatProvider).openResourceLibrary(
+          ResourceLibraryMode.adventure,
+          initialFilter: filter,
+        );
+  }
+
+  /// Opens an existing resource's detail page by deep-linking the Resource
+  /// Library to that resource. Never starts a creation/assembly wizard.
+  void _handleOpenResource(
+    WidgetRef ref,
+    ResourceLibraryItem resource,
+    ResourceLibraryFilter filter,
+  ) {
+    ref.read(chatProvider).openResourceLibrary(
+          ResourceLibraryMode.adventure,
+          initialFilter: filter,
+          initialResourceId: resource.id,
+        );
   }
 
   void _handleOpenPresetScenes(BuildContext context) {
@@ -131,7 +144,8 @@ class AdventureDashboardScreen extends ConsumerWidget {
                               onOpenWizard: () => _handleOpenWizard(context),
                               onOpenPresetScenes: () =>
                                   _handleOpenPresetScenes(context),
-                              onOpenLibrary: () => _handleOpenLibrary(ref),
+                              onOpenLibrary: () => _handleOpenLibrary(
+                                  ref, ResourceLibraryFilter.all),
                             ),
                             const SizedBox(height: DashboardMetrics.groupGap),
 
@@ -144,47 +158,26 @@ class AdventureDashboardScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   DashboardFeaturedWorlds(
-                                    onCreateWorld: () =>
-                                        _handleOpenLibrary(ref),
-                                    onSelectWorld: (config) {
-                                      final chatInstance =
-                                          ref.read(chatProvider);
-                                      if (!chatInstance.isKeyConfigured) {
-                                        showApiSettings(context);
-                                        return;
-                                      }
-                                      _handleOpenWizard(
-                                        context,
-                                        initialConfig: config,
-                                      );
-                                    },
+                                    onOpenLibrary: () => _handleOpenLibrary(
+                                        ref, ResourceLibraryFilter.worldview),
+                                    onOpenResource: (resource) =>
+                                        _handleOpenResource(
+                                      ref,
+                                      resource,
+                                      ResourceLibraryFilter.worldview,
+                                    ),
                                   ),
                                   const SizedBox(
                                       height: DashboardMetrics.subsectionGap),
                                   DashboardCharacterCards(
-                                    onCreateCharacter: () =>
-                                        _handleOpenLibrary(ref),
-                                    onSelectCharacter: (card) {
-                                      final chatInstance =
-                                          ref.read(chatProvider);
-                                      if (!chatInstance.isKeyConfigured) {
-                                        showApiSettings(context);
-                                        return;
-                                      }
-                                      _handleOpenWizard(
-                                        context,
-                                        initialCharacterId: card.id,
-                                        initialConfig: AdventureConfig(
-                                          name: card.name,
-                                          gender: card.gender,
-                                          age: card.age,
-                                          protagonistClass: card.profession,
-                                          personality: card.personality,
-                                          protagonistBackground:
-                                              card.background,
-                                        ),
-                                      );
-                                    },
+                                    onOpenLibrary: () => _handleOpenLibrary(
+                                        ref, ResourceLibraryFilter.character),
+                                    onOpenResource: (resource) =>
+                                        _handleOpenResource(
+                                      ref,
+                                      resource,
+                                      ResourceLibraryFilter.character,
+                                    ),
                                   ),
                                 ],
                               ),

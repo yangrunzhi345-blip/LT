@@ -563,7 +563,8 @@ void main() {
             theme: AppTheme.light(),
             home: Scaffold(
               body: DashboardCharacterCards(
-                onSelectCharacter: (_) {},
+                onOpenLibrary: () {},
+                onOpenResource: (_) {},
               ),
             ),
           ),

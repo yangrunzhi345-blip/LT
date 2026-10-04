@@ -12,6 +12,7 @@ import '../models/app_section.dart';
 import '../models/game_state.dart';
 import '../models/message.dart';
 import '../models/resource_library_mode.dart';
+import '../features/resource_library/domain/models/resource_library_view_state.dart';
 import '../models/world_entry.dart';
 import '../models/persona.dart';
 import '../models/prompt_preset.dart';
@@ -127,10 +128,23 @@ class ChatProvider extends ChangeNotifier {
   bool _isOpeningAdventure = false;
   ResourceLibraryMode _resourceLibraryMode = ResourceLibraryMode.conversation;
 
+  /// One-shot deep-link request for the Resource Library section.
+  ///
+  /// The home's "前往资料库" / resource rows set these together with the section
+  /// change so the library opens on the intended tab or resource. They are part
+  /// of the navigation authority (never a global variable) and are replaced on
+  /// every [openResourceLibrary], so a plain navigation resets them to null.
+  ResourceLibraryFilter? _resourceLibraryInitialFilter;
+  String? _resourceLibraryInitialResourceId;
+
   AppSection get currentSection => _currentSection;
   bool get isMainSidebarExpanded => _isMainSidebarExpanded;
   bool get isAdventureChatOpen => _isAdventureChatOpen;
   ResourceLibraryMode get resourceLibraryMode => _resourceLibraryMode;
+  ResourceLibraryFilter? get resourceLibraryInitialFilter =>
+      _resourceLibraryInitialFilter;
+  String? get resourceLibraryInitialResourceId =>
+      _resourceLibraryInitialResourceId;
 
   /// 加载侧边栏 UI 偏好。桌面工作台默认展开导航；仅当用户显式收起过才为 rail。
   Future<void> loadMainSidebarPreference() async {
@@ -157,14 +171,34 @@ class ChatProvider extends ChangeNotifier {
           ? ResourceLibraryMode.conversation
           : ResourceLibraryMode.adventure;
     }
+    if (section == AppSection.resources) {
+      // A generic section switch is not a deep link: drop any pending filter /
+      // resource target so the library opens on 「全部」.
+      _resourceLibraryInitialFilter = null;
+      _resourceLibraryInitialResourceId = null;
+    }
     notifyListeners();
   }
 
-  void openResourceLibrary(ResourceLibraryMode mode) {
-    final changed =
-        _currentSection != AppSection.resources || _resourceLibraryMode != mode;
+  /// Opens the Resource Library at [mode].
+  ///
+  /// [initialFilter] selects a top-level library view (e.g. 世界观 / 角色) and
+  /// [initialResourceId] opens an existing resource's detail page. Both are the
+  /// deep-link inputs the section host forwards to `ResourceLibraryScreen`; a
+  /// plain navigation passes neither and therefore resets to 「全部」.
+  void openResourceLibrary(
+    ResourceLibraryMode mode, {
+    ResourceLibraryFilter? initialFilter,
+    String? initialResourceId,
+  }) {
+    final changed = _currentSection != AppSection.resources ||
+        _resourceLibraryMode != mode ||
+        _resourceLibraryInitialFilter != initialFilter ||
+        _resourceLibraryInitialResourceId != initialResourceId;
     _currentSection = AppSection.resources;
     _resourceLibraryMode = mode;
+    _resourceLibraryInitialFilter = initialFilter;
+    _resourceLibraryInitialResourceId = initialResourceId;
     if (changed) notifyListeners();
   }
 

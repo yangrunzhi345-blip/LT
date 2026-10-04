@@ -22,6 +22,7 @@ import 'features/adventure/presentation/session/screens/adventure_session_screen
 import 'features/onboarding/presentation/screens/first_run_api_setup_page.dart';
 import 'features/onboarding/presentation/screens/language_setup_page.dart';
 import 'features/resource_library/presentation/screens/resource_library_screen.dart';
+import 'features/resource_library/domain/models/resource_library_view_state.dart';
 import 'features/resource_library/presentation/widgets/resource_trash_sheet.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'l10n/generated/app_localizations_en.dart';
@@ -346,6 +347,12 @@ class _MainGateState extends ConsumerState<MainGate> {
     final resourceLibraryMode = ref.watch(
       chatProvider.select((cp) => cp.resourceLibraryMode),
     );
+    final resourceLibraryInitialFilter = ref.watch(
+      chatProvider.select((cp) => cp.resourceLibraryInitialFilter),
+    );
+    final resourceLibraryInitialResourceId = ref.watch(
+      chatProvider.select((cp) => cp.resourceLibraryInitialResourceId),
+    );
     final cp = ref.read(chatProvider);
 
     final isCompact = AppBreakpoints.isCompact(context);
@@ -360,6 +367,8 @@ class _MainGateState extends ConsumerState<MainGate> {
       isAdventureChatOpen,
       resourceLibraryMode,
       cp,
+      initialFilter: resourceLibraryInitialFilter,
+      initialResourceId: resourceLibraryInitialResourceId,
       isWideScreen: isWideScreen,
     );
 
@@ -420,6 +429,8 @@ class _MainGateState extends ConsumerState<MainGate> {
     ResourceLibraryMode resourceLibraryMode,
     ChatProvider cp, {
     required bool isWideScreen,
+    ResourceLibraryFilter? initialFilter,
+    String? initialResourceId,
   }) {
     // Section-supplied menu affordance. Wide layouts toggle the permanent
     // sidebar; compact layouts open the navigation drawer. The adventure
@@ -472,7 +483,12 @@ class _MainGateState extends ConsumerState<MainGate> {
 
       case AppSection.resources:
         return ResourceLibraryScreen(
+          key: ValueKey(
+            'resources-${initialFilter?.name}-${initialResourceId ?? ''}',
+          ),
           mode: ResourceLibraryMode.adventure,
+          initialFilter: initialFilter,
+          initialResourceId: initialResourceId,
           onMenuPressed: onMenu,
           onReturnHome: cp.navigateToAdventureHome,
         );

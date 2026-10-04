@@ -2,111 +2,79 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/theme/app_spacing.dart';
-import '../../../../../models/character_card_entry.dart';
-import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../resource_library/domain/models/resource_library_view_state.dart';
+import '../providers/home_resource_projection.dart';
 import 'dashboard_section.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
 
-/// 首页“我的角色卡档案”流 (联动资料库 · 零预设白板)
-class DashboardCharacterCards extends ConsumerStatefulWidget {
-  final VoidCallback? onCreateCharacter;
-  final ValueChanged<CharacterCardEntry> onSelectCharacter;
+/// 首页「我的角色卡档案」摘要。
+///
+/// 与「我的世界设定」共用同一个派生投影 Provider。点击「前往资料库」进入
+/// 资料库并选中「角色」，点击具体角色进入其已有详情页，绝不启动角色创建。
+class DashboardCharacterCards extends ConsumerWidget {
+  final VoidCallback onOpenLibrary;
+  final ValueChanged<ResourceLibraryItem> onOpenResource;
 
   const DashboardCharacterCards({
     super.key,
-    this.onCreateCharacter,
-    required this.onSelectCharacter,
+    required this.onOpenLibrary,
+    required this.onOpenResource,
   });
 
   @override
-  ConsumerState<DashboardCharacterCards> createState() =>
-      _DashboardCharacterCardsState();
-}
-
-class _DashboardCharacterCardsState
-    extends ConsumerState<DashboardCharacterCards> {
-  List<CharacterCardEntry> _cards = [];
-  bool _loading = true;
-  bool _hasLoadError = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _loadCards();
-    });
-  }
-
-  Future<void> _loadCards() async {
-    setState(() {
-      _loading = true;
-      _hasLoadError = false;
-    });
-    try {
-      final setupController = ref.read(adventureSetupControllerProvider);
-      await setupController.loadInitialData();
-      if (mounted) {
-        setState(() {
-          _cards = setupController.characterCardEntries;
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _hasLoadError = true;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = _l10n(context);
     return DashboardSubsection(
       key: const Key('dashboard-subsection-characters'),
       title: l10n.dashboardMyCharacterCards,
-      action: widget.onCreateCharacter == null
-          ? null
-          : TextButton(
-              onPressed: widget.onCreateCharacter,
-              child: Text(l10n.dashboardGoToLibrary)),
-      child: _hasLoadError
-          ? Column(children: [
+      action: TextButton(
+        onPressed: onOpenLibrary,
+        child: Text(l10n.dashboardGoToLibrary),
+      ),
+      child: ref.watch(homeResourceProjectionProvider).when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (_, __) => Column(children: [
               Text(l10n.pageLoadError),
-              TextButton(onPressed: _loadCards, child: Text(l10n.retryAction))
-            ])
-          : _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _cards.isEmpty
-                  ? Text(l10n.dashboardNoCharacterCardsTitle)
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                          for (final card in _cards)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: AppSpacing.sm),
-                              child: ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(card.name.isEmpty
-                                    ? l10n.characterCardUnnamed
-                                    : card.name),
-                                subtitle: Text(
-                                    [card.profession, card.personality]
-                                        .where((value) => value.isNotEmpty)
-                                        .join(' · '),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis),
-                                onTap: () => widget.onSelectCharacter(card),
-                              ),
-                            ),
-                        ]),
+              TextButton(
+                onPressed: () => ref.invalidate(homeResourceProjectionProvider),
+                child: Text(l10n.retryAction),
+              ),
+            ]),
+            data: (projection) {
+              final characters = projection.characters;
+              if (characters.isEmpty) {
+                return Text(l10n.dashboardNoCharacterCardsTitle);
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final character in characters)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                      child: ListTile(
+                        key: ValueKey('dashboard-character-${character.id}'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(character.localizedName(l10n)),
+                        subtitle: Text(
+                          character.summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onTap: () => onOpenResource(character),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
     );
   }
 }

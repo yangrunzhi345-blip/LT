@@ -355,15 +355,15 @@ void main() {
       (tester) async {
         setViewport(tester, width: 320, height: 640);
 
-        AdventureConfig? selectedConfig;
+        var openLibraryCount = 0;
 
         await tester.pumpWidget(
           buildTestApp(
             child: Scaffold(
               body: SingleChildScrollView(
                 child: DashboardFeaturedWorlds(
-                  onSelectWorld: (config) => selectedConfig = config,
-                  onCreateWorld: () {},
+                  onOpenLibrary: () => openLibraryCount++,
+                  onOpenResource: (_) {},
                 ),
               ),
             ),
@@ -373,8 +373,12 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text('我的世界设定'), findsOneWidget);
+        expect(find.text('前往资料库'), findsOneWidget);
         expect(find.byIcon(Icons.public_rounded), findsNothing);
-        expect(selectedConfig, isNull);
+
+        await tester.tap(find.text('前往资料库'));
+        await tester.pump();
+        expect(openLibraryCount, 1);
         expect(tester.takeException(), isNull);
       },
     );
@@ -389,8 +393,8 @@ void main() {
             child: Scaffold(
               body: SingleChildScrollView(
                 child: DashboardCharacterCards(
-                  onSelectCharacter: (_) {},
-                  onCreateCharacter: () {},
+                  onOpenLibrary: () {},
+                  onOpenResource: (_) {},
                 ),
               ),
             ),
