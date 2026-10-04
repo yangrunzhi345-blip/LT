@@ -17,6 +17,7 @@ import '../../../../core/widgets/app_loading_view.dart';
 import '../../../../core/widgets/workbench_chrome.dart';
 import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../domain/models/tracked_state_library_view_state.dart';
@@ -589,6 +590,10 @@ final class _ResourceLibraryScreenState
     final availableResources = _controller.state.items
         .where((item) => item.isStudioAvailable)
         .toList(growable: false);
+    // The stable host route this creation flow starts from. Every creation
+    // route (hub / AI form / manual form / blueprint review) is pushed above it
+    // and is removed once the flow commits, so Back returns here.
+    final host = ModalRoute.of(context);
 
     final draft = await AppRouter.push<Object?>(
       context,
@@ -601,9 +606,28 @@ final class _ResourceLibraryScreenState
         setState(() => _studioCreationDraft = draft);
         return;
       }
-      await AppRouter.push<void>(
-        context,
+      await _openStudioForCreation(
+        host: host,
         pageBuilder: (_) => ResourceStudioPage(creationDraft: draft),
+      );
+      if (mounted) await _controller.load();
+    } else if (draft is ResourceAiCreationIdentity) {
+      // The blueprint-review path persists the resource and starts generation
+      // before this screen regains control, so the Studio must be opened from
+      // the resulting identity rather than a fresh creation draft.
+      if (_usesInlineDetail) {
+        setState(() {
+          _studioCreationDraft = null;
+          _studioResourceId = draft.resourceId.value;
+        });
+        return;
+      }
+      await _openStudioForCreation(
+        host: host,
+        pageBuilder: (_) => ResourceStudioPage(
+          resourceId: draft.resourceId.value,
+          sessionId: draft.generationSessionId,
+        ),
       );
       if (mounted) await _controller.load();
     } else if (draft is ManualResourceDraft) {
@@ -618,6 +642,27 @@ final class _ResourceLibraryScreenState
           .firstOrNull;
       if (item != null) await _openDetails(item);
     }
+  }
+
+  /// Opens the generation workspace for a committed creation while collapsing
+  /// any finished creation route above [host].
+  ///
+  /// Anchoring the removal at [host] keeps the Resource Library mounted, so the
+  /// created resource's detail page (and the Studio itself) return to the
+  /// library instead of the create / generation / review pages.
+  Future<void> _openStudioForCreation({
+    required Route<dynamic>? host,
+    required WidgetBuilder pageBuilder,
+  }) async {
+    if (host == null) {
+      await AppRouter.push<void>(context, pageBuilder: pageBuilder);
+      return;
+    }
+    await AppRouter.pushAndRemoveUntil<void>(
+      context,
+      pageBuilder: pageBuilder,
+      predicate: (route) => route == host,
+    );
   }
 
   Future<void> _openDetails(ResourceLibraryItem item) async {

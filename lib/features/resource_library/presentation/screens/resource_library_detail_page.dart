@@ -12,6 +12,7 @@ import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_select.dart';
 import '../../../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../../../application/resource_library/edit_drafts.dart';
+import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../application/resources/resource_lifecycle_projection.dart';
 import '../../../../models/tracked_state_definition.dart';
 import '../../../../models/typed_runtime_state.dart';
@@ -392,8 +393,11 @@ final class _ResourceLibraryDetailPageState
         widget.item.type != ResourceType.npc) {
       return;
     }
-    final draft = await Navigator.of(context).push<ResourceStudioCreationDraft>(
-      MaterialPageRoute<ResourceStudioCreationDraft>(
+    // The AI form returns either a creation draft (direct submit) or the
+    // persisted identity (blueprint review confirmed); both open the Studio,
+    // but the identity path must not be submitted again.
+    final result = await Navigator.of(context).push<Object?>(
+      MaterialPageRoute<Object?>(
         builder: (_) => ResourceAiCreatePage(
           initialType: ResourceType.character,
           resources: widget.relationshipResources,
@@ -401,11 +405,20 @@ final class _ResourceLibraryDetailPageState
         ),
       ),
     );
-    if (!mounted || draft == null) return;
+    if (!mounted || result == null) return;
+    final WidgetBuilder studioBuilder;
+    if (result is ResourceAiCreationIdentity) {
+      studioBuilder = (_) => ResourceStudioPage(
+            resourceId: result.resourceId.value,
+            sessionId: result.generationSessionId,
+          );
+    } else if (result is ResourceStudioCreationDraft) {
+      studioBuilder = (_) => ResourceStudioPage(creationDraft: result);
+    } else {
+      return;
+    }
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => ResourceStudioPage(creationDraft: draft),
-      ),
+      MaterialPageRoute<void>(builder: studioBuilder),
     );
     if (mounted) await _loadTreeAndSession();
     if (mounted) await _loadRelationships();

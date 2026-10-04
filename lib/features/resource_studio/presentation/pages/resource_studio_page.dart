@@ -1456,12 +1456,27 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
   }
 
   Future<void> _showCreateDialog() async {
-    final result = await AppRouter.push<ResourceStudioCreationDraft>(
+    final result = await AppRouter.push<Object?>(
       context,
       pageBuilder: (_) => const ResourceAiCreatePage(),
     );
     if (!mounted || result == null) return;
-    await _beginCreation(result);
+    if (result is ResourceAiCreationIdentity) {
+      // Blueprint review already persisted the resource and started
+      // generation; replace this Studio with the new resource's workspace
+      // instead of submitting a second creation.
+      await AppRouter.pushReplacement<void, void>(
+        context,
+        pageBuilder: (_) => ResourceStudioPage(
+          resourceId: result.resourceId.value,
+          sessionId: result.generationSessionId,
+        ),
+      );
+      return;
+    }
+    if (result is ResourceStudioCreationDraft) {
+      await _beginCreation(result);
+    }
   }
 }
 

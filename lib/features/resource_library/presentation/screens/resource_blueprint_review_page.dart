@@ -14,7 +14,6 @@ import '../../../../domain/resources/resource_blueprint.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../providers/riverpod_providers.dart';
-import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../resolvers/resource_presentation_resolver.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
@@ -63,14 +62,12 @@ class _ResourceBlueprintReviewPageState
       );
       if (!mounted) return;
 
-      await Navigator.of(context).pushReplacement<void, void>(
-        MaterialPageRoute<void>(
-          builder: (_) => ResourceStudioPage(
-            resourceId: identity.resourceId.value,
-            sessionId: identity.generationSessionId,
-          ),
-        ),
-      );
+      // The creation workflow has now persisted its resource and started
+      // generation, so it is finished. Return the persisted identity to the
+      // host navigation authority instead of replacing only this review route:
+      // a `pushReplacement` here would leave the create hub and AI form below
+      // the Studio, and Back from the Studio would re-enter the finished flow.
+      Navigator.of(context).pop(identity);
     } catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);

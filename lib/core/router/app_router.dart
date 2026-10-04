@@ -127,6 +127,25 @@ class AppRouter {
     );
   }
 
+  /// Pushes [pageBuilder] and removes every route above the first route for
+  /// which [predicate] returns true.
+  ///
+  /// This is the canonical way to collapse a finished transient workflow (for
+  /// example a creation flow whose resource is already persisted): pushing the
+  /// committed destination and anchoring the removal at the stable host makes
+  /// Back return to that host instead of re-entering the workflow's
+  /// intermediate pages. The pushed route itself is never removed.
+  static Future<T?> pushAndRemoveUntil<T extends Object?>(
+    BuildContext context, {
+    required WidgetBuilder pageBuilder,
+    required bool Function(Route<dynamic> route) predicate,
+  }) {
+    return Navigator.of(context).pushAndRemoveUntil<T>(
+      pageRoute<T>(context, pageBuilder: pageBuilder),
+      predicate,
+    );
+  }
+
   static PageRoute<T> pageRoute<T extends Object?>(
     BuildContext context, {
     required WidgetBuilder pageBuilder,

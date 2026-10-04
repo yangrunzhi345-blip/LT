@@ -318,14 +318,23 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
       final plan = await runtime.createAndPlan(draft);
       if (!mounted) return;
       setState(() => _planning = false);
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(
+      final result = await Navigator.of(context).push<Object?>(
+        MaterialPageRoute<Object?>(
           builder: (_) => ResourceBlueprintReviewPage(
             plan: plan,
             draft: draft,
           ),
         ),
       );
+      if (!mounted) return;
+      // The review page returns the persisted identity once the blueprint is
+      // confirmed and generation has started. Bubble it to the host so the
+      // whole finished creation flow (hub + this form + review) pops away and
+      // the host opens the Studio — the same authority as the direct-submit
+      // path. Backing out of the review returns null and keeps this form.
+      if (result is ResourceAiCreationIdentity) {
+        Navigator.of(context).pop(result);
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() => _planning = false);
