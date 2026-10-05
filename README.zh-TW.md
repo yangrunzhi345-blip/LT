@@ -1,99 +1,119 @@
 # LT Dialogue
 
-[English](README.md) | [簡體中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[![Flutter](https://img.shields.io/badge/Flutter-app-02569B?logo=flutter)](https://flutter.dev/) [![Latest release](https://img.shields.io/github/v/release/yangrunzhi345-blip/LT)](https://github.com/yangrunzhi345-blip/LT/releases/latest)
 
-LT Dialogue 是使用 Flutter 與 Dart 建立、本地優先的 AI 互動敘事平台。它把結構化資料庫、AI 世界觀與角色創作，以及有狀態的 Adventure 冒險整合在同一個應用程式中。資源、冒險、訊息、版本與設定預設儲存在裝置上的 SQLite。
+[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+
+LT Dialogue 是本機優先的 AI 互動敘事、世界觀與角色創作工作台。
+
+建立可重複使用的資料，從資源快照啟動 Adventure 冒險，在閱讀故事時查看角色與世界狀態的變化。LT 使用 Flutter、Dart、Riverpod 與 SQLite。
 
 ![LT Dialogue 標誌](logo.png)
 
 ## 核心功能
 
-- **互動冒險**：透過導覽選擇世界觀、主角與同行角色，凍結 NPC 快照，設定序章與行動分支，檢查組裝就緒狀態後啟動冒險。遊玩中支援串流回合、行動選項、分支、角色切換與存檔恢復。
-- **世界與角色資料**：建立、匯入、搜尋、篩選與編輯世界觀、角色卡及 NPC。資料採用有序的 `Resource → Section → Part` 結構，長篇設定可以重複使用並保持清晰導覽。
-- **AI 生成流程**：先建立具備冪等性的建立或匯入工作階段，提供貼上文字或檔案文字，規劃並確認藍圖，再由設定的模型生成 Part。結果會驗證，失敗工作可以恢復或重試，不會靜默重複建立資料。
-- **Resource Studio**：在集中式編輯器中新增和調整章節，編輯或重試單一 Part，查看串流進度，恢復自動儲存草稿，檢查版本歷史，並發布壓縮候選而不自動覆蓋目前內容。
-- **有狀態敘事**：每個冒險獨立保存訊息、場景狀態、角色與 NPC 快照、世界條目、分支、摘要及執行狀態提交。模型結構化輸出必須經過解析、活動版本檢查與持久化，才會影響下一回合。
-- **閱讀支援**：透過平台 TTS 翻譯並朗讀選取的對話內容。Linux 桌面會偵測 Speech Dispatcher；沒有可用語音後端時，朗讀入口會保持隱藏。
-- **導覽優先介面**：在 Adventure、資料庫、Resource Studio 與設定之間快速切換。桌面使用側欄，緊湊螢幕使用抽屜或底部導覽。
+- 支援串流回合、行動選擇、分支與已儲存工作階段復原的互動冒險。
+- 可搜尋的 Resource Library 資料庫，以及支援結構化編輯與 AI 生成的 Resource Studio。
+- 角色關係從資料庫進入冒險，在執行期間變化並參與敘事上下文。
+- Runtime State Hub 提供儀表板、實體狀態、時間軸與逐回合變化。
+- 翻譯與朗讀，包括需下載模型的選用本機神經 TTS。
+- 響應式導覽：桌面側欄包含最近冒險，小螢幕使用精簡導覽；可進入 Adventure、資料庫、執行狀態與設定。
 
-## 架構概覽
+## 互動冒險
 
-```text
-Flutter 頁面與 Widget
-        ↓
-Controller、Riverpod Provider 與應用程式用例
-        ↓
-領域契約、引擎、Repository 與模型閘道
-        ↓
-SQLite + 已設定的 OpenAI-compatible 服務 + 平台服務
-```
+透過建立精靈選擇世界觀、主角、同行角色與 NPC，設定開場並檢查就緒狀態。選取的資源形成冒險專屬快照，後續資料庫編輯不會靜默改寫既有冒險。
 
-專案仍在逐步整理架構。新的 `features/`、`application/`、`domain/` 與既有目錄並存；README 不將任何單一目錄宣稱為完整架構。
+執行期間支援串流敘事、行動選擇、建立分支、切換目前角色，以及恢復已儲存的工作階段。書籤、訊息編輯、擲骰、對話匯入匯出與上下文摘要為長篇故事提供輔助。
 
-## AI 生成系統
+## 資料庫與 Resource Studio
 
-LT 直接連接你設定的 OpenAI-compatible 模型服務。在設定中選擇 Base URL、模型與 API Key；金鑰透過應用程式的安全儲存路徑保存在本機。資源建立與匯入支援手動輸入、貼上或檔案文字、既有資源、規劃工作階段、結構化藍圖、串流生成、驗證與復原。
+建立、匯入、搜尋、篩選與管理世界觀、角色卡及 NPC。資源採用有序的 `Resource → Section → Part` 結構。
 
-冒險回應包含敘事正文與結構化狀態資料。應用程式會在寫入本機資料庫或進入下一回合前驗證結構化結果。
+Resource Studio 提供章節新增與排序、Part 編輯、串流生成、手動儲存、自動儲存與草稿復原。可重試單一失敗 Part 或全部失敗 Part，查看版本歷史並還原版本。驗證與就緒狀態協助判斷資源能否用於冒險。
 
-## 角色與世界
+容量工具支援查看資源大小、生成壓縮候選，經審閱後明確發布；壓縮不會自動取代目前內容。資料庫也提供回收筒與還原。
 
-資源模型為：
+## 角色、關係與執行狀態
 
-```text
-Resource → Section → Part
-```
+在資料庫管理角色關係，並以既有角色生成關聯角色。選取角色之間的關係可以複製到冒險快照，在執行期間繼續變化。目前關係狀態進入敘事上下文與加權 Token 預算規劃，因此相關變化可以影響後續 AI 敘事。後續資料庫關係編輯不會靜默改變這份快照。
 
-世界觀保存規則、地點與勢力等設定；角色卡與 NPC 保存可重複使用的人物資料及關係。冒險開始時會建立冒險自己的快照，之後資料庫編輯不會靜默改寫既有冒險。
+目前冒險的 Runtime State Hub 提供儀表板、角色與世界狀態、地點、勢力、關係、追蹤狀態、時間軸及回合歷史。可結合故事查看已記錄的變化與實體歷史。
 
-## 資料庫與閱讀體驗
+## AI 生成流程
 
-資料庫支援搜尋、類型篩選、詳情、手動編輯、AI 建立、匯入、自動儲存、草稿恢復、版本歷史、回收站、容量檢查與壓縮候選。Resource Studio 提供章節與 Part 的集中編輯及生成工作區。
+設定 OpenAI-compatible 服務位址、模型與 API Key。資源建立與匯入經過規劃、藍圖、候選確認、Part 串流生成與驗證，失敗工作支援復原及重試。不同流程可使用手動輸入、貼上文字、檔案文字參考或既有資源。
 
-Adventure 支援串流輸出、可選 reasoning、行動選項、分支、書籤、角色切換、骰點、訊息編輯、上下文摘要、對話匯入匯出、翻譯與朗讀。
+冒險生成在上下文預算內組裝資源快照、近期敘事、摘要與執行狀態。結構化狀態輸出經解析與驗證後，接受的變化才會持久化並用於後續回合。
+
+## 朗讀與本機神經 TTS
+
+預設使用系統 TTS。Enhanced / Neural TTS 為選用模式，使用 Sherpa/ONNX 在裝置上合成語音。神經模型不隨 APK 內建，也不會自動下載；需在設定 → 朗讀 → 模型管理中主動下載。模型管理顯示安裝狀態、下載進度與磁碟用量，支援取消下載及移除模型。
+
+可選擇旁白與預設角色聲音，啟用角色聲音自動分配，或在角色/NPC 資源詳情中綁定聲音。可用聲音與語言取決於已安裝模型。神經聲音、模型或執行環境不可用時，若有可用系統後端，會回退至系統 TTS。
+
+Linux 系統朗讀使用可用的 Speech Dispatcher。對話翻譯由已設定的文字模型完成，與 TTS 相互獨立。
+
+## 本機優先架構
+
+資源、冒險、訊息、版本與應用程式設定主要持久化於本機 SQLite。API Key 經應用程式層加密後儲存在本機；這不表示整個資料庫已加密，也不表示金鑰存放於作業系統憑證庫。
+
+AI 文字生成與翻譯會向你設定的服務傳送所需上下文，該服務可能位於遠端。神經模型下載需要網路，安裝後的神經 TTS 模型可在本機合成語音。本機優先儲存不代表所有 AI 功能都能離線執行。
 
 ## 多語言支援
 
-目前 UI 支援 English、簡體中文、繁體中文、日本語與한국어。翻譯檔案位於 [`lib/l10n/`](lib/l10n/)，首次啟動和設定中都可以切換語言。
+UI 支援 English、简体中文、繁體中文、日本語與 한국어。首次啟動或設定中可選擇語言。翻譯原始檔位於 [`lib/l10n/`](lib/l10n/)。
 
-## 螢幕截圖
+## 安裝
 
-專案目前沒有提交 UI 截圖；上方是已追蹤的專案標誌。穩定的截圖集合準備好後再補充。
+### 下載 Android Release
 
-## 安裝與執行
+從 [Latest Release](https://github.com/yangrunzhi345-blip/LT/releases/latest) 下載正式簽署 APK。目前官方預編譯發行僅提供 **Android ARM64 / arm64-v8a**。此發行流程目前不提供 Windows、Linux、macOS 或 iOS 安裝套件。
 
-需要 Git、Flutter stable（Dart `>=3.0.0 <4.0.0`）以及目標平台工具鏈。
+各版本詳情及簽署、升級說明見 [`docs/releases/`](docs/releases/)。從較舊的 Debug 簽署版本遷移時，若 Android 簽署規則要求解除安裝，請先備份或匯出資料。
+
+### 從原始碼執行
+
+專案包含 Android、Linux、Windows、macOS 與 iOS 平台工程，供原始碼開發使用；仍需對應工具鏈，服務可用性也因平台而異。目前 Android 設定將原生函式庫限制為 ARM64。
+
+需要 Git、Flutter stable 與目標平台原生工具鏈。`pubspec.yaml` 宣告 Dart `>=3.0.0 <4.0.0`，但目前 [`pubspec.lock`](pubspec.lock) 要求 **Flutter >=3.44.0、Dart >=3.12.0 <4.0.0**。本次檢查使用 Flutter 3.44.8 / Dart 3.12.2。
 
 ```bash
 git clone https://github.com/yangrunzhi345-blip/LT.git
 cd LT
 flutter pub get
-flutter devices
-flutter run -d linux       # 或 windows / macos
-# flutter run -d android
-# flutter run -d ios
+flutter run
 ```
 
-首次啟動後在設定中配置 DeepSeek 或其他 OpenAI-compatible 服務。支援的產品平台為 Linux、Windows、Android、macOS 與 iOS。
+需要指定目標時，先用 `flutter devices` 查看裝置，再執行 `flutter run -d <device-id>`。AI 生成前，在首次啟動流程或設定中配置模型服務。
 
 ## 開發
 
 ```bash
-dart format .
+dart format --output=none --set-exit-if-changed .
 flutter analyze
 flutter test
-flutter test benchmark/core_benchmark.dart
 ```
 
-入口檔案包括 [`lib/main.dart`](lib/main.dart)、[`lib/core/router/app_router.dart`](lib/core/router/app_router.dart) 和 [`docs/README.md`](docs/README.md)。
+開發時優先執行針對性測試；專案 CI 檢查格式、靜態分析與 Flutter 測試。專案工作規範見 [`AGENTS.md`](AGENTS.md)。
+
+## 專案結構
+
+- [`lib/features/`](lib/features/)：功能 UI 與相關功能程式碼。
+- [`lib/application/`](lib/application/)：用例、敘事上下文與流程編排。
+- [`lib/domain/`](lib/domain/)：領域契約與模型。
+- [`lib/services/`](lib/services/)：持久化、Repository、模型存取與 TTS。
+- [`lib/core/`](lib/core/)：共用路由、主題與 UI 基礎。
+- [`test/`](test/)：自動化測試；[`docs/`](docs/)：實作與開發文件。
+
+既有 Controller、Provider、Screen 與 Widget 目錄仍與上述邊界並存。從 [`lib/main.dart`](lib/main.dart) 開始，更多說明見[文件索引](docs/README.md)。
 
 ## 路線圖
 
-專案將繼續改進資料創作、Adventure 執行狀態、復原行為與跨平台體驗。通用 tool-calling agent、圖資料庫或向量資料庫、跨資源自主決策目前不屬於已交付功能。
+後續工作聚焦資料創作、冒險狀態工具、復原能力與跨平台體驗。這些是持續改善方向，不是額外已交付能力。
 
 ## 貢獻
 
-歡迎小範圍、聚焦的 Pull Request。請說明行為變化，保護使用者資料與憑證，隨程式碼同步更新文件，並執行相關格式化、分析和測試。
+歡迎聚焦的 Pull Request。請說明行為變化，保護使用者資料與憑證，更新相關文件，並在提出 PR 前執行必要檢查。
 
 ## 授權
 

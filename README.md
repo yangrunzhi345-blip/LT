@@ -1,112 +1,120 @@
 # LT Dialogue
 
-[![Flutter](https://img.shields.io/badge/Flutter-app-02569B?logo=flutter)](https://flutter.dev/) [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.0.0-0175C2?logo=dart)](https://dart.dev/)
+[![Flutter](https://img.shields.io/badge/Flutter-app-02569B?logo=flutter)](https://flutter.dev/) [![Latest release](https://img.shields.io/github/v/release/yangrunzhi345-blip/LT)](https://github.com/yangrunzhi345-blip/LT/releases/latest)
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-LT Dialogue is a local-first AI interactive storytelling platform built with Flutter and Dart. It combines a structured resource library, AI-assisted world and character creation, and stateful Adventure sessions in one application. Local SQLite storage keeps your resources, adventures, messages, revisions, and settings on the device by default.
+LT Dialogue is a local-first workbench for AI interactive storytelling, worldbuilding, and character creation.
+
+Build reusable resources, start Adventures from their snapshots, and follow the story alongside its changing character and world state. LT uses Flutter, Dart, Riverpod, and SQLite.
 
 ![LT Dialogue logo](logo.png)
 
-## Key features
+## Highlights
 
-- **Interactive Adventures** — build an Adventure in a guided flow: choose a worldview, protagonist and supporting cast, bind NPC snapshots, set the opening scene and options, review readiness, and start from a stable resource revision. During play, stream each turn, choose actions, create branches, switch characters, and resume from saved state.
-- **World and character resources** — create, import, search, filter, and edit worldviews, character cards, and NPC records. Resources use an ordered `Resource → Section → Part` structure so long setting material stays reusable and navigable.
-- **AI generation pipeline** — start an idempotent creation or import session, provide pasted or file text, plan a blueprint, confirm candidates, generate parts through the configured model, validate the result, and recover or retry failed work without silently duplicating resources.
-- **Resource Studio** — work on one resource in a focused editor: add and reorder sections, edit or retry individual parts, follow streaming progress, restore autosaved drafts, inspect revision history, and publish compression candidates without replacing the current content automatically.
-- **Stateful storytelling** — each Adventure owns its messages, scene state, character and NPC snapshots, world entries, branches, summaries, and runtime commits. Structured model output is parsed, checked against the active revision, and persisted before it affects the next turn.
-- **Reading support** — translate conversation content and read selected text aloud through the platform TTS service. Linux desktop uses Speech Dispatcher when detected and keeps the read-aloud entry hidden when no usable voice backend is available.
-- **Navigation-first UI** — move between Adventure, Resource Library, Resource Studio, and Settings through a responsive shell. Desktop uses a sidebar while compact layouts use drawer or bottom navigation patterns.
+- Interactive Adventures with streaming turns, action choices, branches, and saved-session recovery.
+- A searchable Resource Library and a Resource Studio for structured editing and AI generation.
+- Character relationships carried from library resources into evolving Adventure state and narrative context.
+- A Runtime State Hub with a dashboard, entity views, timelines, and per-turn changes.
+- Translation and read-aloud, including optional local neural TTS with downloadable models.
+- Responsive navigation: a desktop sidebar with recent Adventures and compact navigation for smaller screens; access Adventure, Resource Library, Runtime State, and Settings.
 
-## Architecture overview
+## Interactive Adventures
 
-```text
-Flutter pages and widgets
-          ↓
-Controllers, Riverpod providers, and application use cases
-          ↓
-Domain contracts, engines, repositories, and model gateways
-          ↓
-SQLite + configured OpenAI-compatible endpoint + platform services
-```
+Use the creation wizard to select a worldview, protagonist, companions, and NPCs, configure the opening scene, and check readiness before starting. Selected resources become Adventure-owned snapshots; subsequent library edits do not silently rewrite an existing Adventure.
 
-The repository is in a gradual architectural transition. The newer `features/`, `application/`, and `domain/` boundaries coexist with established `controllers/`, `providers/`, `services/`, `screens/`, and `widgets/` code. New work should follow the relevant feature and application boundaries instead of assuming one directory is the whole architecture.
+During play, stream narrative turns, choose actions, create branches, switch the active character, and resume saved sessions. Bookmarks, message editing, dice checks, conversation import/export, and context summaries support longer stories.
 
-## AI generation system
+## Resource Library & Resource Studio
 
-LT connects directly to a configured OpenAI-compatible model endpoint. You choose the base URL, model, and API key in Settings; the key is stored locally through the application’s secure storage path. Resource creation and import flows support manual input, pasted or file text, existing resources, planning sessions, structured blueprints, streaming generation, validation, and retry/recovery.
+Create, import, search, filter, and manage worldviews, character cards, and NPCs. Resources follow an ordered `Resource → Section → Part` structure.
 
-Adventure responses contain narrative text and structured state data. The application validates the structured result before it becomes part of the next turn or is written to the local database.
+Resource Studio exposes section creation and reordering, Part editing, streaming generation, manual save, autosave, and draft recovery. Retry an individual failed Part or all failed Parts, inspect revision history, and restore revisions. Validation and readiness show whether a resource can be used in an Adventure.
 
-## Characters and worlds
+Capacity tools help inspect resource size and generate compression candidates for review and explicit publication. Compression does not automatically replace current content. The library also provides trash and restore.
 
-The resource model is:
+## Characters, Relationships & Runtime State
 
-```text
-Resource → Section → Part
-```
+Manage character relationships in the library and generate related characters from an existing character. Relationships between selected characters can be copied into the Adventure snapshot and evolve during play. Current relationship state enters the narrative context and its weighted token-budget planning, so relevant changes can influence subsequent AI storytelling. Later library relationship edits do not silently change that snapshot.
 
-Worldviews hold setting material such as rules, places, and factions. Character cards and NPC records hold reusable people and relationships. When an Adventure starts, selected resources are assembled into Adventure-owned snapshots, so later library edits do not silently rewrite an existing story.
+For the active Adventure, the Runtime State Hub provides a dashboard, character and world state, locations, factions, relationships, tracked state, a timeline, and turn history. Inspect recorded changes and entity history alongside the story.
 
-## Resource Library
+## AI Generation Pipeline
 
-The Resource Library supports search, type filtering, detail views, manual editing, AI creation, import flows, autosave and draft recovery, revision history, trash and restore, capacity checks, and compression candidates. Resource Studio provides the focused editing and generation workspace for sections and parts.
+Configure an OpenAI-compatible endpoint, model, and API key. Resource creation and import use planning, blueprints, candidate confirmation, streamed Part generation, and validation, with recovery and retry for failed work. Flows accept manual input, pasted text, file-text references, or existing resources as appropriate.
 
-## Reading experience
+Adventure generation assembles resource snapshots, recent narrative, summaries, and runtime state within a context budget. Structured state output is parsed and validated before accepted changes are persisted and used in later turns.
 
-Adventure sessions support streaming output, optional reasoning display, action choices, branches, bookmarks, character switching, dice checks, message editing, bounded context and summaries, conversation import/export, translation, and read-aloud. Runtime state is committed through validated, revision-aware application services rather than treating raw model output as database input.
+## Read Aloud & Local Neural TTS
 
-## Multi-language support
+System TTS is the default. Enhanced / Neural TTS is optional and uses Sherpa/ONNX for on-device synthesis. Neural models are neither bundled with the APK nor downloaded automatically: download them explicitly in Settings → Read Aloud → model management. The model manager shows installation status, download progress, and disk usage, and lets you cancel downloads or remove models.
 
-The application currently ships UI localization for English, Simplified Chinese, Traditional Chinese, Japanese, and Korean. The source translations live under [`lib/l10n/`](lib/l10n/), and language selection is available during onboarding and in Settings.
+Choose a narrator voice and default character voice, enable automatic character voice assignment, or bind a voice to an individual character/NPC in its resource detail view. Voice and language availability depend on the installed model. If a neural voice, model, or runtime is unavailable, playback falls back to system TTS when a usable system backend exists.
 
-## Screenshots
+On Linux, system read-aloud uses Speech Dispatcher when available. Conversation translation uses the configured text model, independently of TTS.
 
-UI screenshots are not currently committed to the repository. The tracked logo above is the available project visual; screenshots can be added when a stable capture set is maintained.
+## Local-first Architecture
+
+Resources, Adventures, messages, revisions, and application settings are primarily persisted in local SQLite. API keys are stored locally with application-level encryption; this does not mean the entire database is encrypted or that keys are held in an OS credential vault.
+
+AI text generation and translation send the required context to your configured endpoint, which may be remote. Neural model downloads require network access; installed neural TTS models can synthesize locally. Local-first storage does not mean every AI feature works offline.
+
+## Localization
+
+The UI supports English, Simplified Chinese, Traditional Chinese, Japanese, and Korean. Select a language during onboarding or in Settings. Translation sources are in [`lib/l10n/`](lib/l10n/).
 
 ## Installation
 
-### Requirements
+### Download Android Release
 
-- Git.
-- Flutter stable with a Dart SDK satisfying `>=3.0.0 <4.0.0`.
-- The SDK and native toolchain for the target platform: Android SDK, Xcode, Linux desktop dependencies, or Windows desktop tooling as appropriate.
+Download the signed APK from [Latest Release](https://github.com/yangrunzhi345-blip/LT/releases/latest). Official prebuilt releases currently provide **Android ARM64 / arm64-v8a only**. Windows, Linux, macOS, and iOS installers are not currently distributed through this release workflow.
 
-### Run from source
+See [`docs/releases/`](docs/releases/) for release-specific details and signing/upgrade notes. When moving from an older debug-signed build, back up/export your data before any uninstall required by Android's signing rules.
+
+### Run from Source
+
+The repository includes Android, Linux, Windows, macOS, and iOS platform projects for source development; platform toolchains and service availability still apply. Android configuration currently restricts native libraries to ARM64.
+
+Use Git, Flutter stable, and the target platform's native toolchain. `pubspec.yaml` declares Dart `>=3.0.0 <4.0.0`, but the current [`pubspec.lock`](pubspec.lock) requires **Flutter >=3.44.0 and Dart >=3.12.0 <4.0.0**. The checked source setup uses Flutter 3.44.8 / Dart 3.12.2.
 
 ```bash
 git clone https://github.com/yangrunzhi345-blip/LT.git
 cd LT
 flutter pub get
-flutter devices
-flutter run -d linux       # or windows / macos
-# flutter run -d android
-# flutter run -d ios
+flutter run
 ```
 
-On first launch, open Settings and configure a DeepSeek or other OpenAI-compatible service. A custom service requires its base URL, model name, and API key.
-
-Supported product targets are Linux, Windows, Android, macOS, and iOS.
+Use `flutter devices` to select a target, then `flutter run -d <device-id>` if needed. Configure the model service during onboarding or in Settings before AI generation.
 
 ## Development
 
 ```bash
-dart format .
+dart format --output=none --set-exit-if-changed .
 flutter analyze
 flutter test
-flutter test benchmark/core_benchmark.dart
 ```
 
-Useful entry points include [`lib/main.dart`](lib/main.dart), [`lib/core/router/app_router.dart`](lib/core/router/app_router.dart), [`docs/README.md`](docs/README.md), and [`docs/adventure_runtime_state.md`](docs/adventure_runtime_state.md).
+Run focused tests while developing; the repository CI checks formatting, analysis, and Flutter tests. See [`AGENTS.md`](AGENTS.md) for repository working rules.
+
+## Project Structure
+
+- [`lib/features/`](lib/features/): feature UI and related feature code.
+- [`lib/application/`](lib/application/): use cases, narrative context, and orchestration.
+- [`lib/domain/`](lib/domain/): domain contracts and models.
+- [`lib/services/`](lib/services/): persistence, repositories, model access, and TTS.
+- [`lib/core/`](lib/core/): shared routing, theme, and UI foundations.
+- [`test/`](test/): automated tests; [`docs/`](docs/): implementation and development documentation.
+
+Existing controllers, providers, screens, and widgets coexist with these boundaries. Start at [`lib/main.dart`](lib/main.dart); use the [`documentation index`](docs/README.md) for deeper references.
 
 ## Roadmap
 
-The project continues to improve resource authoring, Adventure state tooling, recovery behavior, and cross-platform polish. Generic tool-calling agents, graph or vector databases, and autonomous cross-resource decision systems are not presented as shipped LT features; they require separate implementation and documentation before they belong in this list.
+Future work focuses on resource authoring, Adventure state tools, recovery, and cross-platform polish. These are ongoing improvement areas, not additional shipped capabilities.
 
 ## Contributing
 
-Small, focused pull requests are welcome. Please describe the behavior change, keep user data and credentials safe, update documentation when source behavior changes, and run the relevant formatter, analyzer, and tests before opening a pull request.
+Focused pull requests are welcome. Describe the behavior change, protect user data and credentials, update affected documentation, and run relevant checks before opening a PR.
 
 ## License
 
-This repository currently has no root `LICENSE` file. Contact the project owner through GitHub before redistributing or using LT commercially.
+The repository currently has no root `LICENSE` file. Contact the project owner through GitHub before redistributing or using LT commercially.
