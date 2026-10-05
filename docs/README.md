@@ -22,7 +22,7 @@
   实机验收清单见 [`ui/ui-acceptance-checklist.md`](./ui/ui-acceptance-checklist.md)。
 - **Read Aloud / Enhanced Neural TTS**：当前架构与限制见 [`read-aloud/enhanced-tts-v1.md`](./read-aloud/enhanced-tts-v1.md)。
 - **Releases（发布事实）**：[`releases/`](./releases/) 为历史与当前 release 记录，最新为
-  [`v1.2.00-android-arm64.md`](./releases/v1.2.00-android-arm64.md)；正式发布仅 Android ARM64。
+  [`v1.2.01-android-arm64.md`](./releases/v1.2.01-android-arm64.md)；正式发布仅 Android ARM64。
 
 ## 历史程序状态（Status Authority 分层）
 
