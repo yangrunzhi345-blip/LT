@@ -5,7 +5,7 @@
 
 > 本 Phase 是 8-Phase 程序中 former R07 的直接后继（2026-09-19 的 8→7 压缩）。
 > 历史文档见
-> [`archive/pre-7-phase-plan/remediation-phase-07-migration-serialization-hardening.md`](./archive/pre-7-phase-plan/remediation-phase-07-migration-serialization-hardening.md)。
+> [`archive/pre-7-phase-plan/remediation-phase-07-migration-serialization-hardening.md`](../pre-7-phase-plan/remediation-phase-07-migration-serialization-hardening.md)。
 
 ## Purpose
 

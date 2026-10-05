@@ -4,6 +4,12 @@
 > Hardening & Slimming 组织。历史压缩：initial 13-Phase →（2026-09-19 第一次重规划）
 > 8-Phase →（2026-09-19 第二次重规划）7-Phase →（2026-09-19 第三次重规划，本文件）
 > **6-Phase**。13-Phase、8-Phase 与 7-Phase 计划均已归档，不再用于执行。
+>
+> **本文档是规划/重规划文档，不是当前状态 Authority。** 文中 Program Baseline、New Phase
+> Index、Finding Coverage Matrix、Dependency semantics 等处的 `Status` 字段均为相应
+> replanning 时点的快照（例如 R01 在基线时记为 `IMPLEMENTED`、R06 记为 `PLANNED`）。
+> R01–R06 的最终状态为全部 `ACCEPTED`，Program 已 COMPLETE，最终结论见
+> [`STATUS.md`](./STATUS.md)。
 
 ## 7-Phase to 6-Phase Replanning
 

@@ -1,6 +1,11 @@
 # LT Post-Phase-12 Remediation Program
 
-本目录是 LT 在 Phase 0-12 后的当前修复执行计划。Program 经历两次压缩：
+> **程序状态：COMPLETE（历史程序）。** R01–R06 全部 `ACCEPTED`，Milestone A/B/C 均 COMPLETE，
+> Final Post-Remediation Full Repository Audit Round 2 PASSED。最终状态与完整历史见
+> [`STATUS.md`](./STATUS.md)。本目录中各 Phase spec 文档头部的 `Status:` 字段是该 Phase
+> 规划或实施时点的状态，不代表最终结论；一律以 `STATUS.md` 为准。
+
+本目录记录 LT 在 Phase 0-12 后的修复程序；该程序已全部完成。Program 经历三次压缩（13→8→7→6）：
 
 1. 2026-09-19（第一次重规划）：初始 13 个平铺阶段压缩为 8 个按风险优先级和架构
    边界组织的阶段。初始 13-Phase 文档位于
@@ -30,7 +35,7 @@ R01-R04 已有历史编号、实施记录和验收记录全部保持不变。
 3. 对应 Phase 文档：可独立实施的 contract、workstream、测试与验收规格。
 4. 当前代码：文档中的行号漂移时，以 symbol 和真实调用链为准。
 
-## 当前程序：6-Phase Program
+## 程序结构：6-Phase Program
 
 | Priority | Phase | Document |
 | --- | --- | --- |
@@ -41,8 +46,8 @@ R01-R04 已有历史编号、实施记录和验收记录全部保持不变。
 | P1 | R05 Runtime State, Production Wiring & Context Continuity | [R05](./remediation-phase-05-runtime-consistency-context-continuity.md) |
 | P2 | R06 Final Hardening, Compatibility & Safe Cleanup | [R06](./remediation-phase-06-final-hardening-safe-cleanup.md) |
 
-R01-R05 全部 `ACCEPTED` 后，执行序列为 R01 → R02 → R03 → R04 → R05 → R06 →
-Final Post-Remediation Full Repository Audit。
+执行序列为 R01 → R02 → R03 → R04 → R05 → R06 → Final Post-Remediation Full
+Repository Audit；以上各步均已执行完成。
 
 ## 执行规则
 
@@ -51,8 +56,8 @@ Final Post-Remediation Full Repository Audit。
 - 单 Agent 按唯一 active 序 R01 → R02 → R03 → R04 → R05 → R06 执行，以降低冲突；
   该顺序是 recommendation，不是 hard dependency。
 - 每个 Phase 必须经历 `IMPLEMENTED -> Independent Acceptance -> ACCEPTED / FAILED`。
-- R01-R05 全部 `ACCEPTED`；Milestone A 与 Milestone B formal gate 均已闭环；
-  R06 已解锁（`PLANNED`）。
+- R01–R06 全部 `ACCEPTED`；Milestone A/B/C formal gate 均已闭环；本程序已 COMPLETE。
+  （历史节点：R01-R05 `ACCEPTED` 后 R06 曾为 `PLANNED`，随后实施并完成独立验收。）
 - R06 内部必须 hardening（R06-A/B/C）先行，通过 Hardening Internal Gate 并产出
   Protected Compatibility List 后才能开始 cleanup（R06-D/E/F/G）。
 - P0 在下一轮大型功能开发前全部完成；P1 强烈建议在下一代状态/权重架构前全部

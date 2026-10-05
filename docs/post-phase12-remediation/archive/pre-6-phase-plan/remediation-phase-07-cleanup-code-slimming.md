@@ -5,7 +5,7 @@
 
 > 本 Phase 是 8-Phase 程序中 former R08 的直接后继（2026-09-19 的 8→7 压缩）。
 > 历史文档见
-> [`archive/pre-7-phase-plan/remediation-phase-08-cleanup-code-slimming.md`](./archive/pre-7-phase-plan/remediation-phase-08-cleanup-code-slimming.md)。
+> [`archive/pre-7-phase-plan/remediation-phase-08-cleanup-code-slimming.md`](../pre-7-phase-plan/remediation-phase-08-cleanup-code-slimming.md)。
 
 ## Purpose
 

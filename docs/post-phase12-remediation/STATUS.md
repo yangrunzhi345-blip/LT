@@ -39,6 +39,10 @@
 | Final Audit | PASSED (Round 2) |
 | Last Updated | 2026-09-20 |
 
+> 上表是 **Post-Phase-12 Remediation 程序完成时（2026-09-20）的快照**。其中 `Schema Version 43`
+> 等属该程序结束时的事实；此后的产品状态（含当前数据库 schema、依赖、版本与 release）以当前代码、
+> 根目录 [`README.md`](../../README.md)、[`docs/releases/`](../releases/) 与 git 历史为准。
+
 ## Phase 状态
 
 | Priority | Milestone | Phase | Name | Status | Depends On |
@@ -63,6 +67,12 @@ Round 2；FINAL-R06-01 与 FINAL-R05-02 均已关闭。
 
 下一轮大型功能开发至少必须等待 Milestone A 的 formal gate 闭环；角色状态、世界
 状态、权重管理等下一代架构应等待 Milestone B。P2 只在 correctness 已稳定后执行。
+
+> **历史记录说明。** 以下各「实施历史 / 实施与独立验收历史」节按时间顺序保留各 Phase 在
+> 执行当时的状态。标注 `IMPLEMENTED（等待独立验收）` 的节是当时的中间状态；每个 Phase 的
+> 最终状态均已 `ACCEPTED`，并由其后对应的「实施与独立验收历史」节及上文 Phase 状态表记录。
+> 本 Program 已 COMPLETE。判断当前状态请看上文「当前总体状态」；不因下方历史节重新开启任何
+> Phase。
 
 ## R01 实施与独立验收历史
 

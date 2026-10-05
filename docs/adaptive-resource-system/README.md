@@ -1,18 +1,27 @@
 # LT 自适应资源系统重构执行方案索引
 
+> **历史方案索引（Historical / Superseded）。**
+>
+> 本目录记录 Adaptive Resource System **Phase 0–12** 的历史规划、实施与验收文档。
+> Phase 0–12 已全部执行完成；本程序此后由 **Post-Phase-12 Remediation（R01–R06）** 取代。
+> 本目录不再代表 LT 当前状态：程序级最新状态入口为
+> `docs/post-phase12-remediation/STATUS.md`，产品级事实以当前代码与 `README.md` 为准。
+
 ## 文档目的
 
 本目录把“统一资源模型 + 自适应内容结构 + 增量 JSON 挂载生成 + 可见流式创作 + 局部控制 + 后台语义压缩 + 统一组装就绪机制”拆成 13 个可独立提交、独立验收的实施阶段。执行顺序固定为 Phase 0 → Phase 12；后续阶段不得绕过前置验收。
 
-> 开始或交接任何阶段前，先查看 [执行状态与阶段交接](STATUS.md)。该文件是实际执行进度、Git 基线、验证结果与验收状态的唯一记录入口。
+> 历史执行进度、Git 基线、验证结果与验收状态见 [执行状态与阶段交接（历史）](STATUS.md)。该文件是 Phase 0–12 的历史记录，不是 LT 当前状态的 Authority。
 
-## 当前代码基线
+## 规划时基线（历史快照，Phase 0 规划时期）
 
 - 数据库当前版本为 v30，资源主要存放在 `worldview_presets`、`character_cards`、`npc_cards`，另有尚未成为统一事实源的 `creation_library_resources` 系列表。
 - 世界观详情仍由 `WorldviewDetails.moduleKeys` 固定模块约束；角色卡仍由 `CharacterCard` 固定字段表达。
 - 创建与导入分布于资源库页面、Adventure Wizard、多个 controller/use case；世界观和角色的详细生成各有 coordinator。
 - 项目已有统一 LLM service/task policy、generation handle、30ms typewriter 与 180ms preview throttle，可扩展但不得复制。
 - Adventure 通过配置快照、world entries 与语义 embedding 消费资源，迁移必须保持旧存档可读。
+
+> 以上为方案编写时的历史基线（数据库 v30 等）。Phase 0–12 完成后实现已远超该快照，当前事实以代码、`README.md` 与 git 历史为准。
 
 ## 阶段文件
 
@@ -42,3 +51,5 @@
 ## 总体验收
 
 完成 Phase 12 后，世界观、角色卡、NPC 仅通过统一创建管线进入同一内容树；AI 可规划并逐 Part 生成，用户可实时阅读和局部编辑；超限内容由后台压缩生成可组装版本，原稿和历史版本可恢复；Adventure 与语义检索只消费明确的 assembly revision；旧固定生成、重复入口和重复保存逻辑已移除。
+
+> 上述为本程序的总体验收目标。Phase 0–12 均已执行并验收完成，程序已由 Post-Phase-12 Remediation 取代；最终状态见 [STATUS.md](STATUS.md) 与 `docs/post-phase12-remediation/STATUS.md`。
