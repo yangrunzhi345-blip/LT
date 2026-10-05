@@ -1,5 +1,15 @@
 # R06 Implementation Report
 
+> **历史实施报告（Historical implementation report）。**
+>
+> 本文件记录 R06 实施完成、独立验收开始之前的时点状态。§16 的
+> "Independent acceptance has not been performed" 与 §17 的
+> "R06 IMPLEMENTED - awaiting independent acceptance / Milestone C remains NOT
+> COMPLETE / Final post-remediation repository audit has not been started" 均为**该时点结论**，
+> 不代表当前状态。R06 随后已 `ACCEPTED`，Milestone C 已 `COMPLETE`，
+> Final Post-Remediation Full Repository Audit 已 `PASSED (Round 2)`。
+> 当前程序状态以 [`STATUS.md`](./STATUS.md) 为准，不得据本文重新打开 R06。
+
 ## 1. Baseline
 
 - Phase: R06 - Final Hardening, Compatibility & Safe Cleanup.

@@ -140,7 +140,7 @@ Pre-Audit 授权 vs 实际执行逐项比对（独立于执行报告复核）：
 
 **结论：PASS，未发现 migration 断裂。**
 
-- 当前 schema：`v43`（`DatabaseService.schemaVersion = 43`，未变）。
+- 该阶段结束时 schema：`v43`（当时 `DatabaseService.schemaVersion = 43`，本阶段未变；属历史值，当前 schema 以代码为准）。
 - 升级链完整保留：`migrateStepByStep`（v22→…→v43 全部分支）+ `createV22..V43Schema` + `addSectionControlColumns` / `addResourceCapacityColumns` / `addCompressionLeaseColumns` / `dropLegacyQuestAndMapTables` / `createCreationLibrarySchema` / `safeAddColumn` / `columnExists` 全部存在。
 - 父提交 `6caa76a` → HEAD 的 `database_service.dart` diff hunk 均不落在迁移代码。
 - 历史升级由真实测试验证（定向运行全部通过）：`database_migration_v36/v39/v40/v41/v42_test.dart`、`test/services/database_migration_v38_test.dart`、`test/services/database_migration_resource_tree_test.dart`、`resource_migration_schema_upgrade_test.dart`、`resource_migration_service_test.dart`，以及 `test/architecture/feature_removal_guard_test.dart`（含 `v28→v29` 升级与 legacy 表清理、fresh v29 建表验证）。

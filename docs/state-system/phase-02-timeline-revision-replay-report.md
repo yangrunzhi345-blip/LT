@@ -1,5 +1,10 @@
 # Character & World State Phase 2 Report
 
+> 历史实施报告（Historical implementation report）。§20 "Remaining debt" 提到的 richer
+> baseline-aware effective-state read model/UI 与 timeline presentation，均由后续 Phase 3/7
+> 交付；restore 由 Phase 4 交付（见同目录 `phase-03` / `phase-04` / `phase-07` 报告）。
+> 本文保留当时状态。
+
 ## 1. Baseline
 
 - Start HEAD: `02a62d4060d21518f43daa5f1ea5ec5c1f20ae43`

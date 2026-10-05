@@ -1,5 +1,12 @@
 # 角色管理 UI 在场状态断链 — 执行规格（可照抄版）
 
+> **历史 Agent 执行规格（Historical agent execution spec）。**
+>
+> 本文件是 2026-09-27 给执行 Agent 的一次性工单，撰写时标注为“待执行”。该工单随后已执行完成：
+> 修复提交为 `6c86f70` `fix(adventure): link character presence to scene state and converge quick
+> menu`，工作区已干净。文中“18 个未提交文件 / 修改保留在 working tree”等均为撰写时状态，
+> **不代表当前项目状态**，不得据此重新执行或覆盖现有提交。
+
 - 状态：**待执行**（本报告只做调查与规格，未修改任何生产代码）
 - 作者：claude-opus-5.5
 - 日期：2026-09-27

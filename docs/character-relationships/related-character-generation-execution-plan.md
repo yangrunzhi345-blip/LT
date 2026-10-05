@@ -1,5 +1,14 @@
 # Related Character Generation Execution Plan
 
+> **历史执行计划（Historical plan）。**
+>
+> 本文件是 Related Character Generation 的分阶段实施计划。其 Phase 0–8 已全部实施并
+> `ACCEPTED`（见 [`phase-02-08-gates.md`](./phase-02-08-gates.md) 与
+> [`phase-09-integrated-acceptance.md`](./phase-09-integrated-acceptance.md)），Phase 9–10 亦已完成，
+> Phase 10 Runtime Narrative Integration 为 `ACCEPTED`
+> （见 [`phase-10-runtime-narrative-acceptance.md`](./phase-10-runtime-narrative-acceptance.md)）。
+> 因此本文**不是**待执行的 active plan；保留它用于追溯设计意图。不要据本文重新启动任何 Phase。
+
 This is a staged implementation plan only. No phase is started by this design task. Each phase is independently reviewable and must preserve the existing Resource Studio authority.
 
 ## Phase 0 — Historical audit and contract freeze

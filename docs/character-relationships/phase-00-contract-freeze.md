@@ -7,7 +7,7 @@
 - Branch: `main`.
 - Baseline before this Phase 0 commit: `78510ab` (`docs: design related character generation pipeline`).
 - `origin/main` at audit start: `6c86f700d8b81d31d4043fbed5279a12e2c55f0d`; the design commit is local and the environment does not provide permission to push it. This Phase 0 commit must be pushed by the authorized maintainer before Phase 1.
-- Current database schema: `DatabaseService.schemaVersion = 46`.
+- Database schema at this Phase 0 freeze: `DatabaseService.schemaVersion = 46` (historical snapshot; the current value must be re-read from code).
 - Working tree contains pre-existing uncommitted UI, localization, generated localization, platform registration, dependency, and widget-test changes. They were preserved and are not part of this phase.
 - No production Dart, test Dart, `database_service.dart`, ARB, or migration file is changed by Phase 0.
 

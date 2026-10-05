@@ -1,6 +1,11 @@
 # LT / LT Dialogue UI 实机与人工验收清单 (Manual & Device Acceptance Checklist)
 
-本文档基于完成 Phase 1~8 UI 重构后的最新代码库（HEAD: `44d4fad`），专供开发与测试人员在真实物理设备（Android 手机、平板、桌面端 Linux / Windows / macOS）上进行全功能交互与视觉验收。
+> 本文件是 UI 重构（Phase 1~8）之后的实机/人工验收清单，编写基线为 `44d4fad`。
+> 该 HEAD 只是编写时点，**不是**当前 HEAD；清单中的页面结构、导航与 design token
+> 应以当前实现代码与 [`AGENTS.md`](../../AGENTS.md) 的 LT Narrative Workbench Design Language 为准，
+> 运行清单前先按当前代码复核受影响的条目。
+
+本文档专供开发与测试人员在真实物理设备（Android 手机、平板、桌面端 Linux / Windows / macOS）上进行全功能交互与视觉验收。
 
 ---
 

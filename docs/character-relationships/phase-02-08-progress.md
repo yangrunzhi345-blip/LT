@@ -1,5 +1,13 @@
 # Related Character Generation Phase 2–8 Progress Record
 
+> **历史进度快照（Historical progress snapshot）——Phase 8 结束、Phase 9/10 之前的时点状态。**
+>
+> 本文件记录 Related Character Generation 在执行到 Phase 8 时的进度。该程序随后继续推进：
+> Phase 9 集成验收见 [`phase-09-integrated-acceptance.md`](./phase-09-integrated-acceptance.md)，
+> Phase 10 Runtime Narrative Integration 已 `ACCEPTED`
+> （见 [`phase-10-runtime-narrative-acceptance.md`](./phase-10-runtime-narrative-acceptance.md)）。
+> 因此下文的 "Current status / Phases 2–8 are implemented" 是**当时快照**，不是本程序的最终状态。
+
 ## Verified baseline
 
 - Current schema version is 48. Version 48 adds the durable
@@ -33,7 +41,7 @@
   `AdventureAssembler.assembleWithResourceRelationships` create an Adventure
   snapshot only when both endpoints are selected.
 
-## Current status
+## Status at the end of Phase 8 (historical snapshot)
 
 Phases 2–8 are implemented. Relationship editing is available from Character
 Detail, Adventure creation projects a frozen relationship snapshot, the

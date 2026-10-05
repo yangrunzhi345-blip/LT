@@ -1,5 +1,12 @@
 # P0 Adventure reasoning / multi-stage investigation
 
+> **历史 Agent 调查报告（Historical agent investigation report）。**
+>
+> 本文件是一次性 P0 调查的时点记录；其 "STATUS 仍为 PARTIALLY_FIXED" 与"剩余实施要求与
+> 验收门槛"是当时结论。后续 [`p0-reasoning-only-narrative-recovery.md`](./p0-reasoning-only-narrative-recovery.md)
+> 记录并完成了该调查要求的 L5 narrative → settlement → commit 证据，结论为 **FIXED**。
+> 本文不是当前状态或操作手册。
+
 ## Baseline and evidence boundary
 
 - Start HEAD / origin/main: `b52a1f33296970eea6824f9e5b4bc97d510ca9bf`;

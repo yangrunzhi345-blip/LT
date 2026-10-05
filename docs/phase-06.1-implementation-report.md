@@ -1,5 +1,10 @@
 # Phase 6.1 Implementation Report: Streaming Resource Generation Runtime
 
+> 历史实施报告（Historical implementation report）。§7 "Known Limitations & Next Steps
+> (Phase 6.2+)" 中列为待建的 Resource Studio 交互 UI 与 live LLM SSE 接入，均已在后续 Phase 6
+> 交付并通过独立复验（见 [`phase6-implementation-report.md`](./phase6-implementation-report.md)、
+> [`phase6-independent-reacceptance.md`](./phase6-independent-reacceptance.md)）。本文保留当时状态。
+
 **Date**: 2026-09-17
 **Repository**: `yangrunzhi345-blip/LT`
 **Phase**: 6.1 - Streaming Resource Generation Runtime

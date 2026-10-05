@@ -1,5 +1,12 @@
 # Import Authority Full Chain Audit
 
+> 历史审计（Historical audit）。本报告是 main@dfd41da（2026-09-24）时点的只读审计，当时判定
+> `FAILED` 并列出 MAJOR 风险（双 Pipeline 组合根等）。这些 MAJOR 随后由
+> [`import-authority-phase2-report.md`](./import-authority-phase2-report.md) 与
+> [`import-authority-phase3-final-report.md`](./import-authority-phase3-final-report.md)
+> 收敛解决（遗留 import 入口删除、entry pipeline 移除、单一 Pipeline）。文中 "当前 schema 已是 v44"
+> 等为审计时点事实，当前 schema 以代码为准。
+
 - 审计状态：**FAILED（存在需要在收敛重构中处理的 MAJOR 风险）**
 - 审计日期：2026-09-24
 - 审计基线：main@dfd41da

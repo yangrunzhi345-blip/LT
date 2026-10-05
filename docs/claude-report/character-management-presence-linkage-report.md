@@ -1,5 +1,13 @@
 # 角色管理 UI 与运行时在场状态断链 — 根因分析与修复方案
 
+> **历史 Agent 报告（Historical agent report）。**
+>
+> 本文件记录 2026-09-27 对该缺陷的调查与修复方案，撰写时标注为“待执行”。
+> 该修复随后已实施并提交（`6c86f70` `fix(adventure): link character presence to scene state
+> and converge quick menu`，见 `lib/features/adventure/presentation/session/screens/scene_character_management_page.dart`），
+> 工作区已干净。文中“生产代码修复未执行 / 测试运行未执行 / 工作区 18 个未提交文件”等均为
+> 撰写时状态，**不代表当前项目状态**。本文不是当前操作手册。
+
 - 状态：**待执行**（本报告只做调查与方案，未修改任何生产代码）
 - 作者：claude-opus-5.5
 - 日期：2026-09-27

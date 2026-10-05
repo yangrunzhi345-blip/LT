@@ -1,4 +1,14 @@
-# Final Post-Remediation Full Repository Audit
+# Final Post-Remediation Full Repository Audit — Round 1
+
+> **已被取代（Superseded by Round 2）。**
+>
+> 本文件是 Final Post-Remediation Full Repository Audit 的 **Round 1**，其结论
+> （R06 `NOT ACCEPTED`、R05 B4 FAIL、Final Repository Verdict `FAILED`、Milestone C
+> `NOT COMPLETE`）是当时的事实。两份 finding `FINAL-R06-01` 与 `FINAL-R05-02` 已在修复
+> 提交 `db8d237` / `09e0cef` 后关闭，**Round 2 结论为 `PASSED`**。
+> 当前程序状态与最终结论见
+> [`final-post-remediation-full-repository-audit-round-2.md`](./final-post-remediation-full-repository-audit-round-2.md)
+> 与 [`STATUS.md`](./STATUS.md)。不得据本文认定 R06 仍未通过。
 
 ## 1. Baseline
 

@@ -1,5 +1,13 @@
 # README Rewrite Report
 
+> **历史一次性报告（Historical one-time report）。**
+>
+> 本文件记录 2026-09-24 对 README 的一次性重写（基线 `8981942`）。此后 README 已多次更新
+> （最近为 `docs: align multilingual READMEs with current implementation`），重写内容已提交。
+> 文中 "the current package version is `1.1.16+19`" 与 "worktree is intentionally left
+> uncommitted" 均为撰写时状态，**不代表当前项目状态**。当前事实以根目录
+> [`README.md`](README.md)、当前代码与 git 历史为准。
+
 Date: 2026-09-24
 Baseline: `main` at `8981942`
 

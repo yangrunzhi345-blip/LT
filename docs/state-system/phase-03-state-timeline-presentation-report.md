@@ -1,5 +1,9 @@
 # Character & World State Phase 3 Report
 
+> 历史实施报告（Historical implementation report）。文末 "ready for a future state-edit/restore
+> phase" 所指的 state edit/revert/restore 已由 Phase 4 交付（见 `phase-04-user-edit-revert-report.md`）。
+> 本文保留当时状态。
+
 ## 1. Baseline
 
 - Start HEAD: `bd8ab7949d74145ade754ec6edc6682fab224d8a`

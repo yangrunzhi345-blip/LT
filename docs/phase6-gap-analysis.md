@@ -1,5 +1,10 @@
 # Phase 6 Resource Studio Gap Analysis
 
+> 历史审计（Historical audit）。下文 "Phase 6 is currently `FAILED`" 是 2026-09-17 审计时点的
+> 结论；Phase 6 随后经独立复验 `ACCEPTED`，Phase 7 随之解封（见
+> [`phase6-implementation-report.md`](./phase6-implementation-report.md)、
+> [`phase6-independent-reacceptance.md`](./phase6-independent-reacceptance.md)）。本文保留当时状态。
+
 Date: 2026-09-17  
 Baseline: `371d672` / candidate implementation `4fe587e`
 

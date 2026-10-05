@@ -1,5 +1,9 @@
 # Character & World State Phase 1 Report
 
+> 历史实施报告（Historical implementation report）。§20 "Remaining debt" 提到的 richer event
+> grouping、revision snapshot replay 与 user-facing timeline/state pages，均由后续 Phase 2/3/4/7
+> 交付（见同目录 `phase-02` / `phase-03` / `phase-04` / `phase-07` 报告）。本文保留当时状态。
+
 ## 1. Baseline
 
 - Start HEAD: `a7ee2147b2ff108bc7aa9382926e5dac0678c53b`

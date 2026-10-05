@@ -1,5 +1,14 @@
 # Error/Event Localization Migration Audit
 
+> **状态：六族 D 类 Error/Event 本地化债务的当前清单（Current debt inventory）＋ 审计基线快照。**
+>
+> 本文件是尚未完成的 Error/Event 跨层本地化迁移的权威 D 类清单，由
+> [`docs/README.md`](../README.md) 引用。文中下节 "Git and worktree baseline" 记录的是
+> 审计当时的基线（commit、schema、ARB 数量），**不代表当前仓库事实**；当前 schema、版本与
+> 依赖一律以代码（`DatabaseService.schemaVersion`、`pubspec.yaml`、git）为准。
+> 该迁移最近一次验收为 [`error-event-i18n-final-acceptance.md`](./error-event-i18n-final-acceptance.md)
+> （结论 `FAILED` / 未完成），本清单所列 D 类债务仍部分存在；"六族 D 类"本身不是当前 schema 声明。
+
 ## Git and worktree baseline
 
 - Repository: `yangrunzhi345-blip/LT`, branch `main`.
@@ -11,7 +20,10 @@
   `lib/widgets/`, `test/`, and `test/helpers/localization_test_helper.dart`.
   They are not part of this migration and must be preserved.
 - Current ARB set: `en`, `ja`, `ko`, `zh`, `zh_Hans`, `zh_Hant` (six files).
-- Current SQLite schema version is 44. This migration must not change it.
+- SQLite schema version at this audit's baseline: 44. This migration must not
+  change the schema; the authoritative current value is defined by
+  `DatabaseService.schemaVersion` and must be re-confirmed from code before any
+  editing.
 
 ## Audit method and classification
 
