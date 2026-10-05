@@ -3919,5 +3919,14 @@
   "sidebarEarlier": "以前",
   "sidebarRenameFailed": "名前の変更に失敗しました",
   "sidebarAdventureRestored": "冒険一覧に復元しました",
-  "sidebarAdventureKind": "冒険"
+  "sidebarAdventureKind": "冒険",
+  "aboutProject": "プロジェクト情報",
+  "aboutProjectDescription": "LT ナラティブワークベンチのソースリポジトリと作者の連絡先です。",
+  "aboutSourceRepository": "ソースリポジトリ",
+  "aboutContactAuthor": "作者に連絡",
+  "aboutOpenRepository": "リポジトリを開く",
+  "aboutCopyEmail": "メールアドレスをコピー",
+  "aboutSendEmail": "メールを送信",
+  "aboutEmailCopied": "メールアドレスをクリップボードにコピーしました",
+  "aboutOpenLinkFailed": "リンクを開けませんでした。手動でコピーしてアクセスしてください。"
 }

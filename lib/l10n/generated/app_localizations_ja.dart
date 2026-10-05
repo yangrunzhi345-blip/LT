@@ -6173,4 +6173,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sidebarAdventureKind => '冒険';
+
+  @override
+  String get aboutProject => 'プロジェクト情報';
+
+  @override
+  String get aboutProjectDescription => 'LT ナラティブワークベンチのソースリポジトリと作者の連絡先です。';
+
+  @override
+  String get aboutSourceRepository => 'ソースリポジトリ';
+
+  @override
+  String get aboutContactAuthor => '作者に連絡';
+
+  @override
+  String get aboutOpenRepository => 'リポジトリを開く';
+
+  @override
+  String get aboutCopyEmail => 'メールアドレスをコピー';
+
+  @override
+  String get aboutSendEmail => 'メールを送信';
+
+  @override
+  String get aboutEmailCopied => 'メールアドレスをクリップボードにコピーしました';
+
+  @override
+  String get aboutOpenLinkFailed => 'リンクを開けませんでした。手動でコピーしてアクセスしてください。';
 }

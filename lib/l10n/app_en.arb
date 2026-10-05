@@ -3919,5 +3919,14 @@
   "sidebarEarlier": "Earlier",
   "sidebarRenameFailed": "Could not rename adventure",
   "sidebarAdventureRestored": "Restored to adventures",
-  "sidebarAdventureKind": "Adventure"
+  "sidebarAdventureKind": "Adventure",
+  "aboutProject": "About",
+  "aboutProjectDescription": "Source repository and author contact for the LT narrative workbench.",
+  "aboutSourceRepository": "Source repository",
+  "aboutContactAuthor": "Contact author",
+  "aboutOpenRepository": "Open repository",
+  "aboutCopyEmail": "Copy email",
+  "aboutSendEmail": "Send email",
+  "aboutEmailCopied": "Email copied to clipboard",
+  "aboutOpenLinkFailed": "Could not open the link. Copy it manually instead."
 }

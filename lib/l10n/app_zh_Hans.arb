@@ -3919,5 +3919,14 @@
   "sidebarEarlier": "更早",
   "sidebarRenameFailed": "重命名失败，请重试",
   "sidebarAdventureRestored": "已恢复到冒险列表",
-  "sidebarAdventureKind": "冒险"
+  "sidebarAdventureKind": "冒险",
+  "aboutProject": "关于项目",
+  "aboutProjectDescription": "LT 叙事工作台的源代码仓库与作者联系方式。",
+  "aboutSourceRepository": "源代码仓库",
+  "aboutContactAuthor": "联系作者",
+  "aboutOpenRepository": "打开仓库",
+  "aboutCopyEmail": "复制邮箱",
+  "aboutSendEmail": "发送邮件",
+  "aboutEmailCopied": "邮箱已复制到剪贴板",
+  "aboutOpenLinkFailed": "无法打开链接，请手动复制后访问。"
 }

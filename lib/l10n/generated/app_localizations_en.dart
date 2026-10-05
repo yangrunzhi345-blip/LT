@@ -6497,4 +6497,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sidebarAdventureKind => 'Adventure';
+
+  @override
+  String get aboutProject => 'About';
+
+  @override
+  String get aboutProjectDescription =>
+      'Source repository and author contact for the LT narrative workbench.';
+
+  @override
+  String get aboutSourceRepository => 'Source repository';
+
+  @override
+  String get aboutContactAuthor => 'Contact author';
+
+  @override
+  String get aboutOpenRepository => 'Open repository';
+
+  @override
+  String get aboutCopyEmail => 'Copy email';
+
+  @override
+  String get aboutSendEmail => 'Send email';
+
+  @override
+  String get aboutEmailCopied => 'Email copied to clipboard';
+
+  @override
+  String get aboutOpenLinkFailed =>
+      'Could not open the link. Copy it manually instead.';
 }

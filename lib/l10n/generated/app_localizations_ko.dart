@@ -6200,4 +6200,31 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get sidebarAdventureKind => '모험';
+
+  @override
+  String get aboutProject => '프로젝트 정보';
+
+  @override
+  String get aboutProjectDescription => 'LT 내러티브 워크벤치의 소스 저장소와 작성자 연락처입니다.';
+
+  @override
+  String get aboutSourceRepository => '소스 저장소';
+
+  @override
+  String get aboutContactAuthor => '작성자에게 연락';
+
+  @override
+  String get aboutOpenRepository => '저장소 열기';
+
+  @override
+  String get aboutCopyEmail => '이메일 복사';
+
+  @override
+  String get aboutSendEmail => '이메일 보내기';
+
+  @override
+  String get aboutEmailCopied => '이메일이 클립보드에 복사되었습니다';
+
+  @override
+  String get aboutOpenLinkFailed => '링크를 열 수 없습니다. 직접 복사하여 접속해 주세요.';
 }

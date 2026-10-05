@@ -6090,6 +6090,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sidebarAdventureKind => '冒险';
+
+  @override
+  String get aboutProject => '关于项目';
+
+  @override
+  String get aboutProjectDescription => 'LT 叙事工作台的源代码仓库与作者联系方式。';
+
+  @override
+  String get aboutSourceRepository => '源代码仓库';
+
+  @override
+  String get aboutContactAuthor => '联系作者';
+
+  @override
+  String get aboutOpenRepository => '打开仓库';
+
+  @override
+  String get aboutCopyEmail => '复制邮箱';
+
+  @override
+  String get aboutSendEmail => '发送邮件';
+
+  @override
+  String get aboutEmailCopied => '邮箱已复制到剪贴板';
+
+  @override
+  String get aboutOpenLinkFailed => '无法打开链接，请手动复制后访问。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -12178,6 +12205,33 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get sidebarAdventureKind => '冒险';
+
+  @override
+  String get aboutProject => '关于项目';
+
+  @override
+  String get aboutProjectDescription => 'LT 叙事工作台的源代码仓库与作者联系方式。';
+
+  @override
+  String get aboutSourceRepository => '源代码仓库';
+
+  @override
+  String get aboutContactAuthor => '联系作者';
+
+  @override
+  String get aboutOpenRepository => '打开仓库';
+
+  @override
+  String get aboutCopyEmail => '复制邮箱';
+
+  @override
+  String get aboutSendEmail => '发送邮件';
+
+  @override
+  String get aboutEmailCopied => '邮箱已复制到剪贴板';
+
+  @override
+  String get aboutOpenLinkFailed => '无法打开链接，请手动复制后访问。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18266,4 +18320,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get sidebarAdventureKind => '冒險';
+
+  @override
+  String get aboutProject => '關於專案';
+
+  @override
+  String get aboutProjectDescription => 'LT 敘事工作台的原始碼倉庫與作者聯絡方式。';
+
+  @override
+  String get aboutSourceRepository => '原始碼倉庫';
+
+  @override
+  String get aboutContactAuthor => '聯絡作者';
+
+  @override
+  String get aboutOpenRepository => '開啟倉庫';
+
+  @override
+  String get aboutCopyEmail => '複製電子郵件';
+
+  @override
+  String get aboutSendEmail => '傳送郵件';
+
+  @override
+  String get aboutEmailCopied => '電子郵件已複製到剪貼簿';
+
+  @override
+  String get aboutOpenLinkFailed => '無法開啟連結，請手動複製後存取。';
 }

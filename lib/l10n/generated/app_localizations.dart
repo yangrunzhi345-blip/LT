@@ -11310,6 +11310,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adventure'**
   String get sidebarAdventureKind;
+
+  /// No description provided for @aboutProject.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutProject;
+
+  /// No description provided for @aboutProjectDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Source repository and author contact for the LT narrative workbench.'**
+  String get aboutProjectDescription;
+
+  /// No description provided for @aboutSourceRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Source repository'**
+  String get aboutSourceRepository;
+
+  /// No description provided for @aboutContactAuthor.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact author'**
+  String get aboutContactAuthor;
+
+  /// No description provided for @aboutOpenRepository.
+  ///
+  /// In en, this message translates to:
+  /// **'Open repository'**
+  String get aboutOpenRepository;
+
+  /// No description provided for @aboutCopyEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy email'**
+  String get aboutCopyEmail;
+
+  /// No description provided for @aboutSendEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Send email'**
+  String get aboutSendEmail;
+
+  /// No description provided for @aboutEmailCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Email copied to clipboard'**
+  String get aboutEmailCopied;
+
+  /// No description provided for @aboutOpenLinkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the link. Copy it manually instead.'**
+  String get aboutOpenLinkFailed;
 }
 
 class _AppLocalizationsDelegate

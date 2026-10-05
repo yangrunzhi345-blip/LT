@@ -10,6 +10,7 @@ import '../widgets/appearance_section.dart';
 import '../widgets/data_management_section.dart';
 import '../widgets/model_params_section.dart';
 import '../widgets/provider_config_section.dart';
+import 'about_project_page.dart';
 import 'chat_transfer_pages.dart';
 import 'language_settings_page.dart';
 import '../../../../core/responsive/app_breakpoints.dart';
@@ -91,6 +92,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               visualDensity: VisualDensity.compact,
               title: Text(settingsCategoryLabel(category, l10n)),
               onTap: () => _select(category)),
+        // About is a destination, not an in-place category: it opens its own
+        // page so the settings list stays stable and the information is not
+        // stacked onto the landing page.
+        const Divider(height: 1),
+        ListTile(
+            key: const Key('settings-about-entry'),
+            visualDensity: VisualDensity.compact,
+            title: Text(l10n.aboutProject),
+            onTap: () => AppRouter.push<void>(context,
+                pageBuilder: (_) => const AboutProjectPage())),
       ]);
       final content = ListView(
         key: ValueKey('settings-content-${_category.name}'),
