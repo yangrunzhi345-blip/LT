@@ -21,7 +21,7 @@ String localizeAppError(AppLocalizations l10n, AppDomainError error) {
     case AppErrorCode.rateLimited:
       return l10n.errorRateLimited;
     case AppErrorCode.serverError:
-      return l10n.errorUnknown;
+      return l10n.errorServerUnavailable;
     case AppErrorCode.invalidRequest:
       return l10n.errorInvalidRequest;
     case AppErrorCode.importInvalidInput:
@@ -41,6 +41,16 @@ String localizeAppError(AppLocalizations l10n, AppDomainError error) {
       return l10n.resourceErrorValidationFailed(
         p['details']?.toString() ?? l10n.errorUnknown,
       );
+    case AppErrorCode.resourceParseFailed:
+      return l10n.resourceErrorParseFailed;
+    case AppErrorCode.resourceContentInvalid:
+      return l10n.resourceErrorContentInvalid;
+    case AppErrorCode.resourcePersistenceFailed:
+      return l10n.resourceErrorPersistenceFailed;
+    case AppErrorCode.resourceLifecycleFailed:
+      return l10n.resourceErrorLifecycleFailed;
+    case AppErrorCode.resourceProviderIncomplete:
+      return l10n.resourceErrorProviderIncomplete;
     case AppErrorCode.resourceGenerationFailed:
       return l10n.resourceErrorGenerationFailed;
     case AppErrorCode.resourceConflict:

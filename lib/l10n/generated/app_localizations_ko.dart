@@ -5001,6 +5001,29 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get errorServerUnavailable => '서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도하세요.';
+
+  @override
+  String get resourceErrorParseFailed =>
+      '생성된 본문을 해석할 수 없습니다. 실패한 단락을 다시 시도하세요.';
+
+  @override
+  String get resourceErrorContentInvalid =>
+      '생성된 본문이 검증을 통과하지 못했습니다. 실패한 단락을 다시 시도하세요.';
+
+  @override
+  String get resourceErrorPersistenceFailed =>
+      '생성된 본문을 저장할 수 없습니다. 저장 공간을 확인한 후 다시 시도하세요.';
+
+  @override
+  String get resourceErrorLifecycleFailed =>
+      '생성 과정이 다음 단계로 진행되지 못했습니다. 리소스를 다시 열고 재시도하세요.';
+
+  @override
+  String get resourceErrorProviderIncomplete =>
+      '모델 서비스의 응답이 불완전합니다. 실패한 단락을 다시 시도하세요.';
+
+  @override
   String get resourceErrorGenerationFailed => '리소스 생성에 실패했습니다. 다시 시도해 주세요.';
 
   @override

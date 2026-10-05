@@ -55,6 +55,37 @@ void main() {
   });
 
   group('ResourceStudioController', () {
+    test(
+        'should restore safe failure categories on reload and clear after success',
+        () async {
+      final controller = ResourceStudioController(
+          runtime: runtime, sessionId: session.sessionId);
+      addTearDown(controller.dispose);
+      for (final code in [
+        AppErrorCode.rateLimited,
+        AppErrorCode.resourceParseFailed,
+        AppErrorCode.resourceContentInvalid,
+        AppErrorCode.resourcePersistenceFailed,
+        AppErrorCode.resourceLifecycleFailed,
+        AppErrorCode.resourceProviderIncomplete,
+        AppErrorCode.unknown
+      ]) {
+        runtime.session = session.copyWith(
+            status: StreamingLifecycleStatus.failed, errorMessage: code.name);
+        await controller.load();
+        expect(controller.state.error?.code, code);
+      }
+      runtime.session = session.copyWith(
+          status: StreamingLifecycleStatus.failed,
+          errorMessage: 'secret-history-response');
+      await controller.load();
+      expect(controller.state.error?.code, AppErrorCode.unknown);
+      runtime.session = session.copyWith(
+          status: StreamingLifecycleStatus.completed, errorMessage: '');
+      await controller.load();
+      expect(controller.state.error, isNull);
+    });
+
     test('should translate runtime events into immutable state', () async {
       final controller = ResourceStudioController(
         runtime: runtime,
@@ -548,6 +579,20 @@ void main() {
           tester.getTopLeft(outline).dx, lessThan(tester.getTopLeft(main).dx));
       expect(tester.takeException(), isNull);
     });
+
+    for (final viewport in requiredUiViewports) {
+      testWidgets('should show restored safe diagnostic at ${viewport.width}px',
+          (tester) async {
+        setViewport(tester, width: viewport.width, height: viewport.height);
+        runtime.session = session.copyWith(
+            status: StreamingLifecycleStatus.failed,
+            errorMessage: AppErrorCode.resourcePersistenceFailed.name);
+        await tester.pumpWidget(_app(runtime, textScale: 1.3));
+        await tester.pumpAndSettle();
+        expect(find.text('正文保存失败，请检查可用存储空间后重试。'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
 
     testWidgets('should map internal runtime terms before displaying an error',
         (tester) async {

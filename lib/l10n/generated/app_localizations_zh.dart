@@ -4904,6 +4904,24 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get errorServerUnavailable => '服务暂时不可用，请稍后重试。';
+
+  @override
+  String get resourceErrorParseFailed => '正文格式无法解析，请重试失败段落。';
+
+  @override
+  String get resourceErrorContentInvalid => '正文未通过校验，请重试失败段落。';
+
+  @override
+  String get resourceErrorPersistenceFailed => '正文保存失败，请检查可用存储空间后重试。';
+
+  @override
+  String get resourceErrorLifecycleFailed => '生成流程无法进入下一步，请重新打开资源后重试。';
+
+  @override
+  String get resourceErrorProviderIncomplete => '模型服务返回的响应不完整，请重试失败段落。';
+
+  @override
   String get resourceErrorGenerationFailed => '资源生成失败，请重试。';
 
   @override
@@ -11019,6 +11037,24 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get errorServerUnavailable => '服务暂时不可用，请稍后重试。';
+
+  @override
+  String get resourceErrorParseFailed => '正文格式无法解析，请重试失败段落。';
+
+  @override
+  String get resourceErrorContentInvalid => '正文未通过校验，请重试失败段落。';
+
+  @override
+  String get resourceErrorPersistenceFailed => '正文保存失败，请检查可用存储空间后重试。';
+
+  @override
+  String get resourceErrorLifecycleFailed => '生成流程无法进入下一步，请重新打开资源后重试。';
+
+  @override
+  String get resourceErrorProviderIncomplete => '模型服务返回的响应不完整，请重试失败段落。';
+
+  @override
   String get resourceErrorGenerationFailed => '资源生成失败，请重试。';
 
   @override
@@ -17132,6 +17168,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String resourceErrorValidationFailed(String details) {
     return '資源驗證失敗：$details';
   }
+
+  @override
+  String get errorServerUnavailable => '服務暫時無法使用，請稍後重試。';
+
+  @override
+  String get resourceErrorParseFailed => '正文格式無法解析，請重試失敗段落。';
+
+  @override
+  String get resourceErrorContentInvalid => '正文未通過驗證，請重試失敗段落。';
+
+  @override
+  String get resourceErrorPersistenceFailed => '正文儲存失敗，請檢查可用儲存空間後重試。';
+
+  @override
+  String get resourceErrorLifecycleFailed => '生成流程無法進入下一步，請重新開啟資源後重試。';
+
+  @override
+  String get resourceErrorProviderIncomplete => '模型服務傳回的回應不完整，請重試失敗段落。';
 
   @override
   String get resourceErrorGenerationFailed => '資源生成失敗，請重試。';

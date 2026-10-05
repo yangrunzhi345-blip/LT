@@ -22,6 +22,7 @@ import 'part_generation_validator.dart';
 import 'resource_blueprint_repository.dart';
 import 'resource_creation_pipeline.dart';
 import 'resource_generation_task_repository.dart';
+import 'resource_generation_error.dart';
 
 /// Progress snapshot of the incremental generation process.
 final class PartGenerationProgress {
@@ -420,7 +421,8 @@ final class PartGenerationCoordinator {
         });
       await _taskRepository.markRetryExhausted(
         taskId: task.taskId,
-        errorMessage: reason,
+        errorMessage:
+            resourceGenerationErrorFromCode(task.errorMessage).code.name,
       );
     }
 
@@ -862,6 +864,16 @@ final class PartGenerationCoordinator {
     var attemptId = '';
     var attemptNumber = 0;
     var commitOwned = false;
+    var failureStage = ResourceGenerationFailureStage.persistence;
+    Future<void> lifecycle(FutureOr<void> Function() callback) async {
+      try {
+        await callback();
+      } catch (_) {
+        failureStage = ResourceGenerationFailureStage.lifecycle;
+        rethrow;
+      }
+    }
+
     try {
       // The repository owns the attempt ordinal: it computes and persists
       // `attempt_number` inside the same transaction that creates the row, so
@@ -882,19 +894,20 @@ final class PartGenerationCoordinator {
           'attemptNumber': attemptNumber,
         });
 
-      await callbacks?.onPartStarted?.call(
-        generationId: generationId,
-        resourceId: ResourceId(task.resourceId),
-        partId: PartId(task.partId),
-        taskId: task.taskId,
-        attemptId: attemptId,
-        attemptNumber: attemptNumber,
-      );
+      failureStage = ResourceGenerationFailureStage.lifecycle;
+      await lifecycle(() => callbacks?.onPartStarted?.call(
+            generationId: generationId,
+            resourceId: ResourceId(task.resourceId),
+            partId: PartId(task.partId),
+            taskId: task.taskId,
+            attemptId: attemptId,
+            attemptNumber: attemptNumber,
+          ));
     } catch (e) {
       await _convergeFailedAttempt(
         task: task,
         attemptId: attemptId,
-        error: e,
+        error: resourceGenerationError(e, stage: failureStage),
         commitOwned: commitOwned,
         cancelTasksOnCancellation: cancelTasksOnCancellation,
         taskHandle: taskHandle,
@@ -923,6 +936,7 @@ final class PartGenerationCoordinator {
       }
 
       // 2. Fetch completed dependencies content for context
+      failureStage = ResourceGenerationFailureStage.persistence;
       final depsMap = await _taskRepository.getPartsContent(task.dependencies);
       final depSummaries = <DependencyPartSummary>[];
       for (final depId in task.dependencies) {
@@ -936,6 +950,7 @@ final class PartGenerationCoordinator {
         }
       }
 
+      failureStage = ResourceGenerationFailureStage.unknown;
       // 3. Find Section and Part metadata from Blueprint
       final rawPartId = _stripPrefix(task.partId, '${task.resourceId}_');
       final rawSectionId = _stripPrefix(task.sectionId, '${task.resourceId}_');
@@ -993,16 +1008,19 @@ final class PartGenerationCoordinator {
         ..setCounter('prompt.lastInstructionLength', instruction.length)
         ..observeMax('prompt.maxInstructionLength', instruction.length);
 
+      failureStage = ResourceGenerationFailureStage.persistence;
       await _taskRepository.recordValidating(
         taskId: task.taskId,
         attemptId: attemptId,
       );
+      failureStage = ResourceGenerationFailureStage.unknown;
 
       if (taskHandle?.isCancelled == true) {
         await convergeCancellation();
         return;
       }
 
+      failureStage = ResourceGenerationFailureStage.unknown;
       final accumulator = GenerationPatchAccumulator(
         expectedGenerationId: request.generationId,
         expectedResourceId: request.resourceId,
@@ -1097,15 +1115,15 @@ final class PartGenerationCoordinator {
           // Read the accumulator at execution time: after queue coalescing the
           // latest snapshot is always the one published.
           enqueuePresentationCallback(() async {
-            await callbacks?.onPartPreviewUpdated?.call(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-              accumulatedContent: accumulator.currentText,
-              accumulatedLength: accumulator.currentLength,
-            );
+            await lifecycle(() => callbacks?.onPartPreviewUpdated?.call(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                  accumulatedContent: accumulator.currentText,
+                  accumulatedLength: accumulator.currentLength,
+                ));
           });
         }
 
@@ -1114,7 +1132,12 @@ final class PartGenerationCoordinator {
         void dispatchLine(String line) {
           if (line.trim().isEmpty) return;
           final patch = patchDecoder.decodeLine(line);
-          accumulator.applyPatch(patch);
+          try {
+            accumulator.applyPatch(patch);
+          } catch (_) {
+            failureStage = ResourceGenerationFailureStage.parsing;
+            rethrow;
+          }
           GenerationDiagnostics.instance
             ..counter('protocol.patchApplied')
             ..setCounter('protocol.lastPatchSeq', patch.sequence)
@@ -1130,15 +1153,15 @@ final class PartGenerationCoordinator {
           if (callbacks?.onPatchReceived != null) {
             final accumulatedLength = accumulator.currentLength;
             enqueuePresentationCallback(() async {
-              await callbacks?.onPatchReceived?.call(
-                generationId: generationId,
-                resourceId: request.resourceId,
-                partId: request.partId,
-                taskId: task.taskId,
-                attemptId: attemptId,
-                patch: patch,
-                accumulatedLength: accumulatedLength,
-              );
+              await lifecycle(() => callbacks?.onPatchReceived?.call(
+                    generationId: generationId,
+                    resourceId: request.resourceId,
+                    partId: request.partId,
+                    taskId: task.taskId,
+                    attemptId: attemptId,
+                    patch: patch,
+                    accumulatedLength: accumulatedLength,
+                  ));
             });
           }
           schedulePreviewPublish(force: false);
@@ -1199,27 +1222,30 @@ final class PartGenerationCoordinator {
           diagMark('CALLBACK_DRAIN_BEGIN');
           if (callbackDrain != null) await callbackDrain;
           diagMark('CALLBACK_DRAIN_END');
+          failureStage = ResourceGenerationFailureStage.parsing;
           response = accumulator.toResponse();
+          failureStage = ResourceGenerationFailureStage.unknown;
         } catch (e) {
           if (e is PartGenerationParseException ||
               e is GenerationPatchParseException ||
               e is PatchSequenceGapException ||
               e is PatchCursorMismatchException) {
-            await callbacks?.onValidationStarted?.call(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-            );
-            await callbacks?.onValidationFailed?.call(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-              errorMessage: _failureCode(e),
-            );
+            await lifecycle(() => callbacks?.onValidationStarted?.call(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                ));
+            await lifecycle(() => callbacks?.onValidationFailed?.call(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                  errorMessage:
+                      resourceGenerationError(e, stage: failureStage).code.name,
+                ));
           }
           rethrow;
         }
@@ -1233,55 +1259,59 @@ final class PartGenerationCoordinator {
         try {
           // The prompt contract is NDJSON regardless of whether transport
           // delivers it incrementally or as one collected completion.
+          failureStage = ResourceGenerationFailureStage.parsing;
           final patches = patchDecoder.decodeNdjson(rawCompletion);
           for (final patch in patches) {
             accumulator.applyPatch(patch);
-            await callbacks?.onPatchReceived?.call(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-              patch: patch,
-              accumulatedLength: accumulator.currentLength,
-            );
+            await lifecycle(() => callbacks?.onPatchReceived?.call(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                  patch: patch,
+                  accumulatedLength: accumulator.currentLength,
+                ));
           }
           // Presentation-plane final flush: mirror the streaming path so the
           // Studio receives one accumulated snapshot even when the transport
           // is non-streaming.
           final previewCallback = callbacks?.onPartPreviewUpdated;
           if (previewCallback != null) {
-            await previewCallback(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-              accumulatedContent: accumulator.currentText,
-              accumulatedLength: accumulator.currentLength,
-            );
+            await lifecycle(() => previewCallback(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                  accumulatedContent: accumulator.currentText,
+                  accumulatedLength: accumulator.currentLength,
+                ));
           }
+          failureStage = ResourceGenerationFailureStage.parsing;
           response = accumulator.toResponse();
+          failureStage = ResourceGenerationFailureStage.unknown;
         } catch (e) {
           if (e is PartGenerationParseException ||
               e is GenerationPatchParseException ||
               e is PatchSequenceGapException ||
               e is PatchCursorMismatchException) {
-            await callbacks?.onValidationStarted?.call(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-            );
-            await callbacks?.onValidationFailed?.call(
-              generationId: generationId,
-              resourceId: request.resourceId,
-              partId: request.partId,
-              taskId: task.taskId,
-              attemptId: attemptId,
-              errorMessage: _failureCode(e),
-            );
+            await lifecycle(() => callbacks?.onValidationStarted?.call(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                ));
+            await lifecycle(() => callbacks?.onValidationFailed?.call(
+                  generationId: generationId,
+                  resourceId: request.resourceId,
+                  partId: request.partId,
+                  taskId: task.taskId,
+                  attemptId: attemptId,
+                  errorMessage:
+                      resourceGenerationError(e, stage: failureStage).code.name,
+                ));
           }
           rethrow;
         }
@@ -1297,13 +1327,13 @@ final class PartGenerationCoordinator {
         {'chars': response.content.length},
       );
       GenerationDiagnostics.instance.runtimeHeartbeat('part.validationBegin');
-      await callbacks?.onValidationStarted?.call(
-        generationId: generationId,
-        resourceId: request.resourceId,
-        partId: request.partId,
-        taskId: task.taskId,
-        attemptId: attemptId,
-      );
+      await lifecycle(() => callbacks?.onValidationStarted?.call(
+            generationId: generationId,
+            resourceId: request.resourceId,
+            partId: request.partId,
+            taskId: task.taskId,
+            attemptId: attemptId,
+          ));
 
       try {
         PartGenerationValidator.validate(request: request, response: response);
@@ -1311,27 +1341,28 @@ final class PartGenerationCoordinator {
           'PART[${task.partId}] VALIDATION_END',
           {'passed': true},
         );
-        await callbacks?.onValidationPassed?.call(
-          generationId: generationId,
-          resourceId: request.resourceId,
-          partId: request.partId,
-          taskId: task.taskId,
-          attemptId: attemptId,
-          characterCount: response.content.length,
-        );
+        await lifecycle(() => callbacks?.onValidationPassed?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              characterCount: response.content.length,
+            ));
       } catch (e) {
         GenerationDiagnostics.instance.mark(
           'PART[${task.partId}] VALIDATION_END',
           {'passed': false, 'error': e.toString()},
         );
-        await callbacks?.onValidationFailed?.call(
-          generationId: generationId,
-          resourceId: request.resourceId,
-          partId: request.partId,
-          taskId: task.taskId,
-          attemptId: attemptId,
-          errorMessage: _failureCode(e),
-        );
+        await lifecycle(() => callbacks?.onValidationFailed?.call(
+              generationId: generationId,
+              resourceId: request.resourceId,
+              partId: request.partId,
+              taskId: task.taskId,
+              attemptId: attemptId,
+              errorMessage:
+                  resourceGenerationError(e, stage: failureStage).code.name,
+            ));
         rethrow;
       }
 
@@ -1349,13 +1380,14 @@ final class PartGenerationCoordinator {
         ..mark('PART[${task.partId}] BEFORE_COMMIT', {
           'chars': response.content.length,
         });
-      await callbacks?.onBeforeCommit?.call(
-        generationId: generationId,
-        resourceId: request.resourceId,
-        partId: request.partId,
-        taskId: task.taskId,
-        attemptId: attemptId,
-      );
+      failureStage = ResourceGenerationFailureStage.lifecycle;
+      await lifecycle(() => callbacks?.onBeforeCommit?.call(
+            generationId: generationId,
+            resourceId: request.resourceId,
+            partId: request.partId,
+            taskId: task.taskId,
+            attemptId: attemptId,
+          ));
 
       // 6. Atomically commit content, guarded by the source token observed when
       // this attempt started. A user edit since then turns this into a typed
@@ -1364,6 +1396,7 @@ final class PartGenerationCoordinator {
         ..runtimeHeartbeat('part.dbWriteBegin')
         ..mark('PART[${task.partId}] DB_PART_WRITE_BEGIN');
       final dbWriteWatch = Stopwatch()..start();
+      failureStage = ResourceGenerationFailureStage.persistence;
       await _taskRepository.commitPartContent(
         response: response,
         taskId: task.taskId,
@@ -1378,14 +1411,15 @@ final class PartGenerationCoordinator {
         });
 
       GenerationDiagnostics.instance.runtimeHeartbeat('part.committed');
-      await callbacks?.onPartCommitted?.call(
-        generationId: generationId,
-        resourceId: request.resourceId,
-        partId: request.partId,
-        taskId: task.taskId,
-        attemptId: attemptId,
-        characterCount: response.content.length,
-      );
+      failureStage = ResourceGenerationFailureStage.lifecycle;
+      await lifecycle(() => callbacks?.onPartCommitted?.call(
+            generationId: generationId,
+            resourceId: request.resourceId,
+            partId: request.partId,
+            taskId: task.taskId,
+            attemptId: attemptId,
+            characterCount: response.content.length,
+          ));
       GenerationDiagnostics.instance
         ..runtimeHeartbeat('part.completedEvent')
         ..mark('PART[${task.partId}] COMMIT_END');
@@ -1393,7 +1427,7 @@ final class PartGenerationCoordinator {
       await _convergeFailedAttempt(
         task: task,
         attemptId: attemptId,
-        error: e,
+        error: resourceGenerationError(e, stage: failureStage),
         commitOwned: commitOwned,
         cancelTasksOnCancellation: cancelTasksOnCancellation,
         taskHandle: taskHandle,
@@ -1454,15 +1488,5 @@ final class PartGenerationCoordinator {
     return text;
   }
 
-  String _failureCode(Object error) {
-    if (error is PartGenerationParseException ||
-        error is GenerationPatchParseException) {
-      return 'resourceValidationFailed';
-    }
-    if (error is PatchSequenceGapException ||
-        error is PatchCursorMismatchException) {
-      return 'resourceConflict';
-    }
-    return 'resourceGenerationFailed';
-  }
+  String _failureCode(Object error) => resourceGenerationError(error).code.name;
 }

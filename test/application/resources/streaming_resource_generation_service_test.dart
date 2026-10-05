@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/part_generation_coordinator.dart';
+import 'package:lt_dialogue/application/llm/llm_gateway.dart';
 import 'package:lt_dialogue/application/resources/resource_blueprint_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
@@ -16,6 +17,7 @@ import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/services/api_error.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -137,12 +139,13 @@ void main() {
 
   Future<({String resourceId, String blueprintId, String sessionId})>
       setupResourceAndBlueprint({
+    ResourceType resourceType = ResourceType.worldview,
     bool autoConfirm = true,
     bool secondPartDependsOnFirst = true,
     bool includeThirdPart = false,
   }) async {
     final creationResult = await pipeline.create(ResourceCreationRequest(
-      resourceType: ResourceType.worldview,
+      resourceType: resourceType,
       method: CreationMethod.aiReference,
       name: '神代天穹',
       idempotencyKey: 'idemp_${DateTime.now().microsecondsSinceEpoch}',
@@ -152,7 +155,7 @@ void main() {
     final bp = ResourceBlueprint(
       blueprintId: 'bp_${DateTime.now().microsecondsSinceEpoch}',
       sessionId: creationResult.sessionId!,
-      resourceType: ResourceType.worldview,
+      resourceType: resourceType,
       suggestedName: '神代天穹',
       summary: '神代天穹的宏大世界观',
       sections: [
@@ -207,6 +210,198 @@ void main() {
       sessionId: creationResult.sessionId!,
     );
   }
+
+  group('StreamingResourceGenerationService failure diagnostics', () {
+    for (final scenario in <(String, Object?, String)>[
+      (
+        'network',
+        const ApiError(
+            type: ApiErrorType.rateLimited,
+            message: 'secret-provider-response'),
+        'rateLimited'
+      ),
+      ('parser', null, 'resourceParseFailed'),
+      ('partial', null, 'resourceParseFailed'),
+      ('streamingMalformed', null, 'resourceParseFailed'),
+      ('streamingPartial', null, 'resourceParseFailed'),
+      ('gap', null, 'resourceParseFailed'),
+      ('cursor', null, 'resourceParseFailed'),
+      ('empty', null, 'resourceContentInvalid'),
+      ('persistence', null, 'resourcePersistenceFailed'),
+      ('lifecycle', null, 'resourceLifecycleFailed'),
+      ('lifecyclePreview', null, 'resourceLifecycleFailed'),
+      (
+        'incomplete',
+        LLMResponseIncompleteException(const LLMStreamResult(
+            content: 'secret-provider-response',
+            finishReason: LLMFinishReason.length,
+            responseCompleted: false)),
+        'resourceProviderIncomplete'
+      ),
+      ('unknown', StateError('secret-provider-response timeout'), 'unknown'),
+      ('foreignAttempt', StateError('secret-provider-response'), 'unknown'),
+    ]) {
+      test('should retain ${scenario.$1} through character terminal and reload',
+          () async {
+        final setup = await setupResourceAndBlueprint(
+            resourceType: ResourceType.character);
+        final successfulCompleter = createMockCompleter();
+        var shouldSucceed = false;
+        final dbForFault = await DatabaseService.database;
+        if (scenario.$1 == 'persistence') {
+          await dbForFault.execute(
+              "CREATE TRIGGER fail_part_write BEFORE UPDATE OF content ON resource_parts BEGIN SELECT RAISE(ABORT, 'secret-storage-detail'); END");
+        }
+        final diagnosticSessionRepo = scenario.$1.startsWith('lifecycle')
+            ? _LifecycleFailingSessionRepository(
+                failPreview: scenario.$1 == 'lifecyclePreview')
+            : sessionRepo;
+        Future<String> diagnosticCompleter(
+            {required String systemPrompt,
+            required String instruction,
+            required LlmTask task,
+            GenerationTaskHandle? taskHandle}) async {
+          if (shouldSucceed ||
+              scenario.$1 == 'persistence' ||
+              scenario.$1.startsWith('lifecycle')) {
+            return successfulCompleter(
+                systemPrompt: systemPrompt,
+                instruction: instruction,
+                task: task,
+                taskHandle: taskHandle);
+          }
+          if (scenario.$2 case final error?) throw error;
+          if (scenario.$1 == 'gap') {
+            return '{"sequence":0,"op":"start_part"}\n'
+                '{"sequence":2,"op":"append_text","text_delta":"secret-body"}';
+          }
+          if (scenario.$1 == 'cursor') {
+            return '{"sequence":0,"op":"start_part"}\n'
+                '{"sequence":1,"op":"append_text","text_delta":"secret-body","cursor":99}';
+          }
+          if (scenario.$1 == 'partial' || scenario.$1 == 'streamingPartial') {
+            return '{"sequence":0,"op":"start_part"}\n'
+                '{"sequence":1,"op":"append_text","text_delta":"secret-body"}';
+          }
+          if (scenario.$1 == 'empty') {
+            return '{"sequence":0,"op":"start_part"}\n'
+                '{"sequence":1,"op":"append_text","text_delta":"   "}\n'
+                '{"sequence":2,"op":"complete_part"}';
+          }
+          return 'secret-provider-response malformed';
+        }
+
+        final coordinator = PartGenerationCoordinator(
+          taskRepository: taskRepo,
+          blueprintRepository: blueprintRepo,
+          pipeline: pipeline,
+          completer:
+              scenario.$1.startsWith('streaming') ? null : diagnosticCompleter,
+          gateway: scenario.$1.startsWith('streaming')
+              ? _DiagnosticStreamingGateway(diagnosticCompleter)
+              : null,
+        );
+        final service = StreamingResourceGenerationService(
+          sessionRepository: diagnosticSessionRepo,
+          taskRepository: scenario.$1 == 'foreignAttempt'
+              ? _ForeignAttemptTaskRepository()
+              : taskRepo,
+          blueprintRepository: blueprintRepo,
+          coordinator: coordinator,
+        );
+        addTearDown(service.dispose);
+        final events = <GenerationRuntimeEvent>[];
+        final subscription = service.eventStream.listen(events.add);
+        addTearDown(subscription.cancel);
+        final session = await service.createSession(
+            resourceId: setup.resourceId,
+            blueprintId: setup.blueprintId,
+            creationSessionId: setup.sessionId);
+        expect(
+            await service.startGeneration(
+                sessionId: session.sessionId, maxRetriesPerPart: 0),
+            isFalse);
+        await Future<void>.delayed(Duration.zero);
+        final failed = (await taskRepo.findTasksForResource(setup.resourceId))
+            .firstWhere((task) => task.status == 'failed');
+        expect(failed.errorMessage, scenario.$3);
+        final db = await DatabaseService.database;
+        final attempts = await db.query(
+            PartGenerationTaskRepositoryImpl.attemptsTable,
+            where: 'attempt_id = ?',
+            whereArgs: [failed.currentAttemptId]);
+        expect(attempts.single['error_message'], scenario.$3);
+        final terminal = events.whereType<GenerationFailed>().single;
+        expect(terminal.failedPartId?.value, failed.partId);
+        expect(terminal.error?.code.name, scenario.$3);
+        expect(terminal.errorMessage, scenario.$3);
+        expect((await sessionRepo.findSession(session.sessionId))?.errorMessage,
+            scenario.$3);
+        if (scenario.$1 == 'parser' || scenario.$1 == 'empty') {
+          expect(events.whereType<ValidationFailed>().first.error?.code.name,
+              scenario.$3);
+        }
+        expect(
+            await service.retryPart(session.sessionId, failed.partId), isFalse);
+        await Future<void>.delayed(Duration.zero);
+        expect(events.whereType<GenerationFailed>().last.error?.code.name,
+            scenario.$3);
+        expect((await sessionRepo.findSession(session.sessionId))?.errorMessage,
+            scenario.$3);
+        if (scenario.$1 == 'persistence') {
+          await dbForFault.execute('DROP TRIGGER fail_part_write');
+        }
+        if (diagnosticSessionRepo is _LifecycleFailingSessionRepository) {
+          diagnosticSessionRepo.shouldFail = false;
+        }
+        shouldSucceed = true;
+        expect(
+            await service.retryPart(session.sessionId, failed.partId), isTrue);
+        final retriedTask = await taskRepo.findTask(failed.taskId);
+        expect(retriedTask?.status, 'completed');
+        expect(retriedTask?.errorMessage, isEmpty);
+        expect((await sessionRepo.findSession(session.sessionId))?.errorMessage,
+            isEmpty);
+      });
+    }
+  });
+
+  group('Resource generation diagnostic success compatibility', () {
+    for (final type in [ResourceType.character, ResourceType.worldview]) {
+      test(
+          'should commit legal ${type.name} text including UTF16 cursor positions',
+          () async {
+        final setup = await setupResourceAndBlueprint(resourceType: type);
+        final tasks = await taskRepo.findTasksForResource(setup.resourceId);
+        final coordinator = PartGenerationCoordinator(
+            taskRepository: taskRepo,
+            blueprintRepository: blueprintRepo,
+            pipeline: pipeline,
+            completer: createMockCompleter(customResponses: {
+              for (final task in tasks) task.partId: '用户内容 🐉 保持原样。',
+            }));
+        final service = StreamingResourceGenerationService(
+            sessionRepository: sessionRepo,
+            taskRepository: taskRepo,
+            blueprintRepository: blueprintRepo,
+            coordinator: coordinator);
+        addTearDown(service.dispose);
+        final session = await service.createSession(
+            resourceId: setup.resourceId,
+            blueprintId: setup.blueprintId,
+            creationSessionId: setup.sessionId);
+        expect(await service.startGeneration(sessionId: session.sessionId),
+            isTrue);
+        expect((await sessionRepo.findSession(session.sessionId))?.errorMessage,
+            isEmpty);
+        final content = await taskRepo
+            .getPartsContent(tasks.map((task) => task.partId).toList());
+        for (final task in tasks) {
+          expect(content[task.partId]?.content, '用户内容 🐉 保持原样。');
+        }
+      });
+    }
+  });
 
   group('StreamingResourceGenerationService - Normal Flow', () {
     test('serializes independent parts for a single-active-part session',
@@ -1142,4 +1337,90 @@ final class _AfterCommitBlockingTaskRepository
       await releaseCommitReturn.future;
     }
   }
+}
+
+final class _LifecycleFailingSessionRepository
+    extends StreamingGenerationSessionRepositoryImpl {
+  _LifecycleFailingSessionRepository({this.failPreview = false})
+      : super(getDb: () => DatabaseService.database);
+  final bool failPreview;
+  bool shouldFail = true;
+  @override
+  Future<void> updateStatus(
+    String sessionId,
+    StreamingLifecycleStatus status, {
+    String? currentPartId,
+    String? currentTaskId,
+    String? currentAttemptId,
+    String? errorMessage,
+    bool clearActiveTask = false,
+  }) {
+    if (shouldFail &&
+        (failPreview
+            ? status == StreamingLifecycleStatus.receivingPatch ||
+                status == StreamingLifecycleStatus.committing
+            : currentPartId != null)) {
+      throw StateError('secret-lifecycle-detail');
+    }
+    return super.updateStatus(sessionId, status,
+        currentPartId: currentPartId,
+        currentTaskId: currentTaskId,
+        currentAttemptId: currentAttemptId,
+        errorMessage: errorMessage,
+        clearActiveTask: clearActiveTask);
+  }
+}
+
+final class _ForeignAttemptTaskRepository
+    extends PartGenerationTaskRepositoryImpl {
+  _ForeignAttemptTaskRepository()
+      : super(getDb: () => DatabaseService.database);
+  @override
+  Future<ResourceGenerationTask?> findTaskByPartId(String partId) async {
+    final task = await super.findTaskByPartId(partId);
+    if (task == null || task.status != 'failed') return task;
+    // Model a newer foreign attempt observed only by the service epilogue.
+    return ResourceGenerationTask(
+        taskId: task.taskId,
+        blueprintId: task.blueprintId,
+        resourceId: task.resourceId,
+        sectionId: task.sectionId,
+        partId: task.partId,
+        promptGoal: task.promptGoal,
+        estimatedLength: task.estimatedLength,
+        dependencies: task.dependencies,
+        status: task.status,
+        currentAttemptId: 'foreign-attempt',
+        errorMessage: 'resourcePersistenceFailed');
+  }
+}
+
+final class _DiagnosticStreamingGateway
+    implements LlmGateway, PartGenerationStreamingGateway {
+  _DiagnosticStreamingGateway(this.completer);
+  final PartRawCompleter completer;
+  @override
+  bool get isConfigured => true;
+  @override
+  Future<void> streamPartGeneration({
+    required String systemPrompt,
+    required String instruction,
+    required LlmTask task,
+    required void Function(String chunk) onChunk,
+    GenerationTaskHandle? taskHandle,
+  }) async {
+    final output = await completer(
+        systemPrompt: systemPrompt,
+        instruction: instruction,
+        task: task,
+        taskHandle: taskHandle);
+    // Cross-line chunks exercise the production decoder and final partial flush.
+    final midpoint = output.length ~/ 2;
+    onChunk(output.substring(0, midpoint));
+    onChunk(output.substring(midpoint));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError(invocation.memberName.toString());
 }

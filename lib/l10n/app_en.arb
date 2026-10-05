@@ -3373,6 +3373,12 @@
     }
   },
   "resourceErrorValidationFailed": "Resource validation failed: {details}",
+  "errorServerUnavailable": "The service is temporarily unavailable. Please retry later.",
+  "resourceErrorParseFailed": "The generated text could not be read. Retry the failed part.",
+  "resourceErrorContentInvalid": "The generated text did not pass validation. Retry the failed part.",
+  "resourceErrorPersistenceFailed": "The generated text could not be saved. Check available storage, then retry.",
+  "resourceErrorLifecycleFailed": "Generation could not advance to the next step. Reopen the resource and retry.",
+  "resourceErrorProviderIncomplete": "The provider returned an incomplete response. Retry the failed part.",
   "resourceErrorGenerationFailed": "Resource generation failed. Please try again.",
   "resourceErrorConflict": "The resource changed. Reload and try again.",
   "adventureErrorAssetMissing": "\"{name}\" is not ready for this adventure.",

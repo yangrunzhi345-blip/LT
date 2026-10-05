@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../core/debug/generation_diagnostics.dart';
 import '../../domain/resources/resource_contracts.dart';
-import '../../domain/errors/app_error.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/resources/resource_blueprint.dart';
@@ -13,6 +12,7 @@ import 'part_generation_coordinator.dart';
 import 'resource_blueprint_repository.dart';
 import 'resource_creation_pipeline.dart';
 import 'resource_generation_task_repository.dart';
+import 'resource_generation_error.dart';
 import 'streaming_generation_session_repository.dart';
 
 /// Core application service driving the streaming resource generation runtime lifecycle.
@@ -442,9 +442,7 @@ final class StreamingResourceGenerationService {
           taskId: taskId,
           attemptId: attemptId,
           errorMessage: errorMessage,
-          error: const AppDomainError(
-            code: AppErrorCode.resourceValidationFailed,
-          ),
+          error: resourceGenerationErrorFromCode(errorMessage),
           timestamp: DateTime.now(),
         ));
       },
@@ -505,6 +503,7 @@ final class StreamingResourceGenerationService {
       },
     );
 
+    var failureStage = ResourceGenerationFailureStage.unknown;
     try {
       final success = await _coordinator.generateAllParts(
         blueprintId: session.blueprintId,
@@ -516,6 +515,7 @@ final class StreamingResourceGenerationService {
         callbacks: callbacks,
       );
 
+      failureStage = ResourceGenerationFailureStage.lifecycle;
       final requestedStop = _requestedStops[sessionId] ??
           (taskHandle.isCancelled ? StreamingLifecycleStatus.cancelled : null);
       if (requestedStop != null) {
@@ -540,6 +540,7 @@ final class StreamingResourceGenerationService {
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.completed,
+          errorMessage: '',
           clearActiveTask: true,
         );
 
@@ -560,21 +561,22 @@ final class StreamingResourceGenerationService {
         ));
         return true;
       } else {
-        final failedPartId = await _failedPartId(session.resourceId.value);
+        final failure = await _failedTask(session.resourceId.value);
+        final failedPartId = failure == null ? null : PartId(failure.partId);
+        final failureError =
+            resourceGenerationErrorFromCode(failure?.errorMessage ?? 'unknown');
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.failed,
-          errorMessage: 'One or more required parts failed generation',
+          errorMessage: failureError.code.name,
           clearActiveTask: failedPartId == null,
         );
 
         _emit(GenerationFailed(
           generationId: sessionId,
           resourceId: session.resourceId,
-          errorMessage: 'One or more required parts failed generation',
-          error: const AppDomainError(
-            code: AppErrorCode.resourceGenerationFailed,
-          ),
+          errorMessage: failureError.code.name,
+          error: failureError,
           failedPartId: failedPartId,
           timestamp: DateTime.now(),
         ));
@@ -593,7 +595,8 @@ final class StreamingResourceGenerationService {
           );
         }
       }
-      const errorMessage = 'resourceGenerationFailed';
+      final failureError = resourceGenerationError(e, stage: failureStage);
+      final errorMessage = failureError.code.name;
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.failed,
@@ -604,9 +607,7 @@ final class StreamingResourceGenerationService {
         generationId: sessionId,
         resourceId: session.resourceId,
         errorMessage: errorMessage,
-        error: const AppDomainError(
-          code: AppErrorCode.resourceGenerationFailed,
-        ),
+        error: failureError,
         failedPartId: await _failedPartId(session.resourceId.value),
         timestamp: DateTime.now(),
       ));
@@ -686,14 +687,17 @@ final class StreamingResourceGenerationService {
     );
   }
 
-  Future<PartId?> _failedPartId(String resourceId) async {
+  Future<ResourceGenerationTask?> _failedTask(String resourceId) async {
     final tasks = await _taskRepository.findTasksForResource(resourceId);
     for (final task in tasks) {
-      if (task.status == PartTaskStatus.failed.storageValue) {
-        return PartId(task.partId);
-      }
+      if (task.status == PartTaskStatus.failed.storageValue) return task;
     }
     return null;
+  }
+
+  Future<PartId?> _failedPartId(String resourceId) async {
+    final task = await _failedTask(resourceId);
+    return task == null ? null : PartId(task.partId);
   }
 
   /// Explicitly cancels generation for [sessionId].
@@ -800,6 +804,8 @@ final class StreamingResourceGenerationService {
       );
     }
 
+    String? retryAttemptId;
+    var failureStage = ResourceGenerationFailureStage.lifecycle;
     try {
       await _sessionRepository.updateStatus(
         sessionId,
@@ -807,6 +813,7 @@ final class StreamingResourceGenerationService {
         currentPartId: partId,
       );
 
+      failureStage = ResourceGenerationFailureStage.unknown;
       final success = await _coordinator.retrySinglePart(
         blueprintId: session.blueprintId,
         partId: partId,
@@ -821,6 +828,7 @@ final class StreamingResourceGenerationService {
             required attemptId,
             required attemptNumber,
           }) {
+            retryAttemptId = attemptId;
             _emit(PartStarted(
               generationId: sessionId,
               resourceId: resourceId,
@@ -905,6 +913,7 @@ final class StreamingResourceGenerationService {
               taskId: taskId,
               attemptId: attemptId,
               errorMessage: errorMessage,
+              error: resourceGenerationErrorFromCode(errorMessage),
               timestamp: DateTime.now(),
             ));
           },
@@ -941,6 +950,7 @@ final class StreamingResourceGenerationService {
         ),
       );
 
+      failureStage = ResourceGenerationFailureStage.lifecycle;
       // Refresh completed parts count
       final allTasks =
           await _taskRepository.findTasksForResource(session.resourceId.value);
@@ -958,6 +968,7 @@ final class StreamingResourceGenerationService {
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.completed,
+          errorMessage: '',
           clearActiveTask: true,
         );
         _emit(GenerationCompleted(
@@ -979,9 +990,15 @@ final class StreamingResourceGenerationService {
             clearActiveTask: true,
           );
         }
+        final remainingFailure = await _failedTask(session.resourceId.value);
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.paused,
+          errorMessage: remainingFailure == null
+              ? ''
+              : resourceGenerationErrorFromCode(remainingFailure.errorMessage)
+                  .code
+                  .name,
           clearActiveTask: true,
         );
       }
@@ -992,6 +1009,8 @@ final class StreamingResourceGenerationService {
         session: session,
         partId: partId,
         error: error,
+        failureStage: failureStage,
+        retryAttemptId: retryAttemptId,
       );
       return false;
     }
@@ -1001,9 +1020,18 @@ final class StreamingResourceGenerationService {
     required StreamingGenerationSession session,
     required String partId,
     required Object error,
+    required String? retryAttemptId,
+    required ResourceGenerationFailureStage failureStage,
   }) async {
-    // Persist only a stable classification. Technical details stay in logs.
-    const errorMessage = 'resourceGenerationFailed';
+    // Use only the failure owned by this retry, never an earlier attempt.
+    final task = await _taskRepository.findTaskByPartId(partId);
+    final failureError = task != null &&
+            task.status == PartTaskStatus.failed.storageValue &&
+            retryAttemptId != null &&
+            task.currentAttemptId == retryAttemptId
+        ? resourceGenerationErrorFromCode(task.errorMessage)
+        : resourceGenerationError(error, stage: failureStage);
+    final errorMessage = failureError.code.name;
     final current = await _sessionRepository.findSession(session.sessionId);
     if (current != null &&
         StreamingLifecycleStateMachine.canTransition(
@@ -1021,9 +1049,7 @@ final class StreamingResourceGenerationService {
       generationId: session.sessionId,
       resourceId: session.resourceId,
       errorMessage: errorMessage,
-      error: const AppDomainError(
-        code: AppErrorCode.resourceGenerationFailed,
-      ),
+      error: failureError,
       failedPartId: PartId(partId),
       timestamp: DateTime.now(),
     ));

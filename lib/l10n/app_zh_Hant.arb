@@ -3443,6 +3443,12 @@
     }
   },
   "resourceErrorValidationFailed": "資源驗證失敗：{details}",
+  "errorServerUnavailable": "服務暫時無法使用，請稍後重試。",
+  "resourceErrorParseFailed": "正文格式無法解析，請重試失敗段落。",
+  "resourceErrorContentInvalid": "正文未通過驗證，請重試失敗段落。",
+  "resourceErrorPersistenceFailed": "正文儲存失敗，請檢查可用儲存空間後重試。",
+  "resourceErrorLifecycleFailed": "生成流程無法進入下一步，請重新開啟資源後重試。",
+  "resourceErrorProviderIncomplete": "模型服務傳回的回應不完整，請重試失敗段落。",
   "resourceErrorGenerationFailed": "資源生成失敗，請重試。",
   "resourceErrorConflict": "資源已變更，請重新載入後重試。",
   "adventureErrorAssetMissing": "「{name}」尚未準備好，無法開始冒險。",

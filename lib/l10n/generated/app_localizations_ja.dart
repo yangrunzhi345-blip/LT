@@ -4976,6 +4976,28 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get errorServerUnavailable => 'サービスを一時的に利用できません。しばらくしてから再試行してください。';
+
+  @override
+  String get resourceErrorParseFailed => '生成された本文を解析できません。失敗した段落を再試行してください。';
+
+  @override
+  String get resourceErrorContentInvalid =>
+      '生成された本文が検証に合格しませんでした。失敗した段落を再試行してください。';
+
+  @override
+  String get resourceErrorPersistenceFailed =>
+      '生成された本文を保存できません。空き容量を確認して再試行してください。';
+
+  @override
+  String get resourceErrorLifecycleFailed =>
+      '生成処理を次の段階に進めません。リソースを開き直して再試行してください。';
+
+  @override
+  String get resourceErrorProviderIncomplete =>
+      'モデルサービスの応答が不完全です。失敗した段落を再試行してください。';
+
+  @override
   String get resourceErrorGenerationFailed => 'リソースの生成に失敗しました。再試行してください。';
 
   @override

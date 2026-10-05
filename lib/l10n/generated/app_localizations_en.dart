@@ -5259,6 +5259,30 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get errorServerUnavailable =>
+      'The service is temporarily unavailable. Please retry later.';
+
+  @override
+  String get resourceErrorParseFailed =>
+      'The generated text could not be read. Retry the failed part.';
+
+  @override
+  String get resourceErrorContentInvalid =>
+      'The generated text did not pass validation. Retry the failed part.';
+
+  @override
+  String get resourceErrorPersistenceFailed =>
+      'The generated text could not be saved. Check available storage, then retry.';
+
+  @override
+  String get resourceErrorLifecycleFailed =>
+      'Generation could not advance to the next step. Reopen the resource and retry.';
+
+  @override
+  String get resourceErrorProviderIncomplete =>
+      'The provider returned an incomplete response. Retry the failed part.';
+
+  @override
   String get resourceErrorGenerationFailed =>
       'Resource generation failed. Please try again.';
 

@@ -326,10 +326,16 @@ void main() {
     final task = await rig.taskRepo
         .findTaskByPartId(_storedPartId(setup.resId, 'part_1'));
     expect(task?.status, PartTaskStatus.failed.storageValue);
-    // The terminal message reports the exhausted budget; the transport
-    // failure itself is recorded on the attempt that hit it.
-    expect(task?.errorMessage, contains('自动重试次数已用尽'));
-    final attempt = await rig.taskRepo.findAttempt(task!.currentAttemptId);
+    // Exhausting the budget must retain the failure category. This custom
+    // gateway exception has no recognized transport type, so it is unknown.
+    expect(task?.errorMessage, 'unknown');
+    final db = await DatabaseService.database;
+    final attemptRows = await db.query(
+        PartGenerationTaskRepositoryImpl.attemptsTable,
+        where: 'attempt_id = ?',
+        whereArgs: [task!.currentAttemptId]);
+    expect(attemptRows.single['error_message'], 'unknown');
+    final attempt = await rig.taskRepo.findAttempt(task.currentAttemptId);
     expect(attempt?.status, 'failed',
         reason: 'the attempt must be terminal, not left started');
   });

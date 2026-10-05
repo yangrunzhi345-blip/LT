@@ -1,20 +1,15 @@
 import '../../../core/localization/app_error_localizer.dart';
 import '../../../domain/errors/app_error.dart';
+import '../../../application/resources/resource_generation_error.dart';
 import '../../../application/resources/resource_autosave_service.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 /// Converts a typed Studio failure to safe user-facing copy.
 ///
-/// Legacy persisted strings are treated as historical diagnostics and are not
-/// parsed as protocol errors.
+/// Stable persisted codes are localized; historical diagnostics stay unknown
+/// so provider payloads and user content cannot become UI copy.
 String resourceStudioUserMessage(Object error, [AppLocalizations? l10n]) {
   if (l10n == null) return 'Operation failed. Please try again.';
-  if (error is String &&
-      !AppErrorCode.values.any((code) => code.name == error)) {
-    // Strings are legacy persisted/result diagnostics. New runtime failures
-    // arrive as typed errors and never use this compatibility branch.
-    return legacyResourceStudioDiagnostic(error);
-  }
   final typed = resourceStudioError(error);
   return localizeAppError(l10n, typed);
 }
@@ -43,11 +38,8 @@ String localizeAutosaveOutcome(
 
 /// Classifies a runtime failure without parsing its human-facing text.
 /// Unknown and legacy persisted diagnostics intentionally become generic.
-AppDomainError resourceStudioError(Object error) => switch (error) {
-      AppDomainError value => value,
-      String value => _fromStableCode(value),
-      _ => const AppDomainError(code: AppErrorCode.unknown),
-    };
+AppDomainError resourceStudioError(Object error) =>
+    error is AppDomainError ? error : resourceGenerationError(error);
 
 /// Legacy diagnostic projection retained only for old state getters/tests.
 /// Production widgets must render the typed [resourceStudioError] instead.
@@ -81,11 +73,4 @@ String legacyResourceStudioDiagnostic(Object error) {
     );
   }
   return message;
-}
-
-AppDomainError _fromStableCode(String value) {
-  final matches = AppErrorCode.values.where((item) => item.name == value);
-  return AppDomainError(
-    code: matches.isEmpty ? AppErrorCode.unknown : matches.first,
-  );
 }

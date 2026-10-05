@@ -145,6 +145,10 @@ final class ResourceStudioController extends ChangeNotifier {
         tree: tree,
         partContents: _initialPartContents(tree),
         errorMessage: '',
+        clearError: session?.status != StreamingLifecycleStatus.failed,
+        error: session?.status == StreamingLifecycleStatus.failed
+            ? resourceStudioError(session?.errorMessage ?? 'unknown')
+            : null,
       ));
       _syncPartPreviewNotifiers();
       _eventsSubscription ??= _runtime.events.listen(_handleEvent);

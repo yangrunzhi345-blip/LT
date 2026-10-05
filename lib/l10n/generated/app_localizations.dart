@@ -9066,6 +9066,42 @@ abstract class AppLocalizations {
   /// **'Resource validation failed: {details}'**
   String resourceErrorValidationFailed(String details);
 
+  /// No description provided for @errorServerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The service is temporarily unavailable. Please retry later.'**
+  String get errorServerUnavailable;
+
+  /// No description provided for @resourceErrorParseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated text could not be read. Retry the failed part.'**
+  String get resourceErrorParseFailed;
+
+  /// No description provided for @resourceErrorContentInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated text did not pass validation. Retry the failed part.'**
+  String get resourceErrorContentInvalid;
+
+  /// No description provided for @resourceErrorPersistenceFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated text could not be saved. Check available storage, then retry.'**
+  String get resourceErrorPersistenceFailed;
+
+  /// No description provided for @resourceErrorLifecycleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation could not advance to the next step. Reopen the resource and retry.'**
+  String get resourceErrorLifecycleFailed;
+
+  /// No description provided for @resourceErrorProviderIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The provider returned an incomplete response. Retry the failed part.'**
+  String get resourceErrorProviderIncomplete;
+
   /// No description provided for @resourceErrorGenerationFailed.
   ///
   /// In en, this message translates to:

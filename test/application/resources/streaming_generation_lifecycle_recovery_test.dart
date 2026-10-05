@@ -506,10 +506,10 @@ void main() {
       final persisted =
           await fixture.sessionRepository.findSession(session.sessionId);
       expect(persisted?.status, StreamingLifecycleStatus.failed);
-      expect(persisted?.errorMessage, 'resourceGenerationFailed');
+      expect(persisted?.errorMessage, 'unknown');
       final failure = events.whereType<GenerationFailed>().single;
-      expect(failure.errorMessage, 'resourceGenerationFailed');
-      expect(failure.error?.code, AppErrorCode.resourceGenerationFailed);
+      expect(failure.errorMessage, 'unknown');
+      expect(failure.error?.code, AppErrorCode.unknown);
       expect(failure.failedPartId, setup.partId);
       await subscription.cancel();
     });
