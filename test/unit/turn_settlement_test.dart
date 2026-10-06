@@ -4,7 +4,18 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lt_dialogue/core/widgets/narrative_paragraph_read_view.dart';
+import 'package:lt_dialogue/domain/read_aloud/read_aloud_contracts.dart';
+import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
+import 'package:lt_dialogue/providers/riverpod_providers.dart';
+import '../helpers/read_aloud_fakes.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
+import 'package:lt_dialogue/models/adventure_response.dart';
+import 'package:lt_dialogue/widgets/adventure_message_card.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
+import '../helpers/responsive_test_helper.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
@@ -1184,6 +1195,276 @@ void main() {
 
     expect(llm.settlementCalls, isEmpty);
     expect(llm.messages, hasLength(1));
+  });
+
+  group('Assistant presentation production protocol', () {
+    const prose = '她推开门，看向桌上的海图，逐一确认航线与沿途的港口。林澈仔细思索明日的行程，'
+        '窗外的海风掠过屋檐，船长仍在等待她的决定。';
+    const originalOptions = ['仔细查看桌上的海图', '询问船长航线安排', '整理明日出航的行囊'];
+    const replacementOptions = ['与船长商议绕开暗礁', '去港口寻找熟悉航线的向导', '检查船上的淡水与补给'];
+    const mind = '明日出航之前必须确认航线';
+    final payload = jsonEncode({
+      'scene': '旅店',
+      'options': originalOptions,
+      'custom_status': [
+        {'name': '伪造状态', 'value': '不可信'}
+      ],
+      'custom_status_changes': [],
+      'custom_status_evaluations': [],
+    });
+    final shapes = <String, String>{
+      'canonical': '$prose\n---JSON---\n$payload',
+      'inline tail': '$prose\n\n$payload',
+      'pure JSON': jsonEncode({
+        ...jsonDecode(payload) as Map<String, dynamic>,
+        'narrative': [prose]
+      }),
+      'spaced separator': '$prose\n--- JSON ---\n$payload',
+      'newline separator': '$prose\n---\nJSON---\n$payload',
+    };
+
+    Future<Message> produce(String input,
+        {bool settlementOptions = false,
+        bool repair = false,
+        bool secondTurn = false,
+        bool hasDefinitions = true}) async {
+      final config = AdventureConfig(
+          name: '林澈',
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+                id: 'lc',
+                characterId: 'lc',
+                characterName: '林澈',
+                isProtagonist: true),
+          ],
+          trackedStateDefinitions: hasDefinitions
+              ? const [
+                  AdventureTrackedStateDefinition(
+                    entityType: RuntimeEntityType.character,
+                    entityId: 'lc',
+                    definition: TrackedStateDefinition(
+                        id: 'inner_voice',
+                        name: '心声',
+                        valueKind: RuntimeStateValueKind.text),
+                  )
+                ]
+              : const []);
+      final id =
+          await repository.createAdventure('Presentation production', config);
+      await repository.seedRuntimeEntity(
+          adventureId: id,
+          branchId: 0,
+          entityType: RuntimeEntityType.character,
+          entityId: 'lc');
+      if (hasDefinitions) {
+        await repository.commitRuntimeMutation(RuntimeStateMutation(
+          requestId: 'seed-mind-$id',
+          adventureId: id,
+          branchId: 0,
+          draft: const RuntimeStateCommitDraft(
+              expectedRevision: 0,
+              summary: 'Fixture current state',
+              changes: [
+                RuntimeStateChangeProposal(
+                    entityType: RuntimeEntityType.character,
+                    entityId: 'lc',
+                    changeKind: RuntimeChangeKind.primary,
+                    operation: RuntimeChangeOperation.set,
+                    path: 'custom_attributes.inner_voice',
+                    value: mind,
+                    reason: '已有心声'),
+              ]),
+        ));
+      }
+      final script = <Object>[
+        input,
+        if (repair) ...[
+          const _ScriptedFailure(SocketException('offline')),
+          const _ScriptedFailure(SocketException('offline')),
+          jsonEncode({'options': replacementOptions}),
+        ] else ...[
+          _settlementJson(
+              options: settlementOptions ? replacementOptions : const []),
+          if (!settlementOptions) _settlementJson(options: const []),
+        ],
+        if (secondTurn) ...[
+          prose,
+          _settlementJson(runtimeChanges: [
+            {
+              'entity_type': 'character',
+              'entity_id': 'lc',
+              'change_kind': 'primary',
+              'operation': 'set',
+              'path': 'custom_attributes.inner_voice',
+              'value': '新的心声',
+              'reason': '下一轮改变',
+            }
+          ])
+        ],
+      ];
+      final llm = _ScriptedLlmService(script);
+      final harness = _SettlementHarness(
+          adventureId: id, repository: repository, config: config);
+      final engine = harness.build(llm);
+      try {
+        await engine.sendMessage('我查看海图。');
+        expect(engine.lastErrorType, isNull);
+        expect(harness.commits, hasLength(1));
+        expect(
+            llm.settlementCalls, repair || !settlementOptions ? [1, 2] : [1]);
+        expect(
+            llm.messages, hasLength(repair ? 4 : (settlementOptions ? 2 : 3)));
+        final diagnostics = await diagnosticsOf(id);
+        expect(
+            diagnostics['turn_settlement_options_applied'], settlementOptions);
+        final first = harness.messages.last;
+        if (secondTurn) await engine.sendMessage('我决定明日出航。');
+        final reopened = await reopenSqlite();
+        final messages = await reopened.getMessages(id);
+        final persisted = messages.singleWhere(
+            (message) => !message.isUser && message.content == first.content);
+        final parsed = AdventureResponse.tryParseSplit(persisted.content)!;
+        expect(parsed.narrative, [prose]);
+        expect(parsed.options,
+            settlementOptions || repair ? replacementOptions : originalOptions);
+        if (hasDefinitions) {
+          expect(parsed.customStatus, hasLength(1));
+          expect(parsed.customStatus.single.name, '心声');
+          expect(parsed.customStatus.single.characterName, '林澈');
+          expect(parsed.customStatus.single.value, mind);
+        } else {
+          expect(parsed.customStatus, isEmpty);
+        }
+        expect(persisted.content, isNot(contains('伪造状态')));
+        expect(persisted.content, isNot(contains('custom_status_changes')));
+        expect(persisted.content, isNot(contains('custom_status_evaluations')));
+        expect(persisted.content, contains(AdventureResponse.jsonSeparator));
+        expect(
+            AdventureResponse.llmHistoryProjection(persisted.content), prose);
+        expect(AdventureResponse.streamingDisplayText(persisted.content).trim(),
+            prose);
+        if (secondTurn) {
+          expect(
+              (await reopened.getRuntimeEntities(id, 0))
+                  .single
+                  .overlay['custom_attributes.inner_voice'],
+              '新的心声');
+          expect(
+              AdventureResponse.tryParseSplit(messages.last.content)!
+                  .customStatus
+                  .single
+                  .value,
+              '新的心声');
+          final history = llm.messages[3]
+              .where((entry) => entry['role'] == 'assistant')
+              .map((entry) => entry['content'])
+              .join();
+          expect(history, contains(prose));
+          expect(history, isNot(contains('custom_status')));
+          expect(history, isNot(contains('options')));
+        }
+        return persisted;
+      } finally {
+        engine.dispose();
+      }
+    }
+
+    for (final shape in shapes.entries) {
+      for (final replacement in [false, true]) {
+        test(
+            'should persist ${shape.key} with ${replacement ? "settlement" : "narrative"} options after SQLite reopen',
+            () async {
+          await produce(shape.value, settlementOptions: replacement);
+        });
+      }
+    }
+    test('should persist repaired options and snapshot after SQLite reopen',
+        () async {
+      await produce(prose, repair: true);
+    });
+    test(
+        'should remove raw model status when the authoritative snapshot is empty',
+        () async {
+      await produce(shapes['inline tail']!, hasDefinitions: false);
+    });
+    test('should keep earlier persisted snapshot after a later runtime change',
+        () async {
+      await produce(shapes['inline tail']!, secondTurn: true);
+    });
+    testWidgets(
+        'should render real ChatEngine persisted output as narrative then state then options',
+        (tester) async {
+      final message =
+          await tester.runAsync(() => produce(shapes['inline tail']!));
+      expect(message, isNotNull);
+      for (final viewport in requiredUiViewports) {
+        setViewport(tester, width: viewport.width, height: viewport.height);
+        await tester.pumpWidget(MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+              body: SingleChildScrollView(
+                  child: AdventureMessageCard(
+            jsonContent: message!.content,
+            brightness: Brightness.light,
+          ))),
+        ));
+        await tester.pumpAndSettle();
+        final narrativeY = tester.getTopLeft(find.text(prose)).dy;
+        final statusY = tester.getTopLeft(find.text('心声')).dy;
+        final optionsY = tester
+            .getTopLeft(find
+                .textContaining(AppLocalizationsZh().optionsSectionTitle(3)))
+            .dy;
+        expect(narrativeY, lessThan(statusY));
+        expect(statusY, lessThan(optionsY));
+        expect(find.text('林澈'), findsOneWidget);
+        expect(find.text(mind), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+      final speechEngine = FakeReadAloudEngine();
+      final controller = ReadAloudController(
+          engine: speechEngine,
+          initialPreferences: const ReadAloudPreferences(enabled: true));
+      addTearDown(controller.dispose);
+      setViewport(tester, width: 412, height: 915);
+      await tester.pumpWidget(ProviderScope(
+          overrides: [
+            readAloudControllerProvider.overrideWith((ref) => controller,
+                disposeNotifier: false),
+          ],
+          child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+                body: SingleChildScrollView(
+                    child: AdventureMessageCard(
+              jsonContent: message!.content,
+              brightness: Brightness.light,
+              readSessionId: 'production-message',
+            ))),
+          )));
+      await tester.pumpAndSettle();
+      expect(
+          tester
+              .widget<NarrativeParagraphReadView>(
+                  find.byType(NarrativeParagraphReadView))
+              .text
+              .trim(),
+          prose);
+      await tester.longPress(find.text(prose));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppLocalizationsZh().readAloudParagraph));
+      await tester.pumpAndSettle();
+      // Speech planning inserts spaces between sentences. Compare the full
+      // spoken content, excluding whitespace only, so any status/option/JSON
+      // leakage still fails this assertion.
+      expect(speechEngine.spokenTexts.join().replaceAll(RegExp(r'\s+'), ''),
+          prose);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   // ─────────────────────────────────────────────────────────────────────────

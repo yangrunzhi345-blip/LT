@@ -246,7 +246,7 @@ class ChatEngine {
   /// [PendingAssistantPhase.settling] holds the frozen narrative only;
   /// [PendingAssistantPhase.settled] holds the exact string the committed
   /// message will carry (narrative + structured payload), produced by the same
-  /// `_injectOptionsIntoAiContent` / `_normalizeCustomStatusInAiContent`
+  /// `_rewriteAssistantPresentationPayload`
   /// authority — so the commit swaps pixels for identical pixels.
   PendingAssistantPhase _pendingAssistantPhase = PendingAssistantPhase.none;
   String _pendingAssistantContent = '';
@@ -1492,9 +1492,10 @@ class ChatEngine {
         _lastValidOptions = List<String>.from(_parsedOptions);
       }
 
-      final aiContent = needsOptionRepair || optionsFromSettlement
-          ? _injectOptionsIntoAiContent(json, _parsedOptions)
-          : _normalizeCustomStatusInAiContent(json);
+      final aiContent = _rewriteAssistantPresentationPayload(json,
+          options: needsOptionRepair || optionsFromSettlement
+              ? _parsedOptions
+              : null);
 
       var aiMsg = Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -1534,7 +1535,8 @@ class ChatEngine {
           throw const GenerationCancelledException();
         }
         aiMsg = aiMsg.copyWith(
-            content: _injectOptionsIntoAiContent(json, _parsedOptions));
+            content: _rewriteAssistantPresentationPayload(json,
+                options: _parsedOptions));
         _isRepairingOptions = false;
       }
 
@@ -1623,12 +1625,16 @@ class ChatEngine {
       // 同一个字符串同时作为 pending presentation 的结构化尾部：settled 阶段
       // 玩家看到的内容与提交后的 Message 语义完全一致。
       final statusSnapshot = _buildTrackedStatusSnapshot(dedupedRuntimeChanges);
-      final settledContent = needsOptionRepair || optionsFromSettlement
-          ? _injectOptionsIntoAiContent(json, _parsedOptions,
-              config: settledConfig, statusSnapshot: statusSnapshot)
-          : _normalizeCustomStatusInAiContent(json,
-              config: settledConfig, statusSnapshot: statusSnapshot);
+      final settledContent = _rewriteAssistantPresentationPayload(json,
+          options: _parsedOptions,
+          config: settledConfig,
+          statusSnapshot: statusSnapshot);
       aiMsg = aiMsg.copyWith(content: settledContent);
+      GenerationDiagnostics.instance
+          .mark('[AssistantMessageCommit][PREPARED]', {
+        'messageId': aiMsg.id,
+        'customStatus': statusSnapshot?.length ?? 0,
+      });
       _stagePendingAssistantTail(settledContent);
       _notifyAll();
       final projectedSceneState = _promptBuilder.lastSceneState;
@@ -1745,6 +1751,10 @@ class ChatEngine {
         ));
         // The transaction returned: this turn is now an irreversible fact.
         turnCommitted = true;
+        GenerationDiagnostics.instance.mark('[AssistantMessageCommit][DONE]', {
+          'messageId': aiMsg.id,
+          'customStatus': statusSnapshot?.length ?? 0,
+        });
         GenerationDiagnostics.instance.mark('[ChatTurn][COMMIT_DONE]', {
           'request': requestId,
           'runtimeRevisionBefore': sceneSnapshot.runtimeRevision
@@ -2256,11 +2266,17 @@ class ChatEngine {
       acceptedChanges,
       config: config,
     );
-    return const TrackedStateSnapshotBuilder().build(
+    final snapshot = const TrackedStateSnapshotBuilder().build(
       config: config,
       runtimeEntities: _runtimeEntities,
       acceptedChanges: validated,
     );
+    GenerationDiagnostics.instance.mark('[TrackedSnapshot]', {
+      'definitions':
+          AdventureTrackedStateRegistry.fromConfig(config).all.length,
+      'items': snapshot.length,
+    });
+    return snapshot;
   }
 
   /// Legacy `custom_status` snapshot for callers that have no unified-definition
@@ -2981,94 +2997,51 @@ $recent
     return unique.length >= 3 ? unique : const [];
   }
 
-  /// [config] 允许注入“本轮已结算但尚未写入 host”的旧协议状态快照；
-  /// [statusSnapshot] 是统一检测权威投影出的只读 `custom_status` 快照（优先）。
-  String _injectOptionsIntoAiContent(String aiContent, List<String> options,
-      {AdventureConfig? config, List<Map<String, dynamic>>? statusSnapshot}) {
+  /// Rewrites options and the validated per-turn status through one protocol
+  /// authority. An explicitly empty snapshot removes all model status echoes.
+  String _rewriteAssistantPresentationPayload(String content,
+      {List<String>? options,
+      AdventureConfig? config,
+      List<Map<String, dynamic>>? statusSnapshot}) {
+    final customStatus = statusSnapshot ?? _legacyCustomStatusMaps(config);
     final scene = _host.gameState.currentScene.trim();
-    final customStatus = statusSnapshot ?? _legacyCustomStatusMaps(config);
-    final fallbackJson = <String, dynamic>{
-      'scene': scene.isNotEmpty ? scene : '当前场景',
-      'hp': _host.gameState.hp,
-      'max_hp': _host.gameState.maxHp,
-      'energy': _host.gameState.energy,
-      'max_energy': _host.gameState.maxEnergy,
-      'gold': _host.gameState.gold,
-      'inventory': List<String>.from(_host.gameState.inventory),
-      'options': options,
-      if (customStatus.isNotEmpty) 'custom_status': customStatus,
-    };
-
-    final sepMatch = AdventureResponse.separatorPattern.firstMatch(aiContent);
-    if (sepMatch == null) {
-      return '${aiContent.trim()}\n${AdventureResponse.jsonSeparator}\n${jsonEncode(fallbackJson)}';
-    }
-
-    final narrative = aiContent.substring(0, sepMatch.start).trimRight();
-    final jsonText = aiContent.substring(sepMatch.end).trim();
-    try {
-      final cleaned = AdventureResponse.cleanJsonBlock(jsonText);
-      final decoded = jsonDecode(cleaned);
-      if (decoded is Map<String, dynamic>) {
-        final merged = Map<String, dynamic>.from(decoded);
-        merged['options'] = options;
-        final mergedScene = merged['scene']?.toString().trim() ?? '';
-        merged['scene'] = scene.isNotEmpty
-            ? scene
-            : (mergedScene.isNotEmpty ? mergedScene : '当前场景');
-        merged['hp'] = merged['hp'] ?? _host.gameState.hp;
-        merged['max_hp'] = merged['max_hp'] ?? _host.gameState.maxHp;
-        merged['energy'] = merged['energy'] ?? _host.gameState.energy;
-        merged['max_energy'] =
-            merged['max_energy'] ?? _host.gameState.maxEnergy;
-        merged['gold'] = merged['gold'] ?? _host.gameState.gold;
-        merged['inventory'] =
-            merged['inventory'] ?? List<String>.from(_host.gameState.inventory);
-        if (customStatus.isNotEmpty) {
-          merged['custom_status'] = customStatus;
-        } else {
-          merged.remove('custom_status');
-          merged.remove('custom_attributes');
-        }
-        // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
-        merged.remove('custom_status_changes');
-        merged.remove('custom_status_evaluations');
-        return '$narrative\n---JSON---\n${jsonEncode(merged)}';
-      }
-    } catch (_) {
-      // fall back to a synthetic JSON block below.
-    }
-
-    return '$narrative\n---JSON---\n${jsonEncode(fallbackJson)}';
-  }
-
-  /// 保证 AI 正文中的 JSON 段包含所有追踪角色最新的检测状态快照。
-  ///
-  /// [statusSnapshot] 优先：它来自统一检测权威（frozen definitions + runtime
-  /// overlay），并已叠加本轮被接受的运行期变更。缺省时回退到旧协议快照。
-  String _normalizeCustomStatusInAiContent(String content,
-      {AdventureConfig? config, List<Map<String, dynamic>>? statusSnapshot}) {
-    final customStatus = statusSnapshot ?? _legacyCustomStatusMaps(config);
-    if (customStatus.isEmpty) return content;
-
-    final sepMatch = AdventureResponse.separatorPattern.firstMatch(content);
-    if (sepMatch == null) return content;
-
-    final narrative = content.substring(0, sepMatch.start).trimRight();
-    final jsonText = content.substring(sepMatch.end).trim();
-    try {
-      final cleaned = AdventureResponse.cleanJsonBlock(jsonText);
-      final decoded = jsonDecode(cleaned);
-      if (decoded is Map<String, dynamic>) {
-        final merged = Map<String, dynamic>.from(decoded);
-        merged['custom_status'] = customStatus;
-        // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
-        merged.remove('custom_status_changes');
-        merged.remove('custom_status_evaluations');
-        return '$narrative\n---JSON---\n${jsonEncode(merged)}';
-      }
-    } catch (_) {}
-    return content;
+    final parsed = AdventureResponse.parse(content);
+    final existingScene = parsed.payload?['scene']?.toString().trim() ?? '';
+    final rewritten = AdventureResponse.rewritePayload(
+      content,
+      defaults: options == null
+          ? const {}
+          : {
+              'hp': _host.gameState.hp,
+              'max_hp': _host.gameState.maxHp,
+              'energy': _host.gameState.energy,
+              'max_energy': _host.gameState.maxEnergy,
+              'gold': _host.gameState.gold,
+              'inventory': List<String>.from(_host.gameState.inventory),
+            },
+      replacements: {
+        if (options != null) ...{
+          'options': options,
+          'scene': scene.isNotEmpty
+              ? scene
+              : (existingScene.isNotEmpty ? existingScene : '当前场景'),
+        },
+        if (customStatus.isNotEmpty) 'custom_status': customStatus,
+      },
+      removals: const [
+        'custom_status',
+        'custom_attributes',
+        'custom_status_changes',
+        'custom_status_evaluations',
+      ],
+    );
+    GenerationDiagnostics.instance.mark('[AssistantPayloadRewrite]', {
+      'inputKind': parsed.kind.name,
+      'inputHasSeparator': AdventureResponse.separatorPattern.hasMatch(content),
+      'options': options?.length ?? 0,
+      'customStatus': customStatus.length,
+    });
+    return rewritten;
   }
 
   // ─── v2.1: Rest action ───

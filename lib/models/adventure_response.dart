@@ -284,6 +284,40 @@ class AdventureResponse with Equatable {
     }
   }
 
+  /// Merges locally owned presentation fields using the formal response parser.
+  ///
+  /// All accepted input shapes share the canonical output protocol. Fields not
+  /// owned by the caller survive unchanged; removals apply before replacements.
+  /// Plain prose gets a payload only when the caller supplies structured data.
+  static String rewritePayload(
+    String content, {
+    Map<String, dynamic> defaults = const {},
+    Map<String, dynamic> replacements = const {},
+    Iterable<String> removals = const [],
+  }) {
+    final parsed = parse(content);
+    final payload = <String, dynamic>{
+      ...defaults,
+      ...?parsed.payload,
+    };
+    for (final key in removals) {
+      payload.remove(key);
+    }
+    payload.addAll(replacements);
+    if (payload.isEmpty) {
+      return parsed.hasPayload
+          ? parsed.narrative.join('\n\n').trim()
+          : canonicalize(content);
+    }
+    // Malformed structured input must not become prose when a local snapshot
+    // or repaired options supply a new payload.
+    final narrative = parsed.kind == AdventureResponseKind.malformedStructured
+        ? canonicalize(content)
+        : parsed.narrative.join('\n\n').trim();
+    return '${narrative.isEmpty ? "" : "$narrative\n"}'
+        '$jsonSeparator\n${jsonEncode(payload)}';
+  }
+
   /// Projects a persisted assistant message into the narrative-only form that
   /// is sent back to the LLM as history.
   ///

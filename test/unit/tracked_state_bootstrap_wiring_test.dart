@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +8,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/application/adventure/adventure_tracked_state_freezer.dart';
 import 'package:lt_dialogue/application/adventure/tracked_state_bootstrap_runner.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
+import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/scene_state.dart';
@@ -22,7 +24,7 @@ import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart'
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 
 final class _FakeLlm extends LLMService {
-  _FakeLlm(this.response, {this.failure})
+  _FakeLlm(this.response, {this.failure, this.beforeResponse})
       : super(const LLMConfig(
           provider: LLMProvider.deepseek,
           apiKey: 'test-key',
@@ -32,6 +34,7 @@ final class _FakeLlm extends LLMService {
 
   final String response;
   final Object? failure;
+  final Future<void> Function()? beforeResponse;
   int calls = 0;
 
   @override
@@ -44,6 +47,7 @@ final class _FakeLlm extends LLMService {
     GenerationTaskHandle? taskHandle,
   }) async {
     calls++;
+    await beforeResponse?.call();
     if (failure != null) throw failure!;
     onChunk(response);
     onDone();
@@ -224,6 +228,117 @@ void main() {
     await chat.startAdventureWithConfig(_worldConfig(openingScene: ''));
 
     expect(llm.calls, 0);
+  });
+
+  group('Opening assistant presentation snapshot', () {
+    test(
+        'should not seed the opening into an adventure switched during bootstrap',
+        () async {
+      final chat = _provider();
+      await chat.loadApiKey();
+      addTearDown(chat.dispose);
+      final repo =
+          AdventureRepositoryImpl(getDb: () => DatabaseService.database);
+      final otherId = await repo.createAdventure(
+          'Other adventure', AdventureConfig(name: '其他角色'));
+      chat.debugBootstrapLlmOverride = _FakeLlm(_worldResponse,
+          beforeResponse: () => chat.loadAdventure(otherId));
+      final createdId = await chat.startAdventureWithConfig(_worldConfig());
+      expect(createdId, isNot(otherId));
+      expect(chat.adventureProvider.currentAdventureId, otherId);
+      expect(chat.messages, isEmpty);
+      expect(await repo.getMessages(otherId), isEmpty);
+      expect(await repo.getMessages(createdId), isEmpty);
+      expect((await repo.getRuntimeHead(createdId, 0)).revision, 0);
+    });
+    for (final hasEvidence in [true, false]) {
+      test(
+          'should persist ${hasEvidence ? "bootstrapped" : "untriggered"} character state after reopen',
+          () async {
+        final chat = _provider();
+        await chat.loadApiKey();
+        addTearDown(chat.dispose);
+        final config = AdventureConfig(
+          name: '林澈',
+          openingScene: '林澈推开门，看向桌上的海图，心中盘算着明日的航程。',
+          openingOptions: const ['查看海图', '询问船长', '整理行囊'],
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'lc',
+              characterId: 'lc',
+              characterName: '林澈',
+              isProtagonist: true,
+              characterCardJson: const {
+                'name': '林澈',
+                'tracked_state_definitions': [
+                  {'id': 'inner_voice', 'name': '心声', 'value_kind': 'text'},
+                ],
+              },
+            )
+          ],
+        );
+        chat.debugBootstrapLlmOverride = _FakeLlm(hasEvidence
+            ? jsonEncode({
+                'runtime_state_changes': [
+                  {
+                    'entity_type': 'character',
+                    'entity_id': 'lc',
+                    'change_kind': 'primary',
+                    'operation': 'set',
+                    'path': 'custom_attributes.inner_voice',
+                    'value': '明日出航',
+                    'reason': '序章中盘算航程',
+                  }
+                ]
+              })
+            : '{"runtime_state_changes":[]}');
+        final id = await chat.startAdventureWithConfig(config);
+        final before = chat.messages.single.content;
+        expect(AdventureResponse.tryParseSplit(before)!.customStatus,
+            hasLength(1));
+        await DatabaseService.resetDatabase();
+        final repo =
+            AdventureRepositoryImpl(getDb: () => DatabaseService.database);
+        final message = (await repo.getMessages(id)).single;
+        expect(message.content, before);
+        final parsed = AdventureResponse.tryParseSplit(message.content)!;
+        expect(parsed.narrative, [config.openingScene]);
+        expect(parsed.options, config.openingOptions);
+        expect(parsed.customStatus.single.name, '心声');
+        expect(parsed.customStatus.single.characterName, '林澈');
+        expect(parsed.customStatus.single.untriggered, !hasEvidence);
+        expect(parsed.customStatus.single.value, hasEvidence ? '明日出航' : '');
+        // A later live edit and real reload must leave the opening historical.
+        final head = await repo.getRuntimeHead(id, 0);
+        await repo.commitRuntimeMutation(RuntimeStateMutation(
+          requestId: 'later-mind-$id',
+          adventureId: id,
+          branchId: 0,
+          draft: RuntimeStateCommitDraft(
+              expectedRevision: head.revision,
+              summary: 'Later current state',
+              changes: const [
+                RuntimeStateChangeProposal(
+                  entityType: RuntimeEntityType.character,
+                  entityId: 'lc',
+                  changeKind: RuntimeChangeKind.primary,
+                  operation: RuntimeChangeOperation.set,
+                  path: 'custom_attributes.inner_voice',
+                  value: '后来的心声',
+                  reason: '后续用户编辑',
+                )
+              ]),
+        ));
+        await chat.adventureProvider.loadAdventure(id);
+        expect(
+            chat.adventureProvider.runtimeEntities
+                .singleWhere((entity) => entity.entityId == 'lc')
+                .overlay['custom_attributes.inner_voice'],
+            '后来的心声');
+        await chat.adventureProvider.seedOpeningScene(config);
+        expect(chat.messages.single.content, before);
+      });
+    }
   });
 
   group('runner contract', () {

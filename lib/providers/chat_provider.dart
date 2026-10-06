@@ -665,15 +665,15 @@ class ChatProvider extends ChangeNotifier {
       final title = _uniqueTitle(baseTitle, _adventure.adventureList);
       final adventureId = await _adventure.createAdventure(title, c);
 
-      // 序章就是本冒险的第一幕：先把配置好的序章落成首条 AI 消息，再打开对话页，
-      // 于是 Session 首屏直接进入该场景并展示可点击的初始行动，既不显示
-      // empty state，也不等待首轮 LLM 完成。
-      final seededOpening = await _adventure.seedOpeningScene(c);
-
-      // 开场检测状态初始化：必须在开放正式输入之前完成，否则它的 runtime commit
-      // 可能与第一轮 settlement 竞争同一个 revision。失败是 fail-open 的，绝不
-      // 影响已经创建成功的 Adventure。
+      // Bootstrap must finish before the opening message freezes its snapshot,
+      // and before player input can race its runtime revision. Failure remains
+      // fail-open: definitions without values are presented as untriggered.
       await _runOpeningTrackedStateBootstrap(adventureId);
+      if (_adventure.currentAdventureId != adventureId) return adventureId;
+
+      // Persist the assembled prologue and its post-bootstrap presentation in
+      // one message insert; no later live-runtime refresh edits its history.
+      final seededOpening = await _adventure.seedOpeningScene(c);
 
       _isAdventureChatOpen = true;
       _triggerTitleBarRebuild(); // title 已创建
@@ -719,8 +719,8 @@ class ChatProvider extends ChangeNotifier {
 
   /// Best-effort opening-scene initialization of tracked state.
   ///
-  /// Runs strictly after [AdventureProvider.createAdventure] + the opening
-  /// message is seeded, and strictly before the session accepts player input.
+  /// Runs strictly after [AdventureProvider.createAdventure] and before the
+  /// opening message is seeded or the session accepts player input.
   /// It uses the **frozen** AdventureConfig (never the raw wizard config), the
   /// real runtime HEAD revision and the branch's scene presence. Any failure is
   /// swallowed: the adventure is already durably created and stays usable, and

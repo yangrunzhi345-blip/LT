@@ -19,6 +19,7 @@ import '../models/scene_state.dart';
 import '../services/database_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
 import '../application/adventure/adventure_tracked_state_freezer.dart';
+import '../application/adventure/tracked_state_snapshot.dart';
 import '../application/resources/assembly_readiness_coordinator.dart';
 import '../application/resources/assembly_readiness_repository.dart';
 import '../application/resources/resource_assembly_builder.dart';
@@ -411,9 +412,18 @@ class AdventureProvider extends ChangeNotifier {
       'scene': '序章',
       if (options.isNotEmpty) 'options': options,
     };
-    final content = scene.isEmpty
-        ? jsonEncode(payload)
-        : '$scene\n\n${AdventureResponse.jsonSeparator}\n${jsonEncode(payload)}';
+    // The creation caller runs bootstrap first. Use the frozen adventure
+    // authority, then persist this snapshot once with the opening message.
+    final snapshot = const TrackedStateSnapshotBuilder().build(
+      config: _adventureConfig ?? config,
+      runtimeEntities: _runtimeEntities,
+    );
+    final content = AdventureResponse.rewritePayload(
+      scene.isEmpty
+          ? jsonEncode(payload)
+          : '$scene\n\n${AdventureResponse.jsonSeparator}\n${jsonEncode(payload)}',
+      replacements: {if (snapshot.isNotEmpty) 'custom_status': snapshot},
+    );
 
     final message = Message(id: messageId, content: content, isUser: false);
     _messages.add(message);
