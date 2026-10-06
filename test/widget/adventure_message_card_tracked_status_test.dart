@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
@@ -53,13 +54,17 @@ void main() {
       };
 
   Future<void> pumpCard(WidgetTester tester, String content,
-      {double width = 420, double height = 900, double scale = 1.0}) async {
+      {double width = 420,
+      double height = 900,
+      double scale = 1.0,
+      Brightness brightness = Brightness.light,
+      void Function(String)? onOptionTap}) async {
     setViewport(tester, width: width, height: height);
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('zh'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: AppTheme.light(),
+      theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(scale)),
@@ -69,7 +74,8 @@ void main() {
         body: SingleChildScrollView(
           child: AdventureMessageCard(
             jsonContent: content,
-            brightness: Brightness.light,
+            brightness: brightness,
+            onOptionTap: onOptionTap,
           ),
         ),
       ),
@@ -202,6 +208,142 @@ void main() {
     expect(find.text('只有正文。'), findsOneWidget);
     expect(find.text(zh.trackedStateUntriggered), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  group('typed text presentation', () {
+    Map<String, dynamic> status(String value,
+            {String kind = 'text', bool isUntriggered = false}) =>
+        {
+          'id': 'thought',
+          'name': '心声',
+          'value': value,
+          'characterName': '林澈',
+          'value_kind': kind,
+          'untriggered': isUntriggered,
+        };
+
+    void expectFullText(WidgetTester tester, String value) {
+      final finder = find.text(value);
+      expect(finder, findsOneWidget);
+      final text = tester.widget<Text>(finder);
+      expect(text.maxLines, isNull);
+      expect(text.softWrap, isNot(false));
+      expect(text.overflow, isNot(TextOverflow.ellipsis));
+      final paragraph = tester.renderObject<RenderParagraph>(finder);
+      expect(paragraph.didExceedMaxLines, isFalse);
+      final rect = tester.getRect(finder);
+      expect(rect.left, greaterThanOrEqualTo(0));
+      expect(rect.right, lessThanOrEqualTo(tester.view.physicalSize.width));
+      expect(rect.top, greaterThan(tester.getRect(find.text('心声')).bottom));
+      // The body spans the item, rather than sharing a narrow chip row.
+      expect(rect.width, greaterThan(tester.view.physicalSize.width - 100));
+    }
+
+    const longText = '澈已落帆掉头脱离浪线，十五米测绳被啃断，她正带着断头返港，'
+        '我让她关灯慢行，在蓝港内港东闸等她。';
+
+    for (final value in ['她还没有回来。', longText, '第一行\n第二行\n第三行', '123/456']) {
+      testWidgets('should display complete typed text: $value', (tester) async {
+        await pumpCard(tester, contentWith([status(value)]), width: 320);
+        expectFullText(tester, value);
+        if (value == longText) {
+          expect(
+              tester
+                  .renderObject<RenderParagraph>(find.text(value))
+                  .getBoxesForSelection(
+                      TextSelection(baseOffset: 0, extentOffset: value.length))
+                  .length,
+              greaterThan(1));
+        } else if (value.contains('\n')) {
+          expect(
+              tester
+                  .renderObject<RenderParagraph>(find.text(value))
+                  .getBoxesForSelection(
+                      TextSelection(baseOffset: 0, extentOffset: value.length))
+                  .length,
+              3);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    for (final (kind, value, label, isUntriggered) in [
+      ('enumValue', '高度戒备', '高度戒备', false),
+      ('boolean', 'true', zh.trackedStateBoolYes, false),
+      ('text', '', zh.trackedStateUntriggered, true),
+    ]) {
+      testWidgets('should retain compact $kind / untriggered=$isUntriggered',
+          (tester) async {
+        await pumpCard(
+            tester,
+            contentWith([
+              status(value, kind: kind, isUntriggered: isUntriggered),
+            ]));
+        final text = tester.widget<Text>(find.text(label));
+        expect(text.maxLines, 1);
+        expect(text.overflow, TextOverflow.ellipsis);
+        expect(tester.getTopLeft(find.text(label)).dy,
+            closeTo(tester.getTopLeft(find.text('心声')).dy, 4));
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('should retain a single-line collapsed summary and reopen全文',
+        (tester) async {
+      await pumpCard(tester, contentWith([status(longText)]));
+      await tester.tap(find.text(zh.monitoredStatus));
+      await tester.pumpAndSettle();
+      expect(find.text(longText), findsNothing);
+      final summary = find.textContaining('林澈·心声');
+      expect(tester.widget<Text>(summary).maxLines, 1);
+      expect(tester.widget<Text>(summary).overflow, TextOverflow.ellipsis);
+      await tester.tap(summary);
+      await tester.pumpAndSettle();
+      expectFullText(tester, longText);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final size in requiredUiViewports) {
+      for (final scale in [1.0, 1.6, 2.0]) {
+        for (final brightness in [Brightness.light, Brightness.dark]) {
+          testWidgets(
+              'should wrap full text at ${size.width} @ $scale $brightness',
+              (tester) async {
+            // More than ten lines and an explicit final line exercise natural
+            // height, preservation of newlines and the bottom of a long item.
+            final value = '${List.filled(12, longText).join('\n')}\n最后一行。';
+            String? selected;
+            await pumpCard(tester, contentWith([status(value)]),
+                width: size.width,
+                height: size.height,
+                scale: scale,
+                brightness: brightness,
+                onOptionTap: (option) => selected = option);
+            expectFullText(tester, value);
+            final paragraph =
+                tester.renderObject<RenderParagraph>(find.text(value));
+            final lines = paragraph.getBoxesForSelection(
+                TextSelection(baseOffset: 0, extentOffset: value.length));
+            expect(lines.length, greaterThan(12));
+            expect(lines.last.bottom,
+                lessThanOrEqualTo(paragraph.size.height + 0.01));
+            final scrollable = find.byType(Scrollable).first;
+            final scrollState = tester.state<ScrollableState>(scrollable);
+            final rect = tester.getRect(find.text(value));
+            scrollState.position.jumpTo((rect.bottom - size.height / 2)
+                .clamp(0, scrollState.position.maxScrollExtent));
+            await tester.pumpAndSettle();
+            expect(tester.getRect(find.text(value)).bottom,
+                inInclusiveRange(0, size.height));
+            await tester.ensureVisible(find.text('继续'));
+            await tester.tap(find.text('继续'));
+            await tester.pumpAndSettle();
+            expect(selected, '继续');
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    }
   });
 
   group('responsive', () {

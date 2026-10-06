@@ -1,4 +1,5 @@
 import "../core/theme/app_colors.dart";
+import '../core/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
 import '../core/widgets/custom_attribute_icon.dart';
 import '../core/widgets/app_svg_icon.dart';
@@ -470,7 +471,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
           iconText: iconText);
     }
 
-    if (item.isNumeric) {
+    if (item.isNumeric && item.valueKind != 'text') {
       final cur = item.effectiveCurrentValue;
       final max = item.effectiveMaxValue;
       final ratio = item.ratio;
@@ -572,8 +573,8 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         iconText: iconText);
   }
 
-  /// Shared non-numeric badge: icon + name + value chip. [muted] is used for the
-  /// untriggered state so it reads as absence-of-value rather than a value.
+  /// Text values use the full item width; compact states retain their chips.
+  /// [muted] distinguishes an untriggered state from a settled value.
   Widget _buildTextStatusBadge(
     BuildContext context,
     CustomAttributeItem item,
@@ -595,44 +596,85 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: itemBorder),
       ),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 4,
-        alignment: WrapAlignment.start,
-        children: [
-          CustomAttributeIcon(iconText, size: 13),
-          Text(
-            item.name,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isDark ? const Color(0xFFE0E0E0) : const Color(0xFF333333),
-            ),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-          if (valueText.isNotEmpty) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: chipColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                valueText,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: chipColor,
+      width: item.valueKind == 'text' && !item.untriggered
+          ? double.infinity
+          : null,
+      child: item.valueKind == 'text' && !item.untriggered
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    CustomAttributeIcon(iconText, size: 13),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
+                if (valueText.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    valueText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.6,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                  ),
+                ],
+              ],
+            )
+          : Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              alignment: WrapAlignment.start,
+              children: [
+                CustomAttributeIcon(iconText, size: 13),
+                Text(
+                  item.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? const Color(0xFFE0E0E0)
+                        : const Color(0xFF333333),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+                if (valueText.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: chipColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      valueText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: chipColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ],
-      ),
     );
 
     if (item.description != null &&
