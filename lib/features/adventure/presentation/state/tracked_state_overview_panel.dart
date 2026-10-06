@@ -7,8 +7,8 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../models/adventure_config.dart';
 import '../../../../models/adventure_runtime_state.dart';
 import '../../../../models/adventure_tracked_state.dart';
-import '../../../../models/tracked_state_definition.dart';
-import '../../../../models/typed_runtime_state.dart';
+import 'tracked_state_presentation.dart';
+import 'tracked_state_summary_view.dart';
 
 /// Entity-type filter for the monitored-fields panel.
 enum TrackedStateCategory { all, character, npc, world }
@@ -151,6 +151,15 @@ class TrackedStateOverviewPanel extends StatelessWidget {
         : _typeLabel(group.entityType, l10n);
     final values = overlay ?? const {};
     final bindings = compact ? group.bindings.take(3).toList() : group.bindings;
+    // Project through the shared presentation layer so this panel, the session
+    // HUD and the Inspector can never disagree about a value.
+    final summaries = <TrackedStateSummary>[
+      for (final binding in bindings)
+        TrackedStateSummary(
+          definition: binding.definition,
+          value: TrackedStatePresentation.rawValue(binding.definition, values),
+        ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -173,89 +182,8 @@ class TrackedStateOverviewPanel extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        for (final binding in bindings)
-          _monitorRow(context, l10n, binding.definition, values),
+        TrackedStateSummaryList(summaries: summaries),
       ],
-    );
-  }
-
-  Widget _monitorRow(
-    BuildContext context,
-    AppLocalizations? l10n,
-    TrackedStateDefinition definition,
-    Map<String, Object?> overlay,
-  ) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              definition.name,
-              style: theme.textTheme.bodyMedium,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 12),
-          _value(context, l10n, definition, overlay),
-        ],
-      ),
-    );
-  }
-
-  Widget _value(
-    BuildContext context,
-    AppLocalizations? l10n,
-    TrackedStateDefinition definition,
-    Map<String, Object?> overlay,
-  ) {
-    final theme = Theme.of(context);
-    final muted = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
-    final path = RuntimeStateChangeProposal.customAttributePath(
-      definition.effectiveId,
-    );
-    final value = overlay[path];
-
-    if (value == null) {
-      return Text(l10n?.trackedStateUntriggered ?? 'Not triggered',
-          style: muted);
-    }
-
-    if (definition.valueKind == RuntimeStateValueKind.boolean) {
-      final isTrue = value == true || value.toString() == 'true';
-      return Text(
-        isTrue
-            ? (l10n?.trackedStateBoolYes ?? 'Yes')
-            : (l10n?.trackedStateBoolNo ?? 'No'),
-        style: theme.textTheme.bodyMedium,
-      );
-    }
-
-    if (definition.isNumeric && value is num) {
-      final max = definition.maximum;
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(_formatNumber(value), style: theme.textTheme.bodyMedium),
-          if (max != null) Text(' / ${_formatNumber(max)}', style: muted),
-        ],
-      );
-    }
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 200),
-      child: Text(
-        value.toString(),
-        style: theme.textTheme.bodyMedium,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.right,
-      ),
     );
   }
 
@@ -267,10 +195,6 @@ class TrackedStateOverviewPanel extends StatelessWidget {
         RuntimeEntityType.world => l10n?.trackedStateEntityTypeWorld ?? 'World',
         _ => '',
       };
-
-  static String _formatNumber(num value) => value == value.truncate()
-      ? value.truncate().toString()
-      : value.toString();
 }
 
 class _EntityGroup {

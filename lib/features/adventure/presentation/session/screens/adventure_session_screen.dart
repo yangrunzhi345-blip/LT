@@ -11,6 +11,7 @@ import '../../../../../models/app_section.dart';
 import '../../../../../core/responsive/responsive.dart';
 import 'model_select_page.dart';
 import 'session_inspector_page.dart';
+import '../../state/runtime_state_hub_page.dart';
 import '../widgets/session_input_bar.dart';
 import '../widgets/session_message_list.dart';
 import '../widgets/status_hud_bar.dart';
@@ -96,6 +97,14 @@ class _AdventureSessionScreenState
   void _showRuntimeState() =>
       ref.read(chatProvider).setCurrentSection(AppSection.runtimeState);
 
+  /// Jumps straight to the monitored-fields view, without the extra dashboard
+  /// step, so a tap on the HUD summary lands on what the user asked for.
+  void _showTrackedState() => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const RuntimeStateHubPage(
+          initialView: RuntimeStateHubInitialView.tracked,
+        ),
+      ));
+
   void _showSceneCharacters() =>
       ref.read(chatProvider).setCurrentSection(AppSection.sceneCharacters);
 
@@ -140,7 +149,9 @@ class _AdventureSessionScreenState
           // The reader owns the whole session workspace; the Inspector is a
           // separate pushed page on every viewport.
           return Column(children: [
-            if (!_focusReading) StatusHudBar(onTap: _showRuntimeState),
+            if (!_focusReading)
+              StatusHudBar(
+                  onTap: _showRuntimeState, onTrackedTap: _showTrackedState),
             if (provider.settingsProvider.searchVisible && !_focusReading)
               ChatSearchBar(onClose: provider.toggleSearch),
             Expanded(

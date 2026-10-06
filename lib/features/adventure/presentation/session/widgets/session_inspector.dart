@@ -7,9 +7,14 @@ import '../../../../../core/widgets/workbench_section.dart';
 import '../../../../prompt_settings/presentation/screens/context_weight_controls.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../../providers/adventure_provider.dart';
+import '../../../../../providers/chat_provider.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../screens/chat/widgets/character_switcher.dart';
 import '../../state/runtime_state_hub_page.dart';
+import '../../state/tracked_state_presentation.dart';
+import '../../state/tracked_state_summary_view.dart';
+import '../screens/tracked_state_management_page.dart';
 import 'reply_length_control.dart';
 
 enum SessionInspectorSection { scene, characters, state, context, generation }
@@ -123,35 +128,94 @@ class SessionInspectorContent extends ConsumerWidget {
                           onPressed: onCharacters,
                           child: Text(l10n.sceneCharactersTitle)),
                     ])),
-            SessionInspectorSection.state => WorkbenchSection(
-                title: l10n.runtimeStateCurrent,
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                          '${l10n.runtimeStateFieldHp}: ${adventure.gameState.hp}/${adventure.gameState.maxHp}'),
-                      Text(
-                          '${l10n.runtimeStateFieldMp}: ${adventure.gameState.mp}/${adventure.gameState.maxMp}'),
-                      for (final change in scene.recentChanges) Text(change),
-                      TextButton(
-                          onPressed: onState,
-                          child: Text(l10n.runtimeStateHistoricalChange)),
-                      TextButton(
-                          onPressed: () =>
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => const RuntimeStateHubPage(
-                                  initialView:
-                                      RuntimeStateHubInitialView.tracked,
-                                ),
-                              )),
-                          child: Text(l10n.trackedStateStatusTitle)),
-                      TextButton(
-                          onPressed: onInventory,
-                          child: Text(l10n.inventoryTitle)),
-                    ])),
+            SessionInspectorSection.state =>
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                WorkbenchSection(
+                    title: l10n.runtimeStateCurrent,
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                              '${l10n.runtimeStateFieldHp}: ${adventure.gameState.hp}/${adventure.gameState.maxHp}'),
+                          Text(
+                              '${l10n.runtimeStateFieldMp}: ${adventure.gameState.mp}/${adventure.gameState.maxMp}'),
+                          for (final change in scene.recentChanges)
+                            Text(change),
+                          TextButton(
+                              onPressed: onState,
+                              child: Text(l10n.runtimeStateHistoricalChange)),
+                          TextButton(
+                              onPressed: onInventory,
+                              child: Text(l10n.inventoryTitle)),
+                        ])),
+                const SizedBox(height: AppSpacing.xl),
+                WorkbenchSection(
+                    title: l10n.trackedStateStatusTitle,
+                    child: _trackedStateBlock(context, l10n, chat, adventure)),
+              ]),
           },
         ),
       ),
+    );
+  }
+
+  /// Medium summary of the currently followed character's monitored fields.
+  ///
+  /// Reads the same read-only projection as the session HUD and the runtime
+  /// hub, so the Inspector never re-implements definition / value mapping. Both
+  /// actions keep the full surfaces one tap away: everything, or management.
+  Widget _trackedStateBlock(
+    BuildContext context,
+    AppLocalizations l10n,
+    ChatProvider chat,
+    AdventureProvider adventure,
+  ) {
+    final config = adventure.adventureConfig;
+    final selected = TrackedStatePresentation.resolveSelectedCharacter(
+      config: config,
+      selectedCharacterIndex: chat.selectedCharacterIndex,
+    );
+    final summaries = TrackedStatePresentation.summaries(
+      config: config,
+      entities: adventure.runtimeEntities,
+      entityType: selected.entityType,
+      entityId: selected.entityId,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (summaries.isEmpty)
+          Text(l10n.trackedStateNoDefinitions)
+        else
+          TrackedStateEntitySummary(
+            config: config,
+            entities: adventure.runtimeEntities,
+            entityType: selected.entityType,
+            entityId: selected.entityId,
+            displayName: selected.name,
+          ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xs,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const RuntimeStateHubPage(
+                  initialView: RuntimeStateHubInitialView.tracked,
+                ),
+              )),
+              child: Text(l10n.trackedStateViewAllAction),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const TrackedStateManagementPage(),
+              )),
+              child: Text(l10n.trackedStateManageAction),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
