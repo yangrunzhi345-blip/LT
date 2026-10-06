@@ -101,6 +101,7 @@ abstract interface class LlmGateway {
     List<Map<String, String>> selectedCharacters = const [],
     List<Map<String, String>> characterRelationships = const [],
     List<Map<String, String>> npcs = const [],
+    List<Map<String, String>> canonEntities = const [],
   });
 
   /// 单轮 JSON 补全（替代页面直接调用 AdventureSetupContextService）。

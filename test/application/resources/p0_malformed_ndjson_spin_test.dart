@@ -858,6 +858,7 @@ final class _ScriptedGateway
     List<Map<String, String>> existingNpcs = const [],
     List<Map<String, String>> characterRelationships = const [],
     List<Map<String, String>> npcs = const [],
+    List<Map<String, String>> canonEntities = const [],
   }) =>
       _unused();
   @override

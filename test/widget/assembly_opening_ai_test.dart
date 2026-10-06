@@ -69,6 +69,7 @@ class _RecordingAiController extends AdventureAiController {
     List<Map<String, String>> selectedCharacters = const [],
     List<Map<String, String>> characterRelationships = const [],
     List<Map<String, String>> npcs = const [],
+    List<Map<String, String>> canonEntities = const [],
   }) async {
     calls++;
     lastArgs = <String, Object?>{
@@ -81,6 +82,7 @@ class _RecordingAiController extends AdventureAiController {
       'selectedCharacters': selectedCharacters,
       'characterRelationships': characterRelationships,
       'npcs': npcs,
+      'canonEntities': canonEntities,
     };
     if (nextError != null) return null;
     return nextResult;
@@ -150,6 +152,34 @@ AdventureConfig _assemblyConfig() => AdventureConfig(
       openingOptions: ['用户手写的分支'],
     );
 
+/// REPRO fixture: character A controls organization 洛恩 whose name looks like
+/// a person's name. The card explicitly declares 洛恩 = organization.
+AdventureConfig _canonAssemblyConfig() => AdventureConfig(
+      worldview: '银月议会统治的旧城',
+      name: 'A',
+      selectedCharacters: [
+        AdventureSelectedCharacter(
+          id: 'a1',
+          characterId: 'a1',
+          characterName: 'A',
+          isProtagonist: true,
+          narrativeRole: AdventureCharacterRole.protagonist,
+          characterCardJson: const {
+            'name': 'A',
+            'profession': '议长',
+            'world_profile': {'faction': '洛恩'},
+            'canonical_entities': [
+              {
+                'name': '洛恩',
+                'type': 'organization',
+                'relation': 'A 是洛恩的实际掌控者',
+              },
+            ],
+          },
+        ),
+      ],
+    );
+
 String _textOf(WidgetTester tester, Key key) {
   final field = tester.widget<AppTextField>(find.byKey(key));
   return field.controller?.text ?? '';
@@ -200,6 +230,7 @@ void main() {
   Future<_RecordingAiController> pumpAssembly(
     WidgetTester tester, {
     Size viewport = const Size(1100, 2600),
+    AdventureConfig? config,
   }) async {
     tester.view.physicalSize = viewport;
     tester.view.devicePixelRatio = 1.0;
@@ -224,7 +255,7 @@ void main() {
           theme: AppTheme.light(),
           home: AssemblyCreatePage(
             onStartAdventure: (_) async {},
-            initialConfig: _assemblyConfig(),
+            initialConfig: config ?? _assemblyConfig(),
             initialWorldviewDesc: '终年不见天日的古老森林',
           ),
         ),
@@ -353,5 +384,66 @@ void main() {
       _textOf(tester, const Key('assembly-option-1-input')),
       '用户已经写好的分支',
     );
+  });
+
+  testWidgets(
+      'a card-declared organization reaches the opening context as '
+      'organization, never as a character', (tester) async {
+    final ai = await pumpAssembly(tester, config: _canonAssemblyConfig());
+    ai.nextResult = {
+      'scene': 'A 站在议会的长廊上，向洛恩发出了最后通牒。',
+      'options': '1 召见洛恩的使者\n2 调阅洛恩的档案\n3 离开长廊',
+    };
+
+    await tester
+        .tap(find.byKey(const Key('assembly-opening-ai-generate-button')));
+    await tester.pumpAndSettle();
+
+    expect(ai.calls, 1);
+    final canon = ai.lastArgs!['canonEntities']! as List<Map<String, String>>;
+    final loen = canon.firstWhere((entity) => entity['name'] == '洛恩');
+    expect(loen['type'], 'organization');
+    expect(loen['relation'], contains('掌控者'));
+
+    final a = canon.firstWhere((entity) => entity['name'] == 'A');
+    expect(a['type'], 'character');
+    expect(
+      canon.where((entity) => entity['name'] == '洛恩').map((e) => e['type']),
+      isNot(contains('character')),
+    );
+
+    // No-regression: scene + options still write back.
+    expect(
+      _textOf(tester, const Key('assembly-opening-scene-input')),
+      contains('向洛恩发出了最后通牒'),
+    );
+    expect(_textOf(tester, const Key('assembly-option-1-input')), '召见洛恩的使者');
+  });
+
+  testWidgets(
+      'a legacy card without canonical_entities still generates and exposes '
+      'only character canon entities', (tester) async {
+    final ai = await pumpAssembly(tester);
+    ai.nextResult = {
+      'scene': '雨水沿着破碎的船舷滑落。',
+      'options': '1 调查脚印\n2 呼唤凯尔',
+    };
+
+    await tester
+        .tap(find.byKey(const Key('assembly-opening-ai-generate-button')));
+    await tester.pumpAndSettle();
+
+    expect(ai.calls, 1);
+    final canon = ai.lastArgs!['canonEntities']! as List<Map<String, String>>;
+    expect(canon, isNotEmpty);
+    expect(
+      canon.every(
+          (entity) => const {'character', 'npc'}.contains(entity['type'])),
+      isTrue,
+      reason: 'legacy cards contribute only character / npc identity, '
+          'never a guessed organization or location',
+    );
+    expect(_textOf(tester, const Key('assembly-opening-scene-input')),
+        '雨水沿着破碎的船舷滑落。');
   });
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'api_error.dart';
 import '../models/completion_params.dart';
 import '../models/generation_mode.dart';
@@ -1680,9 +1681,10 @@ $userPrompt
   }
 
   /// F6: 文字 → 开场场景 + 选项
-  /// 根据用户偏好（最高优先级）、角色卡+NPC（第二优先级）、世界观（最低优先级），
-  /// 生成开场场景叙述和初始行动选项。
-  /// 权重体系为内部配置，UI不可见。
+  ///
+  /// 权威层级：Canon 既定事实（最高）→ 用户序章要求 → 模型创意自由。
+  /// 已明确类型的实体（组织 / 势力 / 地点 / 物品等）绝不能被序章重新解释
+  /// 成人物；用户要求也只能在不违反 Canon 的前提下生效。
   Future<Map<String, String>> textToOpening({
     required String userPrompt,
     String worldview = '',
@@ -1695,6 +1697,7 @@ $userPrompt
     List<Map<String, String>> selectedCharacters = const [],
     List<Map<String, String>> characterRelationships = const [],
     List<Map<String, String>> npcs = const [],
+    List<Map<String, String>> canonEntities = const [],
   }) async {
     final charExtra = [
       if (protagonistPersonality.isNotEmpty) '性格：$protagonistPersonality',
@@ -1722,16 +1725,17 @@ $userPrompt
           }).join('\n')}\n**原则：NPC应按照用户偏好的要求出场布置，角色关系应符合设定。**'
         : '';
 
-    final prompt = _f6Prompt
-        .replaceFirst('{userPrompt}', userPrompt)
-        .replaceFirst('{worldview}', WorldviewPromptBudget.bound(worldview))
-        .replaceFirst('{protagonistName}', protagonistName)
-        .replaceFirst('{protagonistRole}', protagonistRole)
-        .replaceFirst(
-            '{protagonistExtra}', charExtra.isNotEmpty ? '\n$charExtra' : '')
-        .replaceFirst('{selectedCharacters}', selectedCharacterSection)
-        .replaceFirst('{characterRelationships}', relationshipSection)
-        .replaceFirst('{npcs}', npcSection);
+    final prompt = buildOpeningPrompt(
+      userPrompt: userPrompt,
+      worldview: worldview,
+      protagonistName: protagonistName,
+      protagonistRole: protagonistRole,
+      protagonistExtra: charExtra.isNotEmpty ? '\n$charExtra' : '',
+      selectedCharacterSection: selectedCharacterSection,
+      relationshipSection: relationshipSection,
+      npcSection: npcSection,
+      canonEntitySection: renderCanonEntitySection(canonEntities),
+    );
 
     // Structured generation must yield a scene plus 2-4 usable options.  A
     // malformed, truncated or field-missing response is retried a bounded
@@ -1753,6 +1757,61 @@ $userPrompt
     }
     throw StateError(
         '序章生成未返回有效的场景正文与行动选项（已重试 $openingMaximumContentAttempts 次）');
+  }
+
+  /// Fills the single opening prompt template with the already-rendered
+  /// context sections. Pure and side-effect free so prompt authority can be
+  /// asserted directly in tests.
+  @visibleForTesting
+  static String buildOpeningPrompt({
+    required String userPrompt,
+    required String worldview,
+    required String protagonistName,
+    required String protagonistRole,
+    required String protagonistExtra,
+    required String selectedCharacterSection,
+    required String relationshipSection,
+    required String npcSection,
+    required String canonEntitySection,
+  }) =>
+      _f6Prompt
+          .replaceFirst('{userPrompt}', userPrompt)
+          .replaceFirst('{worldview}', WorldviewPromptBudget.bound(worldview))
+          .replaceFirst('{protagonistName}', protagonistName)
+          .replaceFirst('{protagonistRole}', protagonistRole)
+          .replaceFirst('{protagonistExtra}', protagonistExtra)
+          .replaceFirst('{selectedCharacters}', selectedCharacterSection)
+          .replaceFirst('{characterRelationships}', relationshipSection)
+          .replaceFirst('{npcs}', npcSection)
+          .replaceFirst('{canonEntities}', canonEntitySection);
+
+  /// Renders the Canon entity list injected at the highest authority tier.
+  ///
+  /// Returns an empty string when no typed entity could be derived, so cards
+  /// with no structured entity declarations keep their previous prompt shape.
+  @visibleForTesting
+  static String renderCanonEntitySection(List<Map<String, String>> entities) {
+    if (entities.isEmpty) return '';
+    final buf = StringBuffer();
+    buf.writeln('【Canon 实体类型】（权威既定事实，任何用户要求或模型创意都不得改变其类型）');
+    var wrote = false;
+    for (final entity in entities) {
+      final name = (entity['name'] ?? '').trim();
+      if (name.isEmpty) continue;
+      final type = (entity['type'] ?? '').trim();
+      buf.writeln('- 名称：$name');
+      buf.writeln('  类型：${type.isEmpty ? 'unknown' : type}');
+      final source = (entity['source'] ?? '').trim();
+      if (source.isNotEmpty) buf.writeln('  来源：$source');
+      final relation = (entity['relation'] ?? '').trim();
+      if (relation.isNotEmpty) buf.writeln('  关系：$relation');
+      wrote = true;
+    }
+    if (!wrote) return '';
+    buf.writeln('硬性规则：实体类型只以本清单为准；名称的形式（是否像人名）不能作为类型判断依据。'
+        '若本清单将某名称标记为 organization / faction / location / item 等非人物类型，'
+        '即使它看起来像人物名字，也绝不能把它写成人物，或让它执行说话、行走、思考等人物行为。');
+    return buf.toString();
   }
 
   /// Content attempts for the opening-generation structured response.
@@ -2479,43 +2538,43 @@ $userPrompt
       '必须是纯 JSON，npcs 数组包含 3~6 个角色。';
 
   /// F6: 开场场景 + 选项
-  /// 权重体系（内部配置，UI不可见）：
-  ///   1. 用户偏好 = 最高优先级（可能覆盖世界观设定）
-  ///   2. 角色卡 + NPC = 第二优先级
-  ///   3. 世界观 = 最低优先级（仅作场景氛围参考）
-  static const _f6Prompt = '你是一个专业的文字冒险开场设计师。根据以下信息设计冒险开场，**必须严格按照优先级顺序执行**：\n'
+  ///
+  /// 权威层级（内部配置，UI 不可见）：
+  ///   1. Canon 既定事实 = 最高优先级（世界观硬规则、实体类型、角色身份/关系、
+  ///      组织归属等不可变事实；用户要求与模型创意都不得覆盖）
+  ///   2. 用户序章要求 = 在不违反 Canon 的前提下优先满足
+  ///   3. 模型创意自由 = 在不违反以上两者的前提下展开
+  static const _f6Prompt = '你是一个专业的文字冒险开场设计师。生成冒险开场时必须严格遵守以下权威层级：\n'
       '\n'
-      '━━━━━━━━━━━━━━━━━━━━\n'
-      '🔴 【最高优先级 - 用户偏好】（绝对权威，必须100%遵守）\n'
-      '━━━━━━━━━━━━━━━━━━━━\n'
-      '用户偏好：{userPrompt}\n'
-      '**核心原则：用户偏好是最高准则。即使用户的偏好与世界观设定有出入甚至矛盾，也必须以用户偏好为准，覆盖或调整世界观设定来适配用户需求。**\n'
-      '\n'
-      '━━━━━━━━━━━━━━━━━━━━\n'
-      '🟡 【第二优先级 - 角色设定】（角色行为和性格必须符合设定，但不可凌驾于用户偏好）\n'
-      '━━━━━━━━━━━━━━━━━━━━\n'
-      '主角：{protagonistName}（{protagonistRole}）{protagonistExtra}\n'
+      '【第一优先级 — Canon 既定事实】（不可被任何用户要求或模型创意覆盖）\n'
+      '{canonEntities}'
       '{selectedCharacters}'
       '{characterRelationships}'
       '{npcs}\n'
-      '**原则：角色的身份、性格、背景是开场的核心驱动力，但若与用户偏好冲突，优先满足用户偏好。**\n'
+      '世界观硬约束：{worldview}\n'
+      '规则：Canon 实体类型、角色身份、角色关系、组织归属与世界观硬规则属于不可变事实。'
+      '用户要求与模型创意都不得改变、重新解释或推翻它们。名称的形式不能作为实体类型判断依据。\n'
       '\n'
-      '━━━━━━━━━━━━━━━━━━━━\n'
-      '🟢 【最低优先级 - 世界观】（仅作为场景氛围和背景元素的参考，可以被用户偏好和角色设定覆盖）\n'
-      '━━━━━━━━━━━━━━━━━━━━\n'
-      '世界观：{worldview}\n'
-      '**原则：世界观仅提供场景的视觉风格、文化氛围、地理环境等背景元素。当世界观与用户偏好或角色设定冲突时，以更高层级为准。世界观不是不可打破的规则，而是可以被调整的参考框架。**\n'
+      '【第二优先级 — 用户序章要求】（在不违反 Canon 的前提下优先满足）\n'
+      '用户要求：{userPrompt}\n'
+      '主角：{protagonistName}（{protagonistRole}）{protagonistExtra}\n'
+      '用户可控制：开场地点（前提是不违反 Canon）、氛围、节奏、叙事风格、希望出现的角色、冲突方向、悬念、行动类型。'
+      '当用户要求与 Canon 冲突时，必须以 Canon 为准，不得为了满足用户要求而改变实体类型、角色身份或角色关系。\n'
+      '\n'
+      '【第三优先级 — 模型创意自由】\n'
+      '在不违反 Canon 与用户要求的前提下，自由设计场景细节、环境描写与叙事展开。\n'
       '\n'
       '综合要求：\n'
-      '1. **用户偏好优先**：开场必须首先满足用户偏好的要求，即使需要突破或修改世界观设定\n'
-      '2. **角色驱动**：主角和NPC的性格、关系、背景是推动开场剧情的核心引擎\n'
-      '3. **冲突暗示**：场景中要暗示核心冲突或危机，给玩家一个明确的行动动机或悬念\n'
-      '4. **场景具体化**：叙述要生动具体（150~400字），包含具体的环境描写和情境设定\n'
-      '5. **选项多样化**：提供 2~4 个初始行动选项，涵盖探索、对话、战斗、调查等不同类型\n'
+      '1. **Canon 优先**：任何情况下都不得把已明确为非人物类型（organization / faction / location / item 等）的实体写成人物，或让它执行说话、行走、思考等人物行为。\n'
+      '2. **用户要求**：在 Canon 允许范围内首先满足用户要求。\n'
+      '3. **角色驱动**：主角和 NPC 的性格、关系、背景是推动开场剧情的核心引擎。\n'
+      '4. **冲突暗示**：场景中要暗示核心冲突或危机，给玩家一个明确的行动动机或悬念。\n'
+      '5. **场景具体化**：叙述要生动具体（150~400字），包含具体的环境描写和情境设定。\n'
+      '6. **选项多样化**：提供 2~4 个初始行动选项，涵盖探索、对话、战斗、调查等不同类型。\n'
       '\n'
       '请用 JSON 格式回复，不要包含其他内容：\n'
       '{\n'
-      '  "scene": "开场场景叙述（150~400字，充分展现世界观的特色元素）",\n'
+      '  "scene": "开场场景叙述（150~400字）",\n'
       '  "options": ["选项1", "选项2", "选项3"]\n'
       '}\n'
       '\n'
@@ -2557,6 +2616,11 @@ $userPrompt
         'customRoleName',
       ]);
       if (role.isNotEmpty) parts.add('身份：$role');
+      final profession = _firstNonEmpty(character, const [
+        'profession',
+        'occupation',
+      ]);
+      if (profession.isNotEmpty) parts.add('职业：$profession');
       final body = _firstNonEmpty(character, const [
         'bodyDescription',
         'body_description',
@@ -2571,6 +2635,23 @@ $userPrompt
         'description',
       ]);
       if (background.isNotEmpty) parts.add('背景故事：$background');
+      final ability = _firstNonEmpty(character, const ['ability']);
+      if (ability.isNotEmpty) parts.add('能力：$ability');
+      final weakness = _firstNonEmpty(character, const ['weakness']);
+      if (weakness.isNotEmpty) parts.add('弱点：$weakness');
+      final equipment = _firstNonEmpty(character, const ['equipment']);
+      if (equipment.isNotEmpty) parts.add('装备：$equipment');
+      final faction = _firstNonEmpty(character, const ['faction']);
+      if (faction.isNotEmpty) parts.add('阵营/所属组织：$faction');
+      final homeLocation = _firstNonEmpty(character, const ['homeLocation']);
+      if (homeLocation.isNotEmpty) parts.add('故乡/所在地：$homeLocation');
+      final publicGoal = _firstNonEmpty(character, const ['publicGoal']);
+      if (publicGoal.isNotEmpty) parts.add('公开目标：$publicGoal');
+      final relationshipNotes =
+          _firstNonEmpty(character, const ['relationshipNotes']);
+      if (relationshipNotes.isNotEmpty) {
+        parts.add('关系备注：$relationshipNotes');
+      }
       final customAttrs =
           character['customAttributes'] ?? character['custom_attributes'];
       if (customAttrs != null && customAttrs.isNotEmpty) {

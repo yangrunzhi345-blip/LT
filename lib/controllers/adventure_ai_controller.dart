@@ -82,6 +82,7 @@ class AdventureAiController extends ChangeNotifier {
     List<Map<String, String>> selectedCharacters = const [],
     List<Map<String, String>> characterRelationships = const [],
     List<Map<String, String>> npcs = const [],
+    List<Map<String, String>> canonEntities = const [],
   }) async {
     final generation = ++_generation;
     _startGeneration();
@@ -98,6 +99,7 @@ class AdventureAiController extends ChangeNotifier {
         selectedCharacters: selectedCharacters,
         characterRelationships: characterRelationships,
         npcs: npcs,
+        canonEntities: canonEntities,
       );
       if (!_isCurrent(generation)) return null;
       _finishGeneration();

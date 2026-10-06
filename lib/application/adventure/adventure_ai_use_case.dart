@@ -148,6 +148,7 @@ class AdventureAiUseCase {
     List<Map<String, String>> selectedCharacters = const [],
     List<Map<String, String>> characterRelationships = const [],
     List<Map<String, String>> npcs = const [],
+    List<Map<String, String>> canonEntities = const [],
   }) {
     return _gateway.textToOpening(
       userPrompt: userPrompt,
@@ -161,6 +162,7 @@ class AdventureAiUseCase {
       selectedCharacters: selectedCharacters,
       characterRelationships: characterRelationships,
       npcs: npcs,
+      canonEntities: canonEntities,
     );
   }
 

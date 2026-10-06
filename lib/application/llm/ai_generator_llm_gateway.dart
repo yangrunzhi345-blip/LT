@@ -189,6 +189,7 @@ class AiGeneratorLlmGateway
     List<Map<String, String>> selectedCharacters = const [],
     List<Map<String, String>> characterRelationships = const [],
     List<Map<String, String>> npcs = const [],
+    List<Map<String, String>> canonEntities = const [],
   }) =>
       _generator.textToOpening(
         userPrompt: userPrompt,
@@ -202,6 +203,7 @@ class AiGeneratorLlmGateway
         selectedCharacters: selectedCharacters,
         characterRelationships: characterRelationships,
         npcs: npcs,
+        canonEntities: canonEntities,
       );
 
   @override

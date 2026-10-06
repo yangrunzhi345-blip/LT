@@ -11,6 +11,7 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../application/adventure/opening_canon_context.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -59,8 +60,7 @@ Future<OpeningAiOutcome?> generateOpeningWithAi({
 }) async {
   final config = context.config;
   final protagonist = config.protagonistCharacter;
-  final protagonistCard =
-      protagonist?.characterCardJson ?? const <String, dynamic>{};
+  final protagonistData = _cardData(protagonist?.characterCardJson);
 
   final result = await ref.read(adventureAiControllerProvider).generateOpening(
         userPrompt: prompt.isNotEmpty ? prompt : defaultOpeningAiPrompt,
@@ -71,22 +71,24 @@ Future<OpeningAiOutcome?> generateOpeningWithAi({
         protagonistName: protagonist?.characterName ?? config.name,
         protagonistRole: protagonist?.effectiveRole ?? config.protagonistClass,
         protagonistPersonality: _firstText([
-          protagonistCard['personality'],
+          protagonistData['personality'],
           config.personality,
         ]),
         protagonistBackground: _firstText([
-          protagonistCard['description'],
-          protagonistCard['background'],
+          protagonistData['description'],
+          protagonistData['background'],
           config.protagonistBackground,
         ]),
         protagonistBodyDescription: _firstText([
-          protagonistCard['bodyDescription'],
-          protagonistCard['customBodyDescription'],
+          protagonistData['bodyDescription'],
+          protagonistData['body_description'],
+          protagonistData['customBodyDescription'],
         ]),
-        protagonistAppearance: _text(protagonistCard['appearance']),
+        protagonistAppearance: _text(protagonistData['appearance']),
         selectedCharacters: buildOpeningCharacterContexts(config),
         characterRelationships: buildOpeningRelationshipContexts(config),
         npcs: buildOpeningNpcContexts(config),
+        canonEntities: buildOpeningCanonContext(config).toContextMaps(),
       );
 
   if (result == null) return null;
@@ -118,10 +120,17 @@ String buildOpeningWorldviewText(
 }
 
 /// Selected character cards (protagonist included), independent of NPCs.
+///
+/// Reads the authoritative card fields the opening generator needs to keep an
+/// entity's identity stable: the card's own identity/occupation, its
+/// `world_profile` (faction / home location / goals / relationship notes), its
+/// abilities and equipment, and its custom attributes. Nested `data` wrappers
+/// and legacy flat shapes are both expanded so old cards keep working.
 List<Map<String, String>> buildOpeningCharacterContexts(
     AdventureConfig config) {
   return config.selectedCharacters.map((character) {
-    final card = character.characterCardJson ?? const <String, dynamic>{};
+    final card = _cardData(character.characterCardJson);
+    final profile = _map(card['world_profile'] ?? card['worldProfile']);
     return <String, String>{
       'name': character.characterName,
       'isProtagonist': character.isProtagonist ? 'true' : 'false',
@@ -130,6 +139,7 @@ List<Map<String, String>> buildOpeningCharacterContexts(
         card['profession'],
         card['occupation'],
         card['role'],
+        card['identity'],
       ]),
       'personality': _text(card['personality']),
       'background': _firstText([card['description'], card['background']]),
@@ -138,8 +148,17 @@ List<Map<String, String>> buildOpeningCharacterContexts(
       'appearance': _text(card['appearance']),
       'bodyDescription': _firstText([
         card['bodyDescription'],
+        card['body_description'],
         card['customBodyDescription'],
       ]),
+      'ability': _text(card['ability']),
+      'weakness': _text(card['weakness']),
+      'equipment': _text(card['equipment']),
+      'faction': _text(profile['faction']),
+      'homeLocation': _text(profile['home_location']),
+      'publicGoal': _text(profile['public_goal']),
+      'relationshipNotes': _text(profile['relationship_notes']),
+      'customAttributes': _customAttributesText(card),
     };
   }).toList(growable: false);
 }
@@ -170,7 +189,7 @@ List<Map<String, String>> buildOpeningRelationshipContexts(
 /// The NPC assets chosen for this assembly.
 List<Map<String, String>> buildOpeningNpcContexts(AdventureConfig config) {
   return config.npcSnapshots.map((npc) {
-    final json = npc.npcJson;
+    final json = _cardData(npc.npcJson);
     return <String, String>{
       'name': npc.name.isNotEmpty ? npc.name : _text(json['name']),
       'role':
@@ -179,6 +198,37 @@ List<Map<String, String>> buildOpeningNpcContexts(AdventureConfig config) {
       'relation': _firstText([json['relation'], json['relationship']]),
     };
   }).toList(growable: false);
+}
+
+/// Expands the `data` wrapper a v2 / SillyTavern card may carry while keeping
+/// legacy flat cards readable.
+Map<String, dynamic> _cardData(Map<String, dynamic>? raw) {
+  if (raw == null) return const <String, dynamic>{};
+  final nested = raw['data'];
+  return nested is Map ? Map<String, dynamic>.from(nested) : raw;
+}
+
+Map<String, dynamic> _map(Object? value) =>
+    value is Map ? Map<String, dynamic>.from(value) : const <String, dynamic>{};
+
+/// A bounded, human-readable rendering of a card's custom attributes.
+String _customAttributesText(Map<String, dynamic> card) {
+  final raw = card['custom_attributes'] ?? card['customAttributes'];
+  if (raw is! List) return '';
+  final parts = <String>[];
+  for (final item in raw) {
+    if (item is! Map) continue;
+    final name = (item['name'] ?? '').toString().trim();
+    final value = (item['value'] ?? '').toString().trim();
+    if (name.isEmpty && value.isEmpty) continue;
+    parts.add(name.isEmpty
+        ? value
+        : value.isEmpty
+            ? name
+            : '$name：$value');
+    if (parts.length >= 12) break;
+  }
+  return parts.join('；');
 }
 
 String _text(Object? value) => value?.toString().trim() ?? '';
