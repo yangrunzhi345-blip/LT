@@ -224,7 +224,6 @@ void main() {
     double width = 900,
     double height = 600,
     double scale = 1.0,
-    VoidCallback? onTrackedTap,
     VoidCallback? onTap,
   }) async {
     setViewport(tester, width: width, height: height);
@@ -241,7 +240,7 @@ void main() {
           child: child!,
         ),
         home: Scaffold(
-          body: StatusHudBar(onTap: onTap, onTrackedTap: onTrackedTap),
+          body: StatusHudBar(onTap: onTap),
         ),
       ),
     ));
@@ -282,20 +281,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('Session HUD tracked summary', () {
-    testWidgets('Case A: definition present but untriggered is visible',
-        (tester) async {
-      final container = containerFor(_TestAdventure(config: _config()));
-      await pumpHud(tester, container: container);
+  /// The header owns only scene/vitals. Tracked state must never appear here —
+  /// it belongs to each message's per-turn snapshot (and to the Inspector/Hub
+  /// for the current value).
+  void expectNoTrackedState(WidgetTester tester) {
+    expect(find.textContaining(l10n.trackedStateStatusTitle), findsNothing,
+        reason: '「检测状态」标题不得出现在 Session Header');
+    expect(find.textContaining('精神污染'), findsNothing);
+    expect(find.textContaining('信任度'), findsNothing);
+    expect(find.textContaining('受伤状态'), findsNothing);
+    expect(find.textContaining(l10n.trackedStateUntriggered), findsNothing,
+        reason: '「尚未触发」属于正文状态块，不属于 Header');
+    expect(find.textContaining(l10n.trackedStateNoDefinitions), findsNothing);
+  }
 
-      expect(find.text('精神污染'), findsOneWidget);
-      expect(find.text(l10n.trackedStateUntriggered), findsWidgets);
-      // Never a fabricated zero.
-      expect(find.text('0'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Case B: triggered integer shows value / maximum',
+  group('Session header excludes tracked state', () {
+    testWidgets('Case B: header shows vitals only, never tracked state',
         (tester) async {
       final container = containerFor(_TestAdventure(
         config: _config(),
@@ -303,164 +304,49 @@ void main() {
           RuntimeEntityState(
             entityType: RuntimeEntityType.character,
             entityId: 'lc',
-            overlay: const {'custom_attributes.curse_corruption': 37},
+            overlay: const {'custom_attributes.curse_corruption': 18},
           ),
         ],
       ));
       await pumpHud(tester, container: container);
 
-      expect(find.text('37'), findsOneWidget);
-      expect(find.text(' / 100'), findsWidgets);
+      expect(find.byType(StatusHudBar), findsOneWidget);
+      expect(
+          find.textContaining('${l10n.runtimeStateFieldHp} '), findsOneWidget);
+      expect(
+          find.textContaining('${l10n.runtimeStateFieldMp} '), findsOneWidget);
+      expect(find.textContaining('${l10n.workbenchGold} '), findsOneWidget);
+      expectNoTrackedState(tester);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Case C: boolean shows localized yes', (tester) async {
-      final container = containerFor(_TestAdventure(
-        config: _config(),
-        entities: [
-          RuntimeEntityState(
-            entityType: RuntimeEntityType.character,
-            entityId: 'lc',
-            overlay: const {'custom_attributes.wounded': true},
-          ),
-        ],
-      ));
-      await pumpHud(tester, container: container);
-
-      expect(find.text(l10n.trackedStateBoolYes), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Case D: enum shows the user value', (tester) async {
-      final enumOnly = AdventureConfig(
-        name: '李维',
-        selectedCharacters: [
-          AdventureSelectedCharacter(
-            id: 'lc',
-            characterId: 'lc',
-            characterName: '林澈',
-            isProtagonist: true,
-          ),
-        ],
-        trackedStateDefinitions: const [
-          AdventureTrackedStateDefinition(
-            entityType: RuntimeEntityType.character,
-            entityId: 'lc',
-            definition: _stance,
-          ),
-        ],
-      );
-      final container = containerFor(_TestAdventure(
-        config: enumOnly,
-        entities: [
-          RuntimeEntityState(
-            entityType: RuntimeEntityType.character,
-            entityId: 'lc',
-            overlay: const {'custom_attributes.war_stance': '敌对'},
-          ),
-        ],
-      ));
-      await pumpHud(tester, container: container);
-
-      expect(find.text('战争立场'), findsOneWidget);
-      expect(find.text('敌对'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Case E: no definitions shows an explicit empty message',
+    testWidgets('header stays clean when the adventure has no definitions',
         (tester) async {
       final container =
           containerFor(_TestAdventure(config: _config(withDefinitions: false)));
       await pumpHud(tester, container: container);
 
       expect(
-          find.textContaining(l10n.trackedStateNoDefinitions), findsOneWidget);
+          find.textContaining('${l10n.runtimeStateFieldHp} '), findsOneWidget);
+      expectNoTrackedState(tester);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('Case F: current character drives the summary, no state bleed',
+    testWidgets('tapping the header still triggers the vitals callback',
         (tester) async {
-      final entities = [
-        RuntimeEntityState(
-          entityType: RuntimeEntityType.character,
-          entityId: 'alice',
-          overlay: const {'custom_attributes.fear': 20},
-        ),
-        RuntimeEntityState(
-          entityType: RuntimeEntityType.character,
-          entityId: 'bob',
-          overlay: const {'custom_attributes.fear': 80},
-        ),
-      ];
-      final container = containerFor(
-        _TestAdventure(config: _config(), entities: entities),
-        index: 0,
-      );
-      await pumpHud(tester, container: container);
-
-      expect(find.text('Alice'), findsOneWidget);
-      expect(find.text('20'), findsOneWidget);
-      expect(find.text('80'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('Case H: long names do not overflow at 320 px', (tester) async {
-      final longConfig = AdventureConfig(
-        name: '一位名字非常非常长的调查员主角',
-        selectedCharacters: [
-          AdventureSelectedCharacter(
-            id: 'lc',
-            characterId: 'lc',
-            characterName: '一位名字非常非常长的调查员主角',
-            isProtagonist: true,
-          ),
-        ],
-        trackedStateDefinitions: const [
-          AdventureTrackedStateDefinition(
-            entityType: RuntimeEntityType.character,
-            entityId: 'lc',
-            definition: TrackedStateDefinition(
-              id: 'corruption',
-              name: '一个极其冗长的检测状态名称应当被省略号截断',
-              valueKind: RuntimeStateValueKind.text,
-            ),
-          ),
-        ],
-      );
-      final container = containerFor(_TestAdventure(
-        config: longConfig,
-        entities: [
-          RuntimeEntityState(
-            entityType: RuntimeEntityType.character,
-            entityId: 'lc',
-            overlay: const {
-              'custom_attributes.corruption': '一段非常长的文本状态值用于验证省略号而不是溢出行为',
-            },
-          ),
-        ],
-      ));
-      await pumpHud(tester, container: container, width: 320, height: 568);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('tapping the summary opens the tracked view callback',
-        (tester) async {
-      var tracked = false;
+      var tapped = false;
       final container = containerFor(_TestAdventure(config: _config()));
-      await pumpHud(tester,
-          container: container, onTrackedTap: () => tracked = true);
+      await pumpHud(tester, container: container, onTap: () => tapped = true);
 
-      await tester.tap(find.text('精神污染'));
+      await tester.tap(find.byType(StatusHudBar));
       await tester.pump();
-      expect(tracked, isTrue);
+      expect(tapped, isTrue);
     });
-  });
 
-  group('Session HUD responsive', () {
     for (final size in requiredUiViewports) {
       for (final scale in const <double>[1.0, 1.6, 2.0]) {
         testWidgets(
-            'no overflow at ${size.width.toInt()}x${size.height.toInt()} @${scale}x',
+            'header clean + no overflow at ${size.width.toInt()}x${size.height.toInt()} @${scale}x',
             (tester) async {
           final container = containerFor(_TestAdventure(
             config: _config(),
@@ -468,10 +354,7 @@ void main() {
               RuntimeEntityState(
                 entityType: RuntimeEntityType.character,
                 entityId: 'lc',
-                overlay: const {
-                  'custom_attributes.curse_corruption': 18,
-                  'custom_attributes.wounded': false,
-                },
+                overlay: const {'custom_attributes.curse_corruption': 18},
               ),
             ],
           ));
@@ -482,19 +365,11 @@ void main() {
             height: size.height,
             scale: scale,
           );
+          expectNoTrackedState(tester);
           expect(tester.takeException(), isNull);
         });
       }
     }
-
-    testWidgets('320 px still shows at least one monitored field',
-        (tester) async {
-      final container = containerFor(_TestAdventure(config: _config()));
-      await pumpHud(tester, container: container, width: 320, height: 568);
-
-      expect(find.textContaining('精神污染'), findsWidgets);
-      expect(tester.takeException(), isNull);
-    });
   });
 
   group('Session Inspector tracked block', () {
