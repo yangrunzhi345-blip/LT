@@ -451,7 +451,7 @@ final class _SectionControlTile extends StatelessWidget {
         SectionGenerationState.generated => l10n.outlinePartGenerated,
         SectionGenerationState.validating => l10n.resourceStatusGenerating,
         SectionGenerationState.completed => l10n.resourceStatusSaved,
-        SectionGenerationState.failed => l10n.resourceStatusOptimizationFailed,
+        SectionGenerationState.failed => l10n.resourceStatusGenerationFailed,
         SectionGenerationState.cancelled => l10n.resourceStatusCancelled,
       };
 

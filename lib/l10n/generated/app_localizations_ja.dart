@@ -1764,6 +1764,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get resourceStatusOptimizationFailed => '最適化失敗';
 
   @override
+  String get resourceStatusGenerationFailed => '本文生成失敗';
+
+  @override
   String get resourceUnknownTime => '不明な日時';
 
   @override

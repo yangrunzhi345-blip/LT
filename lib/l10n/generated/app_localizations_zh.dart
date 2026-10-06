@@ -1754,6 +1754,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resourceStatusOptimizationFailed => '优化失败';
 
   @override
+  String get resourceStatusGenerationFailed => '正文生成失败';
+
+  @override
   String get resourceUnknownTime => '未知时间';
 
   @override
@@ -7887,6 +7890,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get resourceStatusOptimizationFailed => '优化失败';
 
   @override
+  String get resourceStatusGenerationFailed => '正文生成失败';
+
+  @override
   String get resourceUnknownTime => '未知时间';
 
   @override
@@ -14018,6 +14024,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceStatusOptimizationFailed => '最佳化失敗';
+
+  @override
+  String get resourceStatusGenerationFailed => '本文生成失敗';
 
   @override
   String get resourceUnknownTime => '未知時間';

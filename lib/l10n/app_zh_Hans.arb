@@ -842,6 +842,7 @@
   "resourceStatusOptimizing": "正在优化",
   "resourceStatusReady": "已准备完成",
   "resourceStatusOptimizationFailed": "优化失败",
+  "resourceStatusGenerationFailed": "正文生成失败",
   "resourceUnknownTime": "未知时间",
   "resourceCreateTitle": "新建资源",
   "resourceTypeSectionTitle": "资源类型",

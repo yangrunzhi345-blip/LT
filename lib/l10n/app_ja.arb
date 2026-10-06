@@ -842,6 +842,7 @@
   "resourceStatusOptimizing": "最適化中",
   "resourceStatusReady": "準備完了",
   "resourceStatusOptimizationFailed": "最適化失敗",
+  "resourceStatusGenerationFailed": "本文生成失敗",
   "resourceUnknownTime": "不明な日時",
   "resourceCreateTitle": "新規リソース",
   "resourceTypeSectionTitle": "リソースタイプ",

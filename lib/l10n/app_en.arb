@@ -772,6 +772,7 @@
   "resourceStatusOptimizing": "Optimizing",
   "resourceStatusReady": "Ready",
   "resourceStatusOptimizationFailed": "Optimization Failed",
+  "resourceStatusGenerationFailed": "Generation Failed",
   "resourceUnknownTime": "Unknown Time",
   "resourceCreateTitle": "Create Resource",
   "resourceTypeSectionTitle": "Resource Type",

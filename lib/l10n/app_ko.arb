@@ -842,6 +842,7 @@
   "resourceStatusOptimizing": "최적화 중",
   "resourceStatusReady": "준비 완료",
   "resourceStatusOptimizationFailed": "최적화 실패",
+  "resourceStatusGenerationFailed": "본문 생성 실패",
   "resourceUnknownTime": "알 수 없는 시간",
   "resourceCreateTitle": "새 리소스",
   "resourceTypeSectionTitle": "리소스 유형",

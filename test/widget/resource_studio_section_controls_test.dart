@@ -172,7 +172,10 @@ void main() {
           expect(tester.takeException(), isNull);
           expect(find.text('章节控制'), findsOneWidget);
           expect(find.text('待生成'), findsNothing);
-          expect(find.text('优化失败'), findsNWidgets(2));
+          // A failed正文 generation and a failed validation/optimization are
+          // semantically different and must not share one label.
+          expect(find.text('正文生成失败'), findsOneWidget);
+          expect(find.text('优化失败'), findsOneWidget);
           expect(find.text('建议优化'), findsNWidgets(2));
           expect(find.text('验证'), findsNWidgets(3));
           expect(find.textContaining('加载更多'), findsOneWidget);

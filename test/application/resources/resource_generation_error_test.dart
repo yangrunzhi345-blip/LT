@@ -3,11 +3,13 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:lt_dialogue/application/resources/resource_generation_error.dart';
 import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/resource_studio_user_message.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/services/api_error.dart';
+import 'package:lt_dialogue/services/llm_service.dart';
 
 void main() {
   group('ResourceGenerationError', () {
@@ -43,6 +45,24 @@ void main() {
           AppErrorCode.resourcePersistenceFailed);
       expect(resourceGenerationErrorFromCode('secret-history-response').code,
           AppErrorCode.unknown);
+    });
+
+    test('should classify provider-incomplete and transport failures exactly',
+        () {
+      final incomplete = LLMResponseIncompleteException(const LLMStreamResult(
+        content: '',
+        finishReason: LLMFinishReason.interrupted,
+        responseCompleted: false,
+      ));
+      expect(resourceGenerationError(incomplete).code,
+          AppErrorCode.resourceProviderIncomplete);
+
+      expect(resourceGenerationError(http.ClientException('reset')).code,
+          AppErrorCode.networkUnavailable);
+      expect(resourceGenerationError(const SocketException('closed')).code,
+          AppErrorCode.networkUnavailable);
+      expect(resourceGenerationError(TimeoutException('idle')).code,
+          AppErrorCode.timeout);
     });
 
     test('should render stable and historical failures safely in every locale',

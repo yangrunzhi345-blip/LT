@@ -1544,7 +1544,7 @@ final class _StatusBar extends StatelessWidget {
       ResourceStudioStatus.paused => l10n.resourceStatusSaved,
       ResourceStudioStatus.completed => l10n.resourceStatusSaved,
       ResourceStudioStatus.retrying => l10n.resourceStatusGenerating,
-      ResourceStudioStatus.failed => l10n.resourceStatusOptimizationFailed,
+      ResourceStudioStatus.failed => l10n.resourceStatusGenerationFailed,
       _ => l10n.resourceStatusSaved,
     };
     return Padding(

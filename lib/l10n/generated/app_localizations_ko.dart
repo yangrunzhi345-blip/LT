@@ -1780,6 +1780,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get resourceStatusOptimizationFailed => '최적화 실패';
 
   @override
+  String get resourceStatusGenerationFailed => '본문 생성 실패';
+
+  @override
   String get resourceUnknownTime => '알 수 없는 시간';
 
   @override

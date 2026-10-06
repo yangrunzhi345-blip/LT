@@ -1839,6 +1839,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get resourceStatusOptimizationFailed => 'Optimization Failed';
 
   @override
+  String get resourceStatusGenerationFailed => 'Generation Failed';
+
+  @override
   String get resourceUnknownTime => 'Unknown Time';
 
   @override

@@ -3422,6 +3422,12 @@ abstract class AppLocalizations {
   /// **'Optimization Failed'**
   String get resourceStatusOptimizationFailed;
 
+  /// No description provided for @resourceStatusGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation Failed'**
+  String get resourceStatusGenerationFailed;
+
   /// No description provided for @resourceUnknownTime.
   ///
   /// In en, this message translates to:

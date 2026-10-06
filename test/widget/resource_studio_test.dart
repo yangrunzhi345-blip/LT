@@ -465,7 +465,7 @@ void main() {
         failedPartId: tree.parts.single.id,
       ));
       await tester.pumpAndSettle();
-      expect(find.text('优化失败'), findsOneWidget);
+      expect(find.text('正文生成失败'), findsOneWidget);
       await openStudioInspector(tester);
       // The failed Part is retried by the page-level "regenerate failed parts"
       // action, which targets exactly the Parts whose task is failed.
