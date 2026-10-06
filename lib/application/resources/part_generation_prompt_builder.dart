@@ -206,7 +206,14 @@ abstract final class PartGenerationPromptBuilder {
       if (selected.length + item.text.length + 2 > maxChars) {
         final remaining = maxChars - selected.length;
         if (remaining > 50) {
-          selected.writeln(item.text.substring(0, remaining));
+          // The candidate may be shorter than the remaining budget by exactly
+          // one code unit once the two separators are accounted for. Clamp the
+          // end index to the paragraph length so this partial fit never throws
+          // a RangeError (which previously surfaced as an "unknown" failure for
+          // any long reference, e.g. an associated worldview).
+          final end =
+              remaining < item.text.length ? remaining : item.text.length;
+          selected.writeln(item.text.substring(0, end));
         }
         break;
       }

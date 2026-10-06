@@ -168,5 +168,46 @@ void main() {
         3000,
       );
     });
+
+    test('never throws when a paragraph just misses the remaining budget', () {
+      // Regression: the first non-fitting paragraph used to be truncated with
+      // `substring(0, remaining)`, which throws a RangeError when its length is
+      // exactly `remaining - 1`. That RangeError propagated as an unclassified
+      // "unknown" generation failure for any long reference (for example an
+      // associated worldview), because the short-reference path returns early.
+      for (var len = 1450; len <= 1560; len++) {
+        final top = 'K${'a' * (len - 1)}';
+        final reference = '$top\n\n${'K' * 10}\n\n${'b' * 3000}';
+        final index = ReferenceContextIndex(reference);
+        final excerpt = PartGenerationPromptBuilder.selectRelevantReference(
+          index,
+          keywords: const ['K'],
+        );
+        expect(
+          excerpt.length,
+          lessThanOrEqualTo(PartGenerationPromptBuilder.maxReferenceCharacters),
+          reason: 'len=$len must stay bounded',
+        );
+      }
+    });
+
+    test('selects important tail context by keyword instead of prefix-only',
+        () {
+      final head = List.generate(12, (i) => '普通段落$i ${'a' * 800}').join('\n\n');
+      const tail = '银月城的守夜人组织只在北门活动，与角色的过往直接相关。';
+      final index = ReferenceContextIndex('$head\n\n$tail');
+
+      final excerpt = PartGenerationPromptBuilder.selectRelevantReference(
+        index,
+        keywords: const ['守夜人'],
+      );
+
+      expect(excerpt, contains('守夜人'));
+      expect(excerpt, contains('北门'));
+      expect(
+        excerpt.length,
+        lessThanOrEqualTo(PartGenerationPromptBuilder.maxReferenceCharacters),
+      );
+    });
   });
 }
