@@ -41,6 +41,18 @@ class CustomAttributeItem with Equatable {
   final String? description;
   final String? characterName;
 
+  /// 只读展示元数据：该项是被追踪的检测定义，但本轮结算后仍没有运行期值。
+  ///
+  /// 仅在 assistant message 的 `custom_status` 快照里出现，用于把「尚未触发」
+  /// 与「值为 0」区分开；不参与任何状态权威，也不写入 AdventureConfig。
+  final bool untriggered;
+
+  /// 只读展示元数据：检测定义的值类型（`RuntimeStateValueKind.name`）。
+  ///
+  /// 让正文状态块能正确本地化布尔项（是 / 否）而不必猜测；同样只存在于消息
+  /// 快照中。
+  final String? valueKind;
+
   const CustomAttributeItem({
     required this.id,
     required this.name,
@@ -51,6 +63,8 @@ class CustomAttributeItem with Equatable {
     this.icon,
     this.description,
     this.characterName,
+    this.untriggered = false,
+    this.valueKind,
   });
 
   @override
@@ -64,6 +78,8 @@ class CustomAttributeItem with Equatable {
         icon,
         description,
         characterName,
+        untriggered,
+        valueKind,
       ];
 
   CustomAttributeItem copyWith({
@@ -76,6 +92,8 @@ class CustomAttributeItem with Equatable {
     String? icon,
     String? description,
     String? characterName,
+    bool? untriggered,
+    String? valueKind,
   }) {
     return CustomAttributeItem(
       id: id ?? this.id,
@@ -87,6 +105,8 @@ class CustomAttributeItem with Equatable {
       icon: icon ?? this.icon,
       description: description ?? this.description,
       characterName: characterName ?? this.characterName,
+      untriggered: untriggered ?? this.untriggered,
+      valueKind: valueKind ?? this.valueKind,
     );
   }
 
@@ -101,6 +121,9 @@ class CustomAttributeItem with Equatable {
         if (description != null) 'description': description,
         if (characterName != null && characterName!.trim().isNotEmpty)
           'characterName': characterName!.trim(),
+        if (untriggered) 'untriggered': true,
+        if (valueKind != null && valueKind!.trim().isNotEmpty)
+          'value_kind': valueKind!.trim(),
       };
 
   factory CustomAttributeItem.fromJson(Map<String, dynamic> json) {
@@ -132,6 +155,8 @@ class CustomAttributeItem with Equatable {
       characterName: json['characterName']?.toString() ??
           json['character_name']?.toString() ??
           json['character']?.toString(),
+      untriggered: json['untriggered'] == true,
+      valueKind: (json['value_kind'] ?? json['valueKind'])?.toString(),
     );
   }
 

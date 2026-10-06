@@ -198,9 +198,17 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
                 item.characterName!.trim().isNotEmpty)
             ? '${item.characterName}·'
             : '$defaultChar·';
-        final val = item.isNumeric
-            ? '${item.effectiveCurrentValue}/${item.effectiveMaxValue}'
-            : (item.value.isNotEmpty ? item.value : (item.description ?? ''));
+        final val = item.untriggered
+            ? l10n.trackedStateUntriggered
+            : item.valueKind == 'boolean'
+                ? (item.value == 'true'
+                    ? l10n.trackedStateBoolYes
+                    : l10n.trackedStateBoolNo)
+                : item.isNumeric
+                    ? '${item.effectiveCurrentValue}/${item.effectiveMaxValue}'
+                    : (item.value.isNotEmpty
+                        ? item.value
+                        : (item.description ?? ''));
         return '$charPrefix${item.name} $val'.trim();
       }).join('  ·  ');
 
@@ -352,11 +360,14 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
     );
   }
 
-  Widget _buildFlatStatuses(List<CustomAttributeItem> items, bool isDark) {
+  Widget _buildFlatStatuses(
+      BuildContext context, List<CustomAttributeItem> items, bool isDark) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: items.map((item) => _buildStatusBadge(item, isDark)).toList(),
+      children: items
+          .map((item) => _buildStatusBadge(context, item, isDark))
+          .toList(),
     );
   }
 
@@ -416,7 +427,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: _buildFlatStatuses(charItems, isDark),
+                child: _buildFlatStatuses(context, charItems, isDark),
               ),
             ],
           ),
@@ -425,9 +436,10 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
     );
   }
 
-  Widget _buildStatusBadge(CustomAttributeItem item, bool isDark) {
+  Widget _buildStatusBadge(
+      BuildContext context, CustomAttributeItem item, bool isDark) {
     final iconText = item.effectiveIcon;
-    final isNumeric = item.isNumeric;
+    final l10n = AppLocalizations.of(context) ?? AppLocalizationsZh();
     final itemBg = isDark
         ? Colors.white.withValues(alpha: 0.06)
         : Colors.black.withValues(alpha: 0.04);
@@ -435,7 +447,30 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
         ? Colors.white.withValues(alpha: 0.1)
         : Colors.black.withValues(alpha: 0.08);
 
-    if (isNumeric) {
+    // A monitored definition with no runtime value yet is a real state, not a
+    // zero. It renders as an explicit「尚未触发」row.
+    if (item.untriggered) {
+      return _buildTextStatusBadge(context, item, isDark,
+          valueText: l10n.trackedStateUntriggered,
+          muted: true,
+          itemBg: itemBg,
+          itemBorder: itemBorder,
+          iconText: iconText);
+    }
+
+    // Boolean monitors carry an explicit value kind so the row can localize
+    // itself without guessing (是 / 否).
+    if (item.valueKind == 'boolean') {
+      final isTrue = item.value == 'true';
+      return _buildTextStatusBadge(context, item, isDark,
+          valueText:
+              isTrue ? l10n.trackedStateBoolYes : l10n.trackedStateBoolNo,
+          itemBg: itemBg,
+          itemBorder: itemBorder,
+          iconText: iconText);
+    }
+
+    if (item.isNumeric) {
       final cur = item.effectiveCurrentValue;
       final max = item.effectiveMaxValue;
       final ratio = item.ratio;
@@ -527,10 +562,31 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
       return badge;
     }
 
-    // 非数值（阶段/描述状态）
+    // 非数值（阶段 / 描述 / 文本状态）
     final dispValue =
         item.value.isNotEmpty ? item.value : (item.description ?? '');
+    return _buildTextStatusBadge(context, item, isDark,
+        valueText: dispValue,
+        itemBg: itemBg,
+        itemBorder: itemBorder,
+        iconText: iconText);
+  }
+
+  /// Shared non-numeric badge: icon + name + value chip. [muted] is used for the
+  /// untriggered state so it reads as absence-of-value rather than a value.
+  Widget _buildTextStatusBadge(
+    BuildContext context,
+    CustomAttributeItem item,
+    bool isDark, {
+    required String valueText,
+    required Color itemBg,
+    required Color itemBorder,
+    required String iconText,
+    bool muted = false,
+  }) {
     final primaryColor = isDark ? AppColors.darkPrimary : AppColors.primary;
+    final chipColor =
+        muted ? Theme.of(context).colorScheme.onSurfaceVariant : primaryColor;
 
     final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -555,20 +611,20 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
           ),
-          if (dispValue.isNotEmpty) ...[
+          if (valueText.isNotEmpty) ...[
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.12),
+                color: chipColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                dispValue,
+                valueText,
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: primaryColor,
+                  color: chipColor,
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
@@ -581,7 +637,7 @@ class _CollapsibleCustomStatusState extends State<_CollapsibleCustomStatus> {
 
     if (item.description != null &&
         item.description!.trim().isNotEmpty &&
-        dispValue != item.description!.trim()) {
+        valueText != item.description!.trim()) {
       return Tooltip(
         message: item.description!.trim(),
         child: badge,

@@ -26,6 +26,7 @@ import '../models/worldview_details.dart';
 import '../application/adventure/adventure_tracked_state_registry.dart';
 import '../application/adventure/adventure_speaker_context.dart';
 import '../application/adventure/tracked_state_candidate_planner.dart';
+import '../application/adventure/tracked_state_snapshot.dart';
 import '../application/narrative/user_intent.dart';
 import '../services/auto_backup_service.dart';
 import '../services/llm_service.dart';
@@ -35,6 +36,7 @@ import '../domain/events/app_event.dart';
 import '../domain/events/app_event_codec.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/custom_status_merger.dart';
+import '../services/runtime_state_validator.dart';
 import '../services/scene_consistency_validator.dart';
 import 'chat_engine_host.dart';
 import 'chat_engine_internals/prompt_builder.dart';
@@ -1579,17 +1581,8 @@ class ChatEngine {
       }
       // 本轮 pending 一定由解析阶段写入，不再回退到 host，避免沿用上一轮的残值。
       final state = effects.applyState(_pendingGameState ?? _host.gameState);
-      // 消息里的 custom_status 快照必须反映本轮结算结果（UI 直接读它渲染监测状态）。
-      // 同一个字符串同时作为 pending presentation 的结构化尾部：settled 阶段
-      // 玩家看到的内容与提交后的 Message 语义完全一致。
-      final settledContent = needsOptionRepair || optionsFromSettlement
-          ? _injectOptionsIntoAiContent(json, _parsedOptions,
-              config: settledConfig)
-          : _normalizeCustomStatusInAiContent(json, config: settledConfig);
-      aiMsg = aiMsg.copyWith(content: settledContent);
-      _stagePendingAssistantTail(settledContent);
-      _notifyAll();
-      final projectedSceneState = _promptBuilder.lastSceneState;
+
+      // ─── 本轮运行期变更（先于正文快照，快照必须反映最终接受值） ───
       // The runtime draft now comes from the settlement request. The narrative
       // payload is only consulted as a labelled legacy fallback, and any
       // settlement-side note travels with the parse diagnostics.
@@ -1621,6 +1614,25 @@ class ChatEngine {
       // the atomic commit intact and turns the defect into a diagnostic.
       final dedupedRuntimeChanges = _dedupeRuntimeChanges(allRuntimeChanges,
           diagnostics: runtimeDiagnostics);
+
+      // 消息里的 custom_status 快照必须反映本轮结算结果（UI 直接读它渲染监测状态）。
+      // 快照来自统一检测权威：AdventureConfig.trackedStateDefinitions →
+      // AdventureTrackedStateRegistry → RuntimeEntityState.overlay，并叠加本轮
+      // 被接受的运行期变更，因此与即将持久化的 overlay 完全一致；定义存在但尚无
+      // 运行期值的项目以「尚未触发」出现，绝不伪造 0。
+      // 同一个字符串同时作为 pending presentation 的结构化尾部：settled 阶段
+      // 玩家看到的内容与提交后的 Message 语义完全一致。
+      final statusSnapshot = _buildTrackedStatusSnapshot(dedupedRuntimeChanges);
+      final settledContent = needsOptionRepair || optionsFromSettlement
+          ? _injectOptionsIntoAiContent(json, _parsedOptions,
+              config: settledConfig, statusSnapshot: statusSnapshot)
+          : _normalizeCustomStatusInAiContent(json,
+              config: settledConfig, statusSnapshot: statusSnapshot);
+      aiMsg = aiMsg.copyWith(content: settledContent);
+      _stagePendingAssistantTail(settledContent);
+      _notifyAll();
+      final projectedSceneState = _promptBuilder.lastSceneState;
+
       final runtimeDraft = dedupedRuntimeChanges.isEmpty
           ? null
           : RuntimeStateCommitDraft(
@@ -2224,6 +2236,41 @@ class ChatEngine {
     if (settledConfig == null) return;
     _logCustomStatusUpdate(
         settledConfig.customAttributes, settledConfig.supportingCharacters);
+  }
+
+  /// Builds the assistant message's `custom_status` presentation snapshot from
+  /// the unified tracked-state authority.
+  ///
+  /// [acceptedChanges] is the exact set of runtime proposals this turn will
+  /// commit. The snapshot is filtered through the same [RuntimeStateValidator]
+  /// the commit uses and then projected onto the current overlay with the same
+  /// frozen bounds, so the inline block can never show a value the runtime did
+  /// not accept (a monitor capped at 100 can never read `120 / 100`). Returns
+  /// `null` when there is no adventure config to read definitions from.
+  List<Map<String, dynamic>>? _buildTrackedStatusSnapshot(
+    List<RuntimeStateChangeProposal> acceptedChanges,
+  ) {
+    final config = _host.adventureConfig;
+    if (config == null) return null;
+    final validated = const RuntimeStateValidator().accept(
+      acceptedChanges,
+      config: config,
+    );
+    return const TrackedStateSnapshotBuilder().build(
+      config: config,
+      runtimeEntities: _runtimeEntities,
+      acceptedChanges: validated,
+    );
+  }
+
+  /// Legacy `custom_status` snapshot for callers that have no unified-definition
+  /// projection (pre-settlement interim content and the option-repair path).
+  List<Map<String, dynamic>> _legacyCustomStatusMaps(AdventureConfig? config) {
+    final attributes = config?.allTrackedCustomAttributes ??
+        _host.adventureConfig?.allTrackedCustomAttributes ??
+        _host.adventureConfig?.customAttributes ??
+        const <CustomAttributeItem>[];
+    return [for (final attribute in attributes) attribute.toJson()];
   }
 
   List<RuntimeStateChangeProposal> _customStatusRuntimeChanges({
@@ -2934,14 +2981,12 @@ $recent
     return unique.length >= 3 ? unique : const [];
   }
 
-  /// [config] 允许注入“本轮已结算但尚未写入 host”的状态快照。
+  /// [config] 允许注入“本轮已结算但尚未写入 host”的旧协议状态快照；
+  /// [statusSnapshot] 是统一检测权威投影出的只读 `custom_status` 快照（优先）。
   String _injectOptionsIntoAiContent(String aiContent, List<String> options,
-      {AdventureConfig? config}) {
+      {AdventureConfig? config, List<Map<String, dynamic>>? statusSnapshot}) {
     final scene = _host.gameState.currentScene.trim();
-    final customAttrs = config?.allTrackedCustomAttributes ??
-        _host.adventureConfig?.allTrackedCustomAttributes ??
-        _host.adventureConfig?.customAttributes ??
-        const [];
+    final customStatus = statusSnapshot ?? _legacyCustomStatusMaps(config);
     final fallbackJson = <String, dynamic>{
       'scene': scene.isNotEmpty ? scene : '当前场景',
       'hp': _host.gameState.hp,
@@ -2951,8 +2996,7 @@ $recent
       'gold': _host.gameState.gold,
       'inventory': List<String>.from(_host.gameState.inventory),
       'options': options,
-      if (customAttrs.isNotEmpty)
-        'custom_status': customAttrs.map((a) => a.toJson()).toList(),
+      if (customStatus.isNotEmpty) 'custom_status': customStatus,
     };
 
     final sepMatch = AdventureResponse.separatorPattern.firstMatch(aiContent);
@@ -2980,8 +3024,8 @@ $recent
         merged['gold'] = merged['gold'] ?? _host.gameState.gold;
         merged['inventory'] =
             merged['inventory'] ?? List<String>.from(_host.gameState.inventory);
-        if (customAttrs.isNotEmpty) {
-          merged['custom_status'] = customAttrs.map((a) => a.toJson()).toList();
+        if (customStatus.isNotEmpty) {
+          merged['custom_status'] = customStatus;
         } else {
           merged.remove('custom_status');
           merged.remove('custom_attributes');
@@ -2998,14 +3042,14 @@ $recent
     return '$narrative\n---JSON---\n${jsonEncode(fallbackJson)}';
   }
 
-  /// 保证 AI 正文中的 JSON 段包含所有追踪角色的最新自定义检测状态快照
+  /// 保证 AI 正文中的 JSON 段包含所有追踪角色最新的检测状态快照。
+  ///
+  /// [statusSnapshot] 优先：它来自统一检测权威（frozen definitions + runtime
+  /// overlay），并已叠加本轮被接受的运行期变更。缺省时回退到旧协议快照。
   String _normalizeCustomStatusInAiContent(String content,
-      {AdventureConfig? config}) {
-    final customAttrs = config?.allTrackedCustomAttributes ??
-        _host.adventureConfig?.allTrackedCustomAttributes ??
-        _host.adventureConfig?.customAttributes ??
-        const [];
-    if (customAttrs.isEmpty) return content;
+      {AdventureConfig? config, List<Map<String, dynamic>>? statusSnapshot}) {
+    final customStatus = statusSnapshot ?? _legacyCustomStatusMaps(config);
+    if (customStatus.isEmpty) return content;
 
     final sepMatch = AdventureResponse.separatorPattern.firstMatch(content);
     if (sepMatch == null) return content;
@@ -3017,7 +3061,7 @@ $recent
       final decoded = jsonDecode(cleaned);
       if (decoded is Map<String, dynamic>) {
         final merged = Map<String, dynamic>.from(decoded);
-        merged['custom_status'] = customAttrs.map((a) => a.toJson()).toList();
+        merged['custom_status'] = customStatus;
         // Delta 已并入本地完整快照，避免残留原始 Delta 字段。
         merged.remove('custom_status_changes');
         merged.remove('custom_status_evaluations');

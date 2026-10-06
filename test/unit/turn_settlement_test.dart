@@ -15,6 +15,9 @@ import 'package:lt_dialogue/models/message.dart';
 import 'package:lt_dialogue/models/scene_dialogue.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/models/turn_settlement.dart';
+import 'package:lt_dialogue/models/adventure_tracked_state.dart';
+import 'package:lt_dialogue/models/tracked_state_definition.dart';
+import 'package:lt_dialogue/models/typed_runtime_state.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
@@ -1181,6 +1184,144 @@ void main() {
 
     expect(llm.settlementCalls, isEmpty);
     expect(llm.messages, hasLength(1));
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Tracked-state authority → assistant message `custom_status` snapshot.
+  // ─────────────────────────────────────────────────────────────────────────
+  group('Tracked state message snapshot', () {
+    AdventureConfig trackedConfig() => AdventureConfig(
+          name: '旅人',
+          selectedCharacters: [
+            AdventureSelectedCharacter(
+              id: 'lc',
+              characterId: 'lc',
+              characterName: '林澈',
+              isProtagonist: true,
+            ),
+          ],
+          trackedStateDefinitions: const [
+            AdventureTrackedStateDefinition(
+              entityType: RuntimeEntityType.character,
+              entityId: 'lc',
+              definition: TrackedStateDefinition(
+                id: 'curse_corruption',
+                name: '精神污染',
+                valueKind: RuntimeStateValueKind.integer,
+                minimum: 0,
+                maximum: 100,
+              ),
+            ),
+            AdventureTrackedStateDefinition(
+              entityType: RuntimeEntityType.character,
+              entityId: 'lc',
+              definition: TrackedStateDefinition(
+                id: 'trust',
+                name: '信任度',
+                valueKind: RuntimeStateValueKind.integer,
+              ),
+            ),
+          ],
+        );
+
+    test(
+        'Cases A+B: committed message carries the settled value and the untriggered row',
+        () async {
+      final config = trackedConfig();
+      final adventureId =
+          await repository.createAdventure('Tracked snapshot', config);
+      await repository.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: 0,
+        entityType: RuntimeEntityType.character,
+        entityId: 'lc',
+      );
+
+      final llm = _ScriptedLlmService([
+        _narrative,
+        _settlementJson(runtimeChanges: [
+          {
+            'entity_type': 'character',
+            'entity_id': 'lc',
+            'change_kind': 'primary',
+            'operation': 'set',
+            'path': 'custom_attributes.curse_corruption',
+            'value': 18,
+            'reason': '正文中诅咒明显加深',
+          },
+        ]),
+      ]);
+      final harness = _SettlementHarness(
+        adventureId: adventureId,
+        repository: repository,
+        config: config,
+      );
+      final engine = harness.build(llm);
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('我继续深入废墟。');
+
+      final content = harness.messages.last.content;
+      // The inline block is projected from the unified authority, not the empty
+      // legacy customAttributes.
+      expect(content, contains('custom_status'));
+      expect(content, contains('精神污染'));
+      expect(content, contains('18/100'));
+      // A definition with no value is explicit, never hidden and never zero.
+      expect(content, contains('信任度'));
+      expect(content, contains('untriggered'));
+
+      // The committed overlay agrees with the snapshot value.
+      final entity =
+          (await repository.getRuntimeEntities(adventureId, 0)).single;
+      expect(entity.overlay['custom_attributes.curse_corruption'], 18);
+    });
+
+    test('Case D: an out-of-range set never reaches the snapshot', () async {
+      final config = trackedConfig();
+      final adventureId =
+          await repository.createAdventure('Tracked out of range', config);
+      await repository.seedRuntimeEntity(
+        adventureId: adventureId,
+        branchId: 0,
+        entityType: RuntimeEntityType.character,
+        entityId: 'lc',
+      );
+
+      final llm = _ScriptedLlmService([
+        _narrative,
+        _settlementJson(runtimeChanges: [
+          {
+            'entity_type': 'character',
+            'entity_id': 'lc',
+            'change_kind': 'primary',
+            'operation': 'set',
+            'path': 'custom_attributes.curse_corruption',
+            'value': 120,
+            'reason': '模型越界提议',
+          },
+        ]),
+      ]);
+      final harness = _SettlementHarness(
+        adventureId: adventureId,
+        repository: repository,
+        config: config,
+      );
+      final engine = harness.build(llm);
+      addTearDown(engine.dispose);
+
+      await engine.sendMessage('我继续深入废墟。');
+
+      final content = harness.messages.last.content;
+      // 120 exceeds the frozen maximum of 100 → rejected → the row stays
+      // untriggered; the snapshot must never echo the raw proposal.
+      expect(content, isNot(contains('120')));
+      expect(content, contains('untriggered'));
+
+      final entity =
+          (await repository.getRuntimeEntities(adventureId, 0)).single;
+      expect(entity.overlay['custom_attributes.curse_corruption'], isNull);
+    });
   });
 }
 
