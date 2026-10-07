@@ -27,8 +27,13 @@ class WorldviewSnapshotService {
     Map<String, dynamic> snapshot, {
     String sourceRevisionId = '',
   }) {
+    // Tolerate a `detail_json` that a legacy/imported snapshot stored as text
+    // instead of an object, exactly like `AdventureTrackedStateFreezer` and the
+    // narrative/engine readers do. A non-object value must degrade to the
+    // description fallback, never abort Adventure creation.
+    final rawDetail = snapshot['detail_json'];
     final details = WorldviewDetails.fromJson(
-      snapshot['detail_json'] as Map<String, dynamic>?,
+      rawDetail is Map ? Map<String, dynamic>.from(rawDetail) : null,
       fallbackDescription: snapshot['description']?.toString() ?? '',
     );
     final hash =

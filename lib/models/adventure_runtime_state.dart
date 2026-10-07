@@ -19,6 +19,33 @@ enum RuntimeChangeOperation { set, remove, appendUnique, increment }
 
 enum RuntimeEventSource { aiProposal, userEdit, systemRule, resourceImport }
 
+/// Characters an entity id may never contain.
+///
+/// The id is persisted as a row key and echoed verbatim into model-visible
+/// prompts and overlay JSON, so whitespace-like control characters are the
+/// real boundary. Everything else is allowed.
+final RegExp _runtimeEntityIdForbiddenChars = RegExp(r'[\u0000-\u001F\u007F]');
+
+/// Whether [value] is a legal runtime entity id.
+///
+/// A runtime entity id is the adventure's stable identity for a character, NPC,
+/// relationship, world or faction — exactly the id the frozen `AdventureConfig`
+/// carries for that entity, derived from the resource id via
+/// `AdventureCharacterIdentity.effectiveId`. Resource ids are opaque strings
+/// (`ResourceId` accepts any value), and real user libraries contain character
+/// cards whose id is `<name>_<creator>` (non-ASCII for a typical CJK card), so
+/// the runtime layer must accept the same domain the identity layer produces.
+///
+/// Rejecting only empty, over-long or control-character ids keeps the id safe
+/// as a key while never refusing an id the rest of the adventure already treats
+/// as authoritative. This is the single shared rule: the repository seed, the
+/// model-proposal parser and the scene-state parser all use it so a valid id can
+/// never be accepted by one boundary and rejected by another.
+bool isValidRuntimeEntityId(String value) =>
+    value.isNotEmpty &&
+    value.length <= 200 &&
+    !_runtimeEntityIdForbiddenChars.hasMatch(value);
+
 final class RuntimeStateChangeProposal {
   static const String customAttributesNamespace = 'custom_attributes.';
   static const int maximumChangesPerTurn = 32;
@@ -144,10 +171,9 @@ final class RuntimeStateChangeProposal {
     return List.unmodifiable(proposals);
   }
 
-  static bool _isIdentifier(String value) =>
-      value.isNotEmpty &&
-      value.length <= 200 &&
-      RegExp(r'^[A-Za-z0-9_.:-]+$').hasMatch(value);
+  /// A proposal's entity id must satisfy the shared runtime entity id rule so a
+  /// configured roster id is never accepted at seed time and rejected here.
+  static bool _isIdentifier(String value) => isValidRuntimeEntityId(value);
 
   static bool _isSafeValue(Object? value, [int depth = 0]) {
     if (depth > 3) return false;

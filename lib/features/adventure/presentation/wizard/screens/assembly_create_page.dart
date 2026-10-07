@@ -17,6 +17,7 @@ import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../widgets/app_dialogs.dart';
 import '../adventure_preview_saver.dart';
+import '../adventure_readiness_message_localization.dart';
 import '../models/wizard_character_item.dart';
 import '../widgets/assembly_opening_ai.dart';
 import 'assembly_config_page.dart';
@@ -428,7 +429,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         AppFeedback.error(
             context,
             l10n.startAdventureFailed(
-              localizeAppError(l10n, asAppDomainError(e)),
+              localizeAppError(l10n, adventureLaunchError(e)),
             ));
       }
     } finally {

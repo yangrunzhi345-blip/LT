@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/adventure_readiness_message_localization.dart';
 import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
+import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_ja.dart';
@@ -91,5 +92,37 @@ void main() {
     expect(zh, isNot(en));
     expect(ja, contains('リソースの準備に失敗しました'));
     expect(ja, isNot(en));
+  });
+
+  group('adventureLaunchError', () {
+    test('a readiness refusal must not be reported as an unknown error', () {
+      final blocked = AdventureReadinessGateException(issues: const []);
+      expect(
+        adventureLaunchError(blocked).code,
+        AppErrorCode.adventureReadinessFailed,
+      );
+      expect(adventureLaunchError(blocked).code, isNot(AppErrorCode.unknown));
+    });
+
+    test('a readiness refusal with a typed cause keeps that cause', () {
+      const typed = AppDomainError(code: AppErrorCode.adventureAssetMissing);
+      expect(
+        adventureLaunchError(
+          AdventureReadinessGateException(error: typed),
+        ).code,
+        AppErrorCode.adventureAssetMissing,
+      );
+    });
+
+    test('other failures stay classified by the shared mapper', () {
+      expect(
+          adventureLaunchError(StateError('boom')).code, AppErrorCode.unknown);
+      expect(
+        adventureLaunchError(
+          const AppDomainError(code: AppErrorCode.networkUnavailable),
+        ).code,
+        AppErrorCode.networkUnavailable,
+      );
+    });
   });
 }

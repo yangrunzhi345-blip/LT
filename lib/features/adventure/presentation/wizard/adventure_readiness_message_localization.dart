@@ -1,5 +1,22 @@
+import '../../../../core/localization/app_error_localizer.dart';
+import '../../../../domain/errors/app_error.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../application/adventure/adventure_readiness_gate.dart';
+
+/// Converts a launch failure into the safe typed error the UI localizes.
+///
+/// A readiness gate refusal is a well-defined, actionable condition — not an
+/// unknown crash. Unwrap the gate's typed `error` when it carries one (a
+/// missing/unparseable assembly card), otherwise report the stable readiness
+/// category, so the start boundary never shows 「未知错误」 for a resource that
+/// simply is not assembled/ready yet.
+AppDomainError adventureLaunchError(Object error) {
+  if (error is AdventureReadinessGateException) {
+    return error.error ??
+        const AppDomainError(code: AppErrorCode.adventureReadinessFailed);
+  }
+  return asAppDomainError(error);
+}
 
 /// Localizes a typed readiness result without comparing localized sentences.
 String localizeAdventureReadiness(

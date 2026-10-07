@@ -660,20 +660,31 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners(); // 确保 UI 感知到 inGame 状态变化
 
     try {
+      debugPrint('[AdventureStart][LIST_REFRESH_BEGIN]');
       await _adventure.loadAdventureList();
+      debugPrint('[AdventureStart][LIST_REFRESH_DONE]');
       final baseTitle = c.name.isNotEmpty ? '${c.name}的冒险' : '文字冒险';
       final title = _uniqueTitle(baseTitle, _adventure.adventureList);
+      debugPrint('[AdventureStart][CREATE_BEGIN]');
       final adventureId = await _adventure.createAdventure(title, c);
+      debugPrint('[AdventureStart][CREATE_DONE] {adventureId: $adventureId}');
 
       // Bootstrap must finish before the opening message freezes its snapshot,
       // and before player input can race its runtime revision. Failure remains
       // fail-open: definitions without values are presented as untriggered.
+      debugPrint(
+          '[AdventureStart][BOOTSTRAP_BEGIN] {adventureId: $adventureId}');
       await _runOpeningTrackedStateBootstrap(adventureId);
+      debugPrint(
+          '[AdventureStart][BOOTSTRAP_DONE] {adventureId: $adventureId}');
       if (_adventure.currentAdventureId != adventureId) return adventureId;
 
       // Persist the assembled prologue and its post-bootstrap presentation in
       // one message insert; no later live-runtime refresh edits its history.
+      debugPrint('[AdventureStart][OPENING_BEGIN] {adventureId: $adventureId}');
       final seededOpening = await _adventure.seedOpeningScene(c);
+      debugPrint(
+          '[AdventureStart][OPENING_DONE] {adventureId: $adventureId, seeded: $seededOpening}');
 
       _isAdventureChatOpen = true;
       _triggerTitleBarRebuild(); // title 已创建
@@ -701,7 +712,14 @@ class ChatProvider extends ChangeNotifier {
         }));
       }
       return adventureId;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // Diagnostics stay in the log; the UI keeps the safe generic category.
+      // Only stage/type/IDs are logged, never story text, prompts or secrets.
+      debugPrint('[AdventureStart][FAILED] ${e.runtimeType}: $e');
+      debugPrintStack(
+        label: '[AdventureStart][STACK]',
+        stackTrace: stackTrace,
+      );
       _adventure.inGame = false;
       _adventure.messages.add(Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),

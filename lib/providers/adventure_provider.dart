@@ -296,70 +296,91 @@ class AdventureProvider extends ChangeNotifier {
     // versions before the config is assembled. Managed (unified tree)
     // resources must be ready, or the user must have explicitly allowed the
     // previous ready revision.
-    final gatedConfig = await _gate.enforceAndFreeze(config);
-    final relationshipLoader = _relationshipLoader;
-    final relationshipSelection = relationshipLoader == null
-        ? null
-        : await relationshipLoader.load(gatedConfig);
-    final assembled = relationshipSelection == null
-        ? const AdventureAssembler().assemble(gatedConfig)
-        : const AdventureAssembler().assembleWithResourceRelationships(
-            input: gatedConfig,
-            relationships: relationshipSelection.relationships,
-            selectedResourceIds: relationshipSelection.selectedResourceIds,
-            resourceIdToAdventureId:
-                relationshipSelection.resourceIdToAdventureId,
-          );
-    // Freeze the adventure's own monitoring definitions from every source
-    // (protagonist, all selected characters, supporting fallback, NPCs, world)
-    // before the config is persisted. Later resource edits cannot change it.
-    final frozenConfig = assembled.copyWith(
-      trackedStateDefinitions:
-          const AdventureTrackedStateFreezer().freeze(assembled),
-    );
-    final id = await _adventureRepo.createAdventure(title, frozenConfig);
-    _currentAdventureId = id;
-    _currentTitle = title;
-    _adventureConfig = frozenConfig;
-    _dynamicCharacters = const [];
-    await _seedRuntimeEntities(id, frozenConfig);
-    _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
-    _messages.clear();
-    _gameState = GameState(adventureId: id);
-    await _adventureRepo.saveGameState(_gameState);
-    _scenePresence = ScenePresence(
-        adventureId: id,
-        branchId: 0,
-        actorId: 'protagonist',
-        participantIds: const ['protagonist']);
-    await _adventureRepo.saveScenePresence(_scenePresence!);
-    _sceneState = SceneState(
-      location: frozenConfig.effectiveOpeningScene,
-      presentCharacterIds: const ['protagonist'],
-      recentChanges: frozenConfig.effectiveOpeningScene.isEmpty
-          ? const []
-          : [frozenConfig.effectiveOpeningScene],
-    );
-    await _adventureRepo.saveSceneState(id, 0, _sceneState);
-    _sceneRevision = await _adventureRepo.getSceneStateRevision(id, 0);
-    final snapshot = frozenConfig.worldviewSnapshot;
-    if (snapshot != null) {
-      // Phase 10: stamp managed entries with the adopted assembly revision so
-      // entries → embeddings provenance stays revision-bound.
-      final sourceId = snapshot['source_id']?.toString() ?? '';
-      final worldviewBinding = frozenConfig.resourceBindings
-          .where((binding) => binding.resourceId == sourceId)
-          .firstOrNull;
-      for (final entry in WorldviewSnapshotService.buildManagedEntries(
-        id,
-        snapshot,
-        sourceRevisionId: worldviewBinding?.revisionId ?? '',
-      )) {
-        await _worldMgr.addWorldEntry(entry);
+    try {
+      debugPrint('[AdventureStart][CREATE][GATE_BEGIN]');
+      final gatedConfig = await _gate.enforceAndFreeze(config);
+      debugPrint('[AdventureStart][CREATE][GATE_DONE]');
+      final relationshipLoader = _relationshipLoader;
+      final relationshipSelection = relationshipLoader == null
+          ? null
+          : await relationshipLoader.load(gatedConfig);
+      debugPrint('[AdventureStart][CREATE][RELATIONSHIPS_DONE]');
+      final assembled = relationshipSelection == null
+          ? const AdventureAssembler().assemble(gatedConfig)
+          : const AdventureAssembler().assembleWithResourceRelationships(
+              input: gatedConfig,
+              relationships: relationshipSelection.relationships,
+              selectedResourceIds: relationshipSelection.selectedResourceIds,
+              resourceIdToAdventureId:
+                  relationshipSelection.resourceIdToAdventureId,
+            );
+      // Freeze the adventure's own monitoring definitions from every source
+      // (protagonist, all selected characters, supporting fallback, NPCs, world)
+      // before the config is persisted. Later resource edits cannot change it.
+      final frozenConfig = assembled.copyWith(
+        trackedStateDefinitions:
+            const AdventureTrackedStateFreezer().freeze(assembled),
+      );
+      debugPrint('[AdventureStart][CREATE][ASSEMBLED_DONE] '
+          '{definitions: ${frozenConfig.trackedStateDefinitions.length}, '
+          'selected: ${frozenConfig.selectedCharacters.length}, '
+          'relationships: ${frozenConfig.characterRelationships.length}}');
+      final id = await _adventureRepo.createAdventure(title, frozenConfig);
+      debugPrint('[AdventureStart][CREATE][PERSIST_DONE] {adventureId: $id}');
+      _currentAdventureId = id;
+      _currentTitle = title;
+      _adventureConfig = frozenConfig;
+      _dynamicCharacters = const [];
+      await _seedRuntimeEntities(id, frozenConfig);
+      debugPrint('[AdventureStart][CREATE][SEED_ENTITIES_DONE]');
+      _runtimeEntities = await _adventureRepo.getRuntimeEntities(id, 0);
+      _messages.clear();
+      _gameState = GameState(adventureId: id);
+      await _adventureRepo.saveGameState(_gameState);
+      _scenePresence = ScenePresence(
+          adventureId: id,
+          branchId: 0,
+          actorId: 'protagonist',
+          participantIds: const ['protagonist']);
+      await _adventureRepo.saveScenePresence(_scenePresence!);
+      _sceneState = SceneState(
+        location: frozenConfig.effectiveOpeningScene,
+        presentCharacterIds: const ['protagonist'],
+        recentChanges: frozenConfig.effectiveOpeningScene.isEmpty
+            ? const []
+            : [frozenConfig.effectiveOpeningScene],
+      );
+      await _adventureRepo.saveSceneState(id, 0, _sceneState);
+      _sceneRevision = await _adventureRepo.getSceneStateRevision(id, 0);
+      final snapshot = frozenConfig.worldviewSnapshot;
+      if (snapshot != null) {
+        // Phase 10: stamp managed entries with the adopted assembly revision so
+        // entries → embeddings provenance stays revision-bound.
+        final sourceId = snapshot['source_id']?.toString() ?? '';
+        final worldviewBinding = frozenConfig.resourceBindings
+            .where((binding) => binding.resourceId == sourceId)
+            .firstOrNull;
+        for (final entry in WorldviewSnapshotService.buildManagedEntries(
+          id,
+          snapshot,
+          sourceRevisionId: worldviewBinding?.revisionId ?? '',
+        )) {
+          await _worldMgr.addWorldEntry(entry);
+        }
       }
+      debugPrint('[AdventureStart][CREATE][WORLD_ENTRIES_DONE]');
+      await loadAdventureList();
+      debugPrint('[AdventureStart][CREATE][COMPLETE] {adventureId: $id}');
+      return id;
+    } catch (error, stackTrace) {
+      debugPrint(
+          '[AdventureStart][CREATE][FAILED] ${error.runtimeType}: $error');
+      debugPrintStack(
+        label: '[AdventureStart][CREATE][STACK]',
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
-    await loadAdventureList();
-    return id;
   }
 
   /// Resolves the current Resource relationships for the assembly preview.
@@ -414,23 +435,45 @@ class AdventureProvider extends ChangeNotifier {
     };
     // The creation caller runs bootstrap first. Use the frozen adventure
     // authority, then persist this snapshot once with the opening message.
-    final snapshot = const TrackedStateSnapshotBuilder().build(
-      config: _adventureConfig ?? config,
-      runtimeEntities: _runtimeEntities,
-    );
-    final content = AdventureResponse.rewritePayload(
-      scene.isEmpty
-          ? jsonEncode(payload)
-          : '$scene\n\n${AdventureResponse.jsonSeparator}\n${jsonEncode(payload)}',
-      replacements: {if (snapshot.isNotEmpty) 'custom_status': snapshot},
-    );
+    List<Map<String, dynamic>> snapshot;
+    String content;
+    try {
+      debugPrint(
+          '[AdventureStart][OPENING][SNAPSHOT_BEGIN] {adventureId: $id}');
+      snapshot = const TrackedStateSnapshotBuilder().build(
+        config: _adventureConfig ?? config,
+        runtimeEntities: _runtimeEntities,
+      );
+      debugPrint('[AdventureStart][OPENING][SNAPSHOT_DONE] '
+          '{items: ${snapshot.length}}');
+      content = AdventureResponse.rewritePayload(
+        scene.isEmpty
+            ? jsonEncode(payload)
+            : '$scene\n\n${AdventureResponse.jsonSeparator}\n${jsonEncode(payload)}',
+        replacements: {if (snapshot.isNotEmpty) 'custom_status': snapshot},
+      );
+      debugPrint('[AdventureStart][OPENING][REWRITE_DONE] '
+          '{length: ${content.length}}');
+    } catch (error, stackTrace) {
+      debugPrint(
+          '[AdventureStart][OPENING][SNAPSHOT_FAILED] ${error.runtimeType}: $error');
+      debugPrintStack(
+        label: '[AdventureStart][OPENING][SNAPSHOT_STACK]',
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
 
     final message = Message(id: messageId, content: content, isUser: false);
     _messages.add(message);
     notifyListeners();
     if (_currentAdventureId != id) return true;
+    debugPrint('[AdventureStart][OPENING][INSERT_BEGIN] {adventureId: $id}');
     await _adventureRepo.insertMessage(id, message);
+    debugPrint('[AdventureStart][OPENING][INSERT_DONE] {adventureId: $id}');
+    debugPrint('[AdventureStart][OPENING][LIST_REFRESH_BEGIN]');
     await loadAdventureList();
+    debugPrint('[AdventureStart][OPENING][LIST_REFRESH_DONE]');
     return true;
   }
 

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'adventure_runtime_state.dart' show isValidRuntimeEntityId;
+
 enum SceneGoalStatus { active, resolved, cancelled, superseded }
 
 /// A model-proposed, bounded change to the branch-local scene working state.
@@ -134,10 +136,7 @@ final class SceneStateChangeProposal {
     return proposal.isEmpty ? null : proposal;
   }
 
-  static bool _isId(String value) =>
-      value.isNotEmpty &&
-      value.length <= 200 &&
-      RegExp(r'^[A-Za-z0-9_.:-]+$').hasMatch(value);
+  static bool _isId(String value) => isValidRuntimeEntityId(value);
 }
 
 /// A goal that can stop being authoritative as the story evolves.

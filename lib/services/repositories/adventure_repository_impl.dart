@@ -1122,7 +1122,12 @@ class AdventureRepositoryImpl implements IAdventureRepository {
     required RuntimeEntityType entityType,
     required String entityId,
   }) async {
-    if (!RegExp(r'^[A-Za-z0-9_.:-]{1,200}$').hasMatch(entityId)) {
+    // The seed id is the adventure's own stable identity for the entity —
+    // exactly the frozen config's id. Resource ids are opaque strings, so this
+    // must use the shared runtime entity id rule rather than an ASCII-only
+    // guard, or a real (e.g. imported `name_creator`) card id would abort the
+    // whole Adventure creation after its row was already inserted.
+    if (!isValidRuntimeEntityId(entityId)) {
       throw ArgumentError.value(entityId, 'entityId');
     }
     final db = await _getDb();
