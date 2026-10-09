@@ -11406,6 +11406,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not open the link. Copy it manually instead.'**
   String get aboutOpenLinkFailed;
+
+  /// No description provided for @readinessDiagnosticRevisionHashMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Revision snapshot hash validation failed. Restore a valid version from resource history, then prepare again; keep the original data.'**
+  String get readinessDiagnosticRevisionHashMismatch;
+
+  /// No description provided for @readinessDiagnosticAssemblyValidationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The version snapshot cannot be parsed or assembled. Check the character, NPC fields or worldview, save corrections, then prepare again.'**
+  String get readinessDiagnosticAssemblyValidationFailed;
+
+  /// No description provided for @readinessDiagnosticResourceMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The bound resource is missing or in the recycle bin. Restore it or select an available resource before preparing again.'**
+  String get readinessDiagnosticResourceMissing;
 }
 
 class _AppLocalizationsDelegate

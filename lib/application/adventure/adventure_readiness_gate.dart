@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/resources/resource_contracts.dart';
 import '../../models/adventure_config.dart';
@@ -169,8 +170,17 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
   /// Prepares the resource's current head (used by the Wizard's retry /
   /// wait-for-preparation action).
   @override
-  Future<AssemblyPrepareOutcome> prepare(String assetId) =>
-      _coordinator.prepare(ResourceId(assetId));
+  Future<AssemblyPrepareOutcome> prepare(String assetId) async {
+    final id = ResourceId(assetId);
+    // Old migrated trees predate revision hooks. Explicit retry records the
+    // saved tree through the normal transaction boundary before validation.
+    final head = await _revisions.readHead(id, ResourceRevisionKind.latestHead);
+    if (head == null) {
+      await _revisionService.captureRevision(id,
+          cause: RevisionCause.migration);
+    }
+    return _coordinator.prepare(id);
+  }
 
   /// Resolves the gate status of every [assetId].
   @override
@@ -179,7 +189,27 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
   ) async {
     final result = <String, AdventureAssetReadiness>{};
     for (final id in assetIds) {
-      result[id] = await _resolveOne(id);
+      try {
+        result[id] = await _resolveOne(id);
+      } catch (error, stackTrace) {
+        // Return an explicit refusal for this resource, preserving safe
+        // diagnostics even when SQLite or row decoding fails before readiness.
+        debugPrint('[AdventureStart][RESOLVE_FAILED] resourceId=$id '
+            'status=failed resourceType=unknown exceptionType=${error.runtimeType}');
+        debugPrintStack(
+            label: '[AdventureStart][RESOLVE_STACK]', stackTrace: stackTrace);
+        result[id] = AdventureAssetReadiness(
+          assetId: id,
+          status: AdventureAssetGateStatus.failed,
+          issueCode: AdventureReadinessIssueCode.preparationFailed,
+          parameters: {
+            'name': id,
+            'diagnosticCode': 'preparationFailed',
+            'stage': 'readinessResolution',
+            'exceptionType': error.runtimeType.toString()
+          },
+        );
+      }
     }
     return result;
   }
@@ -211,7 +241,10 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
         assetId: assetId,
         status: AdventureAssetGateStatus.noReadyRevision,
         issueCode: AdventureReadinessIssueCode.noSavedRevision,
-        parameters: {'name': resource.name},
+        parameters: {
+          'name': resource.name,
+          'resourceType': resource.type.storageValue
+        },
       );
     }
 
@@ -254,6 +287,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           issueCode: AdventureReadinessIssueCode.preparing,
           parameters: {
             'name': resource.name,
+            'resourceType': resource.type.storageValue,
             if (diagnostic != null) 'diagnosticCode': diagnostic.code,
             if (diagnostic != null) ...diagnostic.parameters,
             if (diagnostic == null &&
@@ -271,6 +305,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
           issueCode: AdventureReadinessIssueCode.preparationFailed,
           parameters: {
             'name': resource.name,
+            'resourceType': resource.type.storageValue,
             if (diagnostic != null) 'diagnosticCode': diagnostic.code,
             if (diagnostic != null) ...diagnostic.parameters,
             if (diagnostic == null && resolvedRecord.failureReason.isNotEmpty)
@@ -281,13 +316,19 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
         final fresh = assemblyHead != null &&
             resolvedRecord.assemblyRevisionId ==
                 assemblyHead.revisionId.value &&
-            head.contentHash == assemblyHead.contentHash;
+            head.contentHash == assemblyHead.contentHash &&
+            resolvedRecord.targetRevisionId == head.revisionId.value &&
+            resolvedRecord.targetContentHash == head.contentHash &&
+            resolvedRecord.assemblyContentHash == assemblyHead.contentHash;
         if (fresh) {
           return AdventureAssetReadiness(
             assetId: assetId,
             status: AdventureAssetGateStatus.ready,
             issueCode: AdventureReadinessIssueCode.ready,
-            parameters: {'name': resource.name},
+            parameters: {
+              'name': resource.name,
+              'resourceType': resource.type.storageValue
+            },
             assemblyRevisionId: assemblyHead.revisionId.value,
             assemblyContentHash: assemblyHead.contentHash,
           );
@@ -316,14 +357,20 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
         assetId: resource.id.value,
         status: AdventureAssetGateStatus.noReadyRevision,
         issueCode: AdventureReadinessIssueCode.noAssemblyRevision,
-        parameters: {'name': resource.name},
+        parameters: {
+          'name': resource.name,
+          'resourceType': resource.type.storageValue
+        },
       );
     }
     return AdventureAssetReadiness(
       assetId: resource.id.value,
       status: AdventureAssetGateStatus.staleWithPreviousReady,
       issueCode: AdventureReadinessIssueCode.staleWithPreviousReady,
-      parameters: {'name': resource.name},
+      parameters: {
+        'name': resource.name,
+        'resourceType': resource.type.storageValue
+      },
       assemblyRevisionId: assemblyHead.revisionId.value,
       assemblyContentHash: assemblyHead.contentHash,
     );
@@ -344,6 +391,19 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
     final blockedIssues = <AdventureAssetReadiness>[];
     for (final entry in statuses.entries) {
       final readiness = entry.value;
+      // A frozen managed binding is evidence of managed identity. Losing its
+      // tree must not silently downgrade it to an ungated legacy resource.
+      if (!readiness.isManaged &&
+          config.resourceBindings
+              .any((binding) => binding.resourceId == entry.key)) {
+        blockedIssues.add(AdventureAssetReadiness(
+          assetId: entry.key,
+          status: AdventureAssetGateStatus.failed,
+          issueCode: AdventureReadinessIssueCode.preparationFailed,
+          parameters: {'name': entry.key, 'diagnosticCode': 'resourceMissing'},
+        ));
+        continue;
+      }
       if (!readiness.status.blocksStart) continue;
       if (readiness.status == AdventureAssetGateStatus.staleWithPreviousReady &&
           _explicitlyAllowed(config, entry.key, readiness.assemblyRevisionId)) {
@@ -352,6 +412,13 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
       blockedIssues.add(readiness);
     }
     if (blockedIssues.isNotEmpty) {
+      for (final issue in blockedIssues) {
+        debugPrint('[AdventureStart][GATE_BLOCKED] '
+            'resourceId=${issue.assetId} status=${issue.status.name} '
+            'issue=${issue.effectiveIssueCode.name} '
+            'assemblyRevisionId=${issue.assemblyRevisionId} '
+            'assemblyHash=${issue.assemblyContentHash}');
+      }
       throw AdventureReadinessGateException(issues: blockedIssues);
     }
 
@@ -363,103 +430,130 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
       if (!readiness.isManaged) continue;
       if (readiness.assemblyRevisionId.isEmpty) continue;
 
-      final resourceId = ResourceId(entry.key);
-      final build = await _builder.build(
-        resourceId: resourceId,
-        revisionId: ResourceRevisionId(readiness.assemblyRevisionId),
-        expectedContentHash: readiness.assemblyContentHash,
-      );
+      try {
+        final resourceId = ResourceId(entry.key);
+        final build = await _builder.build(
+          resourceId: resourceId,
+          revisionId: ResourceRevisionId(readiness.assemblyRevisionId),
+          expectedContentHash: readiness.assemblyContentHash,
+        );
 
-      switch (build.resourceType) {
-        case ResourceType.worldview:
-          if (build.worldviewPayload != null) {
-            frozen = frozen.copyWith(
-              worldviewSnapshot: build.worldviewPayload,
-            );
-          }
-        case ResourceType.character:
-          final card = _frozenCard(build);
-          final selected = frozen.selectedCharacters
-              .where((item) => item.characterId == entry.key)
-              .toList();
-          final supportingIds = selected.map((item) => item.id).toSet();
-          final isProtagonist =
-              frozen.protagonistCharacter?.characterId == entry.key;
-          frozen = frozen.copyWith(
-            selectedCharacters: frozen.selectedCharacters
-                .map((item) => item.characterId == entry.key
-                    ? item.copyWith(
-                        characterName: card.name,
-                        characterAvatar:
-                            card.cardData['avatar']?.toString() ?? '',
-                        characterCardJson: card.rawData,
-                      )
-                    : item)
-                .toList(),
-            supportingCharacters: frozen.supportingCharacters.map((item) {
-              if (!supportingIds.contains(item.id) && item.id != entry.key) {
-                return item;
-              }
-              final selection = selected
-                      .where((candidate) => candidate.id == item.id)
-                      .firstOrNull ??
-                  selected.firstOrNull;
-              // Relationship and narrative role are Adventure choices; all
-              // resource-derived fields must come from this assembly alone.
-              return SupportingCharacter(
-                id: item.id,
-                name: card.name,
-                gender: card.gender,
-                personality: card.personality,
-                role: card.profession.isNotEmpty
-                    ? card.profession
-                    : selection?.effectiveRole ?? '',
-                relation: item.relation,
-                customAttributes: card.customAttributes,
-                trackedStateDefinitions: card.card.trackedStateDefinitions,
+        switch (build.resourceType) {
+          case ResourceType.worldview:
+            if (build.worldviewPayload != null) {
+              frozen = frozen.copyWith(
+                worldviewSnapshot: build.worldviewPayload,
               );
-            }).toList(),
-            characterCard: isProtagonist ? card.card : null,
-            name: isProtagonist ? card.name : null,
-            gender: isProtagonist ? card.gender : null,
-            age: isProtagonist ? card.age : null,
-            personality: isProtagonist ? card.personality : null,
-            protagonistClass: isProtagonist
-                ? (card.profession.isNotEmpty ? card.profession : '冒险者')
-                : null,
-            protagonistBackground: isProtagonist ? card.background : null,
-          );
-        case ResourceType.npc:
-          final card = _frozenCard(build);
-          final npc = _frozenNpc(card, entry.key);
-          frozen = frozen.copyWith(
-            npcSnapshots: frozen.npcSnapshots
-                .map((snapshot) => snapshot.assetId == entry.key
-                    ? AdventureNpcSnapshot(
-                        assetId: snapshot.assetId,
-                        name: card.name,
-                        originWorldviewId: card.matchingWorldviewId ?? '',
-                        npcJson: card.rawData,
-                      )
-                    : snapshot)
-                .toList(),
-            supportingCharacters: frozen.supportingCharacters
-                .map((item) => item.id == entry.key ? npc : item)
-                .toList(),
-          );
-      }
+            }
+          case ResourceType.character:
+            final card = _frozenCard(build);
+            final selected = frozen.selectedCharacters
+                .where((item) => item.characterId == entry.key)
+                .toList();
+            final supportingIds = selected.map((item) => item.id).toSet();
+            final isProtagonist =
+                frozen.protagonistCharacter?.characterId == entry.key;
+            frozen = frozen.copyWith(
+              selectedCharacters: frozen.selectedCharacters
+                  .map((item) => item.characterId == entry.key
+                      ? item.copyWith(
+                          characterName: card.name,
+                          characterAvatar:
+                              card.cardData['avatar']?.toString() ?? '',
+                          characterCardJson: card.rawData,
+                        )
+                      : item)
+                  .toList(),
+              supportingCharacters: frozen.supportingCharacters.map((item) {
+                if (!supportingIds.contains(item.id) && item.id != entry.key) {
+                  return item;
+                }
+                final selection = selected
+                        .where((candidate) => candidate.id == item.id)
+                        .firstOrNull ??
+                    selected.firstOrNull;
+                // Relationship and narrative role are Adventure choices; all
+                // resource-derived fields must come from this assembly alone.
+                return SupportingCharacter(
+                  id: item.id,
+                  name: card.name,
+                  gender: card.gender,
+                  personality: card.personality,
+                  role: card.profession.isNotEmpty
+                      ? card.profession
+                      : selection?.effectiveRole ?? '',
+                  relation: item.relation,
+                  customAttributes: card.customAttributes,
+                  trackedStateDefinitions: card.card.trackedStateDefinitions,
+                );
+              }).toList(),
+              characterCard: isProtagonist ? card.card : null,
+              name: isProtagonist ? card.name : null,
+              gender: isProtagonist ? card.gender : null,
+              age: isProtagonist ? card.age : null,
+              personality: isProtagonist ? card.personality : null,
+              protagonistClass: isProtagonist
+                  ? (card.profession.isNotEmpty ? card.profession : '冒险者')
+                  : null,
+              protagonistBackground: isProtagonist ? card.background : null,
+            );
+          case ResourceType.npc:
+            final card = _frozenCard(build);
+            final npc = _frozenNpc(card, entry.key);
+            frozen = frozen.copyWith(
+              npcSnapshots: frozen.npcSnapshots
+                  .map((snapshot) => snapshot.assetId == entry.key
+                      ? AdventureNpcSnapshot(
+                          assetId: snapshot.assetId,
+                          name: card.name,
+                          originWorldviewId: card.matchingWorldviewId ?? '',
+                          npcJson: card.rawData,
+                        )
+                      : snapshot)
+                  .toList(),
+              supportingCharacters: frozen.supportingCharacters
+                  .map((item) => item.id == entry.key ? npc : item)
+                  .toList(),
+            );
+        }
 
-      final previous = config.resourceBindings.where(
-        (binding) => binding.resourceId == entry.key,
-      );
-      bindings.add(AdventureResourceBinding(
-        resourceId: entry.key,
-        revisionId: readiness.assemblyRevisionId,
-        contentHash: readiness.assemblyContentHash,
-        staleAllowed: previous.isNotEmpty &&
-            previous.first.staleAllowed &&
-            previous.first.revisionId == readiness.assemblyRevisionId,
-      ));
+        final previous = config.resourceBindings.where(
+          (binding) => binding.resourceId == entry.key,
+        );
+        bindings.add(AdventureResourceBinding(
+          resourceId: entry.key,
+          revisionId: readiness.assemblyRevisionId,
+          contentHash: readiness.assemblyContentHash,
+          staleAllowed: previous.isNotEmpty &&
+              previous.first.staleAllowed &&
+              previous.first.revisionId == readiness.assemblyRevisionId,
+        ));
+      } catch (error, stackTrace) {
+        debugPrint('[AdventureStart][FREEZE_FAILED] '
+            'resourceId=${entry.key} status=${readiness.status.name} '
+            'revisionId=${readiness.assemblyRevisionId} '
+            'contentHash=${readiness.assemblyContentHash} '
+            'exceptionType=${error.runtimeType}');
+        debugPrintStack(
+            label: '[AdventureStart][FREEZE_STACK]', stackTrace: stackTrace);
+        throw AdventureReadinessGateException(issues: [
+          AdventureAssetReadiness(
+            assetId: entry.key,
+            status: AdventureAssetGateStatus.failed,
+            issueCode: AdventureReadinessIssueCode.preparationFailed,
+            assemblyRevisionId: readiness.assemblyRevisionId,
+            assemblyContentHash: readiness.assemblyContentHash,
+            parameters: {
+              ...readiness.parameters,
+              'diagnosticCode': error is ResourceAssemblyException
+                  ? error.diagnosticCode
+                  : 'assemblyValidationFailed',
+              'stage': 'freeze',
+              'exceptionType': error.runtimeType.toString(),
+            },
+          ),
+        ]);
+      }
     }
 
     return frozen.copyWith(resourceBindings: bindings);

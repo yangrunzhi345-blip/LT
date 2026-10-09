@@ -3935,5 +3935,8 @@
   "aboutCopyEmail": "複製電子郵件",
   "aboutSendEmail": "傳送郵件",
   "aboutEmailCopied": "電子郵件已複製到剪貼簿",
-  "aboutOpenLinkFailed": "無法開啟連結，請手動複製後存取。"
+  "aboutOpenLinkFailed": "無法開啟連結，請手動複製後存取。",
+  "readinessDiagnosticRevisionHashMismatch": "版本快照雜湊驗證失敗。請從資源歷史還原有效版本後重新準備；保留原始資料。",
+  "readinessDiagnosticAssemblyValidationFailed": "版本快照無法解析或組裝。請檢查角色卡、NPC 欄位或世界觀，儲存修正後重新準備。",
+  "readinessDiagnosticResourceMissing": "綁定的資源不存在或已移入回收站。請還原資源或重新選擇可用資源後準備。"
 }

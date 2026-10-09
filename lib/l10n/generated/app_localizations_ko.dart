@@ -6253,4 +6253,16 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aboutOpenLinkFailed => '링크를 열 수 없습니다. 직접 복사하여 접속해 주세요.';
+
+  @override
+  String get readinessDiagnosticRevisionHashMismatch =>
+      '버전 스냅샷 해시 검증에 실패했습니다. 원본 데이터를 보존하고 리소스 기록에서 유효한 버전을 복원한 뒤 다시 준비하세요.';
+
+  @override
+  String get readinessDiagnosticAssemblyValidationFailed =>
+      '버전 스냅샷을 해석하거나 조립할 수 없습니다. 캐릭터, NPC 필드 또는 세계관을 확인하고 수정 사항을 저장한 뒤 다시 준비하세요.';
+
+  @override
+  String get readinessDiagnosticResourceMissing =>
+      '연결된 리소스가 없거나 휴지통에 있습니다. 복원하거나 사용 가능한 리소스를 선택한 뒤 다시 준비하세요.';
 }

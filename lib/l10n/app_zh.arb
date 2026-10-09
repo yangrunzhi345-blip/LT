@@ -3935,5 +3935,8 @@
   "aboutCopyEmail": "复制邮箱",
   "aboutSendEmail": "发送邮件",
   "aboutEmailCopied": "邮箱已复制到剪贴板",
-  "aboutOpenLinkFailed": "无法打开链接，请手动复制后访问。"
+  "aboutOpenLinkFailed": "无法打开链接，请手动复制后访问。",
+  "readinessDiagnosticRevisionHashMismatch": "版本快照哈希校验失败。请从资源历史恢复有效版本后重新准备；保留原始数据。",
+  "readinessDiagnosticAssemblyValidationFailed": "版本快照无法解析或组装。请检查角色卡、NPC 字段或世界观，保存修正后重新准备。",
+  "readinessDiagnosticResourceMissing": "绑定的资源不存在或已移入回收站。请恢复资源或重新选择可用资源后准备。"
 }

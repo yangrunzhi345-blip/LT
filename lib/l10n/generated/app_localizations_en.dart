@@ -6553,4 +6553,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aboutOpenLinkFailed =>
       'Could not open the link. Copy it manually instead.';
+
+  @override
+  String get readinessDiagnosticRevisionHashMismatch =>
+      'Revision snapshot hash validation failed. Restore a valid version from resource history, then prepare again; keep the original data.';
+
+  @override
+  String get readinessDiagnosticAssemblyValidationFailed =>
+      'The version snapshot cannot be parsed or assembled. Check the character, NPC fields or worldview, save corrections, then prepare again.';
+
+  @override
+  String get readinessDiagnosticResourceMissing =>
+      'The bound resource is missing or in the recycle bin. Restore it or select an available resource before preparing again.';
 }

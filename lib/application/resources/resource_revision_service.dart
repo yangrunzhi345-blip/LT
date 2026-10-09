@@ -437,6 +437,9 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
       );
     }
     final state = await _revisions.readState(revisionId);
+    if (state.contentHash != source.contentHash) {
+      throw const ResourceRevisionCorruptedException('拒绝发布哈希校验失败的版本快照');
+    }
     await db.transaction((txn) async {
       final publication = await txn.query(
         'resource_revisions',
@@ -450,6 +453,13 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
         limit: 1,
       );
       if (publication.isNotEmpty) {
+        final publishedId =
+            ResourceRevisionId(publication.first['revision_id'].toString());
+        final publishedState =
+            await _revisions.readStateInTransaction(txn, publishedId);
+        if (publishedState.contentHash != state.contentHash) {
+          throw const ResourceRevisionCorruptedException('已有组装版本快照哈希校验失败，拒绝重用');
+        }
         await _revisions.switchHeadInTransaction(
           txn,
           ResourceRevisionId(publication.first['revision_id'].toString()),

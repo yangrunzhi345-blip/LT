@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/resources/resource_capacity.dart';
 import '../../domain/resources/resource_contracts.dart';
@@ -148,7 +149,10 @@ final class AssemblyReadinessCoordinator {
       }
     }
 
-    future.whenComplete(cleanup);
+    // Handle the derived future too: whenComplete otherwise creates a second
+    // unhandled error when claiming a preparation fails before validation.
+    future.then((_) => cleanup(),
+        onError: (Object _, StackTrace __) => cleanup());
     return future;
   }
 
@@ -200,8 +204,11 @@ final class AssemblyReadinessCoordinator {
       );
     }
 
+    var stage = 'capacity';
+    ResourceType? resourceType;
     try {
       // ── 2. Capacity of the frozen revision state. ──
+      resourceType = await _typeResolver?.call(resourceId);
       final state = await _revisions.readState(head!.revisionId);
       final status = await _capacityStatusOf(resourceId, state);
 
@@ -218,6 +225,7 @@ final class AssemblyReadinessCoordinator {
             'compressionUnavailable',
           );
         }
+        stage = 'compression';
         await compression.enqueueForResource(resourceId);
         _compressionWorker?.scheduleProcessing(resourceId.value);
         final message = _diagnostic('compressionPending', {
@@ -240,6 +248,7 @@ final class AssemblyReadinessCoordinator {
       }
 
       // ── 4. Build from the immutable revision only. ──
+      stage = 'assemblyBuild';
       final build = await _builder.build(
         resourceId: resourceId,
         revisionId: head!.revisionId,
@@ -278,6 +287,7 @@ final class AssemblyReadinessCoordinator {
 
       // ── 6. Publish the assembly revision (idempotent, delta-with-
       //       tombstone chain owned by Phase 9). ──
+      stage = 'assemblyPublication';
       await _revisionService.publishAssemblyRevision(
         resourceId: resourceId,
         revisionId: head!.revisionId,
@@ -290,6 +300,7 @@ final class AssemblyReadinessCoordinator {
         return await _fail(resourceId, token, 'assemblyRevisionMissing');
       }
 
+      stage = 'indexPublication';
       // ── 7. Semantic index sync, bound to the published revision. ──
       await db.transaction((txn) async {
         await _readiness.replaceIndexDocsInTransaction(
@@ -302,6 +313,7 @@ final class AssemblyReadinessCoordinator {
         );
       });
 
+      stage = 'readyCommit';
       // ── 8. Final CAS commit: ready. ──
       final record = await db.transaction<AssemblyReadinessRecord>((txn) async {
         final current =
@@ -355,8 +367,27 @@ final class AssemblyReadinessCoordinator {
         published: record.state == ReadinessState.ready,
         superseded: record.state == ReadinessState.stale,
       );
-    } catch (error) {
-      return await _fail(resourceId, token, 'preparationFailed');
+    } catch (error, stackTrace) {
+      final parameters = <String, Object?>{
+        'stage': stage,
+        'exceptionType': error.runtimeType.toString(),
+        'resourceType': resourceType?.storageValue ?? 'unknown',
+        'targetRevisionId': head!.revisionId.value,
+        'targetContentHash': head!.contentHash,
+      };
+      debugPrint('[AdventureStart][PREPARATION_FAILED] '
+          'resourceId=${resourceId.value} status=failed $parameters');
+      debugPrintStack(
+          label: '[AdventureStart][PREPARATION_STACK]', stackTrace: stackTrace);
+      return await _fail(
+          resourceId,
+          token,
+          error is ResourceAssemblyException
+              ? error.diagnosticCode
+              : error is ResourceRevisionCorruptedException
+                  ? 'revisionHashMismatch'
+                  : 'preparationFailed',
+          parameters: parameters);
     }
   }
 
@@ -414,7 +445,10 @@ final class AssemblyReadinessCoordinator {
     final fresh = head != null &&
         assembly != null &&
         record.assemblyRevisionId == assembly.revisionId.value &&
-        head.contentHash == assembly.contentHash;
+        head.contentHash == assembly.contentHash &&
+        record.targetRevisionId == head.revisionId.value &&
+        record.targetContentHash == head.contentHash &&
+        record.assemblyContentHash == assembly.contentHash;
     if (fresh) return record;
 
     return _casUpdate(
@@ -438,15 +472,17 @@ final class AssemblyReadinessCoordinator {
   Future<AssemblyPrepareOutcome> _fail(
     ResourceId resourceId,
     String token,
-    String reason,
-  ) async {
+    String reason, {
+    Map<String, Object?> parameters = const {},
+  }) async {
     final record = await _casUpdate(
       resourceId,
       token,
       (current, txn, now) => _copyRecord(
         current,
         state: ReadinessState.failed,
-        failureReason: _diagnostic(reason, {'resourceId': resourceId.value}),
+        failureReason: _diagnostic(
+            reason, {'resourceId': resourceId.value, ...parameters}),
         completedAt: now,
         updatedAt: now,
       ),

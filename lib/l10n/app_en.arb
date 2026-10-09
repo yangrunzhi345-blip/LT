@@ -3935,5 +3935,8 @@
   "aboutCopyEmail": "Copy email",
   "aboutSendEmail": "Send email",
   "aboutEmailCopied": "Email copied to clipboard",
-  "aboutOpenLinkFailed": "Could not open the link. Copy it manually instead."
+  "aboutOpenLinkFailed": "Could not open the link. Copy it manually instead.",
+  "readinessDiagnosticRevisionHashMismatch": "Revision snapshot hash validation failed. Restore a valid version from resource history, then prepare again; keep the original data.",
+  "readinessDiagnosticAssemblyValidationFailed": "The version snapshot cannot be parsed or assembled. Check the character, NPC fields or worldview, save corrections, then prepare again.",
+  "readinessDiagnosticResourceMissing": "The bound resource is missing or in the recycle bin. Restore it or select an available resource before preparing again."
 }

@@ -11,7 +11,12 @@ import 'resource_revision_repository.dart';
 
 /// Thrown when a revision cannot be assembled into runtime output.
 class ResourceAssemblyException implements Exception {
-  const ResourceAssemblyException(this.message);
+  const ResourceAssemblyException(
+    this.message, {
+    this.diagnosticCode = 'assemblyValidationFailed',
+  });
+
+  final String diagnosticCode;
 
   final String message;
 
@@ -128,6 +133,7 @@ final class ResourceAssemblyBuilder
       throw ResourceAssemblyException(
         'revision ${revisionId.value} 内容哈希不一致（期望 $expectedContentHash，'
         '实际 ${revision.contentHash}），拒绝组装',
+        diagnosticCode: 'revisionHashMismatch',
       );
     }
 
@@ -135,6 +141,7 @@ final class ResourceAssemblyBuilder
     if (state.contentHash != revision.contentHash) {
       throw ResourceAssemblyException(
         'revision ${revisionId.value} 状态重建哈希校验失败，数据可能已损坏',
+        diagnosticCode: 'revisionHashMismatch',
       );
     }
 

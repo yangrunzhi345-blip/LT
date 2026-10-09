@@ -6225,4 +6225,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get aboutOpenLinkFailed => 'リンクを開けませんでした。手動でコピーしてアクセスしてください。';
+
+  @override
+  String get readinessDiagnosticRevisionHashMismatch =>
+      'バージョンスナップショットのハッシュ検証に失敗しました。元のデータを保持し、リソース履歴から有効なバージョンを復元して再準備してください。';
+
+  @override
+  String get readinessDiagnosticAssemblyValidationFailed =>
+      'バージョンスナップショットを解析または組み立てできません。キャラクター、NPC、世界観を確認し、修正を保存して再準備してください。';
+
+  @override
+  String get readinessDiagnosticResourceMissing =>
+      '紐付けたリソースが存在しないか、ごみ箱にあります。復元するか利用可能なリソースを選択して再準備してください。';
 }

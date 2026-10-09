@@ -9,6 +9,32 @@ import 'package:lt_dialogue/l10n/generated/app_localizations_ja.dart';
 void main() {
   final l10n = AppLocalizationsEn();
 
+  test(
+      'launch failure retains per-resource status and actionable Chinese reason',
+      () {
+    final error = AdventureReadinessGateException(issues: [
+      const AdventureAssetReadiness(
+        assetId: 'res-card-42',
+        status: AdventureAssetGateStatus.failed,
+        issueCode: AdventureReadinessIssueCode.preparationFailed,
+        parameters: {
+          'name': '失败角色',
+          'diagnosticCode': 'revisionHashMismatch',
+          'stage': 'assemblyBuild',
+          'exceptionType': 'ResourceAssemblyException'
+        },
+      ),
+    ]);
+    final text = localizeAdventureLaunchFailure(error, AppLocalizationsZh());
+    expect(text, contains('失败角色'));
+    expect(text, contains('res-card-42'));
+    expect(text, contains('failed'));
+    expect(text, contains('哈希校验失败'));
+    expect(text, contains('恢复有效版本'));
+    expect(text, contains('assemblyBuild'));
+    expect(text, contains('ResourceAssemblyException'));
+  });
+
   test('localizes readiness statuses and preserves dynamic details', () {
     expect(
       localizeAdventureReadinessMessage(

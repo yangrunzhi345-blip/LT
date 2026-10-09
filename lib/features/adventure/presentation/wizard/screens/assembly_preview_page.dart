@@ -216,7 +216,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _errorMessage = _l10n(context).startAdventureFailed(
-              localizeAppError(_l10n(context), adventureLaunchError(e)),
+              localizeAdventureLaunchFailure(e, _l10n(context)),
             ));
       }
     } finally {

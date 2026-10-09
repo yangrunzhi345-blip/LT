@@ -6138,6 +6138,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aboutOpenLinkFailed => '无法打开链接，请手动复制后访问。';
+
+  @override
+  String get readinessDiagnosticRevisionHashMismatch =>
+      '版本快照哈希校验失败。请从资源历史恢复有效版本后重新准备；保留原始数据。';
+
+  @override
+  String get readinessDiagnosticAssemblyValidationFailed =>
+      '版本快照无法解析或组装。请检查角色卡、NPC 字段或世界观，保存修正后重新准备。';
+
+  @override
+  String get readinessDiagnosticResourceMissing =>
+      '绑定的资源不存在或已移入回收站。请恢复资源或重新选择可用资源后准备。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -12274,6 +12286,18 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get aboutOpenLinkFailed => '无法打开链接，请手动复制后访问。';
+
+  @override
+  String get readinessDiagnosticRevisionHashMismatch =>
+      '版本快照哈希校验失败。请从资源历史恢复有效版本后重新准备；保留原始数据。';
+
+  @override
+  String get readinessDiagnosticAssemblyValidationFailed =>
+      '版本快照无法解析或组装。请检查角色卡、NPC 字段或世界观，保存修正后重新准备。';
+
+  @override
+  String get readinessDiagnosticResourceMissing =>
+      '绑定的资源不存在或已移入回收站。请恢复资源或重新选择可用资源后准备。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18410,4 +18434,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get aboutOpenLinkFailed => '無法開啟連結，請手動複製後存取。';
+
+  @override
+  String get readinessDiagnosticRevisionHashMismatch =>
+      '版本快照雜湊驗證失敗。請從資源歷史還原有效版本後重新準備；保留原始資料。';
+
+  @override
+  String get readinessDiagnosticAssemblyValidationFailed =>
+      '版本快照無法解析或組裝。請檢查角色卡、NPC 欄位或世界觀，儲存修正後重新準備。';
+
+  @override
+  String get readinessDiagnosticResourceMissing =>
+      '綁定的資源不存在或已移入回收站。請還原資源或重新選擇可用資源後準備。';
 }
