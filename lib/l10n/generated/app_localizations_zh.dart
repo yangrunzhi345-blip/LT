@@ -6150,6 +6150,48 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get readinessDiagnosticResourceMissing =>
       '绑定的资源不存在或已移入回收站。请恢复资源或重新选择可用资源后准备。';
+
+  @override
+  String get readinessCompressionRunning => '正在压缩，原始正文保持不变。';
+
+  @override
+  String get readinessCompressionApproval => '压缩候选已生成，请审核并确认采用后重新装配。';
+
+  @override
+  String get readinessCompressionFailed => '压缩失败，请重试准备；已保存正文保持不变。';
+
+  @override
+  String get readinessCompressionExhausted => '压缩重试次数已用尽，请编辑资源后重新准备。';
+
+  @override
+  String get readinessCompressionNoTargets => '没有可安全压缩的正文段落，请编辑资源以减少字数。';
+
+  @override
+  String get readinessCompressionNoCandidate => '未保存可用的逐段压缩候选，请重试准备或编辑资源。';
+
+  @override
+  String get readinessCompressionReview => '审核压缩候选';
+
+  @override
+  String get readinessCompressionApply => '确认采用并重新装配';
+
+  @override
+  String get readinessCompressionOriginal => '原始正文（保留在版本历史）';
+
+  @override
+  String get readinessCompressionProposed => '候选正文';
+
+  @override
+  String get readinessCompressionCancel => '取消';
+
+  @override
+  String get errorResourceGenerationBudgetExceeded =>
+      '生成正文超过资源或本段预算，请减少本段字数后重试；已保存内容保持不变。';
+
+  @override
+  String readinessActualCapacity(int actual, int absolute) {
+    return '实际正文：$actual 字符；绝对容量：$absolute 字符。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -12298,6 +12340,48 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get readinessDiagnosticResourceMissing =>
       '绑定的资源不存在或已移入回收站。请恢复资源或重新选择可用资源后准备。';
+
+  @override
+  String get readinessCompressionRunning => '正在压缩，原始正文保持不变。';
+
+  @override
+  String get readinessCompressionApproval => '压缩候选已生成，请审核并确认采用后重新装配。';
+
+  @override
+  String get readinessCompressionFailed => '压缩失败，请重试准备；已保存正文保持不变。';
+
+  @override
+  String get readinessCompressionExhausted => '压缩重试次数已用尽，请编辑资源后重新准备。';
+
+  @override
+  String get readinessCompressionNoTargets => '没有可安全压缩的正文段落，请编辑资源以减少字数。';
+
+  @override
+  String get readinessCompressionNoCandidate => '未保存可用的逐段压缩候选，请重试准备或编辑资源。';
+
+  @override
+  String get readinessCompressionReview => '审核压缩候选';
+
+  @override
+  String get readinessCompressionApply => '确认采用并重新装配';
+
+  @override
+  String get readinessCompressionOriginal => '原始正文（保留在版本历史）';
+
+  @override
+  String get readinessCompressionProposed => '候选正文';
+
+  @override
+  String get readinessCompressionCancel => '取消';
+
+  @override
+  String get errorResourceGenerationBudgetExceeded =>
+      '生成正文超过资源或本段预算，请减少本段字数后重试；已保存内容保持不变。';
+
+  @override
+  String readinessActualCapacity(int actual, int absolute) {
+    return '实际正文：$actual 字符；绝对容量：$absolute 字符。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -18446,4 +18530,46 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get readinessDiagnosticResourceMissing =>
       '綁定的資源不存在或已移入回收站。請還原資源或重新選擇可用資源後準備。';
+
+  @override
+  String get readinessCompressionRunning => '正在壓縮，原始正文保持不變。';
+
+  @override
+  String get readinessCompressionApproval => '壓縮候選已生成，請審核並確認採用後重新裝配。';
+
+  @override
+  String get readinessCompressionFailed => '壓縮失敗，請重試準備；已保存正文保持不變。';
+
+  @override
+  String get readinessCompressionExhausted => '壓縮重試次數已用盡，請編輯資源後重新準備。';
+
+  @override
+  String get readinessCompressionNoTargets => '沒有可安全壓縮的正文段落，請編輯資源以減少字數。';
+
+  @override
+  String get readinessCompressionNoCandidate => '未保存可用的逐段壓縮候選，請重試準備或編輯資源。';
+
+  @override
+  String get readinessCompressionReview => '審核壓縮候選';
+
+  @override
+  String get readinessCompressionApply => '確認採用並重新裝配';
+
+  @override
+  String get readinessCompressionOriginal => '原始正文（保留在版本歷史）';
+
+  @override
+  String get readinessCompressionProposed => '候選正文';
+
+  @override
+  String get readinessCompressionCancel => '取消';
+
+  @override
+  String get errorResourceGenerationBudgetExceeded =>
+      '生成正文超過資源或本段預算，請減少本段字數後重試；已保存內容保持不變。';
+
+  @override
+  String readinessActualCapacity(int actual, int absolute) {
+    return '實際正文：$actual 字元；絕對容量：$absolute 字元。';
+  }
 }

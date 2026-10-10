@@ -6265,4 +6265,51 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get readinessDiagnosticResourceMissing =>
       '연결된 리소스가 없거나 휴지통에 있습니다. 복원하거나 사용 가능한 리소스를 선택한 뒤 다시 준비하세요.';
+
+  @override
+  String get readinessCompressionRunning => '압축 중입니다. 원본 내용은 변경되지 않습니다.';
+
+  @override
+  String get readinessCompressionApproval =>
+      '압축 제안을 검토하고 승인하여 모험 리소스를 다시 구성하세요.';
+
+  @override
+  String get readinessCompressionFailed =>
+      '압축에 실패했습니다. 준비를 다시 시도하세요. 저장된 내용은 유지됩니다.';
+
+  @override
+  String get readinessCompressionExhausted =>
+      '압축 재시도 한도에 도달했습니다. 리소스를 수정한 후 준비하세요.';
+
+  @override
+  String get readinessCompressionNoTargets =>
+      '안전하게 압축할 본문이 없습니다. 리소스를 수정하여 글자 수를 줄이세요.';
+
+  @override
+  String get readinessCompressionNoCandidate =>
+      '사용 가능한 문단별 제안이 저장되지 않았습니다. 준비를 재시도하거나 수정하세요.';
+
+  @override
+  String get readinessCompressionReview => '압축 제안 검토';
+
+  @override
+  String get readinessCompressionApply => '승인하고 다시 구성';
+
+  @override
+  String get readinessCompressionOriginal => '원본 내용 (버전 기록에 보존)';
+
+  @override
+  String get readinessCompressionProposed => '제안된 내용';
+
+  @override
+  String get readinessCompressionCancel => '취소';
+
+  @override
+  String get errorResourceGenerationBudgetExceeded =>
+      '생성 내용이 리소스 또는 문단 예산을 초과했습니다. 이 문단의 글자 수를 줄여 재시도하세요. 저장된 내용은 유지됩니다。';
+
+  @override
+  String readinessActualCapacity(int actual, int absolute) {
+    return '실제 본문: $actual자, 절대 한도: $absolute자.';
+  }
 }

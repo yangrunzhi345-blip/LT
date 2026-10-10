@@ -3938,5 +3938,28 @@
   "aboutOpenLinkFailed": "リンクを開けませんでした。手動でコピーしてアクセスしてください。",
   "readinessDiagnosticRevisionHashMismatch": "バージョンスナップショットのハッシュ検証に失敗しました。元のデータを保持し、リソース履歴から有効なバージョンを復元して再準備してください。",
   "readinessDiagnosticAssemblyValidationFailed": "バージョンスナップショットを解析または組み立てできません。キャラクター、NPC、世界観を確認し、修正を保存して再準備してください。",
-  "readinessDiagnosticResourceMissing": "紐付けたリソースが存在しないか、ごみ箱にあります。復元するか利用可能なリソースを選択して再準備してください。"
+  "readinessDiagnosticResourceMissing": "紐付けたリソースが存在しないか、ごみ箱にあります。復元するか利用可能なリソースを選択して再準備してください。",
+  "readinessCompressionRunning": "圧縮処理中です。元の本文は変更されません。",
+  "readinessCompressionApproval": "圧縮候補を確認し、承認して冒険用リソースを再構築してください。",
+  "readinessCompressionFailed": "圧縮に失敗しました。準備を再試行してください。保存済み本文は保持されます。",
+  "readinessCompressionExhausted": "圧縮の再試行上限に達しました。リソースを編集してから準備してください。",
+  "readinessCompressionNoTargets": "安全に圧縮できる本文がありません。リソースを編集して文字数を減らしてください。",
+  "readinessCompressionNoCandidate": "使用可能な段落別候補が保存されませんでした。準備を再試行するか編集してください。",
+  "readinessCompressionReview": "圧縮候補を確認",
+  "readinessCompressionApply": "承認して再構築",
+  "readinessCompressionOriginal": "元の本文（版履歴に保存）",
+  "readinessCompressionProposed": "候補の本文",
+  "readinessCompressionCancel": "キャンセル",
+  "errorResourceGenerationBudgetExceeded": "生成内容がリソースまたは段落の予算を超えています。この段落の文字数を減らして再試行してください。保存済み内容は保持されます。",
+  "readinessActualCapacity": "実際の本文：{actual} 文字、絶対上限：{absolute} 文字。",
+  "@readinessActualCapacity": {
+    "placeholders": {
+      "actual": {
+        "type": "int"
+      },
+      "absolute": {
+        "type": "int"
+      }
+    }
+  }
 }

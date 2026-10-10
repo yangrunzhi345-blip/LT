@@ -127,6 +127,17 @@ abstract final class PartGenerationValidator {
       );
     }
 
+    // Planning estimates must constrain actual output, not only the prompt.
+    if (request.targetBudget > 0 &&
+        response.content.length > request.targetBudget) {
+      throw PartGenerationValidationException(
+        '正文超过本段生成预算，请减少字数后重试（不会截断或覆盖已保存正文）',
+        field: 'generation_budget',
+        expected: '<= ${request.targetBudget}',
+        actual: '${response.content.length}',
+      );
+    }
+
     // 9. Strict allowlist on rawDecodedMap to prevent structural mutation or field injection
     if (rawDecodedMap != null) {
       const allowedKeys = {

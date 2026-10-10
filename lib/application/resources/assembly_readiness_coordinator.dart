@@ -2,6 +2,9 @@ import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/resources/resource_capacity.dart';
+import '../../domain/resources/resource_limits.dart';
+import '../../domain/resources/resource_compression.dart';
+import 'resource_compression_publisher.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/errors/diagnostic_envelope.dart';
@@ -48,7 +51,7 @@ final class AssemblyPrepareOutcome {
 ///
 /// State transitions are validated through the frozen
 /// [ResourceStateMachines.readiness] machine before any persistence.
-final class AssemblyReadinessCoordinator {
+final class AssemblyReadinessCoordinator extends ChangeNotifier {
   AssemblyReadinessCoordinator({
     required Future<Database> Function() getDb,
     required IAssemblyReadinessRepository readinessRepository,
@@ -75,6 +78,7 @@ final class AssemblyReadinessCoordinator {
   // depends on the LLM-gateway provider graph (which reads ChatProvider).
   CompressionCoordinator? _compression;
   CompressionBackgroundWorker? _compressionWorker;
+  CompressionPublisher? _publisher;
 
   /// Wires the Phase 8 compression infrastructure for OVERFLOW heads.
   ///
@@ -85,9 +89,21 @@ final class AssemblyReadinessCoordinator {
   void attachCompression({
     required CompressionCoordinator Function() coordinatorGetter,
     CompressionBackgroundWorker Function()? workerGetter,
+    CompressionPublisher Function()? publisherGetter,
   }) {
     _compression = coordinatorGetter();
     _compressionWorker = workerGetter?.call();
+    _publisher = publisherGetter?.call();
+    _compressionWorker?.onProgress = (_) => notifyListeners();
+    _compressionWorker?.onSettled = (id) async {
+      if (!isPreparationInFlight(id.value)) await refresh(id);
+      notifyListeners();
+    };
+    _publisher?.onPublished = (id) async {
+      await pendingPreparation(id.value);
+      await prepare(id);
+      notifyListeners();
+    };
   }
 
   /// True once [attachCompression] ran. Production wiring tests assert this
@@ -151,8 +167,10 @@ final class AssemblyReadinessCoordinator {
 
     // Handle the derived future too: whenComplete otherwise creates a second
     // unhandled error when claiming a preparation fails before validation.
-    future.then((_) => cleanup(),
-        onError: (Object _, StackTrace __) => cleanup());
+    future.then((_) {
+      cleanup();
+      notifyListeners();
+    }, onError: (Object _, StackTrace __) => cleanup());
     return future;
   }
 
@@ -195,6 +213,8 @@ final class AssemblyReadinessCoordinator {
         ),
       );
     });
+    // Publish the claimed assembly phase too, including after candidate adoption.
+    notifyListeners();
 
     if (head == null) {
       return _fail(
@@ -212,6 +232,17 @@ final class AssemblyReadinessCoordinator {
       final state = await _revisions.readState(head!.revisionId);
       final status = await _capacityStatusOf(resourceId, state);
 
+      final capacityParameters = <String, Object?>{
+        'actualCharacters': state.nodes.values
+            .where((node) =>
+                node.kind == RevisionNodeKind.part &&
+                node.status != NodeStatus.archived)
+            .fold<int>(0, (sum, node) => sum + node.content.length),
+        if (resourceType != null)
+          'absoluteCharacters':
+              ResourceLimits.policyFor(resourceType).absoluteCharacters,
+      };
+
       // ── 3. OVERFLOW: enter compression preparation, stay `preparing`. ──
       if (status == CapacityStatus.overflow) {
         final compression = _compression;
@@ -223,28 +254,36 @@ final class AssemblyReadinessCoordinator {
             resourceId,
             token,
             'compressionUnavailable',
+            parameters: capacityParameters,
           );
         }
         stage = 'compression';
-        await compression.enqueueForResource(resourceId);
-        _compressionWorker?.scheduleProcessing(resourceId.value);
-        final message = _diagnostic('compressionPending', {
-          'resourceId': resourceId.value,
-        });
-        final record = await _casUpdate(
-          resourceId,
-          token,
-          (current, txn, now) => _copyRecord(
-            current,
-            state: ReadinessState.preparing,
-            validationMessage: message,
-            updatedAt: now,
-          ),
-        );
+        final jobs =
+            await compression.enqueueForResource(resourceId, partOnly: true);
+        if (jobs.isEmpty) {
+          return _fail(resourceId, token, 'compressionNoTargets',
+              parameters: capacityParameters);
+        }
+        final worker = _compressionWorker;
+        if (worker == null) {
+          return _fail(resourceId, token, 'compressionUnavailable',
+              parameters: capacityParameters);
+        }
+        await _casUpdate(
+            resourceId,
+            token,
+            (current, txn, now) => _copyRecord(current,
+                validationMessage: _diagnostic('compressionPending', {
+                  ...capacityParameters,
+                  'resourceId': resourceId.value,
+                  'jobIds': jobs.map((job) => job.jobId).toList(),
+                }),
+                updatedAt: now));
+        notifyListeners();
+        await worker.process(resourceId.value);
+        final record = await _reconcileCompression(resourceId);
         return AssemblyPrepareOutcome(
-          record: record,
-          awaitedCompression: true,
-        );
+            record: record!, awaitedCompression: true);
       }
 
       // ── 4. Build from the immutable revision only. ──
@@ -391,6 +430,126 @@ final class AssemblyReadinessCoordinator {
     }
   }
 
+  /// Only an explicit user retry spends another compression attempt.
+  Future<AssemblyPrepareOutcome> retryPreparation(ResourceId id) async {
+    await _compression?.recoverStaleJobs();
+    await _compression?.retryFailedJobs(id);
+    return prepare(id);
+  }
+
+  Future<List<CompressionCandidate>> compressionCandidates(
+          ResourceId id) async =>
+      await _publisher?.publishableCandidates(id) ?? const [];
+
+  Future<void> approveCompression(
+      {required ResourceId resourceId,
+      required List<String> candidateIds,
+      required String expectedHeadRevisionId}) async {
+    await pendingPreparation(resourceId.value);
+    final publisher = _publisher;
+    if (publisher == null) throw const CompressionPublishException('压缩发布服务不可用');
+    await publisher.publishMany(
+        resourceId: resourceId,
+        candidateIds: candidateIds,
+        expectedHeadRevisionId: expectedHeadRevisionId);
+  }
+
+  Future<AssemblyReadinessRecord?> _reconcileCompression(ResourceId id) async {
+    final row = await _readiness.read(id.value);
+    if (row == null || row.state != ReadinessState.preparing) return row;
+    final head = await _revisions.readHead(id, ResourceRevisionKind.latestHead);
+    if (head == null ||
+        head.revisionId.value != row.targetRevisionId ||
+        head.contentHash != row.targetContentHash) {
+      return _casUpdate(
+          id,
+          row.attemptToken,
+          (current, txn, now) => _copyRecord(current,
+              state: ReadinessState.stale,
+              validationMessage: _diagnostic('staleResource'),
+              updatedAt: now),
+          allowTransitionToStale: true);
+    }
+    if (!isPreparationInFlight(id.value)) {
+      final state = await _revisions.readState(head.revisionId);
+      if (await _capacityStatusOf(id, state) != CapacityStatus.overflow) {
+        // A legacy compressionPending row cannot override current capacity.
+        // Rebuild through the full gate pipeline; never synthesize ready.
+        return (await prepare(id)).record;
+      }
+    }
+    final diagnostic = DiagnosticEnvelope.tryDecode(row.validationMessage);
+    final selected =
+        (diagnostic?.parameters['jobIds'] as List?)?.cast<String>();
+    final all = await _compression?.jobsForResource(id) ?? <CompressionJob>[];
+    final jobs = all
+        .where((job) => selected == null
+            ? job.scope == CompressionScope.part
+            : selected.contains(job.jobId))
+        .toList();
+    String code;
+    var failed = false;
+    if (jobs.isEmpty) {
+      code = 'compressionNoTargets';
+      failed = true;
+    } else if (jobs.any((job) => job.isActive)) {
+      if (_compressionWorker?.isProcessing(id.value) == true) {
+        code = jobs.any((job) => job.status == CompressionJobStatus.running)
+            ? 'compressionRunning'
+            : 'compressionPending';
+      } else {
+        code = 'interruptedPreparation';
+        failed = true;
+      }
+    } else if (jobs.any((job) => job.status == CompressionJobStatus.failed)) {
+      code = jobs.any((job) =>
+              !job.canRetry && job.status == CompressionJobStatus.failed)
+          ? 'compressionBudgetExhausted'
+          : 'compressionFailed';
+      failed = true;
+    } else {
+      final candidates = await _compression?.candidatesForResource(id) ??
+          <CompressionCandidate>[];
+      final usable = candidates
+          .where((candidate) =>
+              candidate.isValidated &&
+              candidate.isCandidateOnly &&
+              candidate.scope == CompressionScope.part &&
+              jobs.any((job) => job.jobId == candidate.jobId))
+          .toList();
+      code = usable.length == jobs.length
+          ? 'compressionApprovalRequired'
+          : 'compressionNoCandidate';
+      failed = usable.length != jobs.length;
+    }
+    final encoded = _diagnostic(code, {
+      if (diagnostic?.parameters['actualCharacters'] != null)
+        'actualCharacters': diagnostic!.parameters['actualCharacters'],
+      if (diagnostic?.parameters['absoluteCharacters'] != null)
+        'absoluteCharacters': diagnostic!.parameters['absoluteCharacters'],
+      'resourceId': id.value,
+      'jobIds': jobs.map((job) => job.jobId).toList(),
+      'targetRevisionId': row.targetRevisionId,
+      'targetContentHash': row.targetContentHash
+    });
+    if (row.validationMessage == encoded && !failed) return row;
+    debugPrint('[AdventureStart][COMPRESSION] resourceId=${id.value} '
+        'status=$code jobs=${jobs.length} revision=${row.targetRevisionId} '
+        'hash=${row.targetContentHash} '
+        'jobStates=${jobs.map((job) => '${job.jobId}:${job.scope.name}:${job.targetNodeId}:${job.status.name}:${job.attempts}').join(',')}');
+    final next = await _casUpdate(
+        id,
+        row.attemptToken,
+        (current, txn, now) => _copyRecord(current,
+            state: failed ? ReadinessState.failed : ReadinessState.preparing,
+            validationMessage: encoded,
+            failureReason: failed ? encoded : '',
+            updatedAt: now),
+        allowTransitionToFailed: true);
+    notifyListeners();
+    return next;
+  }
+
   /// Marks every `preparing` row that no live run owns as `failed`.
   ///
   /// Called at startup: a preparing row from a dead process would otherwise
@@ -401,6 +560,16 @@ final class AssemblyReadinessCoordinator {
     var recovered = 0;
     for (final row in rows) {
       if (_inFlight.containsKey(row.resourceId)) continue;
+      if (_compression != null &&
+          DiagnosticEnvelope.tryDecode(row.validationMessage)
+                  ?.code
+                  .startsWith('compression') ==
+              true) {
+        await _compressionWorker?.process(row.resourceId);
+        await _reconcileCompression(ResourceId(row.resourceId));
+        recovered++;
+        continue;
+      }
       final db = await _getDb();
       final done = await db.transaction((txn) async {
         final current = await _readiness.readInTransaction(txn, row.resourceId);
@@ -432,6 +601,14 @@ final class AssemblyReadinessCoordinator {
   Future<AssemblyReadinessRecord?> refresh(ResourceId resourceId) async {
     final record = await _readiness.read(resourceId.value);
     if (record == null) return null;
+    if (record.state == ReadinessState.preparing &&
+        _compression != null &&
+        DiagnosticEnvelope.tryDecode(record.validationMessage)
+                ?.code
+                .startsWith('compression') ==
+            true) {
+      return _reconcileCompression(resourceId);
+    }
     if (record.state != ReadinessState.ready) return record;
 
     final head = await _revisions.readHead(
@@ -604,6 +781,27 @@ final class AssemblyReadinessCoordinator {
         .where((node) => node.kind == RevisionNodeKind.part)
         .where((node) => node.status != NodeStatus.archived)
         .fold(0, (sum, node) => sum + node.content.length);
+    final db = await _getDb();
+    final live = await db.rawQuery(
+        'SELECT p.id, p.content, p.status FROM resource_parts p '
+        'JOIN resource_sections s ON s.id = p.section_id '
+        'WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL',
+        [resourceId.value]);
+    final liveActive = live
+        .where((row) => row['status'] != 'archived')
+        .fold<int>(
+            0, (sum, row) => sum + (row['content']?.toString() ?? '').length);
+    final plan = await db.rawQuery(
+        'SELECT b.target_capacity, b.blueprint_id, s.target_characters '
+        'FROM resource_blueprints b LEFT JOIN resource_creation_sessions s ON s.session_id = b.session_id '
+        'WHERE b.resource_id = ? ORDER BY b.created_at DESC LIMIT 1',
+        [resourceId.value]);
+    debugPrint(
+        '[AdventureStart][CAPACITY] resourceId=${resourceId.value} resourceType=${type.storageValue} '
+        'revision=${state.revisionId.value} revisionCharacters=$activeChars liveCharacters=$liveActive '
+        'activeParts=${live.where((row) => row['status'] != 'archived').length} '
+        'generationTarget=${plan.firstOrNull?['target_characters']} blueprintTarget=${plan.firstOrNull?['target_capacity']} '
+        'status=${ResourceCapacityMath.statusFor(type, activeChars).name}');
     return ResourceCapacityMath.statusFor(type, activeChars);
   }
 }

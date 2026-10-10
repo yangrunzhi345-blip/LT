@@ -305,6 +305,10 @@ final class ResourceRevisionService implements ResourceRevisionSelector {
         _taskReset = taskReset,
         _retention = retention;
 
+  Future<ResourceRevision?> readHeadInTransaction(DatabaseExecutor txn,
+          ResourceId resourceId, ResourceRevisionKind kind) =>
+      _revisions.readHeadInTransaction(txn, resourceId, kind);
+
   final IResourceRevisionRepository _revisions;
   final RevisionCaptureEngine _capture;
   final IResourceTreeRevisionBoundary _tree;

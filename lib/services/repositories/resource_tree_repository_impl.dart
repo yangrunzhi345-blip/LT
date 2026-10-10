@@ -836,6 +836,10 @@ final class ResourceTreeRepositoryImpl
       });
     for (final part in parts) {
       final before = live[part.nodeId];
+      // Rewriting an identical sibling invalidates its source CAS token and
+      // makes a batch of independently reviewed Part proposals self-stale.
+      // Preserve timestamps for nodes whose complete persisted state matches.
+      if (before != null && before.hasSameState(part)) continue;
       final contentChanged = before == null ||
           before.kind != RevisionNodeKind.part ||
           before.content != part.content;

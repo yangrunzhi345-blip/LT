@@ -1,0 +1,18 @@
+Acceptance Mode: Integrated Single-Agent Full-Cycle; not independent review.
+dart format --output=none --set-exit-if-changed lib test: PASS; 847 files, 0 changed.
+flutter analyze --no-pub: PASS; No issues found (5.5s).
+flutter test --no-pub: PASS 3661, SKIP 2, FAIL 0; exit code 0; 13m18s.
+Final narrow-screen production Widget after the last source notification change: PASS 1.
+Targeted combined SQLite/Widget/capacity/localization: PASS 70.
+Generation SOAK unchanged load/output: PASS 7.
+Official real Kokoro Linux TTS model synthesis: PASS 1; 2m36s; Android audio playback NOT RUN.
+flutter build apk --no-pub --debug --target-platform android-arm64: PASS; 32.9s.
+Android debug ABI/ELF/native TTS hashes: see android-debug.json.
+Android device validation: NOT COMPLETED.
+No push, signed release, tag, version bump, database clear or gate bypass.
+
+Final full-suite SQLite evidence (fixture counts, not device measurements):
+SQLITE_BUDGET sessionTarget=8000 blueprintTarget=8000 planned=8000 parts=4 actual=8000 revision=8000 ready=true
+SQLITE_E2E characters=2 originalCharacters=25200 each, candidates=18 ready=2 frozen=2 sessions=1 prologue=1 messages=3 continuation=true snapshotPreserved=true chatOpen=true
+SQLITE_BUDGET sessionTarget=18000 blueprintTarget=18000 planned=18000 parts=9 actual=18000 revision=18000 ready=true
+SQLITE_BUDGET sessionTarget=20000 blueprintTarget=20000 planned=20000 parts=10 actual=20000 revision=20000 ready=true

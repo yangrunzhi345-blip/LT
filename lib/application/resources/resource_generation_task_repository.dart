@@ -8,6 +8,7 @@ import '../../services/repositories/resource_tree_repository.dart'
     show ResourceTreeConflictException;
 import '../../services/repositories/resource_tree_row_mapper.dart';
 import 'resource_blueprint_repository.dart';
+import 'part_generation_validator.dart';
 import 'resource_revision_service.dart';
 
 /// Ownership handle for one Part generation attempt.
@@ -53,6 +54,14 @@ final class PartGenerationAttemptState {
   final String attemptId;
   final String status;
   final String generationId;
+}
+
+/// Read-only planning view; final enforcement still happens under the write lock.
+abstract interface class IPartGenerationBudgetReader {
+  Future<int?> remainingBudget(
+      {required String resourceId,
+      required String blueprintId,
+      required String partId});
 }
 
 /// Contract for managing Part generation tasks and execution attempts.
@@ -164,7 +173,10 @@ abstract interface class IPartGenerationTaskRepository {
 
 /// SQLite implementation of [IPartGenerationTaskRepository].
 class PartGenerationTaskRepositoryImpl
-    implements IPartGenerationTaskRepository, IGenerationTaskResetPort {
+    implements
+        IPartGenerationTaskRepository,
+        IGenerationTaskResetPort,
+        IPartGenerationBudgetReader {
   PartGenerationTaskRepositoryImpl({
     required Future<Database> Function() getDb,
     IPartCommitRevisionBoundary? revisionBoundary,
@@ -404,6 +416,34 @@ class PartGenerationTaskRepositoryImpl
   }
 
   @override
+  Future<int?> remainingBudget(
+      {required String resourceId,
+      required String blueprintId,
+      required String partId}) async {
+    final db = await _getDb();
+    return db.transaction((txn) async {
+      final rows = await txn.query('resource_blueprints',
+          columns: ['target_capacity'],
+          where: 'blueprint_id = ?',
+          whereArgs: [blueprintId],
+          limit: 1);
+      final budget = rows.isEmpty
+          ? 0
+          : (rows.first['target_capacity'] as num?)?.toInt() ?? 0;
+      if (budget <= 0) return null;
+      final other = await txn.rawQuery(
+          'SELECT p.content FROM resource_parts p '
+          'JOIN resource_sections s ON s.id = p.section_id '
+          "WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL "
+          "AND p.status != 'archived' AND p.id != ?",
+          [resourceId, partId]);
+      return budget -
+          other.fold<int>(
+              0, (sum, row) => sum + (row['content']?.toString() ?? '').length);
+    });
+  }
+
+  @override
   Future<void> commitPartContent({
     required PartGenerationResponse response,
     required String taskId,
@@ -479,6 +519,31 @@ class PartGenerationTaskRepositoryImpl
           '（期望 updated_at=$expectedSourceToken，当前=$liveSourceToken），'
           '陈旧生成不得覆盖用户内容',
         );
+      }
+      // Check the aggregate in the same SQLite transaction as the write.
+      // Concurrent Parts and replacement retries cannot spend the same budget.
+      final budgetRows = await txn.query('resource_blueprints',
+          columns: ['target_capacity'],
+          where: 'blueprint_id = ?',
+          whereArgs: [taskRow['blueprint_id']],
+          limit: 1);
+      final budget = budgetRows.isEmpty
+          ? 0
+          : (budgetRows.first['target_capacity'] as num?)?.toInt() ?? 0;
+      final activeRows = await txn.rawQuery(
+          'SELECT p.id, p.content FROM resource_parts p '
+          'JOIN resource_sections s ON s.id = p.section_id '
+          "WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL "
+          "AND p.status != 'archived' AND p.id != ?",
+          [response.resourceId.value, response.partId.value]);
+      final otherCharacters = activeRows.fold<int>(
+          0, (sum, row) => sum + (row['content']?.toString() ?? '').length);
+      if (budget > 0 && otherCharacters + response.content.length > budget) {
+        throw PartGenerationValidationException(
+            '资源生成累计预算不足，请减少本段字数后重试，已保存内容保持不变',
+            field: 'generation_budget',
+            expected: '<= $budget',
+            actual: '${otherCharacters + response.content.length}');
       }
       final hadConfirmedContent =
           (existingPartRows.first['content']?.toString() ?? '').isNotEmpty;

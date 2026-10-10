@@ -68,6 +68,7 @@ abstract interface class ICompressionJobRepository {
     required CompressionJobStatus status,
     required DateTime updatedAt,
     String errorMessage,
+    CompressionCandidate? candidate,
   });
 
   /// Finds queued jobs, optionally scoped to one resource.
@@ -78,6 +79,8 @@ abstract interface class ICompressionJobRepository {
   });
 
   Future<List<CompressionJob>> findJobsForResource(String resourceId);
+
+  Future<List<String>> queuedResourceIds();
 
   /// Releases jobs whose owning worker is gone.
   ///
@@ -294,28 +297,52 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
     required CompressionJobStatus status,
     required DateTime updatedAt,
     String errorMessage = '',
+    CompressionCandidate? candidate,
   }) async {
     final db = await _getDb();
-    final affected = await db.update(
-      jobsTable,
-      {
-        'status': status.storageValue,
-        'error_message': errorMessage,
-        'worker_id': '',
-        'claimed_at': null,
-        'lease_expires_at': null,
-        'updated_at': updatedAt.toIso8601String(),
-      },
-      // Ownership CAS: a worker whose lease was reclaimed must not be able to
-      // overwrite the state written by the new owner.
-      where: 'job_id = ? AND status = ? AND worker_id = ?',
-      whereArgs: [
-        jobId,
-        CompressionJobStatus.running.storageValue,
-        workerId,
-      ],
-    );
-    return affected == 1;
+    if (candidate != null &&
+        (candidate.jobId != jobId ||
+            status != CompressionJobStatus.succeeded)) {
+      throw ArgumentError('Candidate does not belong to the successful job');
+    }
+    return db.transaction((txn) async {
+      final affected = await txn.update(
+        jobsTable,
+        {
+          'status': status.storageValue,
+          'error_message': errorMessage,
+          'worker_id': '',
+          'claimed_at': null,
+          'lease_expires_at': null,
+          'updated_at': updatedAt.toIso8601String(),
+        },
+        // Ownership CAS: a worker whose lease was reclaimed must not be able to
+        // overwrite the state written by the new owner.
+        where: 'job_id = ? AND status = ? AND worker_id = ?',
+        whereArgs: [
+          jobId,
+          CompressionJobStatus.running.storageValue,
+          workerId,
+        ],
+      );
+      if (affected != 1) return false;
+      if (candidate != null) {
+        // Completion and candidate must commit together under the ownership CAS.
+        await txn.insert(candidatesTable, _candidateValues(candidate));
+      }
+      return true;
+    });
+  }
+
+  @override
+  Future<List<String>> queuedResourceIds() async {
+    final db = await _getDb();
+    final rows = await db.query(jobsTable,
+        columns: ['resource_id'],
+        distinct: true,
+        where: 'status = ?',
+        whereArgs: [CompressionJobStatus.queued.storageValue]);
+    return rows.map((row) => row['resource_id'].toString()).toList();
   }
 
   @override
@@ -429,11 +456,8 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
         text.contains('constraint failed');
   }
 
-  @override
-  Future<void> insertCandidate(CompressionCandidate candidate) async {
-    final db = await _getDb();
-    await db.insert(
-      candidatesTable,
+  static Map<String, Object?> _candidateValues(
+          CompressionCandidate candidate) =>
       {
         'candidate_id': candidate.candidateId,
         'job_id': candidate.jobId,
@@ -448,9 +472,13 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
         'validation_message': candidate.validationMessage,
         'applied_at': null,
         'created_at': (candidate.createdAt ?? DateTime.now()).toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+      };
+
+  @override
+  Future<void> insertCandidate(CompressionCandidate candidate) async {
+    final db = await _getDb();
+    await db.insert(candidatesTable, _candidateValues(candidate),
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   @override
@@ -501,13 +529,15 @@ final class CompressionJobRepositoryImpl implements ICompressionJobRepository {
     String resourceId,
   ) async {
     final db = await _getDb();
-    final rows = await db.query(
-      candidatesTable,
-      where: "resource_id = ? AND validation_state = 'validated' "
-          'AND applied_at IS NULL AND scope = ?',
-      whereArgs: <Object?>[resourceId, CompressionScope.part.storageValue],
-      orderBy: 'created_at DESC, candidate_id ASC',
-    );
+    final rows = await db.rawQuery(
+        'SELECT c.* FROM $candidatesTable c '
+        'JOIN $jobsTable j ON j.job_id = c.job_id '
+        'JOIN resource_parts p ON p.id = c.target_node_id '
+        "WHERE c.resource_id = ? AND c.validation_state = 'validated' "
+        'AND c.applied_at IS NULL AND c.scope = ? '
+        'AND p.deleted_at IS NULL AND p.updated_at = j.source_token '
+        'ORDER BY c.created_at DESC, c.candidate_id ASC',
+        [resourceId, CompressionScope.part.storageValue]);
     return rows.map(_mapCandidate).toList();
   }
 

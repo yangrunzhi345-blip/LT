@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../domain/resources/resource_capacity.dart';
 import '../../domain/resources/resource_compression.dart';
 import '../../domain/resources/resource_contracts.dart';
@@ -131,6 +133,7 @@ final class CompressionCoordinator {
   Future<List<CompressionJob>> enqueueForResource(
     ResourceId resourceId, {
     bool force = false,
+    bool partOnly = false,
   }) async {
     final sections = await _treeRepository.readSections(resourceId);
     if (sections.isEmpty) return const <CompressionJob>[];
@@ -157,7 +160,8 @@ final class CompressionCoordinator {
       final sectionState = stateById[section.id.value];
       if (sectionState == null || sectionState.isDeleted) continue;
 
-      if (snapshot.characters <= ResourceLimits.maxCompressionInputCharacters) {
+      if (!partOnly &&
+          snapshot.characters <= ResourceLimits.maxCompressionInputCharacters) {
         jobs.add(await _enqueue(
           resourceId: resourceId,
           scope: CompressionScope.section,
@@ -175,7 +179,16 @@ final class CompressionCoordinator {
         for (final state in partStates) state.id.value: state,
       };
       for (final part in parts) {
-        if (part.content.trim().isEmpty) continue;
+        if (part.content.trim().isEmpty || part.status == NodeStatus.archived) {
+          continue;
+        }
+        if (partOnly) {
+          // Structured card fields are not prose and must retain their schema.
+          try {
+            final decoded = jsonDecode(part.content);
+            if (decoded is Map || decoded is List) continue;
+          } on FormatException {/* Ordinary prose is eligible. */}
+        }
         if (!force && part.content.length < thresholds.minNodeCharacters) {
           continue;
         }
@@ -319,6 +332,9 @@ final class CompressionCoordinator {
     );
   }
 
+  Future<List<String>> queuedResourceIds() =>
+      _jobRepository.queuedResourceIds();
+
   Future<List<CompressionJob>> jobsForResource(ResourceId id) =>
       _jobRepository.findJobsForResource(id.value);
 
@@ -409,13 +425,6 @@ final class CompressionCoordinator {
         return false;
       }
 
-      // Only a worker that still owns the job may publish its result: if the
-      // lease was reclaimed and another worker took over, this run is stale and
-      // must not store a candidate the new owner would have to fight with.
-      final completed =
-          await _finish(running, CompressionJobStatus.succeeded, '');
-      if (!completed) return false;
-
       final candidate = CompressionCandidate(
         candidateId: 'cmpc_${running.jobId}',
         jobId: running.jobId,
@@ -429,8 +438,14 @@ final class CompressionCoordinator {
         isValidated: true,
         createdAt: _clock(),
       );
-      await _jobRepository.insertCandidate(candidate);
-      return true;
+      return _jobRepository.completeJob(
+        jobId: running.jobId,
+        workerId: workerId,
+        status: CompressionJobStateMachine.advance(
+            running.status, CompressionJobStatus.succeeded),
+        updatedAt: _clock(),
+        candidate: candidate,
+      );
     } catch (error) {
       await _finish(
         running,
@@ -475,7 +490,9 @@ final class CompressionCoordinator {
       );
       if (section == null) return null;
       for (final part in await _treeRepository.readParts(section.id)) {
-        if (part.content.trim().isEmpty) continue;
+        if (part.content.trim().isEmpty || part.status == NodeStatus.archived) {
+          continue;
+        }
         nodes.add(CompressionSourceNode(
           nodeId: part.id.value,
           title: part.title,
@@ -588,11 +605,6 @@ final class CompressionCoordinator {
 
   int _sequence = 0;
 
-  static String _describeError(Object error) {
-    if (error is CompressionParseException) return error.message;
-    if (error is ArgumentError) {
-      return error.message?.toString() ?? error.toString();
-    }
-    return error.toString();
-  }
+  static String _describeError(Object error) =>
+      '压缩失败（${error.runtimeType}），请检查模型配置或重试；原始正文保持不变';
 }

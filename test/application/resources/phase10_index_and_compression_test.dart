@@ -151,7 +151,8 @@ void main() {
     expect(docs, isNotEmpty);
   });
 
-  test('OVERFLOW head enqueues Phase 8 compression preparation jobs', () async {
+  test('OVERFLOW queues proposals but missing worker fails explicitly',
+      () async {
     final bigBody = '超' * 61000;
     final resourceId = await fixture.createWorldview(
         'x_wv2',
@@ -176,8 +177,10 @@ void main() {
 
     final outcome = await coordinator.prepare(resourceId);
 
-    expect(outcome.awaitedCompression, isTrue);
-    expect(outcome.record.state, ReadinessState.preparing);
+    expect(outcome.awaitedCompression, isFalse);
+    expect(outcome.record.state, ReadinessState.failed);
+    expect(DiagnosticEnvelope.tryDecode(outcome.record.failureReason)?.code,
+        'compressionUnavailable');
 
     // Phase 8 compression preparation actually received jobs.
     final jobs = await fixture.db.query(

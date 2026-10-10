@@ -76,80 +76,141 @@ final class CompressionPublisher {
   /// The claim on `applied_at` is written first, inside the same transaction as
   /// the body: a second publish of the same candidate loses the guarded update
   /// and rolls back instead of writing the text twice.
+  Future<void> Function(ResourceId resourceId)? onPublished;
+
   Future<CompressionPublishOutcome> publish(String candidateId) async {
     final db = await _getDb();
-    final now = DateTime.now().toIso8601String();
+    final outcome = await db.transaction((txn) => _publishInTransaction(
+        txn, candidateId, DateTime.now().toIso8601String()));
+    if (!outcome.alreadyApplied && onPublished != null) {
+      final candidate = await _jobs.findCandidateInTransaction(db, candidateId);
+      if (candidate != null) await onPublished!(candidate.resourceId);
+    }
+    return outcome;
+  }
 
-    return db.transaction((txn) async {
-      final candidate =
-          await _jobs.findCandidateInTransaction(txn, candidateId);
-      if (candidate == null) {
-        throw CompressionPublishException('压缩候选不存在：$candidateId');
+  /// Explicit approval: all selected Part proposals and history commit together.
+  /// The head captured by the review must still be current under the same lock.
+  Future<List<CompressionPublishOutcome>> publishMany({
+    required ResourceId resourceId,
+    required List<String> candidateIds,
+    required String expectedHeadRevisionId,
+  }) async {
+    if (candidateIds.isEmpty ||
+        candidateIds.toSet().length != candidateIds.length) {
+      throw const CompressionPublishException('请选择不重复的压缩候选');
+    }
+    final db = await _getDb();
+    final outcomes = await db.transaction((txn) async {
+      final candidates = <CompressionCandidate>[];
+      for (final id in candidateIds) {
+        final candidate = await _jobs.findCandidateInTransaction(txn, id);
+        if (candidate == null ||
+            candidate.resourceId != resourceId ||
+            !candidate.isValidated ||
+            candidate.scope != CompressionScope.part) {
+          throw const CompressionPublishException('候选归属或逐段映射无效，请重新准备');
+        }
+        candidates.add(candidate);
       }
-      if (!candidate.isValidated) {
-        throw CompressionPublishException(
-          '压缩候选未通过校验，拒绝发布：${candidate.validationMessage}',
-        );
+      if (candidates.every((candidate) => !candidate.isCandidateOnly)) {
+        return [
+          for (final candidate in candidates)
+            CompressionPublishOutcome(
+                candidateId: candidate.candidateId,
+                partId: candidate.targetNodeId,
+                alreadyApplied: true,
+                savedCharacters: 0)
+        ];
       }
-      if (candidate.scope != CompressionScope.part) {
-        // A section-scoped candidate has no per-Part mapping, so publishing it
-        // would have to guess a split. That mapping is deliberately not
-        // invented here.
-        throw CompressionPublishException(
-          '暂不支持发布章节级压缩结果（缺少逐段映射）：$candidateId',
-        );
+      final head = await _revisions.readHeadInTransaction(
+          txn, resourceId, ResourceRevisionKind.latestHead);
+      if (head == null || head.revisionId.value != expectedHeadRevisionId) {
+        throw const CompressionPublishException('审核期间资源已修改，请重新准备并审核');
       }
-      if (!candidate.isCandidateOnly) {
-        return CompressionPublishOutcome(
-          candidateId: candidateId,
-          partId: candidate.targetNodeId,
-          alreadyApplied: true,
-          savedCharacters: 0,
-          headRevisionId: null,
-        );
+      final result = <CompressionPublishOutcome>[];
+      final now = DateTime.now().toIso8601String();
+      for (final candidate in candidates) {
+        result
+            .add(await _publishInTransaction(txn, candidate.candidateId, now));
       }
+      return result;
+    });
+    if (outcomes.any((outcome) => !outcome.alreadyApplied)) {
+      await onPublished?.call(resourceId);
+    }
+    return outcomes;
+  }
 
-      final claimed = await _jobs.markCandidateAppliedInTransaction(
-        txn,
-        candidateId: candidateId,
-        appliedAt: now,
+  Future<CompressionPublishOutcome> _publishInTransaction(
+      DatabaseExecutor txn, String candidateId, String now) async {
+    final candidate = await _jobs.findCandidateInTransaction(txn, candidateId);
+    if (candidate == null) {
+      throw CompressionPublishException('压缩候选不存在：$candidateId');
+    }
+    if (!candidate.isValidated) {
+      throw CompressionPublishException(
+        '压缩候选未通过校验，拒绝发布：${candidate.validationMessage}',
       );
-      if (!claimed) {
-        throw CompressionPublishException('压缩候选已被并发发布：$candidateId');
-      }
-
-      // R02-B: the candidate was produced from the version recorded on its job.
-      // Publishing into a Part that has moved on since (a manual edit, an
-      // autosave, a generation commit) must be refused, not silently applied —
-      // the source token is the same `resource_parts.updated_at` the manual-edit
-      // path already CASes against.
-      final job = await _jobs.findJobInTransaction(txn, candidate.jobId);
-      if (job == null) {
-        throw CompressionPublishException(
-          '压缩候选缺少 Job 记录，无法校验源版本：$candidateId',
-        );
-      }
-
-      final result = await _revisions.publishCompressedContentInTransaction(
-        txn,
-        candidateId: candidateId,
-        partId: candidate.targetNodeId,
-        resourceId: candidate.resourceId,
-        compressedContent: candidate.compressedContent,
-        originalCharacters: candidate.originalCharacters,
-        expectedSourceToken: job.sourceToken,
+    }
+    if (candidate.scope != CompressionScope.part) {
+      // A section-scoped candidate has no per-Part mapping, so publishing it
+      // would have to guess a split. That mapping is deliberately not
+      // invented here.
+      throw CompressionPublishException(
+        '暂不支持发布章节级压缩结果（缺少逐段映射）：$candidateId',
       );
-
-      // The inner call returns early when the body already equals the candidate.
-      // Reporting that as a fresh publish would claim savings and a new history
-      // entry that do not exist (audit P9-M4).
+    }
+    if (!candidate.isCandidateOnly) {
       return CompressionPublishOutcome(
         candidateId: candidateId,
         partId: candidate.targetNodeId,
-        alreadyApplied: result.alreadyApplied,
-        savedCharacters: result.alreadyApplied ? 0 : candidate.savedCharacters,
-        headRevisionId: result.headRevisionId,
+        alreadyApplied: true,
+        savedCharacters: 0,
+        headRevisionId: null,
       );
-    });
+    }
+
+    final claimed = await _jobs.markCandidateAppliedInTransaction(
+      txn,
+      candidateId: candidateId,
+      appliedAt: now,
+    );
+    if (!claimed) {
+      throw CompressionPublishException('压缩候选已被并发发布：$candidateId');
+    }
+
+    // R02-B: the candidate was produced from the version recorded on its job.
+    // Publishing into a Part that has moved on since (a manual edit, an
+    // autosave, a generation commit) must be refused, not silently applied —
+    // the source token is the same `resource_parts.updated_at` the manual-edit
+    // path already CASes against.
+    final job = await _jobs.findJobInTransaction(txn, candidate.jobId);
+    if (job == null) {
+      throw CompressionPublishException(
+        '压缩候选缺少 Job 记录，无法校验源版本：$candidateId',
+      );
+    }
+
+    final result = await _revisions.publishCompressedContentInTransaction(
+      txn,
+      candidateId: candidateId,
+      partId: candidate.targetNodeId,
+      resourceId: candidate.resourceId,
+      compressedContent: candidate.compressedContent,
+      originalCharacters: candidate.originalCharacters,
+      expectedSourceToken: job.sourceToken,
+    );
+
+    // The inner call returns early when the body already equals the candidate.
+    // Reporting that as a fresh publish would claim savings and a new history
+    // entry that do not exist (audit P9-M4).
+    return CompressionPublishOutcome(
+      candidateId: candidateId,
+      partId: candidate.targetNodeId,
+      alreadyApplied: result.alreadyApplied,
+      savedCharacters: result.alreadyApplied ? 0 : candidate.savedCharacters,
+      headRevisionId: result.headRevisionId,
+    );
   }
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:lt_dialogue/core/widgets/app_buttons.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,6 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
 import 'package:lt_dialogue/application/resources/resource_migration_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_port.dart';
 import 'package:lt_dialogue/application/resources/part_content_commit_service.dart';
@@ -16,7 +19,6 @@ import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/domain/errors/diagnostic_envelope.dart';
-import 'package:flutter/foundation.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -24,6 +26,11 @@ import 'package:flutter/services.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
+import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/assembly_preview_page.dart';
+import 'package:lt_dialogue/features/adventure/presentation/session/screens/adventure_session_screen.dart';
+import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
+import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -507,6 +514,242 @@ void main() {
     });
   }
 
+  test(
+      'two reported overflow character IDs: review → ready → freeze → unique open session',
+      () async {
+    container.dispose();
+    container = ProviderContainer(overrides: [
+      llmGatewayProvider.overrideWithValue(_CompressionGateway())
+    ]);
+    container.read(assemblyReadinessCompressionLinkProvider);
+    final coordinator = container.read(assemblyReadinessCoordinatorProvider);
+    final revisions = container.read(resourceRevisionRepositoryProvider);
+    final service = container.read(resourceRevisionServiceProvider);
+    final tree =
+        ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
+    const ids = ['res_cre_1791593277951938_3', 'res_cre_1791592846335305_2'];
+    for (final id in ids) {
+      await tree.createResourceTree(ResourceTreeDraft(
+          id: ResourceId(id),
+          type: ResourceType.character,
+          name: id == ids.first ? '艾尔' : '利亚',
+          sections: [
+            ResourceTreeSectionDraft(title: '背景', parts: [
+              for (var i = 0; i < 9; i++)
+                ResourceTreePartDraft(title: '背景$i', content: '文' * 2800)
+            ]),
+          ]));
+      final original = await service.captureRevision(ResourceId(id),
+          cause: RevisionCause.manualSave);
+      final result = await coordinator.prepare(ResourceId(id));
+      expect(result.record.state, ReadinessState.preparing);
+      expect(
+          DiagnosticEnvelope.tryDecode(result.record.validationMessage)!.code,
+          'compressionApprovalRequired');
+      final candidates = await container
+          .read(compressionPublisherProvider)
+          .publishableCandidates(ResourceId(id));
+      expect(candidates, hasLength(9));
+      await coordinator.approveCompression(
+          resourceId: ResourceId(id),
+          candidateIds:
+              candidates.map((candidate) => candidate.candidateId).toList(),
+          expectedHeadRevisionId: original.revision!.revisionId.value);
+      expect((await coordinator.readiness(ResourceId(id)))!.state,
+          ReadinessState.ready);
+      final old = await revisions.readState(original.revision!.revisionId);
+      expect(
+          old.nodes.values
+              .where((node) => node.kind == RevisionNodeKind.part)
+              .fold<int>(0, (sum, node) => sum + node.content.length),
+          25200);
+    }
+    final input = config(ids.first).copyWith(selectedCharacters: [
+      ...config(ids.first).selectedCharacters,
+      AdventureSelectedCharacter(
+          id: ids.last,
+          characterId: ids.last,
+          characterName: '利亚',
+          narrativeRole: AdventureCharacterRole.companion),
+    ]);
+    final frozen = await container
+        .read(adventureReadinessGateProvider)
+        .enforceAndFreeze(input);
+    expect(frozen.resourceBindings, hasLength(2));
+    final chat = container.read(chatProvider);
+    await chat.loadApiKey();
+    final starts = await Future.wait([
+      chat.startAdventureWithConfig(frozen),
+      chat.startAdventureWithConfig(frozen)
+    ]);
+    expect(starts.first, starts.last);
+    expect(chat.isAdventureChatOpen, isTrue);
+    final repo = container.read(adventureRepoProvider);
+    expect(await repo.getAdventures(), hasLength(1));
+    expect(await repo.getMessages(starts.first), hasLength(1));
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    var requests = 0;
+    server.listen((request) async {
+      await request.drain<void>();
+      requests++;
+      request.response.headers.contentType =
+          ContentType('text', 'event-stream', charset: 'utf-8');
+      final text = '两人继续旅程。\n\n${AdventureResponse.jsonSeparator}\n'
+          '${jsonEncode({
+            'scene': '旅途中',
+            'options': ['前进']
+          })}';
+      request.response.write('data: ${jsonEncode({
+            'choices': [
+              {
+                'index': 0,
+                'delta': {'content': text},
+                'finish_reason': null
+              }
+            ]
+          })}\n\n');
+      request.response.write('data: ${jsonEncode({
+            'choices': [
+              {
+                'index': 0,
+                'delta': <String, Object?>{},
+                'finish_reason': 'stop'
+              }
+            ]
+          })}\n\ndata: [DONE]\n\n');
+      await request.response.close();
+    });
+    final settings = container.read(settingsProvider);
+    await settings.setProvider(LLMProvider.custom);
+    await settings.setApiBaseUrl('http://127.0.0.1:${server.port}/v1');
+    await settings.setApiKey('local-fixture-placeholder');
+    await settings.setModel('local-fixture-model');
+    await chat.sendMessage('继续前进');
+    expect(requests, greaterThan(0));
+    final messages = await repo.getMessages(starts.first);
+    expect(messages, hasLength(3));
+    expect(messages.last.errorType, isNull);
+    expect(messages.last.content, contains('两人继续旅程'));
+    final db = await DatabaseService.database;
+    final savedConfig =
+        (await db.query('adventures', columns: ['config'])).single['config'];
+    final section = (await tree.readSections(ResourceId(ids.first))).first;
+    final part = (await tree.readParts(section.id)).first;
+    final token = (await db.query('resource_parts',
+            columns: ['updated_at'],
+            where: 'id = ?',
+            whereArgs: [part.id.value]))
+        .single['updated_at']
+        .toString();
+    await tree.updatePart(
+        id: part.id, expectedUpdatedAt: token, content: '后续编辑');
+    await service.captureRevision(ResourceId(ids.first),
+        cause: RevisionCause.manualSave);
+    expect((await db.query('adventures', columns: ['config'])).single['config'],
+        savedConfig);
+    expect(await repo.getMessages(starts.first), hasLength(3));
+    debugPrint(
+        'SQLITE_E2E characters=2 originalCharacters=25200 each, candidates=18 ready=2 frozen=2 sessions=1 prologue=1 messages=3 continuation=true snapshotPreserved=true chatOpen=true');
+  });
+
+  testWidgets(
+      '320px review updates readiness and opens the real Adventure Session',
+      (tester) async {
+    container.dispose();
+    container = ProviderContainer(overrides: [
+      llmGatewayProvider.overrideWithValue(_CompressionGateway())
+    ]);
+    await tester.runAsync(() async {
+      await DatabaseService.database;
+      container.read(assemblyReadinessCompressionLinkProvider);
+      final tree =
+          ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
+      await tree.createResourceTree(ResourceTreeDraft(
+          id: const ResourceId('widget_compression'),
+          type: ResourceType.character,
+          name: '艾尔',
+          sections: [
+            ResourceTreeSectionDraft(title: '背景', parts: [
+              for (var i = 0; i < 9; i++)
+                ResourceTreePartDraft(title: '背景$i', content: '文' * 2800)
+            ]),
+          ]));
+      await container.read(resourceRevisionServiceProvider).captureRevision(
+          const ResourceId('widget_compression'),
+          cause: RevisionCause.manualSave);
+      await container
+          .read(assemblyReadinessCoordinatorProvider)
+          .prepare(const ResourceId('widget_compression'));
+      await container.read(chatProvider).loadApiKey();
+    });
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(builder: (context, ref, _) {
+              final chat = ref.watch(chatProvider);
+              if (chat.isAdventureChatOpen) {
+                return const AdventureSessionScreen();
+              }
+              return AssemblyPreviewPage(
+                  config: config('widget_compression'),
+                  onStartAdventure: (input) async {
+                    await chat.startAdventureWithConfig(input);
+                  });
+            }))));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(find.byType(AssemblyPreviewPage), findsOneWidget);
+    expect(find.textContaining('25200'), findsOneWidget);
+    expect(
+        tester
+            .widget<AppPrimaryButton>(
+                find.byKey(const Key('assembly-preview-start-button')))
+            .onPressed,
+        isNull);
+    final review = find.byKey(const Key('assembly-preview-compression-review'));
+    expect(review, findsOneWidget);
+    await tester.ensureVisible(review);
+    await tester.tap(review);
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('确认采用并重新装配'));
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await tester.pumpAndSettle();
+    expect(
+        (await container
+                .read(assemblyReadinessRepositoryProvider)
+                .read('widget_compression'))!
+            .state,
+        ReadinessState.ready);
+    final launch = find.byKey(const Key('assembly-preview-start-button'));
+    await tester.ensureVisible(launch);
+    await tester.tap(launch);
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    });
+    await tester.pumpAndSettle();
+    expect(find.byType(AdventureSessionScreen), findsOneWidget);
+    expect(container.read(chatProvider).isAdventureChatOpen, isTrue);
+    expect(await container.read(adventureRepoProvider).getAdventures(),
+        hasLength(1));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   test('legacy migration with no captured head can prepare and freeze',
       () async {
     final old = await openDatabase('${directory.path}/adventures.db',
@@ -627,6 +870,31 @@ final class _AiResponses implements LlmGateway {
     ].map(jsonEncode).join('\n');
   }
 
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError(invocation.memberName.toString());
+}
+
+final class _CompressionGateway implements LlmGateway {
+  @override
+  bool get isConfigured => true;
+  @override
+  Future<String> rawCompletion(
+          {required String systemPrompt,
+          required String instruction,
+          int maximumOutputTokens = 4096,
+          double temperature = .7,
+          LlmTask task = LlmTask.structuredExtraction,
+          GenerationTaskHandle? taskHandle}) async =>
+      jsonEncode({
+        'protocol_version': 1,
+        'compressed_content': '文' * 200,
+        'retained': {
+          'entities': <String>[],
+          'relationships': <String>[],
+          'timeline': <String>[]
+        },
+      });
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnsupportedError(invocation.memberName.toString());

@@ -73,36 +73,52 @@ final class ResourceCapacityRepositoryImpl
     'capacity_measured_at',
   ];
 
-  /// One aggregate over the live tree, grouped by owning resources.
-  ///
-  /// `LENGTH` is measured in Dart string units (UTF-16 code units) exactly like
-  /// `String.length`, so the database count and the in-memory count agree.
-  static const String _aggregateByResourceColumns = '''
-    SELECT s.resource_id AS resource_id,
-           COUNT(p.id) AS part_count,
-           COALESCE(SUM(LENGTH(COALESCE(p.content, ''))), 0) AS total_chars,
-           COALESCE(SUM(CASE WHEN p.status = 'archived'
-                             THEN LENGTH(COALESCE(p.content, '')) ELSE 0 END), 0)
-             AS archived_chars
-      FROM $partsTable p
-      INNER JOIN $sectionsTable s ON s.id = p.section_id
-      INNER JOIN $resourcesTable r ON r.id = s.resource_id
-     WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL
-       AND r.deleted_at IS NULL
-  ''';
-
-  static const String _aggregateBySection = '''
-    SELECT p.section_id AS section_id,
-           COUNT(p.id) AS part_count,
-           COALESCE(SUM(LENGTH(COALESCE(p.content, ''))), 0) AS total_chars,
-           COALESCE(MAX(LENGTH(COALESCE(p.content, ''))), 0) AS max_chars,
-           COALESCE(SUM(CASE WHEN TRIM(COALESCE(p.content, '')) = ''
-                             THEN 1 ELSE 0 END), 0) AS empty_parts
-      FROM $partsTable p
-      INNER JOIN $sectionsTable s ON s.id = p.section_id
-     WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL
-     GROUP BY p.section_id
-  ''';
+  // SQLite LENGTH counts Unicode scalar values; Dart String.length counts
+  // UTF-16 units. Read body columns once and use the same domain units as
+  // generation and frozen revisions, including emoji and embedded NUL.
+  Future<List<Map<String, Object?>>> _aggregate(DatabaseExecutor db,
+      {String? resourceId, bool bySection = false}) async {
+    final rows = await db.rawQuery(
+        'SELECT s.resource_id, p.section_id, p.id, p.content, p.status '
+        'FROM $partsTable p JOIN $sectionsTable s ON s.id = p.section_id '
+        'JOIN $resourcesTable r ON r.id = s.resource_id '
+        'WHERE s.deleted_at IS NULL AND p.deleted_at IS NULL AND r.deleted_at IS NULL '
+        '${resourceId == null ? '' : 'AND s.resource_id = ?'}',
+        resourceId == null ? [] : [resourceId]);
+    final grouped = <String, Map<String, Object?>>{};
+    for (final row in rows) {
+      final key = row[bySection ? 'section_id' : 'resource_id'].toString();
+      final aggregate = grouped.putIfAbsent(
+          key,
+          () => {
+                'resource_id': row['resource_id'],
+                'section_id': row['section_id'],
+                'part_count': 0,
+                'total_chars': 0,
+                'archived_chars': 0,
+                'max_chars': 0,
+                'empty_parts': 0
+              });
+      final content = row['content']?.toString() ?? '';
+      final archived = row['status'] == 'archived';
+      aggregate['part_count'] = (aggregate['part_count'] as int) + 1;
+      aggregate['total_chars'] =
+          (aggregate['total_chars'] as int) + content.length;
+      if (archived) {
+        aggregate['archived_chars'] =
+            (aggregate['archived_chars'] as int) + content.length;
+      }
+      // Section compression only covers active prose.
+      if (!archived) {
+        final max = aggregate['max_chars'] as int;
+        if (content.length > max) aggregate['max_chars'] = content.length;
+        if (content.trim().isEmpty) {
+          aggregate['empty_parts'] = (aggregate['empty_parts'] as int) + 1;
+        }
+      }
+    }
+    return grouped.values.toList();
+  }
 
   @override
   Future<ResourceCapacitySnapshot> measureResource(ResourceId id) async {
@@ -121,19 +137,7 @@ final class ResourceCapacityRepositoryImpl
       resourceRows.first['type']?.toString(),
     );
 
-    final aggregateRows = await db.rawQuery(
-      '''
-      SELECT COUNT(p.id) AS part_count,
-             COALESCE(SUM(LENGTH(COALESCE(p.content, ''))), 0) AS total_chars,
-             COALESCE(SUM(CASE WHEN p.status = 'archived'
-                               THEN LENGTH(COALESCE(p.content, '')) ELSE 0 END), 0)
-               AS archived_chars
-        FROM $partsTable p
-        INNER JOIN $sectionsTable s ON s.id = p.section_id
-       WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL
-      ''',
-      [id.value],
-    );
+    final aggregateRows = await _aggregate(db, resourceId: id.value);
     final sectionRows = await db.rawQuery(
       'SELECT COUNT(*) AS section_count FROM $sectionsTable '
       'WHERE resource_id = ? AND deleted_at IS NULL',
@@ -146,7 +150,7 @@ final class ResourceCapacityRepositoryImpl
       [id.value],
     );
 
-    final aggregate = aggregateRows.first;
+    final aggregate = aggregateRows.firstOrNull ?? <String, Object?>{};
     final total = _intOrZero(aggregate['total_chars']);
     final archived = _intOrZero(aggregate['archived_chars']);
     final now = DateTime.now();
@@ -161,7 +165,7 @@ final class ResourceCapacityRepositoryImpl
       sectionCount: _intOrZero(sectionRows.first['section_count']),
       partCount: _intOrZero(aggregate['part_count']),
       historicalRevisionCount: _intOrZero(attemptRows.first['attempt_count']),
-      status: ResourceCapacityMath.statusFor(type, total),
+      status: ResourceCapacityMath.statusFor(type, total - archived),
       measuredAt: now,
     );
   }
@@ -181,12 +185,7 @@ final class ResourceCapacityRepositoryImpl
     );
     if (resourceRows.isEmpty) return const <ResourceCapacitySnapshot>[];
 
-    final aggregates = await db.rawQuery(
-      '$_aggregateByResourceColumns'
-      '${type == null ? '' : ' AND r.type = ?'}'
-      ' GROUP BY s.resource_id',
-      type == null ? null : [type.storageValue],
-    );
+    final aggregates = await _aggregate(db);
     final sectionCounts = await db.rawQuery(
       'SELECT resource_id, COUNT(*) AS section_count FROM $sectionsTable '
       'WHERE deleted_at IS NULL GROUP BY resource_id',
@@ -224,7 +223,8 @@ final class ResourceCapacityRepositoryImpl
           partCount: _intOrZero(aggregate?['part_count']),
           historicalRevisionCount:
               _intOrZero(attemptByResource[resourceId]?['attempt_count']),
-          status: ResourceCapacityMath.statusFor(resourceType, total),
+          status:
+              ResourceCapacityMath.statusFor(resourceType, total - archived),
         ),
       );
     }
@@ -243,7 +243,8 @@ final class ResourceCapacityRepositoryImpl
     );
     if (sectionRows.isEmpty) return const <SectionCapacitySnapshot>[];
 
-    final aggregateRows = await db.rawQuery(_aggregateBySection, [id.value]);
+    final aggregateRows =
+        await _aggregate(db, resourceId: id.value, bySection: true);
     final bySection = <String, Map<String, Object?>>{
       for (final row in aggregateRows)
         if ((row['section_id']?.toString() ?? '').isNotEmpty)
@@ -261,7 +262,8 @@ final class ResourceCapacityRepositoryImpl
         SectionCapacitySnapshot(
           sectionId: SectionId(sectionId),
           title: row['title']?.toString() ?? '',
-          characters: _intOrZero(aggregate?['total_chars']),
+          characters: _intOrZero(aggregate?['total_chars']) -
+              _intOrZero(aggregate?['archived_chars']),
           partCount: partCount,
           largestPartCharacters: _intOrZero(aggregate?['max_chars']),
           isComplete: partCount > 0 && emptyParts == 0,
@@ -307,7 +309,8 @@ final class ResourceCapacityRepositoryImpl
       sectionCount: _intOrZero(row['section_count']),
       partCount: _intOrZero(row['part_count']),
       historicalRevisionCount: 0,
-      status: ResourceCapacityMath.statusFor(type, total),
+      status: ResourceCapacityMath.statusFor(
+          type, total - _intOrZero(row['archive_char_count'])),
       measuredAt: DateTime.tryParse(measuredAt),
     );
   }

@@ -37,6 +37,14 @@ import '../utils/sensitive_data_sanitizer.dart';
 /// 冒险核心数据 Provider
 /// 拥有：消息、冒险CRUD、游戏状态、世界条目、分支、角色切换、导入导出
 class AdventureProvider extends ChangeNotifier {
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   final IAdventureRepository _adventureRepo;
   final IWorldEntryRepository _worldEntryRepo;
   final ILibraryRepository _libraryRepo;
@@ -789,7 +797,7 @@ class AdventureProvider extends ChangeNotifier {
     await loadAdventureList();
     // 帧后通知，避免在 Scaffold/Drawer 动画期间触发重建
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     });
   }
 

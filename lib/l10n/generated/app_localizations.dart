@@ -11424,6 +11424,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The bound resource is missing or in the recycle bin. Restore it or select an available resource before preparing again.'**
   String get readinessDiagnosticResourceMissing;
+
+  /// No description provided for @readinessCompressionRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression is running. Original content is unchanged.'**
+  String get readinessCompressionRunning;
+
+  /// No description provided for @readinessCompressionApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression proposals are ready. Review and approve them to rebuild the adventure resource.'**
+  String get readinessCompressionApproval;
+
+  /// No description provided for @readinessCompressionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression failed. Retry preparation; saved content is preserved.'**
+  String get readinessCompressionFailed;
+
+  /// No description provided for @readinessCompressionExhausted.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression retry limit reached. Edit the resource before preparing again.'**
+  String get readinessCompressionExhausted;
+
+  /// No description provided for @readinessCompressionNoTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'No safe prose parts can be compressed. Edit the resource to reduce its length.'**
+  String get readinessCompressionNoTargets;
+
+  /// No description provided for @readinessCompressionNoCandidate.
+  ///
+  /// In en, this message translates to:
+  /// **'No usable Part proposal was saved. Retry preparation or edit the resource.'**
+  String get readinessCompressionNoCandidate;
+
+  /// No description provided for @readinessCompressionReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review compression proposals'**
+  String get readinessCompressionReview;
+
+  /// No description provided for @readinessCompressionApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve and rebuild'**
+  String get readinessCompressionApply;
+
+  /// No description provided for @readinessCompressionOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original content (preserved in revision history)'**
+  String get readinessCompressionOriginal;
+
+  /// No description provided for @readinessCompressionProposed.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposed content'**
+  String get readinessCompressionProposed;
+
+  /// No description provided for @readinessCompressionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get readinessCompressionCancel;
+
+  /// No description provided for @errorResourceGenerationBudgetExceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated content exceeds the resource or Part budget. Reduce this Part and retry; saved content is preserved.'**
+  String get errorResourceGenerationBudgetExceeded;
+
+  /// No description provided for @readinessActualCapacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual body: {actual} characters; absolute capacity: {absolute}.'**
+  String readinessActualCapacity(int actual, int absolute);
 }
 
 class _AppLocalizationsDelegate

@@ -6237,4 +6237,50 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get readinessDiagnosticResourceMissing =>
       '紐付けたリソースが存在しないか、ごみ箱にあります。復元するか利用可能なリソースを選択して再準備してください。';
+
+  @override
+  String get readinessCompressionRunning => '圧縮処理中です。元の本文は変更されません。';
+
+  @override
+  String get readinessCompressionApproval => '圧縮候補を確認し、承認して冒険用リソースを再構築してください。';
+
+  @override
+  String get readinessCompressionFailed =>
+      '圧縮に失敗しました。準備を再試行してください。保存済み本文は保持されます。';
+
+  @override
+  String get readinessCompressionExhausted =>
+      '圧縮の再試行上限に達しました。リソースを編集してから準備してください。';
+
+  @override
+  String get readinessCompressionNoTargets =>
+      '安全に圧縮できる本文がありません。リソースを編集して文字数を減らしてください。';
+
+  @override
+  String get readinessCompressionNoCandidate =>
+      '使用可能な段落別候補が保存されませんでした。準備を再試行するか編集してください。';
+
+  @override
+  String get readinessCompressionReview => '圧縮候補を確認';
+
+  @override
+  String get readinessCompressionApply => '承認して再構築';
+
+  @override
+  String get readinessCompressionOriginal => '元の本文（版履歴に保存）';
+
+  @override
+  String get readinessCompressionProposed => '候補の本文';
+
+  @override
+  String get readinessCompressionCancel => 'キャンセル';
+
+  @override
+  String get errorResourceGenerationBudgetExceeded =>
+      '生成内容がリソースまたは段落の予算を超えています。この段落の文字数を減らして再試行してください。保存済み内容は保持されます。';
+
+  @override
+  String readinessActualCapacity(int actual, int absolute) {
+    return '実際の本文：$actual 文字、絶対上限：$absolute 文字。';
+  }
 }

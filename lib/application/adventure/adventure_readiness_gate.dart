@@ -179,7 +179,7 @@ final class AdventureReadinessGate implements IAdventureReadinessGate {
       await _revisionService.captureRevision(id,
           cause: RevisionCause.migration);
     }
-    return _coordinator.prepare(id);
+    return _coordinator.retryPreparation(id);
   }
 
   /// Resolves the gate status of every [assetId].

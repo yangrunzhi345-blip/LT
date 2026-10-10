@@ -88,24 +88,35 @@ String localizeReadinessDiagnostic(
   String code,
   Map<String, Object?> parameters,
   AppLocalizations l10n,
-) =>
-    switch (code) {
-      'resourceMissing' => l10n.readinessDiagnosticResourceMissing,
-      'noSavedRevision' => l10n.readinessDiagnosticNoSavedRevision,
-      'compressionUnavailable' =>
-        l10n.readinessDiagnosticCompressionUnavailable,
-      'compressionPending' => l10n.readinessDiagnosticCompressionPending,
-      'staleResource' => l10n.readinessDiagnosticStaleResource,
-      'assemblyRevisionMissing' =>
-        l10n.readinessDiagnosticAssemblyRevisionMissing,
-      'revisionHashMismatch' => l10n.readinessDiagnosticRevisionHashMismatch,
-      'assemblyValidationFailed' =>
-        l10n.readinessDiagnosticAssemblyValidationFailed,
-      'preparationFailed' => l10n.readinessDiagnosticPreparationFailed,
-      'interruptedPreparation' =>
-        l10n.readinessDiagnosticInterruptedPreparation,
-      _ => l10n.readinessDiagnosticUnknown,
-    };
+) {
+  final details = switch (code) {
+    'resourceMissing' => l10n.readinessDiagnosticResourceMissing,
+    'noSavedRevision' => l10n.readinessDiagnosticNoSavedRevision,
+    'compressionUnavailable' => l10n.readinessDiagnosticCompressionUnavailable,
+    'compressionPending' => l10n.readinessDiagnosticCompressionPending,
+    'compressionRunning' => l10n.readinessCompressionRunning,
+    'compressionApprovalRequired' => l10n.readinessCompressionApproval,
+    'compressionFailed' => l10n.readinessCompressionFailed,
+    'compressionBudgetExhausted' => l10n.readinessCompressionExhausted,
+    'compressionNoTargets' => l10n.readinessCompressionNoTargets,
+    'compressionNoCandidate' => l10n.readinessCompressionNoCandidate,
+    'staleResource' => l10n.readinessDiagnosticStaleResource,
+    'assemblyRevisionMissing' =>
+      l10n.readinessDiagnosticAssemblyRevisionMissing,
+    'revisionHashMismatch' => l10n.readinessDiagnosticRevisionHashMismatch,
+    'assemblyValidationFailed' =>
+      l10n.readinessDiagnosticAssemblyValidationFailed,
+    'preparationFailed' => l10n.readinessDiagnosticPreparationFailed,
+    'interruptedPreparation' => l10n.readinessDiagnosticInterruptedPreparation,
+    _ => l10n.readinessDiagnosticUnknown,
+  };
+  final actual = parameters['actualCharacters'];
+  final absolute = parameters['absoluteCharacters'];
+  if (actual is int && absolute is int) {
+    return '$details ${l10n.readinessActualCapacity(actual, absolute)}';
+  }
+  return details;
+}
 
 /// Localizes the stable readiness message templates produced by the gate.
 ///

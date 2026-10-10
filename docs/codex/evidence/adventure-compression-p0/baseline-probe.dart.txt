@@ -1,0 +1,166 @@
+import 'dart:convert';
+import 'package:lt_dialogue/application/resources/compression_coordinator.dart';
+import 'package:lt_dialogue/application/resources/compression_job_repository.dart';
+import 'package:lt_dialogue/application/resources/compression_worker.dart';
+import 'package:lt_dialogue/application/resources/resource_capacity_service.dart';
+import 'package:lt_dialogue/domain/resources/resource_compression.dart';
+import 'package:lt_dialogue/models/generation_task_handle.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lt_dialogue/application/resources/blueprint_budget_normalizer.dart';
+import 'package:lt_dialogue/application/resources/resource_blueprint_repository.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
+import 'package:lt_dialogue/application/resources/resource_generation_task_repository.dart';
+import 'package:lt_dialogue/application/resources/resource_revision_service.dart';
+import 'package:lt_dialogue/application/resources/resource_capacity_repository.dart';
+import 'package:lt_dialogue/application/resources/part_generation_validator.dart';
+import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
+import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
+import 'package:lt_dialogue/domain/resources/resource_revision.dart';
+import '../../helpers/phase10_fixture.dart';
+
+void main() {
+  final fixture = Phase10Fixture();
+  setUp(() => fixture.setUp(prefix: 'lt_budget_'));
+  tearDown(fixture.tearDown);
+
+  Future<
+      ({
+        ResourceId id,
+        ResourceBlueprint blueprint,
+        PartGenerationTaskRepositoryImpl tasks
+      })> create(int target) async {
+    final pipeline = ResourceCreationPipeline(
+        getDb: () async => fixture.db,
+        treeRepository: fixture.treeRepository,
+        hasAiCredentials: () => true);
+    final session = await pipeline.create(ResourceCreationRequest(
+        resourceType: ResourceType.character,
+        method: CreationMethod.aiReference,
+        name: '预算角色',
+        referenceSource: ReferenceSource.text('测试参考'),
+        targetCharacters: target,
+        idempotencyKey: 'budget_$target'));
+    final blueprint = BlueprintBudgetNormalizer.normalizeToGenerationTarget(
+        ResourceBlueprint(
+            blueprintId: 'budget_plan_$target',
+            sessionId: session.sessionId!,
+            resourceType: ResourceType.character,
+            suggestedName: '预算角色',
+            summary: '',
+            targetCapacity: target,
+            sections: [
+              BlueprintSection(id: 's', title: '背景', parts: [
+                for (var i = 0; i < target ~/ 2000; i++)
+                  BlueprintPart(
+                      id: 'p$i',
+                      sectionId: 's',
+                      title: '背景$i',
+                      generationGoal: '角色背景',
+                      estimatedLength: 2000),
+              ])
+            ]),
+        targetCharacters: target);
+    final repo = ResourceBlueprintRepositoryImpl(
+        getDb: () async => fixture.db, treeRepository: fixture.treeRepository);
+    await repo.saveBlueprint(blueprint);
+    final result =
+        await repo.confirmBlueprint(blueprintId: blueprint.blueprintId);
+    final tasks = PartGenerationTaskRepositoryImpl(
+        getDb: () async => fixture.db,
+        revisionBoundary: RevisionCaptureEngine(
+            revisionRepository: fixture.revisionRepository,
+            treeBoundary: fixture.treeRepository));
+    return (id: result.resourceId, blueprint: blueprint, tasks: tasks);
+  }
+
+  for (final target in [8000, 20000]) {
+    test(
+        'generation target $target: actual commits stay within budget and immutable assembly readies',
+        () async {
+      final stack = await create(target);
+      final tasks = await stack.tasks.findReadyTasks(stack.id.value);
+      for (final task in tasks) {
+        final attempt = await stack.tasks
+            .startAttempt(taskId: task.taskId, generationId: 'g');
+        final request = PartGenerationRequest(
+            generationId: 'g',
+            resourceId: stack.id,
+            sectionId: SectionId(task.sectionId),
+            partId: PartId(task.partId),
+            attemptId: attempt.attemptId,
+            targetBudget: task.estimatedLength,
+            promptGoal: '背景',
+            context: const PartGenerationContext(
+                resourceName: '预算角色',
+                resourceType: ResourceType.character,
+                resourceSummary: '',
+                sectionTitle: '背景',
+                sectionSummary: '',
+                partTitle: '背景'));
+        final response = PartGenerationResponse(
+            protocolVersion: 1,
+            generationId: 'g',
+            resourceId: stack.id,
+            sectionId: request.sectionId,
+            partId: request.partId,
+            attemptId: attempt.attemptId,
+            content: '文' * 2500);
+        PartGenerationValidator.validate(request: request, response: response);
+        await stack.tasks.commitPartContent(
+            response: response,
+            taskId: task.taskId,
+            attemptId: attempt.attemptId,
+            expectedSourceToken: attempt.sourceToken);
+      }
+      final actual =
+          await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
+              .measureResource(stack.id);
+      final head = (await fixture.revisionRepository
+          .readHead(stack.id, ResourceRevisionKind.latestHead))!;
+      final state = await fixture.revisionRepository.readState(head.revisionId);
+      expect(actual.activeCharacters, target * 5 ~/ 4);
+      expect(
+          state.nodes.values
+              .where((node) => node.kind == RevisionNodeKind.part)
+              .fold<int>(0, (sum, node) => sum + node.content.length),
+          target * 5 ~/ 4);
+      final jobRepo = CompressionJobRepositoryImpl(getDb: () async => fixture.db);
+      final capacity = ResourceCapacityRepositoryImpl(getDb: () async => fixture.db);
+      final compression = CompressionCoordinator(jobRepository: jobRepo,
+        treeRepository: fixture.treeRepository, capacityRepository: capacity, llmPort: Responses());
+      final worker = CompressionBackgroundWorker(coordinator: compression,
+        capacityService: ResourceCapacityService(repository: capacity));
+      fixture.coordinator.attachCompression(coordinatorGetter: () => compression, workerGetter: () => worker);
+      final outcome = await fixture.coordinator.prepare(stack.id);
+      for (var i = 0; i < 300 && worker.processingCount > 0; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      final jobs = await jobRepo.findJobsForResource(stack.id.value);
+      if (target == 8000) expect(outcome.record.state, ReadinessState.ready);
+      else {
+        expect(outcome.record.state, ReadinessState.preparing);
+        expect(jobs.where((job) => job.status == CompressionJobStatus.queued), hasLength(6));
+      }
+      debugPrint('BASELINE_SQLITE target=$target blueprintTarget=${stack.blueprint.targetCapacity} '
+        'planned=${stack.blueprint.totalEstimatedLength} partEstimated=2000 partActual=2500 '
+        'live=${actual.activeCharacters} revision=${state.charCount} capacity=${actual.status.name} '
+        'readiness=${outcome.record.state.name} jobs=${jobs.length} '
+        'succeeded=${jobs.where((job) => job.status == CompressionJobStatus.succeeded).length} '
+        'queued=${jobs.where((job) => job.status == CompressionJobStatus.queued).length}');
+      final sessions = await fixture.db
+          .query('resource_creation_sessions', columns: ['target_characters']);
+      expect(sessions.single['target_characters'], target);
+    });
+  }
+
+}
+
+class Responses implements CompressionLlmPort {
+  @override
+  Future<String> compress({required String systemPrompt, required String instruction,
+    GenerationTaskHandle? taskHandle}) async => jsonEncode({'protocol_version': 1,
+    'compressed_content': '文' * 200, 'retained': {'entities': [], 'relationships': [], 'timeline': []}});
+}
