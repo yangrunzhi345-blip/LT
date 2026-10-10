@@ -3935,5 +3935,31 @@
   "aboutCopyEmail": "Copy email",
   "aboutSendEmail": "Send email",
   "aboutEmailCopied": "Email copied to clipboard",
-  "aboutOpenLinkFailed": "Could not open the link. Copy it manually instead."
+  "aboutOpenLinkFailed": "Could not open the link. Copy it manually instead.",
+  "readinessDiagnosticRevisionHashMismatch": "Revision snapshot hash validation failed. Restore a valid version from resource history, then prepare again; keep the original data.",
+  "readinessDiagnosticAssemblyValidationFailed": "The version snapshot cannot be parsed or assembled. Check the character, NPC fields or worldview, save corrections, then prepare again.",
+  "readinessDiagnosticResourceMissing": "The bound resource is missing or in the recycle bin. Restore it or select an available resource before preparing again.",
+  "readinessCompressionRunning": "Compression is running. Original content is unchanged.",
+  "readinessCompressionApproval": "Compression proposals are ready. Review and approve them to rebuild the adventure resource.",
+  "readinessCompressionFailed": "Compression failed. Retry preparation; saved content is preserved.",
+  "readinessCompressionExhausted": "Compression retry limit reached. Edit the resource before preparing again.",
+  "readinessCompressionNoTargets": "No safe prose parts can be compressed. Edit the resource to reduce its length.",
+  "readinessCompressionNoCandidate": "No usable Part proposal was saved. Retry preparation or edit the resource.",
+  "readinessCompressionReview": "Review compression proposals",
+  "readinessCompressionApply": "Approve and rebuild",
+  "readinessCompressionOriginal": "Original content (preserved in revision history)",
+  "readinessCompressionProposed": "Proposed content",
+  "readinessCompressionCancel": "Cancel",
+  "errorResourceGenerationBudgetExceeded": "Generated content exceeds the resource or Part budget. Reduce this Part and retry; saved content is preserved.",
+  "readinessActualCapacity": "Actual body: {actual} characters; absolute capacity: {absolute}.",
+  "@readinessActualCapacity": {
+    "placeholders": {
+      "actual": {
+        "type": "int"
+      },
+      "absolute": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -1939,7 +1939,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
       }
     } catch (e, st) {
       // 保留诊断堆栈以定位是哪一步失败，同时只向用户暴露安全文案。
-      debugPrint('Adventure start failed: $e\n$st');
+      debugPrint('Adventure start failed: ${e.runtimeType}\n$st');
       if (mounted) {
         final message = e is AdventureReadinessGateException
             ? (e.issues.isNotEmpty

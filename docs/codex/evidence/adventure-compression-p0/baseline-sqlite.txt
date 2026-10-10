@@ -1,0 +1,5 @@
+Baseline: 7e5a409dd4e2e322d0d9eb85dfd8695284550df0
+External model responses are deterministic fixtures; persistence, validation, revisions and readiness are real.
+BASELINE_SQLITE target=8000 blueprintTarget=8000 planned=8000 partEstimated=2000 partActual=2500 live=10000 revision=10000 capacity=normal readiness=ready jobs=0 succeeded=0 queued=0
+BASELINE_SQLITE target=20000 blueprintTarget=20000 planned=20000 partEstimated=2000 partActual=2500 live=25000 revision=25000 capacity=overflow readiness=preparing jobs=10 succeeded=4 queued=6
+00:02 +2: All tests passed!

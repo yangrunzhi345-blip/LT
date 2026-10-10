@@ -47,7 +47,7 @@ void main() {
       expect(prompt, contains('"section_id": "sec_geo"'));
       expect(prompt, contains('"part_id": "part_terrain"'));
       expect(prompt, contains('"attempt_id": "att_test_1"'));
-      expect(prompt, contains('约 1500 字'));
+      expect(prompt, contains('最多 1500 字，不得超过'));
       expect(prompt, contains('严禁生成任何其他章节'));
       expect(prompt, contains('严禁篡改 ID'));
       expect(prompt, contains('不得输出 "cursor"'));

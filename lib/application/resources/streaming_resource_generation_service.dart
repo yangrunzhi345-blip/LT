@@ -142,7 +142,10 @@ final class StreamingResourceGenerationService {
     } catch (error) {
       GenerationDiagnostics.instance.mark(
         'ASSEMBLY_PREPARE_FAILED',
-        {'resource': resourceId.value, 'error': '$error'},
+        {
+          'resource': resourceId.value,
+          'exceptionType': error.runtimeType.toString()
+        },
       );
     }
   }
@@ -971,6 +974,7 @@ final class StreamingResourceGenerationService {
           errorMessage: '',
           clearActiveTask: true,
         );
+        await _prepareAssemblyAfterCompletion(session.resourceId);
         _emit(GenerationCompleted(
           generationId: sessionId,
           resourceId: session.resourceId,

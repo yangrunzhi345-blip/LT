@@ -985,6 +985,30 @@ final class PartGenerationCoordinator {
         relationshipConstraints: relationshipConstraints,
       );
 
+      var permittedCharacters = task.estimatedLength;
+      final budgetReader = _taskRepository;
+      if (budgetReader is IPartGenerationBudgetReader) {
+        final remaining = await (budgetReader as IPartGenerationBudgetReader)
+            .remainingBudget(
+                resourceId: task.resourceId,
+                blueprintId: task.blueprintId,
+                partId: task.partId);
+        if (remaining != null) {
+          if (remaining <= 0) {
+            throw const PartGenerationValidationException(
+                '资源生成预算已用尽，请编辑资源或调整本段后重试，已保存正文保持不变',
+                field: 'generation_budget');
+          }
+          if (remaining < permittedCharacters) permittedCharacters = remaining;
+        }
+      }
+      GenerationDiagnostics.instance.mark('PART[${task.partId}] BUDGET', {
+        'resourceId': task.resourceId,
+        'blueprintTarget': blueprint.targetCapacity,
+        'plannedTotal': blueprint.totalEstimatedLength,
+        'estimatedLength': task.estimatedLength,
+        'permittedCharacters': permittedCharacters,
+      });
       final request = PartGenerationRequest(
         protocolVersion: currentPartGenerationProtocolVersion,
         generationId: generationId,
@@ -993,7 +1017,7 @@ final class PartGenerationCoordinator {
         partId: PartId(task.partId),
         attemptId: attemptId,
         attemptNumber: attemptNumber,
-        targetBudget: task.estimatedLength,
+        targetBudget: permittedCharacters,
         promptGoal: task.promptGoal,
         context: context,
         userInstruction: userInstruction,

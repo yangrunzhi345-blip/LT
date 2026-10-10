@@ -830,9 +830,10 @@ final assemblyReadinessCoordinatorProvider =
 
 /// 在启动时把 Phase 8 压缩基础设施挂接到 readiness 协调器。
 final assemblyReadinessCompressionLinkProvider = Provider<void>((ref) {
-  ref.read(assemblyReadinessCoordinatorProvider).attachCompression(
+  ref.watch(assemblyReadinessCoordinatorProvider).attachCompression(
         coordinatorGetter: () => ref.read(compressionCoordinatorProvider),
         workerGetter: () => ref.read(compressionBackgroundWorkerProvider),
+        publisherGetter: () => ref.read(compressionPublisherProvider),
       );
 });
 

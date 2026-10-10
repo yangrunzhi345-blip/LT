@@ -37,6 +37,14 @@ import '../utils/sensitive_data_sanitizer.dart';
 /// 冒险核心数据 Provider
 /// 拥有：消息、冒险CRUD、游戏状态、世界条目、分支、角色切换、导入导出
 class AdventureProvider extends ChangeNotifier {
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   final IAdventureRepository _adventureRepo;
   final IWorldEntryRepository _worldEntryRepo;
   final ILibraryRepository _libraryRepo;
@@ -292,6 +300,7 @@ class AdventureProvider extends ChangeNotifier {
   }
 
   Future<int> createAdventure(String title, AdventureConfig config) async {
+    int? createdAdventureId;
     // Phase 10: fail-closed readiness gate + freeze the adopted resource
     // versions before the config is assembled. Managed (unified tree)
     // resources must be ready, or the user must have explicitly allowed the
@@ -326,6 +335,7 @@ class AdventureProvider extends ChangeNotifier {
           'selected: ${frozenConfig.selectedCharacters.length}, '
           'relationships: ${frozenConfig.characterRelationships.length}}');
       final id = await _adventureRepo.createAdventure(title, frozenConfig);
+      createdAdventureId = id;
       debugPrint('[AdventureStart][CREATE][PERSIST_DONE] {adventureId: $id}');
       _currentAdventureId = id;
       _currentTitle = title;
@@ -373,8 +383,18 @@ class AdventureProvider extends ChangeNotifier {
       debugPrint('[AdventureStart][CREATE][COMPLETE] {adventureId: $id}');
       return id;
     } catch (error, stackTrace) {
-      debugPrint(
-          '[AdventureStart][CREATE][FAILED] ${error.runtimeType}: $error');
+      final createdId = createdAdventureId;
+      if (createdId != null) {
+        // Only this attempt's new row can be rolled back. Existing sessions,
+        // source resources and their version history are never deletion targets.
+        try {
+          await deleteAdventure(createdId);
+        } catch (rollbackError) {
+          debugPrint('[AdventureStart][CREATE][ROLLBACK_FAILED] '
+              'adventureId=$createdId exceptionType=${rollbackError.runtimeType}');
+        }
+      }
+      debugPrint('[AdventureStart][CREATE][FAILED] ${error.runtimeType}');
       debugPrintStack(
         label: '[AdventureStart][CREATE][STACK]',
         stackTrace: stackTrace,
@@ -456,7 +476,7 @@ class AdventureProvider extends ChangeNotifier {
           '{length: ${content.length}}');
     } catch (error, stackTrace) {
       debugPrint(
-          '[AdventureStart][OPENING][SNAPSHOT_FAILED] ${error.runtimeType}: $error');
+          '[AdventureStart][OPENING][SNAPSHOT_FAILED] ${error.runtimeType}');
       debugPrintStack(
         label: '[AdventureStart][OPENING][SNAPSHOT_STACK]',
         stackTrace: stackTrace,
@@ -777,7 +797,7 @@ class AdventureProvider extends ChangeNotifier {
     await loadAdventureList();
     // 帧后通知，避免在 Scaffold/Drawer 动画期间触发重建
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     });
   }
 

@@ -18,6 +18,24 @@ AppDomainError adventureLaunchError(Object error) {
   return asAppDomainError(error);
 }
 
+/// Keeps per-resource issues at both assembly launch presentation boundaries.
+String localizeAdventureLaunchFailure(Object error, AppLocalizations l10n) {
+  if (error is AdventureReadinessGateException) {
+    if (error.issues.isNotEmpty) {
+      return error.issues
+          .map((issue) => '${localizeAdventureReadiness(issue, l10n)} '
+              '[${issue.assetId}; ${issue.status.name}]')
+          .join('\n');
+    }
+    if (error.messages.isNotEmpty) {
+      return error.messages
+          .map((message) => localizeAdventureReadinessMessage(message, l10n))
+          .join('\n');
+    }
+  }
+  return localizeAppError(l10n, adventureLaunchError(error));
+}
+
 /// Localizes a typed readiness result without comparing localized sentences.
 String localizeAdventureReadiness(
   AdventureAssetReadiness readiness,
@@ -47,9 +65,14 @@ String localizeAdventureReadiness(
     case AdventureReadinessIssueCode.preparationFailed:
       final resolved =
           diagnosticDetails.isNotEmpty ? diagnosticDetails : details;
+      final context = [
+        readiness.parameters['stage'],
+        readiness.parameters['exceptionType'],
+      ].whereType<String>().join(' / ');
       return l10n.adventureAssetPreparationFailed(
         name,
-        resolved.isEmpty ? l10n.readinessDiagnosticPreparationFailed : resolved,
+        '${resolved.isEmpty ? l10n.readinessDiagnosticPreparationFailed : resolved}'
+        '${context.isEmpty ? '' : ' ($context)'}',
       );
     case AdventureReadinessIssueCode.ready:
       return l10n.adventureAssetReady(name);
@@ -65,20 +88,35 @@ String localizeReadinessDiagnostic(
   String code,
   Map<String, Object?> parameters,
   AppLocalizations l10n,
-) =>
-    switch (code) {
-      'noSavedRevision' => l10n.readinessDiagnosticNoSavedRevision,
-      'compressionUnavailable' =>
-        l10n.readinessDiagnosticCompressionUnavailable,
-      'compressionPending' => l10n.readinessDiagnosticCompressionPending,
-      'staleResource' => l10n.readinessDiagnosticStaleResource,
-      'assemblyRevisionMissing' =>
-        l10n.readinessDiagnosticAssemblyRevisionMissing,
-      'preparationFailed' => l10n.readinessDiagnosticPreparationFailed,
-      'interruptedPreparation' =>
-        l10n.readinessDiagnosticInterruptedPreparation,
-      _ => l10n.readinessDiagnosticUnknown,
-    };
+) {
+  final details = switch (code) {
+    'resourceMissing' => l10n.readinessDiagnosticResourceMissing,
+    'noSavedRevision' => l10n.readinessDiagnosticNoSavedRevision,
+    'compressionUnavailable' => l10n.readinessDiagnosticCompressionUnavailable,
+    'compressionPending' => l10n.readinessDiagnosticCompressionPending,
+    'compressionRunning' => l10n.readinessCompressionRunning,
+    'compressionApprovalRequired' => l10n.readinessCompressionApproval,
+    'compressionFailed' => l10n.readinessCompressionFailed,
+    'compressionBudgetExhausted' => l10n.readinessCompressionExhausted,
+    'compressionNoTargets' => l10n.readinessCompressionNoTargets,
+    'compressionNoCandidate' => l10n.readinessCompressionNoCandidate,
+    'staleResource' => l10n.readinessDiagnosticStaleResource,
+    'assemblyRevisionMissing' =>
+      l10n.readinessDiagnosticAssemblyRevisionMissing,
+    'revisionHashMismatch' => l10n.readinessDiagnosticRevisionHashMismatch,
+    'assemblyValidationFailed' =>
+      l10n.readinessDiagnosticAssemblyValidationFailed,
+    'preparationFailed' => l10n.readinessDiagnosticPreparationFailed,
+    'interruptedPreparation' => l10n.readinessDiagnosticInterruptedPreparation,
+    _ => l10n.readinessDiagnosticUnknown,
+  };
+  final actual = parameters['actualCharacters'];
+  final absolute = parameters['absoluteCharacters'];
+  if (actual is int && absolute is int) {
+    return '$details ${l10n.readinessActualCapacity(actual, absolute)}';
+  }
+  return details;
+}
 
 /// Localizes the stable readiness message templates produced by the gate.
 ///

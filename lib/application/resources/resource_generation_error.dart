@@ -29,6 +29,8 @@ AppDomainError resourceGenerationError(
     PartGenerationParseException() ||
     GenerationPatchParseException() =>
       AppErrorCode.resourceParseFailed,
+    PartGenerationValidationException(field: 'generation_budget') =>
+      AppErrorCode.resourceGenerationBudgetExceeded,
     PartGenerationValidationException() => AppErrorCode.resourceContentInvalid,
     PatchSequenceGapException() ||
     PatchCursorMismatchException() =>

@@ -186,7 +186,7 @@ final class ResourceCapacityPanel extends StatelessWidget {
     final l10n = _l10n(context);
     final snapshot = summary.snapshot;
     final metrics = <String>[
-      l10n.capacityTextCharacters(snapshot.totalCharacters),
+      l10n.capacityTextCharacters(snapshot.activeCharacters),
       l10n.capacitySectionsCount(snapshot.sectionCount),
       l10n.capacityPartsCount(snapshot.partCount),
       l10n.capacityRevisionsCount(snapshot.historicalRevisionCount),

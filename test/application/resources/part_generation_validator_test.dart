@@ -37,6 +37,22 @@ void main() {
       status: 'completed',
     );
 
+    test('rejects actual output above planned Part budget even below 3000', () {
+      final response = PartGenerationResponse(
+          protocolVersion: 1,
+          generationId: defaultRequest.generationId,
+          resourceId: defaultRequest.resourceId,
+          sectionId: defaultRequest.sectionId,
+          partId: defaultRequest.partId,
+          attemptId: defaultRequest.attemptId,
+          content: '文' * 1201);
+      expect(
+          () => PartGenerationValidator.validate(
+              request: defaultRequest, response: response),
+          throwsA(predicate<PartGenerationValidationException>(
+              (error) => error.field == 'generation_budget')));
+    });
+
     test('valid matching response passes validation', () {
       expect(
         () => PartGenerationValidator.validate(

@@ -429,7 +429,7 @@ class _AssemblyCreatePageState extends ConsumerState<AssemblyCreatePage> {
         AppFeedback.error(
             context,
             l10n.startAdventureFailed(
-              localizeAppError(l10n, adventureLaunchError(e)),
+              localizeAdventureLaunchFailure(e, l10n),
             ));
       }
     } finally {

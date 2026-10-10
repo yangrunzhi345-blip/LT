@@ -61,11 +61,11 @@ final class ResourceCapacitySnapshot {
   /// are the same unit and never drift apart.
   int get archiveSize => archivedCharacters;
 
-  /// Measured characters as a fraction of the absolute budget.
+  /// Active characters as a fraction of the absolute budget.
   double get fillRatio {
     final absolute = ResourceLimits.policyFor(type).absoluteCharacters;
     if (absolute <= 0) return 0;
-    return totalCharacters / absolute;
+    return activeCharacters / absolute;
   }
 
   bool get needsCompression => status != CapacityStatus.normal;

@@ -50,7 +50,7 @@ abstract final class PartGenerationPromptBuilder {
 {"sequence":1,"op":"append_text","text_delta":"正文片段"}
 {"sequence":2,"op":"complete_part","summary":"简短摘要"}
 4. 严禁生成任何其他章节（sections）或部件（parts），严禁篡改 ID，严禁输出未经授权的额外层级。
-5. 正文字数应紧扣目标预算（约 ${request.targetBudget} 字），内容必须翔实、生动、符合上下文设定。''';
+5. 正文字数应紧扣目标预算（最多 ${request.targetBudget} 字，不得超过），内容必须翔实、生动、符合上下文设定。''';
   }
 
   /// Builds the user instruction prompt with contextual dependencies and bounds.
@@ -77,7 +77,7 @@ abstract final class PartGenerationPromptBuilder {
     buffer.writeln('Part ID：${request.partId.value}');
     buffer.writeln('部件标题：${ctx.partTitle}');
     buffer.writeln('生成目标：${request.promptGoal}');
-    buffer.writeln('目标字数：约 ${request.targetBudget} 字');
+    buffer.writeln('正文字数上限：${request.targetBudget} 字（包含标点，不得超过）');
     buffer.writeln();
 
     if (ctx.dependencySummaries.isNotEmpty) {

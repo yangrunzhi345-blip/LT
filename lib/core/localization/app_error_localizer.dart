@@ -43,6 +43,8 @@ String localizeAppError(AppLocalizations l10n, AppDomainError error) {
       );
     case AppErrorCode.resourceParseFailed:
       return l10n.resourceErrorParseFailed;
+    case AppErrorCode.resourceGenerationBudgetExceeded:
+      return l10n.errorResourceGenerationBudgetExceeded;
     case AppErrorCode.resourceContentInvalid:
       return l10n.resourceErrorContentInvalid;
     case AppErrorCode.resourcePersistenceFailed:

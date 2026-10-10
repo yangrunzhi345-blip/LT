@@ -35,7 +35,14 @@ class AdventureStartGuard {
             : const <AdventureSelectedCharacter>[];
     return jsonEncode({
       'worldview': config.worldview,
-      'worldviewSnapshot': config.worldviewSnapshot,
+      // Freeze assigns a new observation timestamp each time. It must not
+      // turn one resource/version selection into different start identities.
+      'worldviewSnapshot': config.worldviewSnapshot == null
+          ? null
+          : {
+              for (final entry in config.worldviewSnapshot!.entries)
+                if (entry.key != 'created_at') entry.key: entry.value,
+            },
       'name': config.name,
       'gender': config.gender,
       'age': config.age,
@@ -136,10 +143,17 @@ class AdventureStartGuard {
     }
 
     _lastStartedAt[presetKey] = now;
-    final future = create();
+    final future = Future<int>.sync(create);
     _inFlight[presetKey] = future;
-    future.whenComplete(() {
-      _inFlight.remove(presetKey);
+    void cleanup() {
+      if (identical(_inFlight[presetKey], future)) _inFlight.remove(presetKey);
+    }
+
+    // Observe the derived future too; a failed start must neither create an
+    // unhandled duplicate error nor prevent an immediate corrected retry.
+    future.then((_) => cleanup(), onError: (Object _, StackTrace __) {
+      cleanup();
+      _lastStartedAt.remove(presetKey);
     });
     return future;
   }

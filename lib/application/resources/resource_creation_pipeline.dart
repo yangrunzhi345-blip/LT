@@ -196,6 +196,13 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
       if (existing.status == CreationSessionStatus.persisted ||
           existing.status == CreationSessionStatus.planning ||
           existing.status == CreationSessionStatus.completed) {
+        // Reusing persistence must still retry assembly: a previous post-save
+        // preparation may have failed after the content transaction committed.
+        if (existing.status == CreationSessionStatus.persisted &&
+            !request.isAi) {
+          final id = existing.resourceId;
+          if (id != null) await _onResourceReadyForAssembly?.call(id);
+        }
         return ResourceCreationResult(
           status: existing.status,
           idempotencyKey: request.idempotencyKey,
@@ -226,6 +233,7 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
               errorMessage: '',
             );
             await _updateSession(reconciled, now: now);
+            await _onResourceReadyForAssembly?.call(candidateId);
             return ResourceCreationResult(
               status: CreationSessionStatus.persisted,
               idempotencyKey: request.idempotencyKey,
@@ -488,8 +496,8 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
 
     final prepare = _onResourceReadyForAssembly;
     if (prepare != null) {
-      for (final result in results.where(
-          (result) => !result.reusedExisting && result.resourceId != null)) {
+      for (final result
+          in results.where((result) => result.resourceId != null)) {
         await prepare(result.resourceId!);
       }
     }

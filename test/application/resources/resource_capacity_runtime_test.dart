@@ -246,7 +246,7 @@ void main() {
       expect(summary.retryableFailedJobs, 1,
           reason:
               'a failure with attempt budget left must be offered for retry');
-      expect(summary.latestFailureReason, contains('网络中断'),
+      expect(summary.latestFailureReason, contains('StateError'),
           reason: 'the panel needs the reason, not just a count');
       expect(summary.candidateCount, 0);
 
@@ -281,7 +281,7 @@ void main() {
       expect(outcome.skippedExhausted, 1);
       final summary = await runtime.summarize(id.value);
       expect(summary.retryableFailedJobs, 0);
-      expect(summary.latestFailureReason, contains('第二次失败'));
+      expect(summary.latestFailureReason, contains('StateError'));
     });
 
     test('retrying with nothing to retry reports nothing to do', () async {
@@ -309,14 +309,16 @@ void main() {
       // No lease: the row was written by a process that is gone.
       await markCompressionJobRunningForTest(db, jobId, attempts: 1);
 
-      expect(await worker.start(), 1);
-      final row = await readCompressionJobForTest(db, jobId);
-      expect(row['status'], CompressionJobStatus.queued.storageValue);
-
       llm.response = _compressedJson('赤' * 400);
+      expect(await worker.start(), 1);
+      await worker.process(id.value);
+      final row = await readCompressionJobForTest(db, jobId);
+      expect(row['status'], CompressionJobStatus.succeeded.storageValue,
+          reason:
+              'startup must resume released jobs without waiting for Studio');
       final progress = await runtime.runQueuedCompression(id.value);
-      expect(progress.succeededJobs, 1,
-          reason: 'a released job must be drainable again');
+      expect(progress.processedJobs, 0,
+          reason: 'startup must not repeat completed work');
       expect((await runtime.summarize(id.value)).candidateCount, 1);
     });
 

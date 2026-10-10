@@ -3935,5 +3935,31 @@
   "aboutCopyEmail": "複製電子郵件",
   "aboutSendEmail": "傳送郵件",
   "aboutEmailCopied": "電子郵件已複製到剪貼簿",
-  "aboutOpenLinkFailed": "無法開啟連結，請手動複製後存取。"
+  "aboutOpenLinkFailed": "無法開啟連結，請手動複製後存取。",
+  "readinessDiagnosticRevisionHashMismatch": "版本快照雜湊驗證失敗。請從資源歷史還原有效版本後重新準備；保留原始資料。",
+  "readinessDiagnosticAssemblyValidationFailed": "版本快照無法解析或組裝。請檢查角色卡、NPC 欄位或世界觀，儲存修正後重新準備。",
+  "readinessDiagnosticResourceMissing": "綁定的資源不存在或已移入回收站。請還原資源或重新選擇可用資源後準備。",
+  "readinessCompressionRunning": "正在壓縮，原始正文保持不變。",
+  "readinessCompressionApproval": "壓縮候選已生成，請審核並確認採用後重新裝配。",
+  "readinessCompressionFailed": "壓縮失敗，請重試準備；已保存正文保持不變。",
+  "readinessCompressionExhausted": "壓縮重試次數已用盡，請編輯資源後重新準備。",
+  "readinessCompressionNoTargets": "沒有可安全壓縮的正文段落，請編輯資源以減少字數。",
+  "readinessCompressionNoCandidate": "未保存可用的逐段壓縮候選，請重試準備或編輯資源。",
+  "readinessCompressionReview": "審核壓縮候選",
+  "readinessCompressionApply": "確認採用並重新裝配",
+  "readinessCompressionOriginal": "原始正文（保留在版本歷史）",
+  "readinessCompressionProposed": "候選正文",
+  "readinessCompressionCancel": "取消",
+  "errorResourceGenerationBudgetExceeded": "生成正文超過資源或本段預算，請減少本段字數後重試；已保存內容保持不變。",
+  "readinessActualCapacity": "實際正文：{actual} 字元；絕對容量：{absolute} 字元。",
+  "@readinessActualCapacity": {
+    "placeholders": {
+      "actual": {
+        "type": "int"
+      },
+      "absolute": {
+        "type": "int"
+      }
+    }
+  }
 }

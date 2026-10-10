@@ -108,7 +108,7 @@ class CharacterCardEntry {
     } catch (e, stack) {
       hasParseError = true;
       debugPrint(
-          'Error decoding json_data for row id=${row['id']}: $e\n$stack');
+          'Error decoding json_data for row id=${row['id']}: ${e.runtimeType}\n$stack');
     }
     // A row whose JSON decodes but whose field types predate the current model
     // must not take the whole character list down with it: keep the row-level
@@ -120,7 +120,7 @@ class CharacterCardEntry {
     } catch (e, stack) {
       hasParseError = true;
       debugPrint(
-          'Error building CharacterCard for row id=${row['id']}: $e\n$stack');
+          'Error building CharacterCard for row id=${row['id']}: ${e.runtimeType}\n$stack');
       card = CharacterCard();
     }
     return CharacterCardEntry(

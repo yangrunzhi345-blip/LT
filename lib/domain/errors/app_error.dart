@@ -19,6 +19,7 @@ enum AppErrorCode {
   resourceGenerationFailed,
   resourceParseFailed,
   resourceContentInvalid,
+  resourceGenerationBudgetExceeded,
   resourcePersistenceFailed,
   resourceLifecycleFailed,
   resourceProviderIncomplete,

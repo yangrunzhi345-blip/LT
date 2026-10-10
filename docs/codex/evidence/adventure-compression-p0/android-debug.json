@@ -1,0 +1,12 @@
+{
+  "apkType": "debug only; not published",
+  "bytes": 130979503,
+  "sha256": "4eedbfda772f5e6d83655390d021014ab63ea16d0388862f5b9c36cad7586bba",
+  "abis": [
+    "arm64-v8a"
+  ],
+  "nativeLibraries": 8,
+  "allElf64Aarch64": true,
+  "ttsNativeHashesMatchV1205": true,
+  "androidDeviceValidation": "NOT COMPLETED"
+}

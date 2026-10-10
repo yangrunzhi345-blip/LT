@@ -652,6 +652,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<int> _startAdventureWithConfigUnlocked(AdventureConfig c) async {
+    int? createdAdventureId;
     // 设置加载状态，防止用户在初始化期间发送消息
     _adventure.startNewAdventureConfig(c);
     _adventure.inGame = true;
@@ -667,6 +668,7 @@ class ChatProvider extends ChangeNotifier {
       final title = _uniqueTitle(baseTitle, _adventure.adventureList);
       debugPrint('[AdventureStart][CREATE_BEGIN]');
       final adventureId = await _adventure.createAdventure(title, c);
+      createdAdventureId = adventureId;
       debugPrint('[AdventureStart][CREATE_DONE] {adventureId: $adventureId}');
 
       // Bootstrap must finish before the opening message freezes its snapshot,
@@ -708,14 +710,23 @@ class ChatProvider extends ChangeNotifier {
         // 冒险记录创建后立即切换到对话页。开场请求在后台继续执行，
         // 让对话页直接承接 ChatEngine 的流式气泡，而不是等待整段首幕生成完。
         unawaited(sendMessage(initialMessage).catchError((error, stackTrace) {
-          debugPrint('生成开场场景失败: $error');
+          debugPrint('生成开场场景失败: ${error.runtimeType}');
         }));
       }
       return adventureId;
     } catch (e, stackTrace) {
+      final createdId = createdAdventureId;
+      if (createdId != null) {
+        try {
+          await _adventure.deleteAdventure(createdId);
+        } catch (rollbackError) {
+          debugPrint('[AdventureStart][ROLLBACK_FAILED] '
+              'adventureId=$createdId exceptionType=${rollbackError.runtimeType}');
+        }
+      }
       // Diagnostics stay in the log; the UI keeps the safe generic category.
       // Only stage/type/IDs are logged, never story text, prompts or secrets.
-      debugPrint('[AdventureStart][FAILED] ${e.runtimeType}: $e');
+      debugPrint('[AdventureStart][FAILED] ${e.runtimeType}');
       debugPrintStack(
         label: '[AdventureStart][STACK]',
         stackTrace: stackTrace,

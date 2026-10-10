@@ -1,0 +1,32 @@
+Fixed source evidence; real SQLite and production services.
+Model HTTP/compression responses are deterministic external-boundary fixtures.
+Counts below are fixture data, not measurements of the Android user database.
+
+lt-p0-production-final.log
+SQLITE_BUDGET sessionTarget=8000 blueprintTarget=8000 planned=8000 parts=4 actual=8000 revision=8000 ready=true
+SQLITE_BUDGET sessionTarget=18000 blueprintTarget=18000 planned=18000 parts=9 actual=18000 revision=18000 ready=true
+SQLITE_BUDGET sessionTarget=20000 blueprintTarget=20000 planned=20000 parts=10 actual=20000 revision=20000 ready=true
+SQLITE_E2E characters=2 originalCharacters=25200 each, candidates=18 ready=2 frozen=2 sessions=1 prologue=1 messages=3 continuation=true snapshotPreserved=true chatOpen=true
+00:10 +17: All tests passed!
+
+lt-p0-last-target.log
+SQLITE_BUDGET sessionTarget=8000 blueprintTarget=8000 planned=8000 parts=4 actual=8000 revision=8000 ready=true
+SQLITE_BUDGET sessionTarget=18000 blueprintTarget=18000 planned=18000 parts=9 actual=18000 revision=18000 ready=true
+SQLITE_BUDGET sessionTarget=20000 blueprintTarget=20000 planned=20000 parts=10 actual=20000 revision=20000 ready=true
+00:15 +32: All tests passed!
+
+lt-p0-target-final.log
+SQLITE_E2E characters=2 originalCharacters=25200 each, candidates=18 ready=2 frozen=2 sessions=1 prologue=1 messages=3 continuation=true snapshotPreserved=true chatOpen=true
+SQLITE_BUDGET sessionTarget=8000 blueprintTarget=8000 planned=8000 parts=4 actual=8000 revision=8000 ready=true
+SQLITE_BUDGET sessionTarget=18000 blueprintTarget=18000 planned=18000 parts=9 actual=18000 revision=18000 ready=true
+SQLITE_BUDGET sessionTarget=20000 blueprintTarget=20000 planned=20000 parts=10 actual=20000 revision=20000 ready=true
+00:29 +70: All tests passed!
+
+lt-p0-widget-final.log
+00:05 +1: All tests passed!
+
+lt-p0-soak.log
+02:11 +7: All tests passed!
+
+lt-p0-tts-real.log
+02:36 +1: All tests passed!

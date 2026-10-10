@@ -3935,5 +3935,31 @@
   "aboutCopyEmail": "复制邮箱",
   "aboutSendEmail": "发送邮件",
   "aboutEmailCopied": "邮箱已复制到剪贴板",
-  "aboutOpenLinkFailed": "无法打开链接，请手动复制后访问。"
+  "aboutOpenLinkFailed": "无法打开链接，请手动复制后访问。",
+  "readinessDiagnosticRevisionHashMismatch": "版本快照哈希校验失败。请从资源历史恢复有效版本后重新准备；保留原始数据。",
+  "readinessDiagnosticAssemblyValidationFailed": "版本快照无法解析或组装。请检查角色卡、NPC 字段或世界观，保存修正后重新准备。",
+  "readinessDiagnosticResourceMissing": "绑定的资源不存在或已移入回收站。请恢复资源或重新选择可用资源后准备。",
+  "readinessCompressionRunning": "正在压缩，原始正文保持不变。",
+  "readinessCompressionApproval": "压缩候选已生成，请审核并确认采用后重新装配。",
+  "readinessCompressionFailed": "压缩失败，请重试准备；已保存正文保持不变。",
+  "readinessCompressionExhausted": "压缩重试次数已用尽，请编辑资源后重新准备。",
+  "readinessCompressionNoTargets": "没有可安全压缩的正文段落，请编辑资源以减少字数。",
+  "readinessCompressionNoCandidate": "未保存可用的逐段压缩候选，请重试准备或编辑资源。",
+  "readinessCompressionReview": "审核压缩候选",
+  "readinessCompressionApply": "确认采用并重新装配",
+  "readinessCompressionOriginal": "原始正文（保留在版本历史）",
+  "readinessCompressionProposed": "候选正文",
+  "readinessCompressionCancel": "取消",
+  "errorResourceGenerationBudgetExceeded": "生成正文超过资源或本段预算，请减少本段字数后重试；已保存内容保持不变。",
+  "readinessActualCapacity": "实际正文：{actual} 字符；绝对容量：{absolute} 字符。",
+  "@readinessActualCapacity": {
+    "placeholders": {
+      "actual": {
+        "type": "int"
+      },
+      "absolute": {
+        "type": "int"
+      }
+    }
+  }
 }

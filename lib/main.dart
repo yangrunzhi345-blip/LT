@@ -190,11 +190,6 @@ class _MainGateState extends ConsumerState<MainGate> {
         _initializeApp();
       });
     }
-    // Phase 8: the compression worker's startup hook. It reclaims jobs left
-    // `running` by a process that died, independent of any screen being opened.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(ref.read(compressionBackgroundWorkerProvider).start());
-    });
     // Phase 9: the revision retention pass. Startup is the controlled point for
     // it — no edit can be in flight — and it runs at most once per interval, so
     // it cannot turn into a background load. Without a caller the chains grew
@@ -213,8 +208,11 @@ class _MainGateState extends ConsumerState<MainGate> {
         ref.read(assemblyReadinessCompressionLinkProvider);
         unawaited(
           ref
-              .read(assemblyReadinessCoordinatorProvider)
-              .recoverInterrupted()
+              .read(compressionBackgroundWorkerProvider)
+              .start()
+              .then((_) => ref
+                  .read(assemblyReadinessCoordinatorProvider)
+                  .recoverInterrupted())
               .catchError((Object _) => 0),
         );
       } catch (_) {

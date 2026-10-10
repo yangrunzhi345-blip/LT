@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,8 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
+import '../../../../../application/resources/assembly_readiness_coordinator.dart';
+import '../../../../../domain/resources/resource_contracts.dart';
 import '../adventure_preview_saver.dart';
 import '../adventure_readiness_message_localization.dart';
 
@@ -78,26 +82,111 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
       const <String, AdventureAssetReadiness>{};
   String? _readinessError;
   String? _errorMessage;
+  AssemblyReadinessCoordinator? _coordinator;
+  int _loadEpoch = 0;
+
+  void _onReadinessChanged() {
+    if (mounted) unawaited(_loadReadiness());
+  }
+
+  @override
+  void dispose() {
+    _coordinator?.removeListener(_onReadinessChanged);
+    super.dispose();
+  }
+
+  Future<void> _reviewCompression() async {
+    if (_retryingReadiness) return;
+    final coordinator = ref.read(assemblyReadinessCoordinatorProvider);
+    final revisions = ref.read(resourceRevisionRepositoryProvider);
+    final publisher = ref.read(compressionPublisherProvider);
+    setState(() => _retryingReadiness = true);
+    try {
+      for (final item in _readiness.values.toList()) {
+        if (item.parameters['diagnosticCode'] !=
+            'compressionApprovalRequired') {
+          continue;
+        }
+        final id = ResourceId(item.assetId);
+        final head =
+            await revisions.readHead(id, ResourceRevisionKind.latestHead);
+        if (head == null) continue;
+        final candidates = await publisher.publishableCandidates(id);
+        if (candidates.isEmpty) continue;
+        final original = await revisions.readState(head.revisionId);
+        if (!mounted) return;
+        final l10n = _l10n(context);
+        final approved = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+                  title: Text(l10n.readinessCompressionReview),
+                  content: SizedBox(
+                      width: 560,
+                      child: SingleChildScrollView(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            for (final candidate in candidates) ...[
+                              Text(l10n.readinessCompressionOriginal),
+                              SelectableText(original
+                                      .nodes[candidate.targetNodeId]?.content ??
+                                  ''),
+                              const SizedBox(height: 12),
+                              Text(l10n.readinessCompressionProposed),
+                              SelectableText(candidate.compressedContent),
+                              const Divider(),
+                            ],
+                          ]))),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text(l10n.readinessCompressionCancel)),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text(l10n.readinessCompressionApply)),
+                  ],
+                ));
+        if (approved == true) {
+          await coordinator.approveCompression(
+              resourceId: id,
+              candidateIds:
+                  candidates.map((candidate) => candidate.candidateId).toList(),
+              expectedHeadRevisionId: head.revisionId.value);
+        }
+      }
+      await _loadReadiness();
+    } catch (error) {
+      if (mounted) {
+        setState(() => _readinessError =
+            localizeAdventureLaunchFailure(error, _l10n(context)));
+      }
+    } finally {
+      if (mounted) setState(() => _retryingReadiness = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _coordinator = ref.read(assemblyReadinessCoordinatorProvider);
+    _coordinator!.addListener(_onReadinessChanged);
     _loadReadiness();
   }
 
   Future<void> _loadReadiness() async {
+    final epoch = ++_loadEpoch;
     try {
       final statuses = await ref
           .read(adventureReadinessGateProvider)
           .resolveConfig(widget.config);
-      if (!mounted) return;
+      if (!mounted || epoch != _loadEpoch) return;
       setState(() {
         _readiness = statuses;
         _readinessLoading = false;
         _readinessError = null;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || epoch != _loadEpoch) return;
       setState(() {
         _readinessLoading = false;
         _readinessError = localizeAppError(
@@ -216,7 +305,7 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _errorMessage = _l10n(context).startAdventureFailed(
-              localizeAppError(_l10n(context), adventureLaunchError(e)),
+              localizeAdventureLaunchFailure(e, _l10n(context)),
             ));
       }
     } finally {
@@ -407,6 +496,16 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                                   ),
                                 ),
                               ),
+                          if (_readiness.values.any((item) =>
+                              item.parameters['diagnosticCode'] ==
+                              'compressionApprovalRequired'))
+                            TextButton(
+                                key: const Key(
+                                    'assembly-preview-compression-review'),
+                                onPressed: _retryingReadiness
+                                    ? null
+                                    : _reviewCompression,
+                                child: Text(l10n.readinessCompressionReview)),
                           Align(
                             alignment: Alignment.centerLeft,
                             child: TextButton(

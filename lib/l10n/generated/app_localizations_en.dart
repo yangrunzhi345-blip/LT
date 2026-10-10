@@ -6553,4 +6553,65 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get aboutOpenLinkFailed =>
       'Could not open the link. Copy it manually instead.';
+
+  @override
+  String get readinessDiagnosticRevisionHashMismatch =>
+      'Revision snapshot hash validation failed. Restore a valid version from resource history, then prepare again; keep the original data.';
+
+  @override
+  String get readinessDiagnosticAssemblyValidationFailed =>
+      'The version snapshot cannot be parsed or assembled. Check the character, NPC fields or worldview, save corrections, then prepare again.';
+
+  @override
+  String get readinessDiagnosticResourceMissing =>
+      'The bound resource is missing or in the recycle bin. Restore it or select an available resource before preparing again.';
+
+  @override
+  String get readinessCompressionRunning =>
+      'Compression is running. Original content is unchanged.';
+
+  @override
+  String get readinessCompressionApproval =>
+      'Compression proposals are ready. Review and approve them to rebuild the adventure resource.';
+
+  @override
+  String get readinessCompressionFailed =>
+      'Compression failed. Retry preparation; saved content is preserved.';
+
+  @override
+  String get readinessCompressionExhausted =>
+      'Compression retry limit reached. Edit the resource before preparing again.';
+
+  @override
+  String get readinessCompressionNoTargets =>
+      'No safe prose parts can be compressed. Edit the resource to reduce its length.';
+
+  @override
+  String get readinessCompressionNoCandidate =>
+      'No usable Part proposal was saved. Retry preparation or edit the resource.';
+
+  @override
+  String get readinessCompressionReview => 'Review compression proposals';
+
+  @override
+  String get readinessCompressionApply => 'Approve and rebuild';
+
+  @override
+  String get readinessCompressionOriginal =>
+      'Original content (preserved in revision history)';
+
+  @override
+  String get readinessCompressionProposed => 'Proposed content';
+
+  @override
+  String get readinessCompressionCancel => 'Cancel';
+
+  @override
+  String get errorResourceGenerationBudgetExceeded =>
+      'Generated content exceeds the resource or Part budget. Reduce this Part and retry; saved content is preserved.';
+
+  @override
+  String readinessActualCapacity(int actual, int absolute) {
+    return 'Actual body: $actual characters; absolute capacity: $absolute.';
+  }
 }

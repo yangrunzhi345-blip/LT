@@ -907,7 +907,10 @@ final class _SoakRig {
           sectionId: 'sec_${s + 1}',
           title: '第${s + 1}章第${p + 1}节',
           generationGoal: '生成 $partId 正文',
-          estimatedLength: 500,
+          // Keep the exact 500/200-patch stress workload; the declared budget
+          // must cover its four characters per patch instead of authorizing
+          // a deliberately over-budget model response.
+          estimatedLength: patchesPerPart * 4 > 500 ? patchesPerPart * 4 : 500,
           dependencies: previous != null
               ? [previous]
               : (lastPartOfPreviousSection != null
