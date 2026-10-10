@@ -1932,6 +1932,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get resourceTargetCharactersInputInvalid => '유효한 숫자를 입력하세요';
+
+  @override
   String get resourceLengthShort => '단편';
 
   @override

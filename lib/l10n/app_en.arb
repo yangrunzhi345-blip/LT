@@ -819,6 +819,7 @@
   "resourceGenerationLengthDescription": "Control the approximate target word count of the AI generated resource text",
   "resourceTargetCharactersLabel": "Target Word Count",
   "resourceTargetCharactersValue": "{count} chars",
+  "resourceTargetCharactersInputInvalid": "Enter a valid number",
   "resourceLengthShort": "Short",
   "resourceLengthLong": "Long",
   "resourceStartCreateAction": "Start Creation",

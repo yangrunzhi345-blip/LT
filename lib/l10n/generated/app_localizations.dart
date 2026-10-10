@@ -3704,6 +3704,12 @@ abstract class AppLocalizations {
   /// **'{count} chars'**
   String resourceTargetCharactersValue(Object count);
 
+  /// No description provided for @resourceTargetCharactersInputInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid number'**
+  String get resourceTargetCharactersInputInvalid;
+
   /// No description provided for @resourceLengthShort.
   ///
   /// In en, this message translates to:

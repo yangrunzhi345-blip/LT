@@ -889,6 +889,7 @@
   "resourceGenerationLengthDescription": "AIが生成するリソース本文のおおよその目標文字数を制御します",
   "resourceTargetCharactersLabel": "目標文字数",
   "resourceTargetCharactersValue": "{count} 文字",
+  "resourceTargetCharactersInputInvalid": "有効な数値を入力してください",
   "resourceLengthShort": "ショート",
   "resourceLengthLong": "ロング",
   "resourceStartCreateAction": "作成を開始",

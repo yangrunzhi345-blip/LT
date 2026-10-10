@@ -889,6 +889,7 @@
   "resourceGenerationLengthDescription": "AI가 생성할 리소스 본문의 대략적인 목표 글자 수를 조절합니다",
   "resourceTargetCharactersLabel": "목표 글자 수",
   "resourceTargetCharactersValue": "{count} 자",
+  "resourceTargetCharactersInputInvalid": "유효한 숫자를 입력하세요",
   "resourceLengthShort": "단편",
   "resourceLengthLong": "장편",
   "resourceStartCreateAction": "생성 시작",

@@ -79,8 +79,18 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
   final _referenceController = TextEditingController();
   final _fileNameController = TextEditingController();
 
+  /// Free-text companion of the target-word Slider. Kept in sync both ways so a
+  /// value typed here reaches the generated request, and a value chosen on the
+  /// Slider is reflected here.
+  final _targetCharactersController = TextEditingController();
+  final _targetInputFocusNode = FocusNode();
+
   late ResourceType _type;
   late int _targetCharacters;
+
+  /// Error shown by the numeric target input. Only set while the field holds an
+  /// unparseable value; a numeric out-of-range value is clamped instead.
+  String? _targetInputError;
   AiReferenceMode _referenceMode = AiReferenceMode.paste;
   ResourceLibraryItem? _existingResource;
   ResourceLibraryItem? _originWorldview;
@@ -100,6 +110,8 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
     super.initState();
     _type = widget.initialType;
     _targetCharacters = _maximumTargetFor(_type);
+    _targetCharactersController.text = _targetCharacters.toString();
+    _targetInputFocusNode.addListener(_handleTargetInputFocusChange);
     if (widget.resources.isNotEmpty) {
       _existingResource = widget.resources.first;
     }
@@ -111,6 +123,10 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
     _nameController.dispose();
     _referenceController.dispose();
     _fileNameController.dispose();
+    _targetCharactersController.dispose();
+    _targetInputFocusNode
+      ..removeListener(_handleTargetInputFocusChange)
+      ..dispose();
     for (final editor in _relationshipEditors) {
       editor.dispose();
     }
@@ -411,7 +427,9 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                           ResourceLimits.minimumGenerationTargetCharacters,
                           _maximumTargetFor(val),
                         );
+                        _targetInputError = null;
                       });
+                      _syncTargetCharactersController();
                     }
                   },
                 ),
@@ -523,7 +541,11 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                   divisions: _targetDivisionsFor(_type),
                   label: l10n.resourceTargetCharactersValue(_targetCharacters),
                   onChanged: (value) {
-                    setState(() => _targetCharacters = value.round());
+                    setState(() {
+                      _targetCharacters = value.round();
+                      _targetInputError = null;
+                    });
+                    _syncTargetCharactersController();
                   },
                 ),
                 Row(
@@ -531,6 +553,33 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                     Text(l10n.resourceLengthShort),
                     const Spacer(),
                     Text(l10n.resourceLengthLong),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        key: const ValueKey('ai_creation_target_words_input'),
+                        controller: _targetCharactersController,
+                        focusNode: _targetInputFocusNode,
+                        hintText: l10n.resourceTargetCharactersLabel,
+                        errorText: _targetInputError,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        onChanged: _onTargetCharactersInputChanged,
+                        onSubmitted: _commitTargetCharactersInput,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      key: const ValueKey('ai_creation_target_words_confirm'),
+                      tooltip: l10n.applyAction,
+                      onPressed: () => _commitTargetCharactersInput(
+                          _targetCharactersController.text),
+                      icon: const AppSvgIcon('check', size: 20),
+                    ),
                   ],
                 ),
               ],
@@ -688,6 +737,77 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
       (_maximumTargetFor(type) -
           ResourceLimits.minimumGenerationTargetCharacters) ~/
       ResourceLimits.generationTargetStepCharacters;
+
+  /// Smallest accepted target, shared with the Slider.
+  int get _minTargetCharacters =>
+      ResourceLimits.minimumGenerationTargetCharacters;
+
+  /// Clamps [raw] into the Slider's domain and snaps it to the step grid, so a
+  /// typed value is always representable by the Slider and can never carry the
+  /// existing capacity/validation contract out of range.
+  int _normalizeTargetCharacters(int raw) {
+    final min = _minTargetCharacters;
+    final max = _maximumTargetFor(_type);
+    const step = ResourceLimits.generationTargetStepCharacters;
+    final snapped = min + (((raw - min) / step).round()) * step;
+    return snapped.clamp(min, max);
+  }
+
+  /// Mirrors [_targetCharacters] into the text field.
+  ///
+  /// Skipped while the field is focused unless [force] is set, so a Slider drag
+  /// or a type change never moves the caret while the user is typing.
+  void _syncTargetCharactersController({bool force = false}) {
+    if (!force && _targetInputFocusNode.hasFocus) return;
+    final text = _targetCharacters.toString();
+    if (_targetCharactersController.text == text) return;
+    _targetCharactersController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  void _handleTargetInputFocusChange() {
+    if (!_targetInputFocusNode.hasFocus && mounted) {
+      _commitTargetCharactersInput(_targetCharactersController.text);
+    }
+  }
+
+  /// Live, non-destructive update while typing: sync the Slider as soon as the
+  /// text is a valid in-range integer, but never reformat the text itself.
+  void _onTargetCharactersInputChanged(String raw) {
+    final parsed = int.tryParse(raw.trim());
+    final max = _maximumTargetFor(_type);
+    if (parsed != null && parsed >= _minTargetCharacters && parsed <= max) {
+      setState(() {
+        _targetCharacters = parsed;
+        _targetInputError = null;
+      });
+    } else if (_targetInputError != null) {
+      setState(() => _targetInputError = null);
+    }
+  }
+
+  /// Unified confirm/blur validation.
+  ///
+  /// A parseable number is clamped + snapped into the domain; a non-numeric or
+  /// empty value is rejected and the field is restored to the last valid value,
+  /// so an invalid configuration can never reach the generation request.
+  void _commitTargetCharactersInput(String raw) {
+    if (!mounted) return;
+    final parsed = int.tryParse(raw.trim());
+    if (parsed == null) {
+      setState(() => _targetInputError =
+          _l10n(context).resourceTargetCharactersInputInvalid);
+      _syncTargetCharactersController(force: true);
+      return;
+    }
+    setState(() {
+      _targetCharacters = _normalizeTargetCharacters(parsed);
+      _targetInputError = null;
+    });
+    _syncTargetCharactersController(force: true);
+  }
 
   Widget _buildReferenceContent(
     List<AppSelectItem<ResourceLibraryItem>> existingResourceItems,

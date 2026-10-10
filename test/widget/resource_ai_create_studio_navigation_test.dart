@@ -205,7 +205,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(_fieldByLabel('名称'), '创建中资源');
       await tester.enterText(_fieldByLabel('粘贴参考内容'), '城市居民');
-      await tester.tap(find.byKey(const Key('ai-create-submit-button')));
+      final submit = find.byKey(const Key('ai-create-submit-button'));
+      await tester.ensureVisible(submit);
+      await tester.pumpAndSettle();
+      await tester.tap(submit);
 
       await _waitFor(tester, find.byType(ResourceStudioPage));
       // While the planner runs the tree is still absent; the Studio must not

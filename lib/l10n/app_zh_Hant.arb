@@ -889,6 +889,7 @@
   "resourceGenerationLengthDescription": "控制 AI 生成資源正文的大致目標字數",
   "resourceTargetCharactersLabel": "目標字數",
   "resourceTargetCharactersValue": "{count} 字",
+  "resourceTargetCharactersInputInvalid": "請輸入有效數字",
   "resourceLengthShort": "短篇",
   "resourceLengthLong": "長篇",
   "resourceStartCreateAction": "開始建立",

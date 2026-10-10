@@ -1916,6 +1916,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get resourceTargetCharactersInputInvalid => '有効な数値を入力してください';
+
+  @override
   String get resourceLengthShort => 'ショート';
 
   @override

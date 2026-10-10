@@ -86,6 +86,7 @@ class SessionInputBar extends ConsumerWidget {
                           },
                         },
                         child: TextField(
+                          key: const Key('adventure-session-input'),
                           controller: controller,
                           focusNode: focusNode,
                           enabled: !offline,
@@ -120,6 +121,7 @@ class SessionInputBar extends ConsumerWidget {
                   // 发送 / 停止生成 切换按钮
                   if (isGenerating)
                     _InputActionButton(
+                      key: const Key('adventure-session-stop-button'),
                       onPressed: onStop,
                       tooltip: l10n.stopGenerationAction,
                       background: colorScheme.errorContainer,
@@ -128,6 +130,7 @@ class SessionInputBar extends ConsumerWidget {
                     )
                   else
                     _InputActionButton(
+                      key: const Key('adventure-session-send-button'),
                       onPressed: offline ? null : onSend,
                       tooltip: '${l10n.sendAction} (Enter)',
                       background: colorScheme.primary,
@@ -150,6 +153,7 @@ class SessionInputBar extends ConsumerWidget {
 /// a narrative transcript control, not a chat app.
 class _InputActionButton extends StatelessWidget {
   const _InputActionButton({
+    super.key,
     required this.onPressed,
     required this.tooltip,
     required this.background,

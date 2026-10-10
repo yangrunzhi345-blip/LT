@@ -1999,6 +1999,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get resourceTargetCharactersInputInvalid => 'Enter a valid number';
+
+  @override
   String get resourceLengthShort => 'Short';
 
   @override

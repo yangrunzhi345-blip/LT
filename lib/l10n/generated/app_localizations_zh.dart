@@ -1902,6 +1902,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get resourceTargetCharactersInputInvalid => '请输入有效数字';
+
+  @override
   String get resourceLengthShort => '短篇';
 
   @override
@@ -8092,6 +8095,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get resourceTargetCharactersInputInvalid => '请输入有效数字';
+
+  @override
   String get resourceLengthShort => '短篇';
 
   @override
@@ -14280,6 +14286,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String resourceTargetCharactersValue(Object count) {
     return '$count 字';
   }
+
+  @override
+  String get resourceTargetCharactersInputInvalid => '請輸入有效數字';
 
   @override
   String get resourceLengthShort => '短篇';

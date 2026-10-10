@@ -92,6 +92,14 @@ android {
     }
 
     buildTypes {
+        // Automation/debug builds carry their own applicationId so they live in
+        // a fully separate Android data space and can never read or write the
+        // release package's real user data. The release applicationId, signing
+        // identity and upgrade compatibility are intentionally unchanged.
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
         }

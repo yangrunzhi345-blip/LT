@@ -213,7 +213,10 @@ void main() {
         await tester.pumpAndSettle();
         await tester.enterText(_fieldByLabel('名称'), 'AI新资源');
         await tester.enterText(_fieldByLabel('粘贴参考内容'), '山海之间的城市和居民');
-        await tester.tap(find.text('开始创建'));
+        final submit = find.text('开始创建');
+        await tester.ensureVisible(submit);
+        await tester.pumpAndSettle();
+        await tester.tap(submit);
         await _waitFor(tester, find.text('编辑正文'));
         await _waitFor(tester, find.textContaining('AI生成正文'));
         expect(
