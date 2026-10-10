@@ -211,6 +211,38 @@ void main() {
         'compressionApprovalRequired');
   });
 
+  test('candidate write failure rolls back success and remains retryable',
+      () async {
+    final id = await create('candidate_write_failure', 25200);
+    final stack = wire();
+    await fixture.db.execute('''
+      CREATE TRIGGER reject_candidate_write
+      BEFORE INSERT ON resource_compression_candidates
+      BEGIN SELECT RAISE(ABORT, 'fixture-candidate-write-failure'); END
+    ''');
+    final result = await fixture.coordinator.prepare(id);
+    expect(result.record.state, ReadinessState.failed);
+    expect(DiagnosticEnvelope.tryDecode(result.record.failureReason)!.code,
+        'compressionFailed');
+    expect(
+        (await stack.repository.findJobsForResource(id.value))
+            .every((job) => job.status == CompressionJobStatus.failed),
+        isTrue);
+    expect(await stack.publisher.publishableCandidates(id), isEmpty);
+    final live =
+        await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
+            .measureResource(id);
+    expect(live.activeCharacters, 25200);
+    await fixture.db.execute('DROP TRIGGER reject_candidate_write');
+    await fixture.coordinator.retryPreparation(id);
+    expect(await stack.publisher.publishableCandidates(id), hasLength(9));
+    expect(
+        DiagnosticEnvelope.tryDecode(
+                (await fixture.coordinator.readiness(id))!.validationMessage)!
+            .code,
+        'compressionApprovalRequired');
+  });
+
   test('edit during review rejects the entire adoption transaction', () async {
     final id = await create('edit_review', 25200);
     final stack = wire();

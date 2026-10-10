@@ -261,12 +261,12 @@ final class AssemblyReadinessCoordinator extends ChangeNotifier {
         final jobs =
             await compression.enqueueForResource(resourceId, partOnly: true);
         if (jobs.isEmpty) {
-          return _fail(resourceId, token, 'compressionNoTargets',
+          return await _fail(resourceId, token, 'compressionNoTargets',
               parameters: capacityParameters);
         }
         final worker = _compressionWorker;
         if (worker == null) {
-          return _fail(resourceId, token, 'compressionUnavailable',
+          return await _fail(resourceId, token, 'compressionUnavailable',
               parameters: capacityParameters);
         }
         await _casUpdate(

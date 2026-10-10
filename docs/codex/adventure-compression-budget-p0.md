@@ -95,3 +95,11 @@ Exact device data and real Android playback/start are unverified. External model
 ## Git delivery
 
 Integrated Review and Integrated Acceptance are complete. Delivery consists of one local commit on `fix/adventure-compression-lifecycle`; its SHA is recorded in the final task response / Git log. No push, tag, version change or release is performed. The initial workspace was clean; changes in this task are isolated to budget/capacity/compression/readiness, their UI/error/DI dependencies, tests and evidence. The detached baseline probe worktree remains available for reproduction.
+
+## User-authorized push / merge follow-up (2026-10-10)
+
+After the local delivery above, the user explicitly authorized pushing the repair branch and merging into main. PR #4 records the strict per-Part generation-budget risk and the incomplete device validation.
+
+The first GitHub Quality gate uses Flutter 3.47.7 and passed formatting, then reported three `unawaited_return_in_try_block` warnings. Add explicit `await` to the two fail-record returns and atomic job/candidate completion so asynchronous database exceptions enter their existing catch handlers. Do not disable the diagnostic or change generation-budget behavior.
+
+A real SQLite trigger that aborts candidate insertion reproduces incorrect failure reconciliation before this follow-up. With the awaits in place, every unsuccessful job becomes failed, no candidate is publishable, original 25,200-character text remains intact, and explicit retry after removing the test-only trigger yields nine reviewed candidates. The trigger exists only in a disposable regression fixture, never the application database. Local targeted suites pass 49 cases; local analyze reports zero issues. The original full-suite / TTS / APK evidence above applies to head `7c2d7d9`; follow-up CI and merge outcome are recorded at https://github.com/yangrunzhi345-blip/LT/pull/4.

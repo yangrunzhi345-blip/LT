@@ -438,7 +438,7 @@ final class CompressionCoordinator {
         isValidated: true,
         createdAt: _clock(),
       );
-      return _jobRepository.completeJob(
+      return await _jobRepository.completeJob(
         jobId: running.jobId,
         workerId: workerId,
         status: CompressionJobStateMachine.advance(
