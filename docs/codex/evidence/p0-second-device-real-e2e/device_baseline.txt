@@ -1,0 +1,29 @@
+=== date ===
+2026-10-10T16:50:55Z
+=== adb devices -l ===
+List of devices attached
+10AE7J1QPS001GH        device usb:3-1 product:PD2361 model:V2361A device:PD2361 transport_id:2
+
+=== model ===
+V2361A
+=== manufacturer ===
+vivo
+=== device ===
+PD2361
+=== android release ===
+16
+=== sdk ===
+36
+=== cpu abi ===
+arm64-v8a
+=== abilist ===
+arm64-v8a,armeabi-v7a,armeabi
+=== adb version ===
+Android Debug Bridge version 1.0.41
+Version 35.0.2-android-tools
+Installed as /usr/bin/adb
+Running on Linux 7.0.11-arch1-1 (x86_64)
+=== flutter version ===
+Flutter 3.44.8 • channel stable • https://github.com/flutter/flutter.git
+Framework • revision 058e0af2c2 (3 个月前) • 2026-07-23 10:56:21 -0700
+Engine • hash 13ffd72b2f9a5ca4db2a74ea52d5353ec2e8f939 (revision 0cd610717b) (2 months ago) • 2026-07-23 16:11:34.000Z

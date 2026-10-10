@@ -1,0 +1,8 @@
+=== 2026-10-10T16:54:39Z APK build/install verification ===
+HEAD: 8c623c2dd05fcd3c3f20cf3f89d04880a8ccf412
+built: build/app/outputs/flutter-apk/app-release.apk 54780371 bytes
+badging: package com.example.lt_dialogue versionCode=28 versionName=1.2.06, native-code arm64-v8a only
+installed signer SHA256: 1F:B6:92:59:5E:D7:01:52:D2:F4:3B:A0:A8:40:7F:87:95:59:CA:58:3D:8C:D6:8F:81:5A:EB:C5:68:E0:7B:2D (LT Android Release)
+built signer SHA256: identical
+install: adb install -r -> Success; firstInstallTime preserved 2026-10-11 00:00:13; lastUpdateTime -> 2026-10-11 00:54:33
+data preserved: YES (no uninstall, no pm clear, no user-data deletion)
