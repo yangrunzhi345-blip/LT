@@ -192,6 +192,17 @@ final class CompressionCoordinator {
         if (!force && part.content.length < thresholds.minNodeCharacters) {
           continue;
         }
+        // One compression request carries a bounded window
+        // (`ResourceLimits.maxCompressionInputCharacters`). A single Part above
+        // that bound cannot be compressed as one request and the builder would
+        // reject it, so it is deliberately never queued: a doomed job would
+        // otherwise be reported as a retryable failure and burn its attempt
+        // budget without any chance of success. Such content must be
+        // edited/reduced by the user (surfaced as `compressionNoTargets`).
+        if (part.content.length >
+            ResourceLimits.maxCompressionInputCharacters) {
+          continue;
+        }
         final partState = partStateById[part.id.value];
         if (partState == null || partState.isDeleted) continue;
         jobs.add(await _enqueue(

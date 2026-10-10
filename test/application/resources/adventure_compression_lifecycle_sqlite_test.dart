@@ -10,6 +10,7 @@ import 'package:lt_dialogue/application/resources/resource_capacity_repository.d
 import 'package:lt_dialogue/application/resources/resource_capacity_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_compression.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import 'package:lt_dialogue/domain/errors/diagnostic_envelope.dart';
 import 'package:lt_dialogue/application/resources/resource_compression_publisher.dart';
@@ -468,6 +469,115 @@ void main() {
     expect(jobs.where((job) => job.isActive), isEmpty,
         reason:
             'A completed background pass must not abandon the remaining queue');
+  });
+
+  test(
+      'a Part above the bounded compression window is never queued and fails explicitly',
+      () async {
+    // Regression (P0 reliability): enqueueing a target larger than the bounded
+    // per-request window used to create a job that was guaranteed to fail at
+    // request build time. That doomed job was reported as a retryable
+    // `compressionFailed` and burned its attempt budget without any chance of
+    // success. Such a target must not be queued at all.
+    const id = ResourceId('oversized_single_part');
+    final stack = wire();
+    // Total is above the absolute budget (overflow), but every Part is larger
+    // than the bounded per-request window, so there is no safely compressible
+    // target at all.
+    final oversized = '文' * (ResourceLimits.maxCompressionInputCharacters + 1);
+    await fixture.treeRepository.createResourceTree(ResourceTreeDraft(
+      id: id,
+      type: ResourceType.character,
+      name: '巨块',
+      sections: [
+        ResourceTreeSectionDraft(title: '设定', parts: [
+          ResourceTreePartDraft(title: '巨块A', content: oversized),
+          ResourceTreePartDraft(title: '巨块B', content: oversized),
+        ])
+      ],
+    ));
+    await fixture.revisionService
+        .captureRevision(id, cause: RevisionCause.manualSave);
+
+    final outcome = await fixture.coordinator.prepare(id);
+    expect(await stack.repository.findJobsForResource(id.value), isEmpty,
+        reason: 'an oversized Part must never become a doomed compression job');
+    expect(outcome.record.state, ReadinessState.failed);
+    expect(
+      DiagnosticEnvelope.tryDecode(outcome.record.failureReason)!.code,
+      'compressionNoTargets',
+      reason: 'the failure must be actionable (edit/reduce) rather than '
+          'a retryable compression failure that can never succeed',
+    );
+    // The original oversized content is preserved unchanged.
+    final live =
+        await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
+            .measureResource(id);
+    expect(live.activeCharacters, oversized.length * 2);
+  });
+
+  test('two overflowing resources prepare concurrently without cross-talk',
+      () async {
+    final a = await create('multi_a', 25200, sections: 3);
+    final b = await create('multi_b', 26000, sections: 3);
+    final stack = wire();
+    final results = await Future.wait(
+        [fixture.coordinator.prepare(a), fixture.coordinator.prepare(b)]);
+    expect(results.every((result) => result.awaitedCompression), isTrue);
+
+    for (final id in [a, b]) {
+      final record = (await fixture.coordinator.readiness(id))!;
+      expect(record.state, ReadinessState.preparing,
+          reason: '${id.value} waits for its own approval, not the other');
+      expect(
+        DiagnosticEnvelope.tryDecode(record.validationMessage)!.code,
+        'compressionApprovalRequired',
+      );
+      final jobs = await stack.repository.findJobsForResource(id.value);
+      expect(jobs, isNotEmpty);
+      expect(jobs.every((job) => job.scope == CompressionScope.part), isTrue);
+      expect(jobs.every((job) => !job.isActive), isTrue);
+      // Candidates are attributed to the resource that produced them.
+      final candidates =
+          await stack.repository.findCandidatesForResource(id.value);
+      expect(
+          candidates.every((candidate) => candidate.resourceId == id), isTrue);
+    }
+  });
+
+  test(
+      'gate recovers a failed compression through retry, approval and re-resolve',
+      () async {
+    final id = await create('gate_recovery', 25200, sections: 3);
+    wire(llm: _FailOnce());
+    // First preparation: one bounded request fails, so readiness is a terminal
+    // (retryable) failure and Adventure start is refused.
+    final failed = await fixture.gate.resolve([id.value]);
+    expect(failed[id.value]!.status.name, 'failed');
+
+    // Wizard "retry preparation" button.
+    await fixture.gate.prepare(id.value);
+    final awaiting = await fixture.gate.resolve([id.value]);
+    expect(awaiting[id.value]!.status.name, 'preparing');
+
+    // User reviews and adopts the candidates; the gate then re-resolves ready.
+    final publisher = CompressionPublisher(
+      jobRepository:
+          CompressionJobRepositoryImpl(getDb: () async => fixture.db),
+      revisionService: fixture.revisionService,
+      getDb: () async => fixture.db,
+    );
+    final candidates = await publisher.publishableCandidates(id);
+    final head = await fixture.latestHeadRevision(id);
+    await fixture.coordinator.approveCompression(
+      resourceId: id,
+      candidateIds:
+          candidates.map((candidate) => candidate.candidateId).toList(),
+      expectedHeadRevisionId: head.revisionId.value,
+    );
+    final ready = await fixture.gate.resolve([id.value]);
+    expect(ready[id.value]!.status.name, 'ready');
+    expect(ready[id.value]!.assemblyRevisionId, isNotEmpty);
   });
 }
 

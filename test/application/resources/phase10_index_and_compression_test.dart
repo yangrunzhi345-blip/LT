@@ -153,11 +153,16 @@ void main() {
 
   test('OVERFLOW queues proposals but missing worker fails explicitly',
       () async {
-    final bigBody = '超' * 61000;
+    // Overflow with real, bounded compression targets: each Part stays within
+    // the per-request input window, so proposals are actually queued. A single
+    // Part above the window is deliberately never queued (it could never be
+    // compressed) — that separate case is covered by
+    // `adventure_compression_lifecycle_sqlite_test`.
+    final partBody = '超' * 10100;
     final resourceId = await fixture.createWorldview(
         'x_wv2',
         [
-          [bigBody],
+          [for (var i = 0; i < 6; i++) partBody],
         ],
         summary: '概览',
         confirmed: true);
