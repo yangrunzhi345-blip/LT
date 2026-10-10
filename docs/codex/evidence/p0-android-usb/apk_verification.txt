@@ -1,0 +1,21 @@
+# ARM64 release APK verification
+path: build/app/outputs/flutter-apk/app-release.apk  size: 54780142 bytes
+package: name='com.example.lt_dialogue' versionCode='28' versionName='1.2.06' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+native-code: 'arm64-v8a'
+--- signer ---
+Signer #1 certificate DN: CN=LT Android Release, OU=Android, O=LT Dialogue, C=CN
+Signer #1 certificate SHA-256 digest: 1fb692595ed70152d2f43ba0a8407f879559ca583d8cd68f815aebc568e07b2d
+--- ABIs in apk ---
+lib/arm64-v8a/
+--- native TTS libs ---
+lib/arm64-v8a/libapp.so
+lib/arm64-v8a/libdartjni.so
+lib/arm64-v8a/libdatastore_shared_counter.so
+lib/arm64-v8a/libflutter.so
+lib/arm64-v8a/libonnxruntime.so
+lib/arm64-v8a/libsherpa-onnx-c-api.so
+lib/arm64-v8a/libsherpa-onnx-cxx-api.so
+lib/arm64-v8a/libsqlite3.so
+--- installed app signer (for compatibility) ---
+Signer #1 certificate DN: CN=LT Android Release, OU=Android, O=LT Dialogue, C=CN
+Signer #1 certificate SHA-256 digest: 1fb692595ed70152d2f43ba0a8407f879559ca583d8cd68f815aebc568e07b2d
