@@ -556,15 +556,33 @@ class LegacyResourceMapper {
     };
 
     String take(List<String> aliases) {
+      var selected = '';
       for (final alias in aliases) {
         consumed.add(alias);
         final value = data[alias];
-        if (value is String && value.trim().isNotEmpty) return value.trim();
+        if (value is String && value.trim().isNotEmpty) {
+          selected = value.trim();
+          break;
+        }
         if (value != null && value is! Map && value is! List) {
-          return value.toString().trim();
+          selected = value.toString().trim();
+          break;
         }
       }
-      return '';
+      // Library projection mirrors description as background. An early return
+      // used to leave the equal alias as fallback prose, doubling saved size.
+      // Consume only equivalent aliases: distinct authored values stay in the
+      // fallback section so compatibility import cannot silently discard them.
+      for (final alias in aliases) {
+        final value = data[alias];
+        if (value != null &&
+            value is! Map &&
+            value is! List &&
+            value.toString().trim() == selected) {
+          consumed.add(alias);
+        }
+      }
+      return selected;
     }
 
     final description = take(_fieldAliases['description']!);

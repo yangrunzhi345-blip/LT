@@ -77,6 +77,21 @@ void main() {
       );
     });
 
+    test('library background mirror counts once, distinct text still counts',
+        () {
+      String aliases(String description, String background) => jsonEncode({
+            'name': '角色',
+            'description': description,
+            'background': background,
+          });
+      expect(() => validateCharacter(aliases('文' * 24000, '文' * 24000)),
+          returnsNormally);
+      expect(() => validateCharacter(aliases('文' * 24001, '文' * 24001)),
+          throwsA(isA<ResourceValidationException>()));
+      expect(() => validateCharacter(aliases('文' * 16000, '异' * 16000)),
+          throwsA(isA<ResourceValidationException>()));
+    });
+
     test('NPC cards share the same two-level character budget', () {
       expect(
         () => ResourceIntegrityValidator.validateNpcCard(

@@ -323,6 +323,27 @@ void main() {
       expect(descriptionParts, hasLength(1));
     });
 
+    test('equal aliases count once while distinct authored aliases survive',
+        () {
+      final same = mapper.mapCharacter(cardRow('same_alias', {
+        'name': '角色',
+        'description': '背景',
+        'background': ' 背景 ',
+        'bodyDescription': '外貌',
+        'body_description': '外貌',
+      }));
+      expect(
+          same.sections.expand((s) => s.parts).map((p) => p.content).toList(),
+          ['背景', '外貌']);
+      final distinct = mapper.mapCharacter(cardRow('distinct_alias', {
+        'name': '角色',
+        'description': '背景',
+        'background': '补充背景',
+      }));
+      expect(distinct.sections.expand((s) => s.parts).map((p) => p.content),
+          containsAll(['背景', '补充背景']));
+    });
+
     test('custom attributes keep order and importance next to their node', () {
       final draft = mapper.mapCharacter(cardRow('card_3', richCard));
       final section =

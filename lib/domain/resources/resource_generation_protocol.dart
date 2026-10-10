@@ -1,4 +1,5 @@
 import 'resource_contracts.dart';
+import 'resource_limits.dart';
 
 /// Current version of the Incremental JSON Part Generation Protocol.
 const int currentPartGenerationProtocolVersion = 1;
@@ -173,6 +174,7 @@ final class PartGenerationRequest {
     this.protocolVersion = currentPartGenerationProtocolVersion,
     this.attemptNumber = 1,
     this.userInstruction = '',
+    this.remainingResourceBudget,
   });
 
   /// Incremental protocol version; must equal [currentPartGenerationProtocolVersion].
@@ -196,8 +198,21 @@ final class PartGenerationRequest {
   /// 1-based attempt sequence number for this Part.
   final int attemptNumber;
 
-  /// Target character budget (estimated length).
+  /// Desired Part size, not a hard rejection threshold.
   final int targetBudget;
+
+  /// Actual aggregate budget available to this replacement attempt, excluding
+  /// its own previously saved body. Null is used by non-persistent callers;
+  /// the atomic commit remains the final authority for concurrent spending.
+  final int? remainingResourceBudget;
+
+  /// Transport capacity stays bounded even when the resource has more room.
+  int get maximumAcceptedCharacters {
+    final remaining = remainingResourceBudget;
+    return remaining == null
+        ? ResourceLimits.maxPartCharacters
+        : remaining.clamp(0, ResourceLimits.maxPartCharacters).toInt();
+  }
 
   /// Specific goal/instruction for what this part should cover.
   final String promptGoal;

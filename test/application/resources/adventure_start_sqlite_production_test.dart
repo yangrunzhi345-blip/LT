@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lt_dialogue/core/widgets/app_buttons.dart';
+import 'package:lt_dialogue/models/character_card.dart';
+import 'package:lt_dialogue/models/character_card_entry.dart';
+import 'package:lt_dialogue/domain/resources/section_control.dart';
+import 'package:lt_dialogue/services/resource_integrity_validator.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -179,6 +183,64 @@ void main() {
         await DatabaseService.resetDatabase();
         expect(await repo.getMessages(starts.first), hasLength(3));
       }
+    });
+  }
+
+  for (final length in [8000, 12000, 16000, 20000, 24000]) {
+    test('existing card $length: import → library reload → reimport → freeze',
+        () async {
+      final id = 'import-boundary-$length';
+      final body = '文' * length;
+      final encoded = jsonEncode({
+        'spec': 'chara_card_v2',
+        'data': {'name': '边界角色', 'description': body},
+      });
+      ResourceIntegrityValidator.validateCharacterCard(
+          name: '边界角色', jsonData: encoded);
+      final imported = CharacterCard.fromJsonString(encoded);
+      expect(imported.description, body);
+      final port = container.read(resourceCreationPortProvider);
+      await port.saveCharacter(
+          id: id,
+          name: imported.name,
+          jsonData: encoded,
+          mode: 'adventure',
+          authoringMethod: 'import',
+          origin: 'boundary-first');
+      final library = container.read(libraryRepoProvider);
+      final row =
+          (await library.getCharacterCards()).singleWhere((r) => r['id'] == id);
+      ResourceIntegrityValidator.validateCharacterCard(
+          name: '边界角色', jsonData: row['json_data']! as String);
+      final loaded = CharacterCardEntry.fromRow(row);
+      expect(loaded.hasParseError, isFalse);
+      expect(loaded.card.description, body);
+      final tree =
+          ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
+      final first = (await tree.readTree(ResourceId(id)))!;
+      // Long imported prose may fail the separate per-Part optimization
+      // validation; that verdict must never erase or misclassify saved body.
+      final optimization = await container
+          .read(sectionControlRuntimeProvider)
+          .validateSection(first.sections.single.id);
+      expect(optimization.state, SectionValidationState.invalid);
+      expect((await tree.readTree(ResourceId(id)))!.parts.single.content, body);
+      await port.saveCharacter(
+          id: id,
+          name: loaded.name,
+          jsonData: row['json_data']! as String,
+          mode: 'adventure',
+          authoringMethod: 'import',
+          origin: 'boundary-reimport');
+      final reread = (await tree.readTree(ResourceId(id)))!;
+      expect(reread.parts.single.content, body);
+      expect(reread.parts.fold<int>(0, (sum, p) => sum + p.content.length),
+          length);
+      final gate = container.read(adventureReadinessGateProvider);
+      expect((await gate.resolve([id]))[id]!.status,
+          AdventureAssetGateStatus.ready);
+      final frozen = await gate.enforceAndFreeze(config(id));
+      expect(frozen.resourceBindings, hasLength(1));
     });
   }
 

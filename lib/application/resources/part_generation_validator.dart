@@ -127,13 +127,13 @@ abstract final class PartGenerationValidator {
       );
     }
 
-    // Planning estimates must constrain actual output, not only the prompt.
-    if (request.targetBudget > 0 &&
-        response.content.length > request.targetBudget) {
+    // A Part estimate is a generation target. Only actual remaining resource
+    // budget may reject an otherwise valid body below the transport ceiling.
+    if (response.content.length > request.maximumAcceptedCharacters) {
       throw PartGenerationValidationException(
-        '正文超过本段生成预算，请减少字数后重试（不会截断或覆盖已保存正文）',
+        '正文超过资源实际剩余预算，请减少字数后重试（不会截断或覆盖已保存正文）',
         field: 'generation_budget',
-        expected: '<= ${request.targetBudget}',
+        expected: '<= ${request.maximumAcceptedCharacters}',
         actual: '${response.content.length}',
       );
     }

@@ -985,7 +985,8 @@ final class PartGenerationCoordinator {
         relationshipConstraints: relationshipConstraints,
       );
 
-      var permittedCharacters = task.estimatedLength;
+      var targetCharacters = task.estimatedLength;
+      int? remainingResourceBudget;
       final budgetReader = _taskRepository;
       if (budgetReader is IPartGenerationBudgetReader) {
         final remaining = await (budgetReader as IPartGenerationBudgetReader)
@@ -993,13 +994,14 @@ final class PartGenerationCoordinator {
                 resourceId: task.resourceId,
                 blueprintId: task.blueprintId,
                 partId: task.partId);
+        remainingResourceBudget = remaining;
         if (remaining != null) {
           if (remaining <= 0) {
             throw const PartGenerationValidationException(
                 '资源生成预算已用尽，请编辑资源或调整本段后重试，已保存正文保持不变',
                 field: 'generation_budget');
           }
-          if (remaining < permittedCharacters) permittedCharacters = remaining;
+          if (remaining < targetCharacters) targetCharacters = remaining;
         }
       }
       GenerationDiagnostics.instance.mark('PART[${task.partId}] BUDGET', {
@@ -1007,7 +1009,8 @@ final class PartGenerationCoordinator {
         'blueprintTarget': blueprint.targetCapacity,
         'plannedTotal': blueprint.totalEstimatedLength,
         'estimatedLength': task.estimatedLength,
-        'permittedCharacters': permittedCharacters,
+        'targetCharacters': targetCharacters,
+        'remainingResourceBudget': remainingResourceBudget,
       });
       final request = PartGenerationRequest(
         protocolVersion: currentPartGenerationProtocolVersion,
@@ -1017,7 +1020,8 @@ final class PartGenerationCoordinator {
         partId: PartId(task.partId),
         attemptId: attemptId,
         attemptNumber: attemptNumber,
-        targetBudget: permittedCharacters,
+        targetBudget: targetCharacters,
+        remainingResourceBudget: remainingResourceBudget,
         promptGoal: task.promptGoal,
         context: context,
         userInstruction: userInstruction,

@@ -14,6 +14,7 @@ void main() {
       partId: PartId('part_terrain'),
       attemptId: 'att_1',
       targetBudget: 1200,
+      remainingResourceBudget: 1200,
       promptGoal: '描述大陆的地形分布',
       context: PartGenerationContext(
         resourceName: '艾尔登',
@@ -37,7 +38,9 @@ void main() {
       status: 'completed',
     );
 
-    test('rejects actual output above planned Part budget even below 3000', () {
+    test(
+        'rejects actual output above remaining aggregate budget even below 3000',
+        () {
       final response = PartGenerationResponse(
           protocolVersion: 1,
           generationId: defaultRequest.generationId,

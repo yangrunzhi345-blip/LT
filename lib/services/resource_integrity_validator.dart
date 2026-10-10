@@ -197,6 +197,16 @@ class ResourceIntegrityValidator {
     var total = 0;
     for (final entry in payload.entries) {
       if (_cardMetadataKeys.contains(entry.key)) continue;
+      // Tree/library projections expose both spellings for compatibility.
+      // Count an identical mirrored background once, but retain the capacity
+      // charge for distinct authored text rather than dropping information.
+      if (entry.key == 'background' &&
+          entry.value is String &&
+          payload['description'] is String &&
+          (entry.value as String).trim() ==
+              (payload['description'] as String).trim()) {
+        continue;
+      }
       total += _textLength(entry.value);
     }
     return total;
