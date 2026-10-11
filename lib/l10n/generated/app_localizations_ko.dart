@@ -1921,10 +1921,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'AI가 생성할 리소스 본문의 대략적인 목표 글자 수를 조절합니다';
+      'AI가 생성할 리소스 본문의 소프트 목표입니다. 최대 약 20%까지 자연스럽게 늘어날 수 있으며, 글자 수 채우기보다 내용 품질과 설정 일관성이 우선합니다.';
 
   @override
   String get resourceTargetCharactersLabel => '목표 글자 수';
+
+  @override
+  String get resourceGenerationElasticCeilingLabel => '생성 허용 상한';
 
   @override
   String resourceTargetCharactersValue(Object count) {

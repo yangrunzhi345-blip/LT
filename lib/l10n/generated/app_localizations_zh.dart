@@ -1891,10 +1891,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resourceGenerationLengthTitle => '生成长度';
 
   @override
-  String get resourceGenerationLengthDescription => '控制 AI 生成资源正文的大致目标字数';
+  String get resourceGenerationLengthDescription =>
+      'AI 生成资源正文的软目标。生成最多可自然扩写约 20%；内容质量与设定一致性优先于填满字数。';
 
   @override
   String get resourceTargetCharactersLabel => '目标字数';
+
+  @override
+  String get resourceGenerationElasticCeilingLabel => '允许生成上界';
 
   @override
   String resourceTargetCharactersValue(Object count) {
@@ -14277,10 +14281,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get resourceGenerationLengthTitle => '生成長度';
 
   @override
-  String get resourceGenerationLengthDescription => '控制 AI 生成資源正文的大致目標字數';
+  String get resourceGenerationLengthDescription =>
+      'AI 生成資源正文的軟目標。生成最多可自然擴寫約 20%；內容品質與設定一致性優先於填滿字數。';
 
   @override
   String get resourceTargetCharactersLabel => '目標字數';
+
+  @override
+  String get resourceGenerationElasticCeilingLabel => '允許生成上界';
 
   @override
   String resourceTargetCharactersValue(Object count) {

@@ -18,6 +18,7 @@ import 'package:lt_dialogue/application/resources/part_generation_validator.dart
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
+import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/domain/resources/resource_revision.dart';
 import '../../helpers/phase10_fixture.dart';
 
@@ -31,7 +32,7 @@ void main() {
         ResourceId id,
         ResourceBlueprint blueprint,
         PartGenerationTaskRepositoryImpl tasks
-      })> create(int target) async {
+      })> create(int target, {int? partCount}) async {
     final pipeline = ResourceCreationPipeline(
         getDb: () async => fixture.db,
         treeRepository: fixture.treeRepository,
@@ -42,10 +43,11 @@ void main() {
         name: '预算角色',
         referenceSource: ReferenceSource.text('测试参考'),
         targetCharacters: target,
-        idempotencyKey: 'budget_$target'));
+        idempotencyKey: 'budget_${target}_$partCount'));
+    final parts = partCount ?? (target ~/ 2000);
     final blueprint = BlueprintBudgetNormalizer.normalizeToGenerationTarget(
         ResourceBlueprint(
-            blueprintId: 'budget_plan_$target',
+            blueprintId: 'budget_plan_${target}_$partCount',
             sessionId: session.sessionId!,
             resourceType: ResourceType.character,
             suggestedName: '预算角色',
@@ -53,7 +55,7 @@ void main() {
             targetCapacity: target,
             sections: [
               BlueprintSection(id: 's', title: '背景', parts: [
-                for (var i = 0; i < target ~/ 2000; i++)
+                for (var i = 0; i < parts; i++)
                   BlueprintPart(
                       id: 'p$i',
                       sectionId: 's',
@@ -135,11 +137,12 @@ void main() {
         await fixture.db.update(
             'resource_generation_tasks', {'estimated_length': 1200},
             where: 'task_id = ?', whereArgs: [task.taskId]);
-        // With no spare, 6800 saved units leave exactly 1200 for this Part.
+        // With no spare, 8400 saved units leave exactly 1200 for this Part
+        // under the elastic ceiling C = 9600.
         if (!hasRemaining) {
           for (var i = 0; i < 3; i++) {
             await fixture.db.update(
-                'resource_parts', {'content': '原' * (i == 2 ? 800 : 3000)},
+                'resource_parts', {'content': '原' * (i == 2 ? 2400 : 3000)},
                 where: 'id = ?', whereArgs: [tasks[i].partId]);
           }
         }
@@ -212,8 +215,8 @@ void main() {
         await generator.retrySinglePart(
             blueprintId: stack.blueprint.blueprintId, partId: failed.partId),
         isTrue);
-    expect(instructions.last, contains('整份资源实际剩余预算：2000'));
-    expect(instructions.last, contains('正文接受上限：2000'));
+    expect(instructions.last, contains('整份资源实际剩余预算：3600'));
+    expect(instructions.last, contains('正文接受上限：3000'));
     final after = await fixture.db.query('resource_parts', orderBy: 'id');
     for (var i = 0; i < before.length; i++) {
       if (before[i]['id'] != failed.partId) {
@@ -260,16 +263,18 @@ void main() {
             resourceId: stack.id.value,
             blueprintId: task.blueprintId,
             partId: 'not-a-replacement'),
-        8000 - body.length);
+        // Elastic ceiling C = min(floor(8000*1.2), 24000) = 9600.
+        9600 - body.length);
   });
 
   test('aggregate exhausted before request terminates finitely, preserves text',
       () async {
     final stack = await create(8000);
     final tasks = await stack.tasks.findReadyTasks(stack.id.value);
+    // Fill to the elastic ceiling C = 9600 so the tail Part has no room left.
     for (var i = 0; i < 3; i++) {
       await fixture.db.update(
-          'resource_parts', {'content': '原' * (i == 2 ? 2000 : 3000)},
+          'resource_parts', {'content': '原' * (i == 0 ? 3600 : 3000)},
           where: 'id = ?', whereArgs: [tasks[i].partId]);
       await fixture.db.update(
           'resource_generation_tasks', {'status': 'completed'},
@@ -292,14 +297,37 @@ void main() {
         (await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
                 .measureResource(stack.id))
             .activeCharacters,
-        8000);
+        9600);
   });
 
-  test('concurrent overshoot cannot spend shared remaining budget twice',
+  test(
+      'concurrent over-expansion within the elastic ceiling commits every Part',
       () async {
+    // Spec 8.2: target 8,000, four Parts of 2,100 → 8,400 total must save.
     final stack = await create(8000);
     final generator =
         coordinator(stack.tasks, r01Completer('文' * 2100), concurrency: 4);
+    expect(
+        await generator.generateAllParts(
+            blueprintId: stack.blueprint.blueprintId, maxRetriesPerPart: 1),
+        isTrue);
+    final tasks = await stack.tasks.findTasksForResource(stack.id.value);
+    expect(tasks.where((t) => t.status == 'completed'), hasLength(4));
+    final actual =
+        await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
+            .measureResource(stack.id);
+    expect(actual.activeCharacters, 8400);
+    // 8,400 stays normal capacity: the goal deviation never reclassifies it.
+    expect(ResourceLimits.character.statusFor(actual.activeCharacters),
+        CapacityStatus.normal);
+  });
+
+  test('concurrent commits cannot jointly break through the elastic ceiling',
+      () async {
+    final stack = await create(8000);
+    final generator =
+        coordinator(stack.tasks, r01Completer('文' * 2500), concurrency: 4);
+    // 4 × 2500 = 10000 > C = 9600: exactly three Parts fit, the tail fails.
     expect(
         await generator.generateAllParts(
             blueprintId: stack.blueprint.blueprintId, maxRetriesPerPart: 1),
@@ -310,7 +338,7 @@ void main() {
     final actual =
         await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
             .measureResource(stack.id);
-    expect(actual.activeCharacters, 6300);
+    expect(actual.activeCharacters, 7500);
     expect(
         tasks
             .every((t) => t.status != 'generating' && t.status != 'validating'),
@@ -322,9 +350,11 @@ void main() {
       () async {
     final stack = await create(8000);
     final tasks = await stack.tasks.findReadyTasks(stack.id.value);
-    // Three historical / edited Parts already occupy 7,500 characters.
+    // Three historical / edited Parts already occupy 9,100 characters, one
+    // code unit of the Part budget short of the elastic ceiling C = 9,600.
     for (final task in tasks.take(3)) {
-      await fixture.db.update('resource_parts', {'content': '文' * 2500},
+      await fixture.db.update('resource_parts',
+          {'content': '文' * (task == tasks.first ? 4100 : 2500)},
           where: 'id = ?', whereArgs: [task.partId]);
     }
     final task = tasks.last;
@@ -354,10 +384,113 @@ void main() {
     final contents = await stack.tasks
         .getPartsContent(tasks.map((task) => task.partId).toList());
     expect(contents[task.partId]!.content, isEmpty);
-    expect(contents[tasks.first.partId]!.content.length, 2500);
+    expect(contents[tasks.first.partId]!.content.length, 4100);
     expect(
         await fixture.revisionRepository
             .readHead(stack.id, ResourceRevisionKind.latestHead),
         isNull);
+  });
+
+  group('acceptance matrix at the SQLite commit boundary', () {
+    // Spec 8.1 realized end-to-end against real persistence: a commit at
+    // exactly C succeeds, one code unit above C is rejected fail-closed.
+    final matrix = <(int, int, bool)>[
+      (1000, 1200, true),
+      (1000, 1201, false),
+      (4000, 4800, true),
+      (4000, 4801, false),
+      (8000, 9600, true),
+      (8000, 9601, false),
+      (12000, 14400, true),
+      (16000, 19200, true),
+      (20000, 24000, true),
+      (20000, 24001, false),
+    ];
+    for (final (target, actual, accepted) in matrix) {
+      test('target $target, body $actual → ${accepted ? 'accept' : 'reject'}',
+          () async {
+        final stack = await create(target, partCount: 2);
+        final tasks = await stack.tasks.findReadyTasks(stack.id.value);
+        expect(tasks, hasLength(2));
+        // The sibling Part carries C − actual characters so the candidate
+        // under test lands exactly on the matrix boundary.
+        final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
+            target: target,
+            absolute: ResourceLimits.characterAbsoluteCharacters);
+        final other = (ceiling - actual).clamp(0, ceiling);
+        await fixture.db.update('resource_parts', {'content': '原' * other},
+            where: 'id = ?', whereArgs: [tasks.first.partId]);
+        await fixture.db.update(
+            'resource_generation_tasks', {'status': 'completed'},
+            where: 'task_id = ?', whereArgs: [tasks.first.taskId]);
+        final task = tasks.last;
+        final attempt = await stack.tasks
+            .startAttempt(taskId: task.taskId, generationId: 'g');
+        final response = PartGenerationResponse(
+            protocolVersion: 1,
+            generationId: 'g',
+            resourceId: stack.id,
+            sectionId: SectionId(task.sectionId),
+            partId: PartId(task.partId),
+            attemptId: attempt.attemptId,
+            content: '文' * actual);
+        if (accepted) {
+          await stack.tasks.commitPartContent(
+              response: response,
+              taskId: task.taskId,
+              attemptId: attempt.attemptId,
+              expectedSourceToken: attempt.sourceToken);
+          expect(
+              (await stack.tasks.getPartsContent([task.partId]))[task.partId]!
+                  .content,
+              '文' * actual);
+        } else {
+          await expectLater(
+              stack.tasks.commitPartContent(
+                  response: response,
+                  taskId: task.taskId,
+                  attemptId: attempt.attemptId,
+                  expectedSourceToken: attempt.sourceToken),
+              throwsA(isA<PartGenerationValidationException>()));
+          expect(
+              (await stack.tasks.getPartsContent([task.partId]))[task.partId]!
+                  .content,
+              isEmpty);
+        }
+      });
+    }
+  });
+
+  test('target-boundary resource assembles and readies at exactly C characters',
+      () async {
+    // A 20,000-target card that naturally expands to 24,000 must still start
+    // an adventure: elastic capacity assembles directly, compression is only
+    // demanded for overflow. Content is committed through the real CAS path so
+    // the revision head exists for the readiness gate.
+    final stack = await create(20000, partCount: 4);
+    final tasks = await stack.tasks.findReadyTasks(stack.id.value);
+    for (final task in tasks) {
+      final attempt = await stack.tasks
+          .startAttempt(taskId: task.taskId, generationId: 'g');
+      await stack.tasks.commitPartContent(
+          response: PartGenerationResponse(
+              protocolVersion: 1,
+              generationId: 'g',
+              resourceId: stack.id,
+              sectionId: SectionId(task.sectionId),
+              partId: PartId(task.partId),
+              attemptId: attempt.attemptId,
+              content: '文' * 6000),
+          taskId: task.taskId,
+          attemptId: attempt.attemptId,
+          expectedSourceToken: attempt.sourceToken);
+    }
+    expect(
+        (await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
+                .measureResource(stack.id))
+            .activeCharacters,
+        24000);
+    expect((await fixture.coordinator.prepare(stack.id)).record.state,
+        ReadinessState.ready);
   });
 }

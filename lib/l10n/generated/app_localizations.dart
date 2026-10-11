@@ -3689,7 +3689,7 @@ abstract class AppLocalizations {
   /// No description provided for @resourceGenerationLengthDescription.
   ///
   /// In en, this message translates to:
-  /// **'Control the approximate target word count of the AI generated resource text'**
+  /// **'Soft target for the AI generated resource text. The generation may naturally expand up to about 20% beyond it; quality and consistency outrank filling the quota.'**
   String get resourceGenerationLengthDescription;
 
   /// No description provided for @resourceTargetCharactersLabel.
@@ -3697,6 +3697,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Target Word Count'**
   String get resourceTargetCharactersLabel;
+
+  /// No description provided for @resourceGenerationElasticCeilingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed generation ceiling'**
+  String get resourceGenerationElasticCeilingLabel;
 
   /// No description provided for @resourceTargetCharactersValue.
   ///
