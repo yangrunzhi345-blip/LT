@@ -591,36 +591,29 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                 ),
                 if (_useIndependentElastic) ...[
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.generationElasticIndependentHint,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                      DropdownButton<int>(
-                        key: const Key('ai-create-elastic-percent-dropdown'),
-                        value: GenerationBudgetPolicy.normalizeElasticPercent(
-                            _independentElasticPercent),
-                        items: [
-                          for (var i =
-                                  GenerationBudgetPolicy.minimumElasticPercent;
-                              i <= GenerationBudgetPolicy.maximumElasticPercent;
-                              i += 5)
-                            DropdownMenuItem<int>(
-                              value: i,
-                              child: Text('$i%'),
-                            ),
-                        ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() {
-                            _independentElasticPercent = value;
-                          });
-                        },
-                      ),
+                  Text(
+                    l10n.generationElasticIndependentHint,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  // Unified design-system select: height-capped, scrollable
+                  // and anchored by the shared menu kernel (ADR-0003).
+                  AppSelect<int>(
+                    key: const Key('ai-create-elastic-percent-dropdown'),
+                    value: GenerationBudgetPolicy.normalizeElasticPercent(
+                        _independentElasticPercent),
+                    items: [
+                      for (var i = GenerationBudgetPolicy.minimumElasticPercent;
+                          i <= GenerationBudgetPolicy.maximumElasticPercent;
+                          i += 5)
+                        AppSelectItem(value: i, label: '$i%'),
                     ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _independentElasticPercent = value;
+                      });
+                    },
                   ),
                 ],
                 Slider(

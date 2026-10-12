@@ -1221,16 +1221,21 @@ void main() {
       expect(runtime.setOverridePercent, 20);
       expect(runtime.setOverrideToken, 'tok-1');
 
-      // Pick an explicit 50%.
+      // Pick an explicit 50%: the unified AppSelect opens the shared
+      // bottom-sheet picker on compact viewports, whose lazy list needs
+      // scrolling before the last entries exist.
       final dropdown = find.byKey(const Key('studio-elastic-percent-dropdown'));
       await tester.ensureVisible(dropdown);
       await tester.pumpAndSettle();
       await tester.tap(dropdown, warnIfMissed: false);
       await tester.pumpAndSettle();
-      final item = find.text('50%').last;
-      await tester.ensureVisible(item);
+      await tester.dragUntilVisible(
+        find.text('50%'),
+        find.byType(ListView).last,
+        const Offset(0, -80),
+      );
       await tester.pumpAndSettle();
-      await tester.tap(item, warnIfMissed: false);
+      await tester.tap(find.text('50%').last, warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(runtime.setOverridePercent, 50);
 

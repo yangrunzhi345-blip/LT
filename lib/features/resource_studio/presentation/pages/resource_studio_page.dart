@@ -12,6 +12,7 @@ import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/app_select.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/workbench_chrome.dart';
 import '../../../../core/widgets/app_read_aloud.dart';
@@ -205,6 +206,10 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         targetResourceId: draft.targetResourceId,
         originWorldviewId: draft.originWorldviewId,
         relationshipDraft: draft.relationshipDraft,
+        // ADR-0003: the run-scoped elastic choice must survive the direct
+        // creation path, not just the blueprint-review flow, or the frozen
+        // budget would silently fall back to the global default.
+        elasticPercent: draft.elasticPercent,
       );
     } finally {
       _creationInFlight = false;
@@ -1658,27 +1663,24 @@ final class _GenerationElasticOverrideSection extends StatelessWidget {
             ),
             if (isIndependent) ...[
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(l10n.generationElasticIndependentHint),
-                  ),
-                  DropdownButton<int>(
-                    key: const Key('studio-elastic-percent-dropdown'),
-                    value: GenerationBudgetPolicy.normalizeElasticPercent(
-                        overridePercent),
-                    items: [
-                      for (var i = GenerationBudgetPolicy.minimumElasticPercent;
-                          i <= GenerationBudgetPolicy.maximumElasticPercent;
-                          i += 5)
-                        DropdownMenuItem<int>(value: i, child: Text('$i%')),
-                    ],
-                    onChanged: (value) {
-                      if (value == null) return;
-                      controller.setElasticOverride(value);
-                    },
-                  ),
+              Text(l10n.generationElasticIndependentHint),
+              const SizedBox(height: 4),
+              // Unified design-system select: height-capped, scrollable and
+              // anchored by the shared menu kernel (ADR-0003).
+              AppSelect<int>(
+                key: const Key('studio-elastic-percent-dropdown'),
+                value: GenerationBudgetPolicy.normalizeElasticPercent(
+                    overridePercent),
+                items: [
+                  for (var i = GenerationBudgetPolicy.minimumElasticPercent;
+                      i <= GenerationBudgetPolicy.maximumElasticPercent;
+                      i += 5)
+                    AppSelectItem(value: i, label: '$i%'),
                 ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  controller.setElasticOverride(value);
+                },
               ),
             ],
             const SizedBox(height: 2),
