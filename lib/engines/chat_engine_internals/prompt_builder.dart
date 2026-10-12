@@ -39,6 +39,7 @@ class PromptBuilder {
     int runtimeRevision = 0,
     List<RuntimeEntityState> runtimeEntities = const [],
     List<String> archiveRetrievalFacts = const [],
+    SceneDialogueOutputBudget? frozenOutputBudget,
   }) {
     final last = messages.lastOrNull;
     final hasCurrentInput =
@@ -46,8 +47,14 @@ class PromptBuilder {
     final round =
         messages.where((m) => m.isUser).length + (hasCurrentInput ? 0 : 1);
     lastRound = round;
-    final outputBudget = SceneDialogueOutputBudget.resolve(host.dialogueLevel,
-        quickMode: host.quickMode);
+    // ADR-0003: prefer the turn snapshot's frozen budget so the prompt can
+    // never disagree with the multi-stage loop, the length guard and the
+    // overflow convergence after a mid-turn settings change. The host-based
+    // resolution stays as the fallback for callers without a snapshot.
+    final outputBudget = frozenOutputBudget ??
+        SceneDialogueOutputBudget.resolve(host.dialogueLevel,
+            quickMode: host.quickMode,
+            elasticPercent: host.effectiveGenerationElasticPercent);
     final adventurePrompt = AppConfig.adventurePrompt(
       host.brightness,
       host.gameTopic,
@@ -57,6 +64,7 @@ class PromptBuilder {
       round,
       host.dialogueLevel,
       outputBudget.usesMultiStage,
+      outputBudget,
     );
     final customPrompt = host.customSystemPrompt;
     final prompt = customPrompt.isNotEmpty

@@ -439,21 +439,28 @@ class PartGenerationTaskRepositoryImpl
   }
 
   /// The cumulative acceptance ceiling C for one generation run:
-  /// `min(floor(T * 1.20), A)` where T is the blueprint's persisted target and
-  /// A is the resource type's absolute capacity. Null when the blueprint
-  /// carries no budget (`target_capacity <= 0`), preserving the budgetless
-  /// behaviour of historical rows.
+  /// `min(floor(T*(100+E)/100), A)` where T is the blueprint's persisted
+  /// target, E the blueprint's frozen elastic percent (ADR-0003; NULL legacy
+  /// rows resolve to the fixed PR #5 20%) and A the resource type's absolute
+  /// capacity. Null when the blueprint carries no budget (`target_capacity <=
+  /// 0`), preserving the budgetless behaviour of historical rows.
   ///
   /// The resource type comes from `resource_blueprints.resource_type`
   /// (NOT NULL, authoritative). An unknown storage value fails closed so a
   /// corrupt row can never widen the ceiling.
-  static int? _cumulativeCeilingOf(int targetCapacity, String resourceType) {
+  static int? _cumulativeCeilingOf(
+    int targetCapacity,
+    String resourceType,
+    int? frozenElasticPercent,
+  ) {
     if (targetCapacity <= 0) return null;
     return GenerationBudgetPolicy.cumulativeCeiling(
       target: targetCapacity,
       absolute: ResourceLimits.policyFor(
         ResourceType.fromStorageValue(resourceType),
       ).absoluteCharacters,
+      elasticPercent:
+          frozenElasticPercent ?? GenerationBudgetPolicy.defaultElasticPercent,
     );
   }
 
@@ -462,7 +469,7 @@ class PartGenerationTaskRepositoryImpl
     String blueprintId,
   ) async {
     final rows = await txn.query('resource_blueprints',
-        columns: ['target_capacity', 'resource_type'],
+        columns: ['target_capacity', 'resource_type', 'elastic_percent'],
         where: 'blueprint_id = ?',
         whereArgs: [blueprintId],
         limit: 1);
@@ -470,6 +477,7 @@ class PartGenerationTaskRepositoryImpl
     return _cumulativeCeilingOf(
       (rows.first['target_capacity'] as num?)?.toInt() ?? 0,
       rows.first['resource_type']?.toString() ?? '',
+      (rows.first['elastic_percent'] as num?)?.toInt(),
     );
   }
 
@@ -552,9 +560,9 @@ class PartGenerationTaskRepositoryImpl
       }
       // Check the aggregate in the same SQLite transaction as the write.
       // Concurrent Parts and replacement retries cannot spend the same budget.
-      // The ceiling is the elastic budget C = min(floor(T*1.20), A), never the
-      // raw target T, so a natural over-expansion of early Parts cannot starve
-      // the tail of the run.
+      // The ceiling is the elastic budget C = min(floor(T*(100+E)/100), A)
+      // with the blueprint's frozen E, never the raw target T, so a natural
+      // over-expansion of early Parts cannot starve the tail of the run.
       final budget = await _cumulativeCeilingInTransaction(
           txn, taskRow['blueprint_id']?.toString() ?? '');
       final activeRows = await txn.rawQuery(

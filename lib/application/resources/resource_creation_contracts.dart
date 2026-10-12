@@ -16,6 +16,7 @@ final class ResourceStudioCreationDraft {
     this.targetResourceId,
     this.originWorldviewId = '',
     this.relationshipDraft,
+    this.elasticPercent,
   });
 
   final ResourceType type;
@@ -35,6 +36,10 @@ final class ResourceStudioCreationDraft {
   /// The native/origin worldview for a character or NPC.
   final String originWorldviewId;
   final CharacterRelationshipDraft? relationshipDraft;
+
+  /// Run-scoped elastic-percent choice (null = inherit per the standard
+  /// resolution order). Frozen into the blueprint at confirm time.
+  final int? elasticPercent;
 }
 
 /// Input shared by every AI resource-creation entry point.
@@ -54,6 +59,7 @@ final class ResourceAiCreationDraft {
     this.targetResourceId,
     this.originWorldviewId = '',
     this.relationshipDraft,
+    this.elasticPercent,
   });
 
   final ResourceType resourceType;
@@ -68,6 +74,10 @@ final class ResourceAiCreationDraft {
   /// The native/origin worldview for a character or NPC.
   final String originWorldviewId;
   final CharacterRelationshipDraft? relationshipDraft;
+
+  /// Run-scoped elastic-percent choice (null = inherit per the standard
+  /// resolution order). Frozen into the blueprint at confirm time.
+  final int? elasticPercent;
 }
 
 /// Persisted planning result exposed for workflows that review Blueprint Parts
@@ -113,6 +123,7 @@ final class ResourceCreationOriginEnvelope {
     this.targetResourceId = '',
     this.expectedSourceToken = '',
     this.originWorldviewId = '',
+    this.elasticPercent,
   });
 
   static const String _separator = '|';
@@ -120,6 +131,7 @@ final class ResourceCreationOriginEnvelope {
   static const String _targetResourceKey = 'target_resource_id';
   static const String _sourceTokenKey = 'source_token';
   static const String _originWorldviewKey = 'origin_worldview_id';
+  static const String _elasticPercentKey = 'elastic_percent';
 
   final String origin;
   final String libraryMode;
@@ -127,12 +139,20 @@ final class ResourceCreationOriginEnvelope {
   final String expectedSourceToken;
   final String originWorldviewId;
 
+  /// Run-scoped elastic-percent choice captured before planning. Null means
+  /// "inherit" — the confirm transaction then falls back to the target
+  /// resource's own override, and finally to the global default. Absent from
+  /// legacy envelopes (old sessions decode to null), which preserves their
+  /// inherit behaviour exactly.
+  final int? elasticPercent;
+
   String encode() {
     final fields = <String, String>{
       _libraryModeKey: libraryMode,
       if (targetResourceId.isNotEmpty) _targetResourceKey: targetResourceId,
       if (expectedSourceToken.isNotEmpty) _sourceTokenKey: expectedSourceToken,
       if (originWorldviewId.isNotEmpty) _originWorldviewKey: originWorldviewId,
+      if (elasticPercent != null) _elasticPercentKey: elasticPercent.toString(),
     };
     return <String>[
       Uri.encodeComponent(origin),
@@ -156,6 +176,9 @@ final class ResourceCreationOriginEnvelope {
       targetResourceId: values[_targetResourceKey] ?? '',
       expectedSourceToken: values[_sourceTokenKey] ?? '',
       originWorldviewId: values[_originWorldviewKey] ?? '',
+      elasticPercent: values.containsKey(_elasticPercentKey)
+          ? int.tryParse(values[_elasticPercentKey]!)
+          : null,
     );
   }
 }

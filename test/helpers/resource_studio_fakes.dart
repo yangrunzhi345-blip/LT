@@ -24,6 +24,7 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   final StreamController<GenerationRuntimeEvent> eventsController =
       StreamController<GenerationRuntimeEvent>.broadcast();
   bool createCalled = false;
+  int? createdElasticPercent;
   int? createdTargetCharacters;
   String? createdOriginWorldviewId;
   CharacterRelationshipDraft? createdRelationshipDraft;
@@ -68,6 +69,36 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   @override
   Future<int?> creationTargetCharacters(String sessionId) async =>
       targetCharacters;
+
+  /// Effective elastic percent reported by [sessionElasticPercent].
+  int? elasticPercent;
+
+  /// Per-resource override state reported by [readGenerationElasticOverride].
+  int? elasticOverridePercent;
+  String? elasticOverrideUpdatedAt = 'fake-override-token';
+  int? setOverridePercent;
+  String? setOverrideToken;
+
+  @override
+  Future<int?> sessionElasticPercent(String sessionId) async => elasticPercent;
+
+  @override
+  Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(
+    ResourceId resourceId,
+  ) async =>
+      (updatedAt: elasticOverrideUpdatedAt, percent: elasticOverridePercent);
+
+  @override
+  Future<void> setGenerationElasticOverride(
+    ResourceId resourceId, {
+    required String expectedUpdatedAt,
+    int? percent,
+  }) async {
+    setOverrideToken = expectedUpdatedAt;
+    setOverridePercent = percent;
+    elasticOverridePercent = percent;
+    elasticOverrideUpdatedAt = '$expectedUpdatedAt#next';
+  }
 
   @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
@@ -136,8 +167,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) async {
     createCalled = true;
+    createdElasticPercent = elasticPercent;
     createdTargetCharacters = targetCharacters;
     createdOriginWorldviewId = originWorldviewId;
     createdRelationshipDraft = relationshipDraft;

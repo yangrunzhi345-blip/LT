@@ -88,6 +88,12 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
   late ResourceType _type;
   late int _targetCharacters;
 
+  /// ADR-0003 run-scoped elasticity choice. Null selection means "inherit"
+  /// (the confirm transaction then applies the standard resolution order);
+  /// a non-null value freezes this run's own percent into the blueprint.
+  bool _useIndependentElastic = false;
+  int _independentElasticPercent = GenerationBudgetPolicy.defaultElasticPercent;
+
   /// Error shown by the numeric target input. Only set while the field holds an
   /// unparseable value; a numeric out-of-range value is clamped instead.
   String? _targetInputError;
@@ -244,6 +250,10 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
       referenceSource: reference,
       targetCharacters: _targetCharacters,
       originWorldviewId: _originWorldview?.id ?? '',
+      elasticPercent: _useIndependentElastic
+          ? GenerationBudgetPolicy.normalizeElasticPercent(
+              _independentElasticPercent)
+          : null,
       relationshipDraft: relationshipReferences.isEmpty
           ? null
           : CharacterRelationshipDraft(
@@ -549,6 +559,63 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                // ADR-0003: run-scoped elasticity. Inherit keeps the standard
+                // resolution order; Independent freezes this run's own value.
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    l10n.generationElasticPercentLabel,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SegmentedButton<bool>(
+                  key: const Key('ai-create-elastic-mode-segmented'),
+                  segments: [
+                    ButtonSegment(
+                      value: false,
+                      label: Text(l10n.generationElasticInheritLabel),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      label: Text(l10n.generationElasticIndependentLabel),
+                    ),
+                  ],
+                  selected: {_useIndependentElastic},
+                  onSelectionChanged: (selection) {
+                    setState(() {
+                      _useIndependentElastic = selection.first;
+                    });
+                  },
+                ),
+                if (_useIndependentElastic) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.generationElasticIndependentHint,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  // Unified design-system select: height-capped, scrollable
+                  // and anchored by the shared menu kernel (ADR-0003).
+                  AppSelect<int>(
+                    key: const Key('ai-create-elastic-percent-dropdown'),
+                    value: GenerationBudgetPolicy.normalizeElasticPercent(
+                        _independentElasticPercent),
+                    items: [
+                      for (var i = GenerationBudgetPolicy.minimumElasticPercent;
+                          i <= GenerationBudgetPolicy.maximumElasticPercent;
+                          i += 5)
+                        AppSelectItem(value: i, label: '$i%'),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _independentElasticPercent = value;
+                      });
+                    },
+                  ),
+                ],
                 Slider(
                   key: const Key('ai-create-target-slider'),
                   value: _targetCharacters.toDouble(),
@@ -750,13 +817,23 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
   int _maximumTargetFor(ResourceType type) =>
       ResourceLimits.policyFor(type).nominalCharacters;
 
-  /// Cumulative generation ceiling C = min(floor(T * 1.20), A) shown next to
-  /// the target. Presentation of the generation-goal dimension only; capacity
-  /// classification still follows the nominal/absolute policy.
+  /// Effective elastic percent of this run: the independent choice when the
+  /// user opted out of inheritance, otherwise the live global default.
+  int _effectiveElasticPercent() {
+    if (_useIndependentElastic) return _independentElasticPercent;
+    final settings = ref.watch(settingsProvider);
+    return settings.globalGenerationElasticPercent;
+  }
+
+  /// Cumulative generation ceiling C = min(floor(T*(100+E)/100), A) shown next
+  /// to the target. Presentation of the generation-goal dimension only;
+  /// capacity classification still follows the nominal/absolute policy.
   int _elasticCeilingFor(ResourceType type) =>
       GenerationBudgetPolicy.cumulativeCeiling(
         target: _targetCharacters,
         absolute: ResourceLimits.policyFor(type).absoluteCharacters,
+        elasticPercent: GenerationBudgetPolicy.normalizeElasticPercent(
+            _effectiveElasticPercent()),
       );
 
   int _targetDivisionsFor(ResourceType type) =>

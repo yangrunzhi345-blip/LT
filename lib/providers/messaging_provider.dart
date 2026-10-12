@@ -84,6 +84,15 @@ class MessagingProvider extends ChangeNotifier implements ChatEngineHost {
   bool get quickMode => _settingsProv.quickMode;
   @override
   DialogueLevel get dialogueLevel => _settingsProv.dialogueLevel;
+  @override
+  int get globalGenerationElasticPercent =>
+      _settingsProv.globalGenerationElasticPercent;
+  @override
+  int? get adventureGenerationElasticPercent =>
+      adventureConfig?.generationElasticPercent;
+  @override
+  int get effectiveGenerationElasticPercent =>
+      adventureGenerationElasticPercent ?? globalGenerationElasticPercent;
 
   @override
   String get authorsNote => _settingsProv.authorsNote;

@@ -11,6 +11,7 @@ import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/settings/presentation/screens/settings_pages.dart';
 import 'package:lt_dialogue/features/settings/presentation/widgets/data_management_section.dart';
 import 'package:lt_dialogue/features/settings/presentation/widgets/appearance_section.dart';
+import 'package:lt_dialogue/features/settings/presentation/widgets/generation_elastic_section.dart';
 import 'package:lt_dialogue/features/settings/presentation/widgets/provider_config_section.dart';
 import 'package:lt_dialogue/features/prompt_settings/presentation/screens/prompt_advanced_settings.dart';
 import 'package:lt_dialogue/features/prompt_settings/presentation/screens/context_weight_controls.dart';
@@ -306,6 +307,91 @@ void main() {
       )!;
       expect(ratio(fg, unselectedBg), greaterThanOrEqualTo(4.5));
       expect(find.byType(ChoiceChip), findsNWidgets(3));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('generation elastic budget section (ADR-0003)', () {
+    testWidgets(
+        'renders in the generation category and persists slider changes',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await mount(tester,
+          home:
+              const SettingsPage(initialCategory: SettingsCategory.generation));
+      expect(find.byType(GenerationElasticSection), findsOneWidget);
+      expect(find.text('AI 生成弹性预算'), findsOneWidget);
+      // Default 20%.
+      expect(find.byKey(const Key('settings-elastic-percent-value')),
+          findsOneWidget);
+      expect(find.text('20%'), findsOneWidget);
+
+      // Slider: 11 divisions, 0..50. Move to 50%.
+      final slider = find.byKey(const Key('settings-elastic-slider'));
+      await tester.ensureVisible(slider);
+      await tester.pumpAndSettle();
+      await tester.drag(slider, const Offset(400, 0));
+      await tester.pumpAndSettle();
+      final settings = container.read(chatProvider).settingsProvider;
+      expect(settings.globalGenerationElasticPercent, 50);
+      expect(find.text('50%'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('numeric input normalizes out-of-range values', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await mount(tester,
+          home:
+              const SettingsPage(initialCategory: SettingsCategory.generation));
+      await tester.enterText(
+          find.byKey(const Key('settings-elastic-input')), '99');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(
+          container
+              .read(chatProvider)
+              .settingsProvider
+              .globalGenerationElasticPercent,
+          50);
+      expect(find.text('50%'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('320 px with 1.8 text scale does not overflow', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await mount(tester,
+          scale: 1.8,
+          home:
+              const SettingsPage(initialCategory: SettingsCategory.generation));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('section alone at 320 px with large text does not overflow',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: ThemeData.dark(useMaterial3: true),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.8)),
+            child: child!,
+          ),
+          home: const Scaffold(
+            body: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: GenerationElasticSection(),
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
   });

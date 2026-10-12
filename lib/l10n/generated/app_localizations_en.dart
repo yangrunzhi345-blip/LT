@@ -1988,7 +1988,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'Soft target for the AI generated resource text. The generation may naturally expand up to about 20% beyond it; quality and consistency outrank filling the quota.';
+      'Soft target for the AI generated resource text. The generation may naturally expand beyond it within the configured elastic budget; quality and consistency outrank filling the quota.';
 
   @override
   String get resourceTargetCharactersLabel => 'Target Word Count';
@@ -1996,6 +1996,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get resourceGenerationElasticCeilingLabel =>
       'Allowed generation ceiling';
+
+  @override
+  String get generationElasticSettingsTitle => 'AI Generation Elastic Budget';
+
+  @override
+  String get generationElasticSettingsDescription =>
+      'Extra room the AI may naturally exceed the target by (0–50%). Elasticity is allowed headroom, never a quota to fill; resources still follow their absolute capacity.';
+
+  @override
+  String get generationElasticPercentLabel => 'Effective elasticity';
+
+  @override
+  String get generationElasticInheritLabel => 'Inherit global';
+
+  @override
+  String get generationElasticIndependentLabel => 'Independent';
+
+  @override
+  String get generationElasticIndependentHint => 'Independent ratio';
+
+  @override
+  String get generationElasticSnapshotNotice =>
+      'Generation tasks that already started keep the budget they were created with.';
 
   @override
   String get resourceGenerationProgressTarget => 'Target word count';

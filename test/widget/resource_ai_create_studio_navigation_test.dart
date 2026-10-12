@@ -11,6 +11,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/application/llm/llm_gateway.dart';
 import 'package:lt_dialogue/application/resource_library/import_models.dart';
+import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/core/router/app_router.dart';
 import 'package:lt_dialogue/core/widgets/app_select.dart';
 import 'package:lt_dialogue/core/widgets/app_text_field.dart';
@@ -45,13 +46,19 @@ Future<void> _submitAiCreate(
   bool secondTapWithoutPump = false,
 }) async {
   final submit = find.byKey(const Key('ai-create-submit-button'));
-  await tester.ensureVisible(submit);
-  await tester.pumpAndSettle();
-  // `ensureVisible` can leave the button's center just below the fold when the
-  // form is near the scroll extent; one extra drag brings the whole button on
-  // screen so tap() hits it (the 320px viewport keeps the gate honest).
-  await tester.drag(find.byType(Scrollable).first, const Offset(0, -80));
-  await tester.pumpAndSettle();
+  // The form is taller than small viewports and `ensureVisible` alone can
+  // leave the button below the fold in this nested scroll structure, so drag
+  // until the whole button is on screen (bounded loop keeps failures honest).
+  final viewportHeight =
+      tester.view.physicalSize.height / tester.view.devicePixelRatio;
+  for (var i = 0; i < 8; i++) {
+    await tester.ensureVisible(submit);
+    await tester.pumpAndSettle();
+    final rect = tester.getRect(submit);
+    if (rect.top >= 0 && rect.bottom <= viewportHeight) break;
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -100));
+    await tester.pumpAndSettle();
+  }
   await tester.tap(submit);
   if (secondTapWithoutPump) {
     await tester.tap(submit, warnIfMissed: false);
@@ -90,6 +97,310 @@ void main() {
     await DatabaseService.resetDatabase();
     DatabaseService.customDbDir = null;
     await directory.delete(recursive: true);
+  });
+
+  group('AI create page elastic selection (ADR-0003)', () {
+    testWidgets('inherit keeps the global ceiling; independent re-freezes it',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final container = ProviderContainer();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+      });
+      await tester.runAsync(() => container
+          .read(settingsProvider)
+          .setApiKey('test-only-not-a-real-key'));
+
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          initialRoute: '/library',
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
+      ));
+      await _waitFor(tester, find.text('还没有资源'));
+      await tester.tap(find.byKey(const Key('resource-create-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('AI 创建'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ResourceAiCreatePage), findsOneWidget);
+
+      expect(find.byKey(const Key('ai-create-elastic-mode-segmented')),
+          findsOneWidget);
+
+      // Bring the target below nominal first: at the nominal default the
+      // ceiling already sits on the absolute capacity, which would mask the
+      // elasticity. Target 10000 → C(20%) = 12000.
+      final targetInput =
+          find.byKey(const ValueKey('ai_creation_target_words_input'));
+      await tester.ensureVisible(targetInput);
+      await tester.pumpAndSettle();
+      await tester.enterText(targetInput, '10000');
+      await tester
+          .tap(find.byKey(const ValueKey('ai_creation_target_words_confirm')));
+      await tester.pumpAndSettle();
+      const worldNominal = 10000;
+      final ceilingText = tester
+          .widget<Text>(
+              find.byKey(const Key('ai-create-elastic-ceiling-value')))
+          .data!;
+      final uiCeiling =
+          int.parse(ceilingText.replaceAll(RegExp(r'[^0-9]'), ''));
+      expect(uiCeiling, (worldNominal * 120) ~/ 100);
+
+      // Switch to independent 50%: the live ceiling re-computes.
+      await tester.ensureVisible(
+          find.byKey(const Key('ai-create-elastic-mode-segmented')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('独立设置'));
+      await tester.pumpAndSettle();
+      final dropdown =
+          find.byKey(const Key('ai-create-elastic-percent-dropdown'));
+      await tester.ensureVisible(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(dropdown, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      // The unified AppSelect opens the shared picker sheet whose lazy list
+      // must be scrolled before the trailing entries are built.
+      await tester.dragUntilVisible(
+        find.text('50%'),
+        find.byType(ListView).last,
+        const Offset(0, -80),
+      );
+      await tester.pumpAndSettle();
+      final item = find.text('50%').last;
+      await tester.ensureVisible(item);
+      await tester.pumpAndSettle();
+      await tester.tap(item, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final newCeiling = tester
+          .widget<Text>(
+              find.byKey(const Key('ai-create-elastic-ceiling-value')))
+          .data!;
+      expect(int.parse(newCeiling.replaceAll(RegExp(r'[^0-9]'), '')),
+          (worldNominal * 150) ~/ 100);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'the unified picker exposes all eleven percents inside a '
+        'height-capped scrollable sheet', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      final container = ProviderContainer();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+      });
+      await tester.runAsync(() => container
+          .read(settingsProvider)
+          .setApiKey('test-only-not-a-real-key'));
+
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          initialRoute: '/library',
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
+      ));
+      await _waitFor(tester, find.text('还没有资源'));
+      await tester.tap(find.byKey(const Key('resource-create-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('AI 创建'));
+      await tester.pumpAndSettle();
+
+      // Keep the target below the absolute capacity so the live ceiling can
+      // actually prove the picked percent.
+      final targetInput =
+          find.byKey(const ValueKey('ai_creation_target_words_input'));
+      await tester.ensureVisible(targetInput);
+      await tester.pumpAndSettle();
+      await tester.enterText(targetInput, '10000');
+      await tester
+          .tap(find.byKey(const ValueKey('ai_creation_target_words_confirm')));
+      await tester.pumpAndSettle();
+      const worldNominal = 10000;
+      int ceilingValue() {
+        final text = tester
+            .widget<Text>(
+                find.byKey(const Key('ai-create-elastic-ceiling-value')))
+            .data!;
+        return int.parse(text.replaceAll(RegExp(r'[^0-9]'), ''));
+      }
+
+      await tester.tap(find.text('独立设置'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final dropdown =
+          find.byKey(const Key('ai-create-elastic-percent-dropdown'));
+      await tester.ensureVisible(dropdown);
+      await tester.pumpAndSettle();
+
+      final sheetListView = find.byType(ListView).last;
+      // Rows are scoped to the sheet: the trigger behind the barrier shows
+      // the selected label too, so a bare text finder can match twice.
+      Finder sheetRow(int percent) => find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.text('$percent%'),
+          );
+
+      Future<void> openPicker() async {
+        await tester.tap(dropdown, warnIfMissed: false);
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> pickPercent(int percent) async {
+        final row = sheetRow(percent);
+        await tester.dragUntilVisible(
+          row,
+          sheetListView,
+          Offset(0, percent >= 25 ? -80 : 80),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(row, warnIfMissed: false);
+        await tester.pumpAndSettle();
+      }
+
+      // Opened picker: the shared sheet list is capped well below the
+      // viewport height instead of stretching to fit all 11 rows.
+      await openPicker();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      final sheetHeight = tester.getRect(sheetListView).height;
+      expect(sheetHeight, lessThanOrEqualTo(568 * 0.9));
+
+      // Every one of the 11 options is reachable by scrolling, in both
+      // directions.
+      const percents = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
+      for (final percent in percents) {
+        final row = sheetRow(percent);
+        await tester.dragUntilVisible(
+          row,
+          sheetListView,
+          Offset(0, percent >= 25 ? -80 : 80),
+        );
+        await tester.pumpAndSettle();
+        expect(row, findsOneWidget,
+            reason: 'option $percent% must be reachable');
+      }
+
+      // E = 0% keeps the ceiling exactly at the target (no widening).
+      await pickPercent(0);
+      expect(ceilingValue(), worldNominal);
+      expect(find.byType(BottomSheet), findsNothing,
+          reason: 'picking an option closes the picker');
+
+      // E = 35% widens the ceiling to target x 1.35.
+      await openPicker();
+      await pickPercent(35);
+      expect(ceilingValue(), (worldNominal * 135) ~/ 100);
+
+      // Tapping outside the sheet closes it without changing the value.
+      await openPicker();
+      expect(find.byType(BottomSheet), findsOneWidget);
+      await tester.tapAt(const Offset(160, 60));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(ceilingValue(), (worldNominal * 135) ~/ 100);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'an independent 35% selection freezes the real blueprint '
+        'budget, not just the UI', (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final container = ProviderContainer(
+        overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+      );
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+      });
+      await tester.runAsync(() => container
+          .read(settingsProvider)
+          .setApiKey('test-only-not-a-real-key'));
+
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          initialRoute: '/library',
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
+      ));
+      await _waitFor(tester, find.text('还没有资源'));
+      await tester.tap(find.byKey(const Key('resource-create-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('AI 创建'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(_fieldByLabel('名称'), '弹性冻结资源');
+      await tester.enterText(_fieldByLabel('粘贴参考内容'), '山海之间的城市和居民');
+      final targetInput =
+          find.byKey(const ValueKey('ai_creation_target_words_input'));
+      await tester.ensureVisible(targetInput);
+      await tester.pumpAndSettle();
+      await tester.enterText(targetInput, '10000');
+      await tester
+          .tap(find.byKey(const ValueKey('ai_creation_target_words_confirm')));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+          find.byKey(const Key('ai-create-elastic-mode-segmented')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('独立设置'));
+      await tester.pumpAndSettle();
+      final dropdown =
+          find.byKey(const Key('ai-create-elastic-percent-dropdown'));
+      await tester.ensureVisible(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(dropdown, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.dragUntilVisible(
+        find.text('35%'),
+        find.byType(ListView).last,
+        const Offset(0, -80),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('35%').last, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final ceilingText = tester
+          .widget<Text>(
+              find.byKey(const Key('ai-create-elastic-ceiling-value')))
+          .data!;
+      expect(int.parse(ceilingText.replaceAll(RegExp(r'[^0-9]'), '')),
+          (10000 * 135) ~/ 100);
+
+      await _submitAiCreate(tester);
+      await _waitFor(tester, find.byType(ResourceStudioPage));
+      await _waitFor(tester, find.text('编辑正文'));
+
+      final db = await tester.runAsync(() => DatabaseService.database);
+      final sessions = await tester.runAsync(
+        () => db!.query('resource_creation_sessions'),
+      );
+      expect(sessions, hasLength(1));
+      // The run-scoped choice must be encoded in the session origin so the
+      // confirm transaction can freeze it even if settings change meanwhile.
+      final envelope = ResourceCreationOriginEnvelope.decode(
+          sessions!.single['origin'] as String);
+      expect(envelope.elasticPercent, 35);
+
+      final blueprints = await tester.runAsync(
+        () => db!.query('resource_blueprints'),
+      );
+      expect(blueprints, hasLength(1));
+      // The frozen snapshot is the source of truth for every later budget
+      // read; the UI label alone would prove nothing.
+      expect(blueprints!.single['elastic_percent'], 35);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('AI creation navigates to the production Resource Studio', () {

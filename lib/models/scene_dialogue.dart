@@ -11,6 +11,7 @@ import 'game_state.dart';
 import 'message.dart';
 import 'scene_dialogue_effects.dart';
 import 'scene_state.dart';
+import '../domain/resources/resource_limits.dart';
 
 /// A stable, public identity used by scene features.  Private card fields are
 /// deliberately not represented here.
@@ -186,7 +187,52 @@ class SceneDialogueOutputBudget {
   static const l4 = SceneDialogueOutputBudget(2500, 3200, 4500, 4096);
   static const l5 = SceneDialogueOutputBudget(4500, 6500, 10000, 8192);
 
-  static SceneDialogueOutputBudget resolve(DialogueLevel level,
+  /// Resolves the output budget for [level], optionally widened by the
+  /// adventure's effective elastic percent (ADR-0003).
+  ///
+  /// Widening is add-only: `effectiveHardMax = max(legacyHardMax,
+  /// floor(target*(100+E)/100))`, so E can never *narrow* a level's existing
+  /// range. E = 0 reproduces the legacy budget bit-for-bit; the legacy default
+  /// 20% leaves every level unchanged except L1 (300 → 312, target-driven).
+  /// The `hardMaximum <= min*3` invariant still holds because [hardMaximum]
+  /// keeps its `min()` clamp. Quick mode keeps its fixed fast budget — it is a
+  /// deliberate speed/shortness mode, not an elasticity consumer.
+  ///
+  /// [recommendedTokens] grows with the widened maximum so the model's real
+  /// output-token budget matches the widened char contract; the derivation
+  /// mirrors [stageOutputTokens] (~1.6 tokens per CJK char + payload headroom).
+  static SceneDialogueOutputBudget resolve(
+    DialogueLevel level, {
+    bool quickMode = false,
+    int? elasticPercent,
+  }) {
+    final base = resolveBase(level, quickMode: quickMode);
+    // Quick mode is a deliberate speed/shortness mode: never widened.
+    if (quickMode && level.id == 'L0') return base;
+    if (elasticPercent == null || elasticPercent <= 0) return base;
+    // Defense-in-depth clamp (review M1): the config JSON read path accepts
+    // any num, so an out-of-range persisted value must not widen past the
+    // ADR-0003 envelope. UI writers already normalize; this matches the
+    // resource read path's clamp semantics.
+    final percent =
+        GenerationBudgetPolicy.normalizeElasticPercent(elasticPercent);
+    if (percent <= 0) return base;
+    final widened = (base.targetChineseChars * (100 + percent)) ~/ 100;
+    final legacyHardMax = base.hardMaximum;
+    if (widened <= legacyHardMax) return base;
+    final recommendedTokens = math.max(
+      base.recommendedTokens,
+      (widened * 1.6).ceil() + 512,
+    );
+    return SceneDialogueOutputBudget(
+      base.minChineseChars,
+      base.targetChineseChars,
+      widened,
+      recommendedTokens,
+    );
+  }
+
+  static SceneDialogueOutputBudget resolveBase(DialogueLevel level,
       {bool quickMode = false}) {
     if (quickMode && level.id == 'L0') return quick;
     return switch (level.id) {

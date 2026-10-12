@@ -1905,13 +1905,36 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'AIが生成するリソース本文のソフト目標です。最大約20%まで自然に長くなる場合があります。字数を埋めるよりも内容の品質と設定の一貫性を優先します。';
+      'AI生成リソース本文のソフト目標。生成は設定された弾性バジェットの範囲内で自然に超えることがあります。内容の品質と設定の一貫性が字数を満たすことより優先されます。';
 
   @override
   String get resourceTargetCharactersLabel => '目標文字数';
 
   @override
   String get resourceGenerationElasticCeilingLabel => '生成許容上限';
+
+  @override
+  String get generationElasticSettingsTitle => 'AI生成弾性バジェット';
+
+  @override
+  String get generationElasticSettingsDescription =>
+      'AI生成本文が目標字数を超えてよい余裕（0～50%）。弾性は許容される超過幅であり、上限まで生成する義務ではありません。リソースは絶対容量の制限を受けます。';
+
+  @override
+  String get generationElasticPercentLabel => '適用弾性';
+
+  @override
+  String get generationElasticInheritLabel => 'グローバル設定を継承';
+
+  @override
+  String get generationElasticIndependentLabel => '個別設定';
+
+  @override
+  String get generationElasticIndependentHint => '個別比率';
+
+  @override
+  String get generationElasticSnapshotNotice =>
+      '開始済みの生成タスクは作成時の凍結された予算を使い続けます。';
 
   @override
   String get resourceGenerationProgressTarget => '目標文字数';

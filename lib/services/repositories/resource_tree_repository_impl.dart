@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../domain/resources/resource_repository.dart';
 import '../../domain/resources/resource_revision.dart';
 import 'resource_metadata_policy.dart';
@@ -386,6 +387,38 @@ final class ResourceTreeRepositoryImpl
       id: id.value,
       expectedUpdatedAt: expectedUpdatedAt,
       values: values,
+      label: '资源 ${id.value}',
+    );
+  }
+
+  @override
+  Future<void> updateGenerationElasticOverride({
+    required ResourceId id,
+    required String expectedUpdatedAt,
+    int? percent,
+  }) async {
+    final db = await _getDb();
+    final row = await _requireLiveRow(db, _resources, id.value, label: '资源');
+    final type = ResourceTreeRowMapper.resourceTypeFromStorage(row['type']);
+
+    final metadata = ResourceTreeRowMapper.decodeMetadata(row['metadata_json']);
+    if (percent == null) {
+      metadata.remove(ResourceTreeSchema.metadataGenerationElasticPercentKey);
+    } else {
+      metadata[ResourceTreeSchema.metadataGenerationElasticPercentKey] =
+          GenerationBudgetPolicy.normalizeElasticPercent(percent);
+    }
+    _metadataPolicy.validate(type: type, metadata: metadata);
+
+    await _applyGuardedUpdate(
+      db,
+      table: _resources,
+      id: id.value,
+      expectedUpdatedAt: expectedUpdatedAt,
+      values: {
+        'metadata_json': ResourceTreeRowMapper.encodeMetadata(metadata),
+        'updated_at': _now(),
+      },
       label: '资源 ${id.value}',
     );
   }

@@ -735,6 +735,22 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
   Future<int?> creationTargetCharacters(String sessionId) async => null;
 
   @override
+  Future<int?> sessionElasticPercent(String sessionId) async => null;
+
+  @override
+  Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(
+    ResourceId resourceId,
+  ) async =>
+      (updatedAt: null, percent: null);
+
+  @override
+  Future<void> setGenerationElasticOverride(
+    ResourceId resourceId, {
+    required String expectedUpdatedAt,
+    int? percent,
+  }) async {}
+
+  @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
   ) =>
@@ -803,6 +819,7 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String? originWorldviewId,
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) =>
       throw UnimplementedError('not used in soak tests');
 

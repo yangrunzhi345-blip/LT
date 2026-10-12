@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../services/repositories/resource_tree_repository.dart';
 import '../../services/repositories/resource_tree_repository_impl.dart';
@@ -292,6 +293,7 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       // Ownership Boundary Check (H1): If an explicitResourceId was provided,
       // or if session recorded a resource_id, ensure that any existing resource
       // in the database actually belongs to this creation session / blueprint.
+      Map<String, Object?>? existingResourceMetadata;
       final existingRes = await txn.query(
         resourcesTable,
         where: 'id = ? AND deleted_at IS NULL',
@@ -302,18 +304,17 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       if (existingRes.isNotEmpty) {
         // Resource already exists. Check ownership via metadata or session linkage.
         final rawMeta = existingRes.first['metadata_json'] as String? ?? '{}';
-        Map<String, dynamic>? decodedMeta;
         try {
           final dynamic parsed = jsonDecode(rawMeta);
           if (parsed is Map<String, dynamic>) {
-            decodedMeta = parsed;
+            existingResourceMetadata = parsed;
           }
         } catch (_) {
-          decodedMeta = null;
+          existingResourceMetadata = null;
         }
 
         final existingSessionId =
-            decodedMeta?['creation_session_id'] as String?;
+            existingResourceMetadata?['creation_session_id'] as String?;
 
         final isOwnSession = existingSessionId == blueprint.sessionId ||
             sessionResourceId == allocatedResId.value;
@@ -349,6 +350,19 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       final finalName = nameOverride?.trim().isNotEmpty == true
           ? nameOverride!.trim()
           : blueprint.suggestedName.trim();
+
+      // ADR-0003: freeze this generation run's elastic budget. The resolution
+      // order is run-scoped choice → target resource's own override → global
+      // default. Reference resources (worldview/character used as *sources*)
+      // are never consulted, so a related-character run cannot inherit a
+      // reference's override. The frozen value is written onto the blueprint
+      // row and both budget consumption points read it from there, so later
+      // setting changes never reach a started run.
+      final frozenElasticPercent = await _resolveElasticPercentInTransaction(
+        txn,
+        sessionOverride: originEnvelope.elasticPercent,
+        resourceMetadata: existingResourceMetadata,
+      );
 
       // Build ResourceTreeDraft with Section and Part placeholders
       final treeSections = <ResourceTreeSectionDraft>[];
@@ -461,6 +475,7 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
         {
           'status': BlueprintStatus.confirmed.storageValue,
           'resource_id': allocatedResId.value,
+          'elastic_percent': frozenElasticPercent,
           'blueprint_json': BlueprintParser.serializeToJson(confirmedBlueprint),
           'updated_at': now,
         },
@@ -486,6 +501,43 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
         reusedExisting: false,
       );
     });
+  }
+
+  /// Resolves the effective elastic percent for a generation run (ADR-0003).
+  ///
+  /// Priority: run-scoped session choice → target resource's persisted
+  /// metadata override → global default from the `settings` table. The global
+  /// value is read inside the same confirm transaction so the frozen snapshot
+  /// is consistent with what the UI last persisted. Out-of-range stored values
+  /// are normalized instead of being trusted.
+  static Future<int> _resolveElasticPercentInTransaction(
+    DatabaseExecutor txn, {
+    required int? sessionOverride,
+    required Map<String, Object?>? resourceMetadata,
+  }) async {
+    if (sessionOverride != null) {
+      return GenerationBudgetPolicy.normalizeElasticPercent(sessionOverride);
+    }
+    final rawResourceOverride = resourceMetadata?[
+        ResourceTreeSchema.metadataGenerationElasticPercentKey];
+    if (rawResourceOverride is num) {
+      return GenerationBudgetPolicy.normalizeElasticPercent(
+          rawResourceOverride.toInt());
+    }
+    final settingRows = await txn.query(
+      'settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: ['generation_elastic_percent'],
+      limit: 1,
+    );
+    final rawGlobal = settingRows.isEmpty
+        ? null
+        : int.tryParse(settingRows.first['value']?.toString() ?? '');
+    if (rawGlobal == null) {
+      return GenerationBudgetPolicy.defaultElasticPercent;
+    }
+    return GenerationBudgetPolicy.normalizeElasticPercent(rawGlobal);
   }
 
   ResourceBlueprint _selectBlueprintParts(

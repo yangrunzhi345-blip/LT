@@ -38,6 +38,27 @@ abstract interface class ResourceStudioRuntime {
   /// Presentation-only input for the Studio's budget progress display.
   Future<int?> creationTargetCharacters(String sessionId);
 
+  /// The effective elastic percent (E) behind [sessionId]'s generation run —
+  /// the frozen snapshot value for a confirmed run, otherwise the resolution
+  /// a confirm would perform. Null default keeps fakes and legacy hosts on the
+  /// global 20% behaviour without forcing every implementer to override.
+  Future<int?> sessionElasticPercent(String sessionId) async => null;
+
+  /// The target resource's own persisted elastic override (ADR-0003): its
+  /// percent (null = inherit) plus the CAS token for a later write. Null
+  /// default keeps fakes honest without forcing every implementer to override.
+  Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(
+    ResourceId resourceId,
+  ) async =>
+      (updatedAt: null, percent: null);
+
+  /// Persists or removes ([percent] = null) the resource's elastic override.
+  Future<void> setGenerationElasticOverride(
+    ResourceId resourceId, {
+    required String expectedUpdatedAt,
+    int? percent,
+  }) async {}
+
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
   );
@@ -80,6 +101,7 @@ abstract interface class ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   });
 
   /// Commits a reviewed generated character and its relationship edges.
@@ -192,6 +214,39 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
   }
 
   @override
+  Future<int?> sessionElasticPercent(String sessionId) async {
+    final session = await getSession(sessionId);
+    final creationSessionId = session?.creationSessionId.trim() ?? '';
+    if (creationSessionId.isEmpty) return null;
+    return _pipeline.resolveSessionElasticPercent(creationSessionId);
+  }
+
+  @override
+  Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(
+      ResourceId resourceId) async {
+    final state = await _treeRepository.readNodeState(resourceId);
+    final tree = await _treeRepository.readTree(resourceId);
+    final raw = tree?.resource
+        .metadata[ResourceTreeSchema.metadataGenerationElasticPercentKey];
+    return (
+      updatedAt: state?.updatedAt,
+      percent: raw is num ? raw.toInt() : null,
+    );
+  }
+
+  @override
+  Future<void> setGenerationElasticOverride(
+    ResourceId resourceId, {
+    required String expectedUpdatedAt,
+    int? percent,
+  }) =>
+      _treeRepository.updateGenerationElasticOverride(
+        id: resourceId,
+        expectedUpdatedAt: expectedUpdatedAt,
+        percent: percent,
+      );
+
+  @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
   ) =>
@@ -280,6 +335,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) async {
     final operationId = idempotencyKey?.trim().isNotEmpty == true
         ? idempotencyKey!.trim()
@@ -296,6 +352,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         targetResourceId: targetResourceId,
         originWorldviewId: originWorldviewId,
         relationshipDraft: relationshipDraft,
+        elasticPercent: elasticPercent,
       ),
     );
     final session =
@@ -321,6 +378,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
           targetResourceId: draft.targetResourceId,
           originWorldviewId: draft.originWorldviewId,
           relationshipDraft: draft.relationshipDraft,
+          elasticPercent: draft.elasticPercent,
         ),
       );
 

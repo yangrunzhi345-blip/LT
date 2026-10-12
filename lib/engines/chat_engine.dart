@@ -1168,6 +1168,7 @@ class ChatEngine {
           runtimeEntities: _runtimeEntities,
           archiveRetrievalFacts: _runtimeArchiveFacts,
           controlContext: controlContext,
+          frozenOutputBudget: sceneSnapshot.budget,
         );
         lengthGuardBaseMessages = List.unmodifiable(currentContextMessages);
 
@@ -1336,6 +1337,7 @@ class ChatEngine {
           runtimeEntities: _runtimeEntities,
           archiveRetrievalFacts: _runtimeArchiveFacts,
           controlContext: controlContext,
+          frozenOutputBudget: sceneSnapshot.budget,
         );
         lengthGuardBaseMessages = List.unmodifiable(apiMessages);
         final execution = await _executeAdventureNarrativeStage(
@@ -3375,7 +3377,12 @@ $recent
       recentMessages: List.unmodifiable(copiedMessages),
       summary: chatSummary,
       budget: SceneDialogueOutputBudget.resolve(_host.dialogueLevel,
-          quickMode: _host.quickMode),
+          quickMode: _host.quickMode,
+          // ADR-0003: the effective elastic percent is frozen here, at turn
+          // start. Every later consumer (prompt, multi-stage loop, length
+          // guard, overflow convergence) reads this snapshot, so a mid-turn
+          // settings change can never reshape an in-flight turn.
+          elasticPercent: _host.effectiveGenerationElasticPercent),
       runtimeRevision: runtimeRevision,
       retrievalFacts: retrievalFacts,
     );

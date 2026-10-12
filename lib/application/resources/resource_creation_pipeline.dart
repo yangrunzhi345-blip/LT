@@ -589,6 +589,80 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
     return result;
   }
 
+  /// ADR-0003: effective elastic percent of a creation session's run.
+  ///
+  /// - Confirmed blueprint: the frozen snapshot value (legacy NULL row resolves
+  ///   to the fixed PR #5 20%), so an active run's display never drifts when
+  ///   settings change.
+  /// - Draft/planning blueprint: the same resolution the confirm transaction
+  ///   will perform — origin-envelope override → target resource metadata
+  ///   override → global setting.
+  /// - Unknown session: null (the caller keeps its current value).
+  Future<int?> resolveSessionElasticPercent(String creationSessionId) async {
+    final db = await _getDb();
+    final blueprintRows = await db.query(
+      'resource_blueprints',
+      columns: ['status', 'elastic_percent'],
+      where: 'session_id = ?',
+      whereArgs: [creationSessionId],
+      orderBy: 'revision DESC, created_at DESC',
+      limit: 1,
+    );
+    if (blueprintRows.isEmpty) return null;
+    final status = blueprintRows.first['status']?.toString() ?? '';
+    final frozen = (blueprintRows.first['elastic_percent'] as num?)?.toInt();
+    if (status == BlueprintStatus.confirmed.storageValue) {
+      return frozen ?? GenerationBudgetPolicy.defaultElasticPercent;
+    }
+    final session = await findSession(creationSessionId);
+    final envelopeOverride = session == null || session.origin.isEmpty
+        ? null
+        : ResourceCreationOriginEnvelope.decode(session.origin).elasticPercent;
+    if (envelopeOverride != null) {
+      return GenerationBudgetPolicy.normalizeElasticPercent(envelopeOverride);
+    }
+    final resourceId = session?.resourceId;
+    if (resourceId != null) {
+      final resourceRows = await db.query(
+        'resources',
+        columns: ['metadata_json'],
+        where: 'id = ? AND deleted_at IS NULL',
+        whereArgs: [resourceId.value],
+        limit: 1,
+      );
+      if (resourceRows.isNotEmpty) {
+        try {
+          // Corrupt metadata must not break budget display; the value is
+          // re-validated the same way at confirm time.
+          final meta = jsonDecode(
+              resourceRows.first['metadata_json']?.toString() ?? '{}');
+          if (meta is Map) {
+            final raw = meta['generationElasticPercent'];
+            if (raw is num) {
+              return GenerationBudgetPolicy.normalizeElasticPercent(
+                  raw.toInt());
+            }
+          }
+        } on FormatException {
+          // fall through to the global default
+        }
+      }
+    }
+    final settingRows = await db.query(
+      'settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: ['generation_elastic_percent'],
+      limit: 1,
+    );
+    final raw = settingRows.isEmpty
+        ? null
+        : int.tryParse(settingRows.first['value']?.toString() ?? '');
+    return raw == null
+        ? GenerationBudgetPolicy.defaultElasticPercent
+        : GenerationBudgetPolicy.normalizeElasticPercent(raw);
+  }
+
   Future<ResourceCreationSession?> findByIdempotencyKey(String key) async {
     final db = await _getDb();
     final rows = await db.query(

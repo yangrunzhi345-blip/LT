@@ -47,8 +47,10 @@ class DatabaseService {
   /// revision tracking and idempotent presence mutation requests; v46 adds
   /// branch-local runtime checkpoint metadata; v47 adds resource character
   /// relationships; v48 persists related-character generation drafts for
-  /// restart-safe Resource Studio recovery.
-  static const int schemaVersion = 48;
+  /// restart-safe Resource Studio recovery; v49 adds the nullable
+  /// `resource_blueprints.elastic_percent` task-budget snapshot column
+  /// (NULL = legacy fixed 20% from PR #5).
+  static const int schemaVersion = 49;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -345,7 +347,7 @@ class DatabaseService {
         await createRuntimeCheckpointSchema(db);
         await createCreationLibrarySchema(db);
         await createResourceCharacterRelationshipSchema(db);
-        _log('全新安装，v48 schema 创建完毕');
+        _log('全新安装，v49 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -978,6 +980,7 @@ class DatabaseService {
         revision INTEGER NOT NULL DEFAULT 1,
         status TEXT NOT NULL DEFAULT 'draft',
         target_capacity INTEGER NOT NULL DEFAULT 0,
+        elastic_percent INTEGER,
         blueprint_json TEXT NOT NULL DEFAULT '{}',
         resource_id TEXT,
         created_at TEXT NOT NULL,
@@ -2576,6 +2579,13 @@ class DatabaseService {
     if (oldVersion < 48 && newVersion >= 48) {
       await safeAddColumn(db, 'resource_creation_sessions',
           'relationship_draft_json', "TEXT NOT NULL DEFAULT ''");
+    }
+    if (oldVersion < 49 && newVersion >= 49) {
+      _log('  执行迁移: v48 → v49（生成弹性预算快照列）');
+      // 可空列，NULL = 历史固定 20% 快照（PR #5 行为），升级不追溯任何任务。
+      await safeAddColumn(
+          db, 'resource_blueprints', 'elastic_percent', 'INTEGER');
+      _log('  迁移 v48 → v49 完成');
     }
 
     _log('migrateStepByStep 全部完成');

@@ -1921,13 +1921,36 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'AI가 생성할 리소스 본문의 소프트 목표입니다. 최대 약 20%까지 자연스럽게 늘어날 수 있으며, 글자 수 채우기보다 내용 품질과 설정 일관성이 우선합니다.';
+      'AI 생성 리소스 본문의 소프트 목표입니다. 생성은 설정된 탄성 예산 범위 내에서 자연스럽게 초과할 수 있습니다. 내용 품질과 설정 일관성이 분량 채우기보다 우선합니다.';
 
   @override
   String get resourceTargetCharactersLabel => '목표 글자 수';
 
   @override
   String get resourceGenerationElasticCeilingLabel => '생성 허용 상한';
+
+  @override
+  String get generationElasticSettingsTitle => 'AI 생성 탄성 예산';
+
+  @override
+  String get generationElasticSettingsDescription =>
+      'AI 생성 본문이 목표 분량을 초과할 수 있는 여유(0–50%)입니다. 탄성은 허용되는 초과 폭이지 상한까지 채워야 한다는 뜻이 아니며, 리소스는 여전히 절대 용량 제한을 따릅니다.';
+
+  @override
+  String get generationElasticPercentLabel => '적용 탄성';
+
+  @override
+  String get generationElasticInheritLabel => '전역 상속';
+
+  @override
+  String get generationElasticIndependentLabel => '개별 설정';
+
+  @override
+  String get generationElasticIndependentHint => '개별 비율';
+
+  @override
+  String get generationElasticSnapshotNotice =>
+      '이미 시작된 생성 작업은 생성 당시 고정된 예산을 유지합니다.';
 
   @override
   String get resourceGenerationProgressTarget => '목표 글자 수';

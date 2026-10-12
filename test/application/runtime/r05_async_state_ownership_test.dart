@@ -628,6 +628,7 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) {
     createAndStartCalls += 1;
     return onCreateAndStart?.call() ?? (throw UnimplementedError());
@@ -636,6 +637,15 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
   @override
   Future<ResourceTree?> readTree(ResourceId resourceId) async =>
       buildStudioTestTree();
+
+  @override
+  Future<int?> sessionElasticPercent(String sessionId) async => null;
+
+  @override
+  Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(
+    ResourceId resourceId,
+  ) async =>
+      (updatedAt: null, percent: null);
 
   @override
   void dispose() {}

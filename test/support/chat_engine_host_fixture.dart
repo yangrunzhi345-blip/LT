@@ -2,6 +2,7 @@ import 'dart:ui' show Brightness;
 
 import 'package:lt_dialogue/engines/chat_engine_host.dart';
 import 'package:lt_dialogue/engines/game_engine.dart';
+import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
 import 'package:lt_dialogue/models/dialogue_level.dart';
@@ -167,6 +168,22 @@ class ChatDependencies implements ChatEngineHost {
   @override
   DialogueLevel get dialogueLevel => _getDialogueLevel();
   DialogueLevel Function() get getDialogueLevel => _getDialogueLevel;
+
+  // ADR-0003: the fixture keeps the legacy fixed 20% behaviour unless a test
+  // overrides the getters.
+  int? _globalGenerationElasticPercent;
+  @override
+  int get globalGenerationElasticPercent =>
+      _globalGenerationElasticPercent ??
+      GenerationBudgetPolicy.defaultElasticPercent;
+  set globalGenerationElasticPercent(int? value) =>
+      _globalGenerationElasticPercent = value;
+  @override
+  int? get adventureGenerationElasticPercent =>
+      adventureConfig?.generationElasticPercent;
+  @override
+  int get effectiveGenerationElasticPercent =>
+      adventureGenerationElasticPercent ?? globalGenerationElasticPercent;
 
   final GameState Function() _getGameState;
   @override

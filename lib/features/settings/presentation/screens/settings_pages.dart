@@ -8,6 +8,7 @@ import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../widgets/appearance_section.dart';
 import '../widgets/data_management_section.dart';
+import '../widgets/generation_elastic_section.dart';
 import '../widgets/model_params_section.dart';
 import '../widgets/provider_config_section.dart';
 import 'about_project_page.dart';
@@ -169,6 +170,8 @@ class SettingsCategoryContent extends StatelessWidget {
           ProviderConfigSection(),
           SizedBox(height: 24),
           Align(alignment: Alignment.centerLeft, child: ReplyLengthControl()),
+          SizedBox(height: 24),
+          GenerationElasticSection(),
           SizedBox(height: 24),
           ModelParamsSection()
         ]),

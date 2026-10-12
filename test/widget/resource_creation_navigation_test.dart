@@ -19,6 +19,29 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../helpers/responsive_test_helper.dart';
 
+/// Drags the form until the submit button is fully on screen. `ensureVisible`
+/// alone can leave it below the fold in this nested scroll structure, and the
+/// stacked elastic select made the form taller, so a fixed extra drag is not
+/// enough on every path.
+Future<void> _scrollSubmitIntoView(
+  WidgetTester tester,
+  Finder submitButton,
+) async {
+  final viewportHeight =
+      tester.view.physicalSize.height / tester.view.devicePixelRatio;
+  for (var i = 0; i < 8; i++) {
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
+    final rect = tester.getRect(submitButton);
+    if (rect.top >= 0 && rect.bottom <= viewportHeight) return;
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+  }
+}
+
 void main() {
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -267,16 +290,7 @@ void main() {
       await tester.pump();
 
       // 提交粘贴模式
-      await tester.scrollUntilVisible(
-        submitButton,
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.drag(
-        find.byType(SingleChildScrollView),
-        const Offset(0, -80),
-      );
-      await tester.pumpAndSettle();
+      await _scrollSubmitIntoView(tester, submitButton);
       await tester.tap(submitButton);
       await tester.pumpAndSettle();
 
@@ -350,16 +364,7 @@ void main() {
         '用于验证目标字数贯穿提交草稿的参考资料。',
       );
       final submitButton = find.byKey(const Key('ai-create-submit-button'));
-      await tester.scrollUntilVisible(
-        submitButton,
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.drag(
-        find.byType(SingleChildScrollView),
-        const Offset(0, -80),
-      );
-      await tester.pumpAndSettle();
+      await _scrollSubmitIntoView(tester, submitButton);
       await tester.tap(submitButton);
       await tester.pumpAndSettle();
 
