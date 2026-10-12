@@ -109,6 +109,23 @@ void main() {
     expect(widened.minChineseChars, legacy.minChineseChars);
   });
 
+  test('out-of-range percents are clamped into the 0-50 envelope', () {
+    // Review M1: a hand-edited config JSON can carry any num; the read path
+    // must clamp instead of widening past the ADR envelope.
+    final clamped = SceneDialogueOutputBudget.resolve(DialogueLevel.l1,
+        elasticPercent: 9999);
+    final at50 =
+        SceneDialogueOutputBudget.resolve(DialogueLevel.l1, elasticPercent: 50);
+    expect(clamped.hardMaximum, at50.hardMaximum);
+    expect(clamped.recommendedTokens, at50.recommendedTokens);
+
+    final negative =
+        SceneDialogueOutputBudget.resolve(DialogueLevel.l1, elasticPercent: -5);
+    final legacy =
+        SceneDialogueOutputBudget.resolve(DialogueLevel.l1, elasticPercent: 0);
+    expect(negative.hardMaximum, legacy.hardMaximum);
+  });
+
   test('multi-stage trigger follows the min bound, not the widened max', () {
     // L2 min = 400 < 2000: stays single-stage even at E = 50.
     expect(resolve('L2', elasticPercent: 50).usesMultiStage, isFalse);

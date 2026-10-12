@@ -11,6 +11,7 @@ import 'game_state.dart';
 import 'message.dart';
 import 'scene_dialogue_effects.dart';
 import 'scene_state.dart';
+import '../domain/resources/resource_limits.dart';
 
 /// A stable, public identity used by scene features.  Private card fields are
 /// deliberately not represented here.
@@ -209,7 +210,14 @@ class SceneDialogueOutputBudget {
     // Quick mode is a deliberate speed/shortness mode: never widened.
     if (quickMode && level.id == 'L0') return base;
     if (elasticPercent == null || elasticPercent <= 0) return base;
-    final widened = (base.targetChineseChars * (100 + elasticPercent)) ~/ 100;
+    // Defense-in-depth clamp (review M1): the config JSON read path accepts
+    // any num, so an out-of-range persisted value must not widen past the
+    // ADR-0003 envelope. UI writers already normalize; this matches the
+    // resource read path's clamp semantics.
+    final percent =
+        GenerationBudgetPolicy.normalizeElasticPercent(elasticPercent);
+    if (percent <= 0) return base;
+    final widened = (base.targetChineseChars * (100 + percent)) ~/ 100;
     final legacyHardMax = base.hardMaximum;
     if (widened <= legacyHardMax) return base;
     final recommendedTokens = math.max(
