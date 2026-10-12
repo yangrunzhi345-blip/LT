@@ -819,6 +819,7 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String? originWorldviewId,
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) =>
       throw UnimplementedError('not used in soak tests');
 

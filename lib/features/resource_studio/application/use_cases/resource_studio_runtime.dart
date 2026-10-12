@@ -101,6 +101,7 @@ abstract interface class ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   });
 
   /// Commits a reviewed generated character and its relationship edges.
@@ -334,6 +335,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) async {
     final operationId = idempotencyKey?.trim().isNotEmpty == true
         ? idempotencyKey!.trim()
@@ -350,6 +352,7 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         targetResourceId: targetResourceId,
         originWorldviewId: originWorldviewId,
         relationshipDraft: relationshipDraft,
+        elasticPercent: elasticPercent,
       ),
     );
     final session =

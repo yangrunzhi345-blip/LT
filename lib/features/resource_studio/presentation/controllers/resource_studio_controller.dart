@@ -402,6 +402,7 @@ final class ResourceStudioController extends ChangeNotifier {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) =>
       _runCommand(() async {
         final session = await _runtime.createAndStart(
@@ -415,6 +416,7 @@ final class ResourceStudioController extends ChangeNotifier {
           targetResourceId: targetResourceId,
           originWorldviewId: originWorldviewId,
           relationshipDraft: relationshipDraft,
+          elasticPercent: elasticPercent,
         );
         final tree = await _runtime.readTree(session.resourceId);
         _errorPartId = null;

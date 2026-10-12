@@ -24,6 +24,7 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   final StreamController<GenerationRuntimeEvent> eventsController =
       StreamController<GenerationRuntimeEvent>.broadcast();
   bool createCalled = false;
+  int? createdElasticPercent;
   int? createdTargetCharacters;
   String? createdOriginWorldviewId;
   CharacterRelationshipDraft? createdRelationshipDraft;
@@ -166,8 +167,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
     ResourceId? targetResourceId,
     String originWorldviewId = '',
     CharacterRelationshipDraft? relationshipDraft,
+    int? elasticPercent,
   }) async {
     createCalled = true;
+    createdElasticPercent = elasticPercent;
     createdTargetCharacters = targetCharacters;
     createdOriginWorldviewId = originWorldviewId;
     createdRelationshipDraft = relationshipDraft;
