@@ -183,29 +183,38 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.xs + 2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isKeyConfigured
-                                ? const Color(0xFF10B981)
-                                    .withValues(alpha: 0.15)
-                                : colorScheme.errorContainer
-                                    .withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(AppRadius.full),
-                          ),
-                          child: Text(
-                            isKeyConfigured
-                                ? l10n.statusReady
-                                : l10n.statusNotReady,
-                            style: theme.textTheme.labelSmall?.copyWith(
+                        // The status badge is flex too: at extreme text scales
+                        // on a 320 px viewport the row can be narrower than
+                        // the badge's intrinsic width, which used to overflow
+                        // by a fixed amount instead of shrinking.
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1.5,
+                            ),
+                            decoration: BoxDecoration(
                               color: isKeyConfigured
                                   ? const Color(0xFF10B981)
-                                  : colorScheme.error,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                                      .withValues(alpha: 0.15)
+                                  : colorScheme.errorContainer
+                                      .withValues(alpha: 0.3),
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.full),
+                            ),
+                            child: Text(
+                              isKeyConfigured
+                                  ? l10n.statusReady
+                                  : l10n.statusNotReady,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: isKeyConfigured
+                                    ? const Color(0xFF10B981)
+                                    : colorScheme.error,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ),

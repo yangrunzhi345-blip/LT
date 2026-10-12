@@ -357,10 +357,10 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('320 px with larger text does not overflow', (tester) async {
+    testWidgets('320 px with 1.8 text scale does not overflow', (tester) async {
       setViewport(tester, width: 320, height: 568);
       await mount(tester,
-          scale: 1.5,
+          scale: 1.8,
           home:
               const SettingsPage(initialCategory: SettingsCategory.generation));
       expect(tester.takeException(), isNull);
