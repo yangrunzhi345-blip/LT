@@ -1905,10 +1905,31 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'AIが生成するリソース本文のおおよその目標文字数を制御します';
+      'AIが生成するリソース本文のソフト目標です。最大約20%まで自然に長くなる場合があります。字数を埋めるよりも内容の品質と設定の一貫性を優先します。';
 
   @override
   String get resourceTargetCharactersLabel => '目標文字数';
+
+  @override
+  String get resourceGenerationElasticCeilingLabel => '生成許容上限';
+
+  @override
+  String get resourceGenerationProgressTarget => '目標文字数';
+
+  @override
+  String get resourceGenerationProgressCommitted => '保存済み本文';
+
+  @override
+  String get resourceGenerationProgressPreview => '生成中プレビュー';
+
+  @override
+  String get resourceGenerationProgressProjected => '予想合計';
+
+  @override
+  String get resourceGenerationProgressDeviation => '目標偏差';
+
+  @override
+  String get resourceGenerationProgressRemaining => '残り容量';
 
   @override
   String resourceTargetCharactersValue(Object count) {

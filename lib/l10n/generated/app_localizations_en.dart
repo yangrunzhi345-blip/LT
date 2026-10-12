@@ -1988,10 +1988,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'Control the approximate target word count of the AI generated resource text';
+      'Soft target for the AI generated resource text. The generation may naturally expand up to about 20% beyond it; quality and consistency outrank filling the quota.';
 
   @override
   String get resourceTargetCharactersLabel => 'Target Word Count';
+
+  @override
+  String get resourceGenerationElasticCeilingLabel =>
+      'Allowed generation ceiling';
+
+  @override
+  String get resourceGenerationProgressTarget => 'Target word count';
+
+  @override
+  String get resourceGenerationProgressCommitted => 'Saved body';
+
+  @override
+  String get resourceGenerationProgressPreview => 'Generating preview';
+
+  @override
+  String get resourceGenerationProgressProjected => 'Projected total';
+
+  @override
+  String get resourceGenerationProgressDeviation => 'Target deviation';
+
+  @override
+  String get resourceGenerationProgressRemaining => 'Remaining capacity';
 
   @override
   String resourceTargetCharactersValue(Object count) {

@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
+import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
+import '../../domain/resources/resource_limits.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/resources/section_control.dart';
 import '../../services/repositories/resource_tree_repository.dart'
@@ -422,25 +424,53 @@ class PartGenerationTaskRepositoryImpl
       required String partId}) async {
     final db = await _getDb();
     return db.transaction((txn) async {
-      final rows = await txn.query('resource_blueprints',
-          columns: ['target_capacity'],
-          where: 'blueprint_id = ?',
-          whereArgs: [blueprintId],
-          limit: 1);
-      final budget = rows.isEmpty
-          ? 0
-          : (rows.first['target_capacity'] as num?)?.toInt() ?? 0;
-      if (budget <= 0) return null;
+      final ceiling = await _cumulativeCeilingInTransaction(txn, blueprintId);
+      if (ceiling == null) return null;
       final other = await txn.rawQuery(
           'SELECT p.content FROM resource_parts p '
           'JOIN resource_sections s ON s.id = p.section_id '
           "WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL "
           "AND p.status != 'archived' AND p.id != ?",
           [resourceId, partId]);
-      return budget -
+      return ceiling -
           other.fold<int>(
               0, (sum, row) => sum + (row['content']?.toString() ?? '').length);
     });
+  }
+
+  /// The cumulative acceptance ceiling C for one generation run:
+  /// `min(floor(T * 1.20), A)` where T is the blueprint's persisted target and
+  /// A is the resource type's absolute capacity. Null when the blueprint
+  /// carries no budget (`target_capacity <= 0`), preserving the budgetless
+  /// behaviour of historical rows.
+  ///
+  /// The resource type comes from `resource_blueprints.resource_type`
+  /// (NOT NULL, authoritative). An unknown storage value fails closed so a
+  /// corrupt row can never widen the ceiling.
+  static int? _cumulativeCeilingOf(int targetCapacity, String resourceType) {
+    if (targetCapacity <= 0) return null;
+    return GenerationBudgetPolicy.cumulativeCeiling(
+      target: targetCapacity,
+      absolute: ResourceLimits.policyFor(
+        ResourceType.fromStorageValue(resourceType),
+      ).absoluteCharacters,
+    );
+  }
+
+  Future<int?> _cumulativeCeilingInTransaction(
+    DatabaseExecutor txn,
+    String blueprintId,
+  ) async {
+    final rows = await txn.query('resource_blueprints',
+        columns: ['target_capacity', 'resource_type'],
+        where: 'blueprint_id = ?',
+        whereArgs: [blueprintId],
+        limit: 1);
+    if (rows.isEmpty) return null;
+    return _cumulativeCeilingOf(
+      (rows.first['target_capacity'] as num?)?.toInt() ?? 0,
+      rows.first['resource_type']?.toString() ?? '',
+    );
   }
 
   @override
@@ -522,14 +552,11 @@ class PartGenerationTaskRepositoryImpl
       }
       // Check the aggregate in the same SQLite transaction as the write.
       // Concurrent Parts and replacement retries cannot spend the same budget.
-      final budgetRows = await txn.query('resource_blueprints',
-          columns: ['target_capacity'],
-          where: 'blueprint_id = ?',
-          whereArgs: [taskRow['blueprint_id']],
-          limit: 1);
-      final budget = budgetRows.isEmpty
-          ? 0
-          : (budgetRows.first['target_capacity'] as num?)?.toInt() ?? 0;
+      // The ceiling is the elastic budget C = min(floor(T*1.20), A), never the
+      // raw target T, so a natural over-expansion of early Parts cannot starve
+      // the tail of the run.
+      final budget = await _cumulativeCeilingInTransaction(
+          txn, taskRow['blueprint_id']?.toString() ?? '');
       final activeRows = await txn.rawQuery(
           'SELECT p.id, p.content FROM resource_parts p '
           'JOIN resource_sections s ON s.id = p.section_id '
@@ -538,7 +565,8 @@ class PartGenerationTaskRepositoryImpl
           [response.resourceId.value, response.partId.value]);
       final otherCharacters = activeRows.fold<int>(
           0, (sum, row) => sum + (row['content']?.toString() ?? '').length);
-      if (budget > 0 && otherCharacters + response.content.length > budget) {
+      if (budget != null &&
+          otherCharacters + response.content.length > budget) {
         throw PartGenerationValidationException(
             '资源生成累计预算不足，请减少本段字数后重试，已保存内容保持不变',
             field: 'generation_budget',

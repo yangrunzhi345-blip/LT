@@ -484,3 +484,109 @@ sqflite 的一连接事务模型下，在事务回调里通过 `Database` 对象
 `ResourceRevisionSelector.select()` 只解析**revision 指针**（哪条 revision 存在、assembly 指针的
 content hash 是否仍等于 latest head），据此返回 `preparing` / `ready` / `stale`。
 它刻意不判断「资源是否可以被 Adventure 消费」——那是 Phase 10 的 readiness 策略。
+
+---
+
+# 附录 G：生成弹性预算与 DeepSeek 适配决策（ADR-0002）
+
+Status: ACCEPTED（Integrated Single-Agent Full-Cycle；真实 DeepSeek API 与实机验证 NOT VERIFIED）
+Baseline: `e5a86dc`（v1.2.07-1）；实现分支 `fix/character-generation-elastic-budget`
+
+## G.1 生成目标 T 是软目标，累计硬边界是 C
+
+用户选择的生成目标 `targetCharacters`（T，≤ nominal）只是规划参考，不再被当作
+整卡硬上限。每个生成 run 的累计接受边界由唯一策略给出：
+
+```
+C = GenerationBudgetPolicy.cumulativeCeiling(target: T, absolute: A)
+  = T <= 0 ? 0 : min(floor(T * 1.20), A)
+```
+
+- `ResourceLimits`（resource_limits.dart）是容量数字唯一来源；`GenerationBudgetPolicy`
+  与容量策略同文件，不建立第二套数字。
+- 消费点只有两处：`PartGenerationTaskRepositoryImpl.remainingBudget`（派发期剩余）
+  与 `commitPartContent` 提交事务内的累计校验。两处都读
+  `resource_blueprints.target_capacity` 与 `resource_blueprints.resource_type`
+  （NOT NULL，权威）；未知类型 fail-closed。
+- 修复的根因：v1.2.07 以 T 为累计硬上限，早期 Part 自然超预计后后期 Part
+  `remaining <= 0`，重试耗尽导致整个 run 失败（高字数角色卡无法完成生成）。
+
+## G.2 容量分级语义不变，目标偏差不改变分级
+
+- `normal`（≤ 20,000）/ `elastic`（20,001–24,000）/ `overflow`（> 24,000）仍由
+  `ResourceCapacityPolicy.statusFor` 按 nominal/absolute 判定，含下界语义不变。
+- `actual > T` 只是"生成目标偏差"（UI 展示维度，`GenerationBudgetPolicy.deviationPercent`），
+  绝不参与容量分级。21,000 字角色卡仍是 elastic，不是 overflow。
+- `C ≤ A` 由策略保证，AI 生成自身永远不会产生 overflow 资源。
+- elastic 资源直接装配进入冒险；只有 overflow 才触发强制压缩
+  （`AssemblyReadinessCoordinator._prepare` 第 3 步不变）。
+
+## G.3 单段边界与协议不变
+
+- 单 Part 传输上限 `maxPartCharacters = 3000` 与 4096 maxTokens 的绑定关系保留；
+  validator、NDJSON Patch 协议、cursor 权威、attempt_id/CAS、原子提交、并发预算
+  守卫全部不变。
+- 提示词把 T 表述为软目标（质量与设定一致性优先），硬边界只声明单次接受上限与
+  剩余预算，不要求模型统计累计字数；硬边界由客户端校验。
+
+## G.4 计量口径
+
+- 容量与预算一律使用解码后正文的 Dart `String.length`（UTF-16 code units），
+  排除 JSON 包装、NDJSON 协议字段与思考内容；UI 文案按"字"表述。
+- DeepSeek API tokens 与正文字符是两个计量体系（官方 1 汉字 ≈ 0.6 token，以
+  API `usage` 为准）。协议开销（JSON 语法、换行转义）消耗输出 token 预算，
+  但不计入角色卡正文容量。
+
+## G.5 DeepSeek 输出 Token 策略（4096）
+
+- `LlmTask.resourcePartGeneration` 固定 `maxTokens: 4096`、非思考模式
+  （`ThinkingPolicy.disabled`，网关两侧均显式 `enableThinking: false`）。理由：
+  DeepSeek 将 reasoning tokens 计入同一输出预算，思考模式会在 4096 内挤占
+  正文，产生 `finish_reason=length` 截断；非思考下 3000 字 Part 约 1800–2000
+  token（官方 0.6 比例估算，含 NDJSON 语法与换行转义），余量充足。
+  该估算未用真实 API 验证，标记 NOT VERIFIED。
+- `finish_reason=length / max_tokens` 在 `LlmService.sendMessageStream` 中抛
+  `LLMResponseIncompleteException`，错误映射为 `resourceProviderIncomplete`，
+  与协议解析失败（`resourceParseFailed`）、应用预算拒绝
+  （`resourceGenerationBudgetExceeded`）、内容超限（`resourceContentInvalid`）
+  四者可区分。
+- 用户"最大输出 tokens"设置被任务策略覆盖是有意行为：资源生成任务使用固定
+  有界输出，不继承用户对冒险叙事的输出偏好。
+- 模型能力经 `ModelCapabilityRegistry` 统一读取；不自动替换用户所选模型。
+
+## G.6 上下文触发常量的现状（审计结论）
+
+- `resourceContextTokenBudget = 6000` 与 `compressionTriggerContextTokens = 8000`
+  目前没有生产调用方（`CompressionTriggers.evaluateContext` 无生产消费），
+  保留为规划元数据，注释已写明不得在未与运行时预算对齐前接入决策路径。
+  生产压缩触发是容量分级：overflow 强制、elastic 机会性后台候选
+  （`CompressionBackgroundWorker.onEditorLeave`），后者不阻塞装配。
+- 压缩生命周期有界：lease 5 分钟、每 drain 先回收过期 running、failed 不自动
+  重排、唯一重试入口显式（`retryJob` / `retryFailedJobs` / `retryPreparation`）。
+  压缩只产出候选，发布需用户显式批准；overflow 资源无可压缩目标时
+  fail-closed（`compressionNoTargets`），不伪造 ready。
+
+## G.7 冒险运行时上下文预算（角色卡长度与截断）
+
+- 运行时输入预算由 `ContextBudget.resolve` 按当前模型窗口推导
+  （`inputLimit = maxContext - responseReserve - 512`），与压缩体系无关。
+- `WeightedContextPlanner` 按权重在预算内选择完整片段；characterProfile 的
+  per-source 上限 2048 token（`_sourceBudget` divisor 4，max 2048）是 R05-C M13
+  的刻意决策：防止单源吃满输入窗口挤掉 summary/history。
+- 完整角色卡正文不在每轮对话中全量注入：冒险引导阶段经
+  `tracked_state_bootstrap` 提取结构化状态，运行时依赖 tracked state、
+  关系投影与档案检索（archiveRetrievalFacts）+ 有界画像。**这不是缺陷而是
+  状态系统架构**——因此不因 DeepSeek 支持大窗口而放宽 per-source 上限；
+  相关性选择机制（retrieval + state）承担长卡信息供给。已知限制：超长卡的
+  非状态化细节依赖检索命中，未做逐轮相关性召回，留待后续独立任务。
+
+## G.8 生成进度 UI 的权威数据来源
+
+- Resource Studio 预算摘要（`_GenerationBudgetSummary`）全部取自既有权威：
+  - T：`ResourceCreationSession.targetCharacters`（经 runtime 只读透传）；
+  - 已保存正文：controller 以 `_persistedPartLengths`（树加载基线）+
+    `partTaskStatuses == completed` 的可见内容投影，不重复读 SQLite；
+  - 生成中预览：流式 buffer 长度聚合（`inFlightCharacters` notifier），
+    按既有 `streamingPreviewThrottle` 节奏更新，不新增状态权威、不入库；
+  - C / 偏差 / 剩余：`GenerationBudgetPolicy` 纯函数即时计算。
+- 预览内容永不计入已保存总量；替换已有 Part 时预计总长扣除其旧正文基线。

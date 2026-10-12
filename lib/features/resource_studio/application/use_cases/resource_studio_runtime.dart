@@ -33,6 +33,11 @@ abstract interface class ResourceStudioRuntime {
   /// that can be committed with the generated character.
   Future<bool> hasAcceptableRelationshipDraft(String creationSessionId);
 
+  /// The persisted generation target (T) behind [sessionId]'s creation
+  /// session, or null when the session predates target tracking or has none.
+  /// Presentation-only input for the Studio's budget progress display.
+  Future<int?> creationTargetCharacters(String sessionId);
+
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
   );
@@ -174,6 +179,16 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     if (normalizedId.isEmpty) return false;
     final creation = await _pipeline.findSession(normalizedId);
     return creation?.relationshipDraft?.isEmpty == false;
+  }
+
+  @override
+  Future<int?> creationTargetCharacters(String sessionId) async {
+    final session = await getSession(sessionId);
+    final creationSessionId = session?.creationSessionId.trim() ?? '';
+    if (creationSessionId.isEmpty) return null;
+    final creation = await _pipeline.findSession(creationSessionId);
+    final target = creation?.targetCharacters ?? 0;
+    return target > 0 ? target : null;
   }
 
   @override

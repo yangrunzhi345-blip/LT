@@ -28,6 +28,9 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   String? createdOriginWorldviewId;
   CharacterRelationshipDraft? createdRelationshipDraft;
   bool canAcceptGeneratedCharacter = false;
+
+  /// Creation generation target reported by [creationTargetCharacters].
+  int? targetCharacters;
   int getSessionCalls = 0;
   Object? nextSessionError;
   final List<String> resumeCalls = <String>[];
@@ -61,6 +64,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   @override
   Future<bool> hasAcceptableRelationshipDraft(String creationSessionId) async =>
       canAcceptGeneratedCharacter;
+
+  @override
+  Future<int?> creationTargetCharacters(String sessionId) async =>
+      targetCharacters;
 
   @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(

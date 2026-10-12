@@ -42,6 +42,21 @@ final class ResourceStudioController extends ChangeNotifier {
   final Map<String, StringBuffer> _buffers = {};
   final Map<String, ValueNotifier<String>> _partPreviewNotifiers = {};
 
+  /// Live total length of uncommitted streaming previews, in UTF-16 units.
+  ///
+  /// Presentation-only: preview content never counts toward the persisted
+  /// capacity. The aggregate is (preview − persisted old body) per buffering
+  /// Part, so replacing an existing Part adds only its new bytes.
+  final ValueNotifier<int> _inFlightCharacters = ValueNotifier<int>(0);
+
+  /// Persisted body length per Part captured at the last tree load. The
+  /// baseline that separates "already committed" from "streaming preview".
+  final Map<String, int> _persistedPartLengths = <String, int>{};
+
+  /// The user-selected generation target (T) of the loaded session, null when
+  /// unknown. Display input for the budget progress summary only.
+  int? _targetCharacters;
+
   /// The attempt currently owning each Part, so a late failure event from a
   /// superseded attempt can never be applied to the current one.
   final Map<String, String> _currentAttemptByPart = <String, String>{};
@@ -77,6 +92,29 @@ final class ResourceStudioController extends ChangeNotifier {
   int _stateGeneration = 0;
 
   ResourceStudioState get state => _state;
+
+  /// The generation target (T) of the current session, or null when unknown.
+  int? get targetCharacters => _targetCharacters;
+
+  /// Live uncommitted preview length across buffering Parts.
+  ValueListenable<int> get inFlightCharacters => _inFlightCharacters;
+
+  /// Characters already committed for the current resource.
+  ///
+  /// A Part contributes its persisted baseline until its task reports
+  /// `completed`, after which its visible content is the committed body. This
+  /// keeps a regenerating Part counted at its old committed length (never
+  /// double-counted with the preview) and never counts uncommitted previews.
+  int get committedCharacters {
+    var total = 0;
+    for (final part in _state.tree?.parts ?? const <ResourcePart>[]) {
+      final id = part.id.value;
+      total += _state.partTaskStatuses[id] == PartTaskStatus.completed
+          ? (_state.partContents[id]?.length ?? 0)
+          : (_persistedPartLengths[id] ?? part.content.length);
+    }
+    return total;
+  }
 
   /// Returns the transient preview notifier for [partId].
   ///
@@ -133,10 +171,15 @@ final class ResourceStudioController extends ChangeNotifier {
       final tree = resolvedResourceId == null
           ? null
           : await _runtime.readTree(resolvedResourceId);
+      final target = session == null
+          ? null
+          : await _runtime.creationTargetCharacters(session.sessionId);
       if (_disposed || generation != _stateGeneration) return;
       // A fresh load re-derives state from persistence, so any Part-scoped
       // banner ownership from the previous view is dropped with it.
       _errorPartId = null;
+      _targetCharacters = target;
+      _snapshotPersistedLengths(tree);
       _setState(_state.copyWith(
         status: _statusForSession(session),
         resourceId: resolvedResourceId,
@@ -330,6 +373,8 @@ final class ResourceStudioController extends ChangeNotifier {
         );
         final tree = await _runtime.readTree(session.resourceId);
         _errorPartId = null;
+        _targetCharacters = targetCharacters;
+        _snapshotPersistedLengths(tree);
         _setState(_state.copyWith(
           status: ResourceStudioStatus.generating,
           resourceId: session.resourceId,
@@ -434,6 +479,7 @@ final class ResourceStudioController extends ChangeNotifier {
       _materializePartPreview(event.partId.value);
       _buffers.remove(event.partId.value);
       _dirtyPartIds.remove(event.partId.value);
+      _updateInFlightCharacters();
       _completedPartIds.add(event.partId.value);
       _currentAttemptByPart.remove(event.partId.value);
       partTaskStatuses[event.partId.value] = PartTaskStatus.completed;
@@ -554,6 +600,7 @@ final class ResourceStudioController extends ChangeNotifier {
       ..[partId] = content;
     _state = _state.copyWith(partContents: contents);
     _setPartPreview(partId, content);
+    _updateInFlightCharacters();
   }
 
   /// Removes transient output for a Part that did not pass validation and was
@@ -564,6 +611,7 @@ final class ResourceStudioController extends ChangeNotifier {
     _dirtyPartIds.remove(partId.value);
     final contents = Map<String, String>.from(_state.partContents);
     _restorePersistedPartContent(contents, partId);
+    _updateInFlightCharacters();
     return contents;
   }
 
@@ -593,6 +641,7 @@ final class ResourceStudioController extends ChangeNotifier {
       _dirtyPartIds.remove(partId);
       _restorePersistedPartContent(contents, PartId(partId));
     }
+    _updateInFlightCharacters();
     return contents;
   }
 
@@ -631,6 +680,7 @@ final class ResourceStudioController extends ChangeNotifier {
       session: session,
       partContents: _initialPartContents(tree),
     ));
+    _snapshotPersistedLengths(tree);
     _syncPartPreviewNotifiers();
   }
 
@@ -684,6 +734,46 @@ final class ResourceStudioController extends ChangeNotifier {
           part.id.value: part.content,
       };
 
+  /// Captures the committed baseline per Part so the budget summary can split
+  /// "already saved" from "streaming preview" without re-reading SQLite.
+  void _snapshotPersistedLengths(ResourceTree? tree) {
+    _persistedPartLengths
+      ..clear()
+      ..addAll({
+        for (final part in tree?.parts ?? const <ResourcePart>[])
+          part.id.value: part.content.length,
+      });
+    _updateInFlightCharacters();
+  }
+
+  /// Recomputes the aggregate uncommitted preview length: the full streamed
+  /// body of every buffering Part, since a commit replaces that Part's old
+  /// body wholesale. Cheap: only Parts with a live buffer contribute, and it
+  /// runs at the throttled flush rate.
+  void _updateInFlightCharacters() {
+    if (_disposed) return;
+    var total = 0;
+    for (final buffer in _buffers.values) {
+      total += buffer.length;
+    }
+    if (_inFlightCharacters.value != total) {
+      _inFlightCharacters.value = total;
+    }
+  }
+
+  /// The displayed end state if every live preview committed right now:
+  /// committed bodies with each buffering Part's old body replaced by its
+  /// preview. Never persisted; presentation-only.
+  int get projectedCharacters {
+    var total = committedCharacters;
+    for (final entry in _buffers.entries) {
+      final persisted = _persistedPartLengths[entry.key] ?? 0;
+      final preview = entry.value.length;
+      total += preview > persisted ? preview - persisted : 0;
+    }
+    return total;
+  }
+
   void _syncPartPreviewNotifiers() {
     for (final entry in _state.partContents.entries) {
       _setPartPreview(entry.key, entry.value);
@@ -715,6 +805,7 @@ final class ResourceStudioController extends ChangeNotifier {
       notifier.dispose();
     }
     _partPreviewNotifiers.clear();
+    _inFlightCharacters.dispose();
     unawaited(_eventsSubscription?.cancel());
     super.dispose();
   }

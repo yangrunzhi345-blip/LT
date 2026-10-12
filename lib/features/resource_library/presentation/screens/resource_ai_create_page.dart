@@ -532,6 +532,23 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.resourceGenerationElasticCeilingLabel,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    Text(
+                      l10n.resourceTargetCharactersValue(
+                          _elasticCeilingFor(_type)),
+                      key: const Key('ai-create-elastic-ceiling-value'),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
                 Slider(
                   key: const Key('ai-create-target-slider'),
                   value: _targetCharacters.toDouble(),
@@ -732,6 +749,15 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
 
   int _maximumTargetFor(ResourceType type) =>
       ResourceLimits.policyFor(type).nominalCharacters;
+
+  /// Cumulative generation ceiling C = min(floor(T * 1.20), A) shown next to
+  /// the target. Presentation of the generation-goal dimension only; capacity
+  /// classification still follows the nominal/absolute policy.
+  int _elasticCeilingFor(ResourceType type) =>
+      GenerationBudgetPolicy.cumulativeCeiling(
+        target: _targetCharacters,
+        absolute: ResourceLimits.policyFor(type).absoluteCharacters,
+      );
 
   int _targetDivisionsFor(ResourceType type) =>
       (_maximumTargetFor(type) -

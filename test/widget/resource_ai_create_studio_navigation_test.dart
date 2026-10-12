@@ -47,6 +47,11 @@ Future<void> _submitAiCreate(
   final submit = find.byKey(const Key('ai-create-submit-button'));
   await tester.ensureVisible(submit);
   await tester.pumpAndSettle();
+  // `ensureVisible` can leave the button's center just below the fold when the
+  // form is near the scroll extent; one extra drag brings the whole button on
+  // screen so tap() hits it (the 320px viewport keeps the gate honest).
+  await tester.drag(find.byType(Scrollable).first, const Offset(0, -80));
+  await tester.pumpAndSettle();
   await tester.tap(submit);
   if (secondTapWithoutPump) {
     await tester.tap(submit, warnIfMissed: false);

@@ -3689,7 +3689,7 @@ abstract class AppLocalizations {
   /// No description provided for @resourceGenerationLengthDescription.
   ///
   /// In en, this message translates to:
-  /// **'Control the approximate target word count of the AI generated resource text'**
+  /// **'Soft target for the AI generated resource text. The generation may naturally expand up to about 20% beyond it; quality and consistency outrank filling the quota.'**
   String get resourceGenerationLengthDescription;
 
   /// No description provided for @resourceTargetCharactersLabel.
@@ -3697,6 +3697,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Target Word Count'**
   String get resourceTargetCharactersLabel;
+
+  /// No description provided for @resourceGenerationElasticCeilingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed generation ceiling'**
+  String get resourceGenerationElasticCeilingLabel;
+
+  /// No description provided for @resourceGenerationProgressTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target word count'**
+  String get resourceGenerationProgressTarget;
+
+  /// No description provided for @resourceGenerationProgressCommitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved body'**
+  String get resourceGenerationProgressCommitted;
+
+  /// No description provided for @resourceGenerationProgressPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating preview'**
+  String get resourceGenerationProgressPreview;
+
+  /// No description provided for @resourceGenerationProgressProjected.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected total'**
+  String get resourceGenerationProgressProjected;
+
+  /// No description provided for @resourceGenerationProgressDeviation.
+  ///
+  /// In en, this message translates to:
+  /// **'Target deviation'**
+  String get resourceGenerationProgressDeviation;
+
+  /// No description provided for @resourceGenerationProgressRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining capacity'**
+  String get resourceGenerationProgressRemaining;
 
   /// No description provided for @resourceTargetCharactersValue.
   ///

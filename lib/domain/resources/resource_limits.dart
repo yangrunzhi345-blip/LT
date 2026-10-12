@@ -108,9 +108,23 @@ abstract final class ResourceLimits {
   static const Duration compressionLeaseDuration = Duration(minutes: 5);
 
   /// Token budget for the priority-packed resource context.
+  ///
+  /// Audit note (2026-10): this constant currently has no production consumer.
+  /// The runtime narrative context budget is derived from the active model's
+  /// context window (`ContextBudget.resolve`) plus per-source caps inside
+  /// `WeightedContextPlanner`. It is retained as planning metadata for a future
+  /// context-driven compression trigger; do not wire it into a decision path
+  /// without reconciling it with that runtime budget first.
   static const int resourceContextTokenBudget = 6000;
 
   /// Context token threshold above which automatic compression is scheduled.
+  ///
+  /// Audit note (2026-10): only consumed via `CompressionThresholds` defaults
+  /// and `CompressionTriggers.evaluateContext`, which has no production caller.
+  /// The production compression trigger is the capacity classification
+  /// (`CompressionTriggers.evaluateResource`: overflow is mandatory, elastic is
+  /// opportunistic background work that never blocks assembly). Retained for
+  /// the same reason as [resourceContextTokenBudget].
   static const int compressionTriggerContextTokens = 8000;
 
   /// Fraction of a resource's **nominal** budget above which the elastic
@@ -146,6 +160,61 @@ abstract final class ResourceLimits {
         ResourceType.character => character,
         ResourceType.npc => npc,
       };
+}
+
+/// The single authority for the AI generation elastic budget.
+///
+/// Three distinct quantities must never be conflated:
+/// - `target` (T): the user-selected soft generation goal. The model is asked
+///   to aim for it; quality outranks mechanically filling it.
+/// - `cumulativeCeiling` (C): the hard cumulative acceptance boundary of one
+///   generation run, `min(floor(T * (1 + [elasticRatio])), absolute)`. It only
+///   bounds what the *run* may commit; it does not re-classify capacity.
+/// - `absolute` (A): the resource type's frozen capacity ceiling. Capacity
+///   status (normal / elastic / overflow) is and remains a function of A via
+///   [ResourceCapacityPolicy.statusFor].
+///
+/// A body that lands in `target < length <= C` is a normal, accepted
+/// generation whose *deviation from the goal* is presented in the UI; the
+/// resource itself is still classified by the nominal/absolute policy. C can
+/// never exceed A, so AI generation alone can never push a resource into the
+/// overflow band that requires compression before assembly.
+abstract final class GenerationBudgetPolicy {
+  /// Maximum permitted expansion of the cumulative generated body above the
+  /// user's target: `C = min(floor(T * 1.20), A)`.
+  static const double elasticRatio = 0.20;
+
+  /// The cumulative acceptance ceiling for one generation run.
+  ///
+  /// A non-positive target means "no generation budget": the ceiling is 0 and
+  /// callers treat the run as budgetless exactly as they treated
+  /// `target_capacity <= 0` before elasticity existed.
+  static int cumulativeCeiling({
+    required int target,
+    required int absolute,
+  }) {
+    if (target < 0) {
+      throw ArgumentError.value(target, 'target', 'must not be negative');
+    }
+    if (absolute < 0) {
+      throw ArgumentError.value(absolute, 'absolute', 'must not be negative');
+    }
+    if (target == 0) return 0;
+    final elastic = (target * (1 + elasticRatio)).floor();
+    return elastic > absolute ? absolute : elastic;
+  }
+
+  /// Deviation of [actual] from [target] in percent, rounded to one decimal.
+  ///
+  /// Presentation-only: this describes the generation-goal dimension and must
+  /// never be used for capacity classification.
+  static double deviationPercent({
+    required int actual,
+    required int target,
+  }) {
+    if (target <= 0) return 0;
+    return ((actual - target) / target * 100 * 10).roundToDouble() / 10;
+  }
 }
 
 /// Nominal/absolute character budgets for one resource type.

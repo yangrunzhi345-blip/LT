@@ -21,6 +21,7 @@ import '../../../../providers/riverpod_providers.dart';
 import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/resources/resource_generation_protocol.dart';
+import '../../../../domain/resources/resource_limits.dart';
 import '../../../../domain/resources/section_control.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../domain/models/resource_studio_state.dart';
@@ -619,6 +620,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                     ],
                     const SizedBox(height: 12),
                     _StatusBar(state: state),
+                    _GenerationBudgetSummary(controller: _controller),
                     if (state.error != null ||
                         state.errorMessage.isNotEmpty) ...[
                       const SizedBox(height: 8),
@@ -1579,6 +1581,96 @@ final class _ReaderEntry {
 
   final ResourceSection? section;
   final ResourcePart? part;
+}
+
+/// Live generation budget summary under the status bar.
+///
+/// Presentation only: committed characters come from the controller's
+/// persisted-baseline projection, streaming previews never count as saved,
+/// and the target deviation never reclassifies the resource's capacity band
+/// (nominal/absolute policy stays the sole authority).
+final class _GenerationBudgetSummary extends StatelessWidget {
+  const _GenerationBudgetSummary({required this.controller});
+
+  final ResourceStudioController controller;
+
+  AppLocalizations _l10n(BuildContext context) =>
+      AppLocalizations.of(context) ?? AppLocalizationsZh();
+
+  @override
+  Widget build(BuildContext context) {
+    final tree = controller.state.tree;
+    final target = controller.targetCharacters;
+    final type = tree?.resource.type;
+    // Without a persisted target or a known type there is no honest budget
+    // to display; the summary stays silent instead of guessing defaults.
+    if (target == null || target <= 0 || type == null) {
+      return const SizedBox.shrink();
+    }
+    final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
+      target: target,
+      absolute: ResourceLimits.policyFor(type).absoluteCharacters,
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: DefaultTextStyle(
+        style: Theme.of(context).textTheme.bodySmall!,
+        child: ListenableBuilder(
+          listenable:
+              Listenable.merge([controller, controller.inFlightCharacters]),
+          builder: (context, _) {
+            final l10n = _l10n(context);
+            final committed = controller.committedCharacters;
+            final inFlight = controller.inFlightCharacters.value;
+            final projected = controller.projectedCharacters;
+            final deviation = GenerationBudgetPolicy.deviationPercent(
+              actual: committed,
+              target: target,
+            );
+            final remaining = (ceiling - projected).clamp(0, ceiling).toInt();
+            final deviationLabel =
+                '${deviation >= 0 ? '+' : ''}${deviation.toStringAsFixed(1)}%';
+            String count(int value) => l10n.resourceTargetCharactersValue(
+                  value,
+                );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _budgetRow(
+                    l10n.resourceGenerationProgressTarget, count(target)),
+                _budgetRow(
+                    l10n.resourceGenerationProgressCommitted, count(committed)),
+                if (inFlight > 0)
+                  _budgetRow(
+                      l10n.resourceGenerationProgressPreview, count(inFlight)),
+                if (inFlight > 0)
+                  _budgetRow(l10n.resourceGenerationProgressProjected,
+                      count(projected)),
+                _budgetRow(
+                    l10n.resourceGenerationProgressDeviation, deviationLabel),
+                _budgetRow(
+                    l10n.resourceGenerationElasticCeilingLabel, count(ceiling)),
+                _budgetRow(
+                    l10n.resourceGenerationProgressRemaining, count(remaining)),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _budgetRow(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Text(label)),
+            const SizedBox(width: 8),
+            Text(value),
+          ],
+        ),
+      );
 }
 
 String _resourceTypeLabel(ResourceType type, AppLocalizations l10n) {
