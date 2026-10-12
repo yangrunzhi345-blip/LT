@@ -1,4 +1,5 @@
 import 'dart:ui' show Brightness;
+import '../domain/resources/resource_limits.dart';
 import '../models/adventure_config.dart';
 import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
@@ -29,6 +30,23 @@ abstract class ChatEngineHost {
   CompletionParams get completionParams;
   bool get quickMode;
   DialogueLevel get dialogueLevel;
+
+  /// Global default generation elastic percent (ADR-0003). Hosts backed by
+  /// SettingsProvider override this; the default keeps legacy hosts on the
+  /// frozen PR #5 20% behaviour.
+  int get globalGenerationElasticPercent =>
+      GenerationBudgetPolicy.defaultElasticPercent;
+
+  /// This adventure's own elastic override (null = inherit global), read from
+  /// the persisted [AdventureConfig].
+  int? get adventureGenerationElasticPercent =>
+      adventureConfig?.generationElasticPercent;
+
+  /// The effective elastic percent for the current adventure. Frozen into the
+  /// turn snapshot when a generation starts; later setting changes only affect
+  /// turns that begin afterwards.
+  int get effectiveGenerationElasticPercent =>
+      adventureGenerationElasticPercent ?? globalGenerationElasticPercent;
 
   // ─── 作者注释 ───
   String get authorsNote;

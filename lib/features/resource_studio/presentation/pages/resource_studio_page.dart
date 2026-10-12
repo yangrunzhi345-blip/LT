@@ -620,6 +620,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
                     ],
                     const SizedBox(height: 12),
                     _StatusBar(state: state),
+                    _GenerationElasticOverrideSection(controller: _controller),
                     _GenerationBudgetSummary(controller: _controller),
                     if (state.error != null ||
                         state.errorMessage.isNotEmpty) ...[
@@ -1589,6 +1590,109 @@ final class _ReaderEntry {
 /// persisted-baseline projection, streaming previews never count as saved,
 /// and the target deviation never reclassifies the resource's capacity band
 /// (nominal/absolute policy stays the sole authority).
+/// Per-resource elasticity override control (ADR-0003).
+///
+/// Quiet, compact block: current inheritance state, a switch between
+/// inherit-global and an independent percent, and the frozen-snapshot notice.
+/// Only rendered when a persisted resource with a CAS token is loaded.
+final class _GenerationElasticOverrideSection extends StatelessWidget {
+  const _GenerationElasticOverrideSection({required this.controller});
+
+  final ResourceStudioController controller;
+
+  AppLocalizations _l10n(BuildContext context) =>
+      AppLocalizations.of(context) ?? AppLocalizationsZh();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = _l10n(context);
+    if (controller.state.resourceId == null ||
+        controller.elasticOverrideUpdatedAt == null ||
+        controller.elasticOverrideUpdatedAt!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final overridePercent = controller.elasticOverridePercent;
+    final isIndependent = overridePercent != null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: DefaultTextStyle(
+        style: Theme.of(context).textTheme.bodySmall!,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    isIndependent
+                        ? '${l10n.generationElasticPercentLabel}: $overridePercent%'
+                        : l10n.generationElasticPercentLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            // Stacked, not side-by-side: the segmented control keeps its full
+            // intrinsic width and cannot overflow a 320 px viewport.
+            SegmentedButton<bool>(
+              key: const Key('studio-elastic-mode-segmented'),
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(l10n.generationElasticInheritLabel),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(l10n.generationElasticIndependentLabel),
+                ),
+              ],
+              selected: {isIndependent},
+              onSelectionChanged: (selection) {
+                final want = selection.first;
+                if (want == isIndependent) return;
+                controller.setElasticOverride(
+                    want ? GenerationBudgetPolicy.defaultElasticPercent : null);
+              },
+            ),
+            if (isIndependent) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(l10n.generationElasticIndependentHint),
+                  ),
+                  DropdownButton<int>(
+                    key: const Key('studio-elastic-percent-dropdown'),
+                    value: GenerationBudgetPolicy.normalizeElasticPercent(
+                        overridePercent),
+                    items: [
+                      for (var i = GenerationBudgetPolicy.minimumElasticPercent;
+                          i <= GenerationBudgetPolicy.maximumElasticPercent;
+                          i += 5)
+                        DropdownMenuItem<int>(value: i, child: Text('$i%')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      controller.setElasticOverride(value);
+                    },
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 2),
+            Text(
+              l10n.generationElasticSnapshotNotice,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 final class _GenerationBudgetSummary extends StatelessWidget {
   const _GenerationBudgetSummary({required this.controller});
 
@@ -1610,7 +1714,15 @@ final class _GenerationBudgetSummary extends StatelessWidget {
     final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
       target: target,
       absolute: ResourceLimits.policyFor(type).absoluteCharacters,
+      // ADR-0003: display the same E the repository enforces — the frozen
+      // snapshot of an active run, or the would-be resolution while planning.
+      // Never the bare global default, or the summary could disagree with the
+      // commit-time validation.
+      elasticPercent: controller.elasticPercent ??
+          GenerationBudgetPolicy.defaultElasticPercent,
     );
+    final elasticPercent = controller.elasticPercent ??
+        GenerationBudgetPolicy.defaultElasticPercent;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: DefaultTextStyle(
@@ -1638,6 +1750,8 @@ final class _GenerationBudgetSummary extends StatelessWidget {
               children: [
                 _budgetRow(
                     l10n.resourceGenerationProgressTarget, count(target)),
+                _budgetRow(
+                    l10n.generationElasticPercentLabel, '$elasticPercent%'),
                 _budgetRow(
                     l10n.resourceGenerationProgressCommitted, count(committed)),
                 if (inFlight > 0)

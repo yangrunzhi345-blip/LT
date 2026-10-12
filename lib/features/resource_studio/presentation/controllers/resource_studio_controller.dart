@@ -57,6 +57,17 @@ final class ResourceStudioController extends ChangeNotifier {
   /// unknown. Display input for the budget progress summary only.
   int? _targetCharacters;
 
+  /// The effective elastic percent (E) of the loaded session's run (ADR-0003).
+  /// Null until loaded; the budget summary then resolves against the global
+  /// default so planning-time display and frozen-run display agree with the
+  /// repository's enforcement.
+  int? _elasticPercent;
+
+  /// The target resource's own persisted elastic override (ADR-0003): null
+  /// percent = inherit; [elasticOverrideUpdatedAt] is the CAS token.
+  int? _elasticOverridePercent;
+  String? _elasticOverrideUpdatedAt;
+
   /// The attempt currently owning each Part, so a late failure event from a
   /// superseded attempt can never be applied to the current one.
   final Map<String, String> _currentAttemptByPart = <String, String>{};
@@ -95,6 +106,31 @@ final class ResourceStudioController extends ChangeNotifier {
 
   /// The generation target (T) of the current session, or null when unknown.
   int? get targetCharacters => _targetCharacters;
+
+  /// The effective elastic percent (E) of the current session's run, or null
+  /// when not yet resolved.
+  int? get elasticPercent => _elasticPercent;
+
+  /// The loaded resource's own elastic override percent (null = inherit).
+  int? get elasticOverridePercent => _elasticOverridePercent;
+
+  /// CAS token of the last override read, null when no resource is loaded.
+  String? get elasticOverrideUpdatedAt => _elasticOverrideUpdatedAt;
+
+  /// Persists an independent elastic override for the loaded resource, or
+  /// restores inheritance with null. Reloads afterwards so the effective
+  /// budget display reflects the new authority.
+  Future<void> setElasticOverride(int? percent) async {
+    final resourceId = _state.resourceId;
+    final token = _elasticOverrideUpdatedAt;
+    if (resourceId == null || token == null || token.isEmpty) return;
+    await _runtime.setGenerationElasticOverride(
+      resourceId,
+      expectedUpdatedAt: token,
+      percent: percent,
+    );
+    await load();
+  }
 
   /// Live uncommitted preview length across buffering Parts.
   ValueListenable<int> get inFlightCharacters => _inFlightCharacters;
@@ -174,11 +210,20 @@ final class ResourceStudioController extends ChangeNotifier {
       final target = session == null
           ? null
           : await _runtime.creationTargetCharacters(session.sessionId);
+      final elasticPercent = session == null
+          ? null
+          : await _runtime.sessionElasticPercent(session.sessionId);
+      final elasticOverride = resolvedResourceId == null
+          ? null
+          : await _runtime.readGenerationElasticOverride(resolvedResourceId);
       if (_disposed || generation != _stateGeneration) return;
       // A fresh load re-derives state from persistence, so any Part-scoped
       // banner ownership from the previous view is dropped with it.
       _errorPartId = null;
       _targetCharacters = target;
+      _elasticPercent = elasticPercent;
+      _elasticOverridePercent = elasticOverride?.percent;
+      _elasticOverrideUpdatedAt = elasticOverride?.updatedAt;
       _snapshotPersistedLengths(tree);
       _setState(_state.copyWith(
         status: _statusForSession(session),

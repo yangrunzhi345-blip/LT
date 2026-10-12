@@ -120,6 +120,7 @@ final class ResourceAiCreationOrchestrator {
       targetResourceId: target?.value ?? '',
       expectedSourceToken: expectedSourceToken,
       originWorldviewId: draft.originWorldviewId,
+      elasticPercent: draft.elasticPercent,
     );
     final pipelineWatch = Stopwatch()..start();
     final creation = await _pipeline.create(ResourceCreationRequest(

@@ -168,7 +168,8 @@ abstract final class ResourceLimits {
 /// - `target` (T): the user-selected soft generation goal. The model is asked
 ///   to aim for it; quality outranks mechanically filling it.
 /// - `cumulativeCeiling` (C): the hard cumulative acceptance boundary of one
-///   generation run, `min(floor(T * (1 + [elasticRatio])), absolute)`. It only
+///   generation run, `min(floor(T*(100+E)/100), absolute)` where E is the
+///   task-frozen effective elastic percent. It only
 ///   bounds what the *run* may commit; it does not re-classify capacity.
 /// - `absolute` (A): the resource type's frozen capacity ceiling. Capacity
 ///   status (normal / elastic / overflow) is and remains a function of A via
@@ -180,18 +181,44 @@ abstract final class ResourceLimits {
 /// never exceed A, so AI generation alone can never push a resource into the
 /// overflow band that requires compression before assembly.
 abstract final class GenerationBudgetPolicy {
-  /// Maximum permitted expansion of the cumulative generated body above the
-  /// user's target: `C = min(floor(T * 1.20), A)`.
-  static const double elasticRatio = 0.20;
+  /// Default expansion of the cumulative generated body above the user's
+  /// target, expressed in integer percent: `C = min(floor(T*(100+E)/100), A)`.
+  ///
+  /// 20 is the frozen PR #5 behaviour and also the value resolved for legacy
+  /// rows whose stored snapshot predates configurable elasticity (NULL
+  /// `resource_blueprints.elastic_percent`), so historical runs keep their
+  /// original budget no matter what the global setting becomes later.
+  static const int defaultElasticPercent = 20;
+
+  /// Lowest configurable elasticity. 0% means "never exceed the target": the
+  /// ceiling collapses onto T and over-expansion is rejected at commit.
+  static const int minimumElasticPercent = 0;
+
+  /// Highest configurable elasticity. 50% widens the acceptance ceiling but
+  /// never lifts the absolute capacity A: `min(..., A)` still applies.
+  static const int maximumElasticPercent = 50;
+
+  /// Clamps and normalizes a user-provided percent into the legal domain.
+  ///
+  /// Input boundaries (sliders, text fields, restored settings) all funnel
+  /// through here so no caller can smuggle an out-of-range value into a
+  /// budget computation.
+  static int normalizeElasticPercent(int raw) =>
+      raw.clamp(minimumElasticPercent, maximumElasticPercent);
 
   /// The cumulative acceptance ceiling for one generation run.
   ///
   /// A non-positive target means "no generation budget": the ceiling is 0 and
   /// callers treat the run as budgetless exactly as they treated
   /// `target_capacity <= 0` before elasticity existed.
+  ///
+  /// [elasticPercent] is the task-frozen effective percent E. The arithmetic
+  /// is pure integer (`T*(100+E) ~/ 100`), so the boundary between an accepted
+  /// `C` and a rejected `C+1` never depends on floating-point rounding.
   static int cumulativeCeiling({
     required int target,
     required int absolute,
+    int elasticPercent = defaultElasticPercent,
   }) {
     if (target < 0) {
       throw ArgumentError.value(target, 'target', 'must not be negative');
@@ -199,8 +226,16 @@ abstract final class GenerationBudgetPolicy {
     if (absolute < 0) {
       throw ArgumentError.value(absolute, 'absolute', 'must not be negative');
     }
+    if (elasticPercent < minimumElasticPercent ||
+        elasticPercent > maximumElasticPercent) {
+      throw ArgumentError.value(
+        elasticPercent,
+        'elasticPercent',
+        'must be between $minimumElasticPercent and $maximumElasticPercent',
+      );
+    }
     if (target == 0) return 0;
-    final elastic = (target * (1 + elasticRatio)).floor();
+    final elastic = (target * (100 + elasticPercent)) ~/ 100;
     return elastic > absolute ? absolute : elastic;
   }
 

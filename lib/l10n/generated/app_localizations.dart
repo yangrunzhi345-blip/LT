@@ -3689,7 +3689,7 @@ abstract class AppLocalizations {
   /// No description provided for @resourceGenerationLengthDescription.
   ///
   /// In en, this message translates to:
-  /// **'Soft target for the AI generated resource text. The generation may naturally expand up to about 20% beyond it; quality and consistency outrank filling the quota.'**
+  /// **'Soft target for the AI generated resource text. The generation may naturally expand beyond it within the configured elastic budget; quality and consistency outrank filling the quota.'**
   String get resourceGenerationLengthDescription;
 
   /// No description provided for @resourceTargetCharactersLabel.
@@ -3703,6 +3703,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allowed generation ceiling'**
   String get resourceGenerationElasticCeilingLabel;
+
+  /// No description provided for @generationElasticSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Generation Elastic Budget'**
+  String get generationElasticSettingsTitle;
+
+  /// No description provided for @generationElasticSettingsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra room the AI may naturally exceed the target by (0–50%). Elasticity is allowed headroom, never a quota to fill; resources still follow their absolute capacity.'**
+  String get generationElasticSettingsDescription;
+
+  /// No description provided for @generationElasticPercentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Effective elasticity'**
+  String get generationElasticPercentLabel;
+
+  /// No description provided for @generationElasticInheritLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Inherit global'**
+  String get generationElasticInheritLabel;
+
+  /// No description provided for @generationElasticIndependentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Independent'**
+  String get generationElasticIndependentLabel;
+
+  /// No description provided for @generationElasticIndependentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Independent ratio'**
+  String get generationElasticIndependentHint;
+
+  /// No description provided for @generationElasticSnapshotNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation tasks that already started keep the budget they were created with.'**
+  String get generationElasticSnapshotNotice;
 
   /// No description provided for @resourceGenerationProgressTarget.
   ///

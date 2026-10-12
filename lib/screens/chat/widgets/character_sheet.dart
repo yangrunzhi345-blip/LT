@@ -6,7 +6,9 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/custom_attribute_importance_visuals.dart';
+import '../../../../domain/resources/resource_limits.dart';
 import '../../../../core/widgets/app_dropdown.dart';
+import '../../../../core/widgets/app_select.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../core/widgets/custom_attribute_icon.dart';
@@ -1864,6 +1866,8 @@ class _CharacterStatusScreenState extends ConsumerState<CharacterStatusScreen>
                 ? config!.worldview
                 : l10n.defaultWorldviewDescription),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _GenerationElasticSection(config: config),
         ],
       );
     }
@@ -2382,5 +2386,87 @@ class _DetectedStatusCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// ADR-0003: per-adventure generation elastic override.
+///
+/// A quiet [WorkbenchSection] inside the existing adventure configuration
+/// (protagonist profile tab). "Inherit global" removes the override so the
+/// adventure follows the global default; a picked percent becomes the
+/// adventure's own value for turns that begin afterwards. Only the effective
+/// percent of *new* turns changes — an in-flight turn keeps its frozen budget.
+class _GenerationElasticSection extends ConsumerWidget {
+  const _GenerationElasticSection({required this.config});
+
+  final AdventureConfig? config;
+
+  static const int _minPercent = GenerationBudgetPolicy.minimumElasticPercent;
+  static const int _maxPercent = GenerationBudgetPolicy.maximumElasticPercent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = _l10n(context);
+    final global = ref.watch(chatProvider.select(
+        (chat) => chat.settingsProvider.globalGenerationElasticPercent));
+    final current = config?.generationElasticPercent;
+    return WorkbenchSection(
+      title: l10n.generationElasticSettingsTitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.generationElasticSettingsDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // String sentinel: 'inherit' vs 'custom:<percent>' keeps a real 0%
+          // distinguishable from "no override".
+          AppSelect<String>(
+            key: const Key('adventure-elastic-select'),
+            value: current == null ? 'inherit' : 'custom:$current',
+            label: l10n.generationElasticPercentLabel,
+            items: [
+              AppSelectItem(
+                value: 'inherit',
+                label: l10n.generationElasticInheritLabel,
+                subtitle: '$global%',
+              ),
+              for (var i = _minPercent; i <= _maxPercent; i += 5)
+                AppSelectItem(
+                  value: 'custom:$i',
+                  label: l10n.generationElasticIndependentLabel,
+                  subtitle: '$i%',
+                ),
+            ],
+            onChanged: (value) => _save(context, ref, value),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.generationElasticSnapshotNotice,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _save(
+    BuildContext context,
+    WidgetRef ref,
+    String? value,
+  ) async {
+    if (config == null || value == null) return;
+    final chat = ref.read(chatProvider);
+    final percent =
+        value == 'inherit' ? null : int.tryParse(value.split(':').last);
+    final updated = config!..generationElasticPercent = percent;
+    try {
+      await chat.updateAdventureConfig(updated);
+    } catch (_) {
+      if (context.mounted) {
+        AppFeedback.error(context, _l10n(context).chatSaveFailed);
+      }
+    }
   }
 }

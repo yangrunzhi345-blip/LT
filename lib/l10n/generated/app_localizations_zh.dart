@@ -1892,13 +1892,35 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'AI 生成资源正文的软目标。生成最多可自然扩写约 20%；内容质量与设定一致性优先于填满字数。';
+      'AI 生成资源正文的软目标。生成可在所配置的弹性预算内自然超出该字数；内容质量与设定一致性优先于填满字数。';
 
   @override
   String get resourceTargetCharactersLabel => '目标字数';
 
   @override
   String get resourceGenerationElasticCeilingLabel => '允许生成上界';
+
+  @override
+  String get generationElasticSettingsTitle => 'AI 生成弹性预算';
+
+  @override
+  String get generationElasticSettingsDescription =>
+      'AI 生成正文允许超出目标字数的空间（0–50%）。弹性是允许的超出空间，不代表必须生成到上限；资源仍受绝对容量限制。';
+
+  @override
+  String get generationElasticPercentLabel => '生效弹性';
+
+  @override
+  String get generationElasticInheritLabel => '继承全局';
+
+  @override
+  String get generationElasticIndependentLabel => '独立设置';
+
+  @override
+  String get generationElasticIndependentHint => '独立比例';
+
+  @override
+  String get generationElasticSnapshotNotice => '已开始的生成任务使用创建时冻结的预算，不会被追溯修改。';
 
   @override
   String get resourceGenerationProgressTarget => '目标字数';
@@ -8107,13 +8129,35 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'AI 生成资源正文的软目标。生成最多可自然扩写约 20%；内容质量与设定一致性优先于填满字数。';
+      'AI 生成资源正文的软目标。生成可在所配置的弹性预算内自然超出该字数；内容质量与设定一致性优先于填满字数。';
 
   @override
   String get resourceTargetCharactersLabel => '目标字数';
 
   @override
   String get resourceGenerationElasticCeilingLabel => '允许生成上界';
+
+  @override
+  String get generationElasticSettingsTitle => 'AI 生成弹性预算';
+
+  @override
+  String get generationElasticSettingsDescription =>
+      'AI 生成正文允许超出目标字数的空间（0–50%）。弹性是允许的超出空间，不代表必须生成到上限；资源仍受绝对容量限制。';
+
+  @override
+  String get generationElasticPercentLabel => '生效弹性';
+
+  @override
+  String get generationElasticInheritLabel => '继承全局';
+
+  @override
+  String get generationElasticIndependentLabel => '独立设置';
+
+  @override
+  String get generationElasticIndependentHint => '独立比例';
+
+  @override
+  String get generationElasticSnapshotNotice => '已开始的生成任务使用创建时冻结的预算，不会被追溯修改。';
 
   @override
   String get resourceGenerationProgressTarget => '目标字数';
@@ -14322,13 +14366,35 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get resourceGenerationLengthDescription =>
-      'AI 生成資源正文的軟目標。生成最多可自然擴寫約 20%；內容品質與設定一致性優先於填滿字數。';
+      'AI 生成資源正文的軟目標。生成可在所設定的彈性預算內自然超出該字數；內容品質與設定一致性優先於填滿字數。';
 
   @override
   String get resourceTargetCharactersLabel => '目標字數';
 
   @override
   String get resourceGenerationElasticCeilingLabel => '允許生成上界';
+
+  @override
+  String get generationElasticSettingsTitle => 'AI 生成彈性預算';
+
+  @override
+  String get generationElasticSettingsDescription =>
+      'AI 生成正文允許超出目標字數的空間（0–50%）。彈性是允許的超出空間，不代表必須生成到上限；資源仍受絕對容量限制。';
+
+  @override
+  String get generationElasticPercentLabel => '生效彈性';
+
+  @override
+  String get generationElasticInheritLabel => '繼承全域';
+
+  @override
+  String get generationElasticIndependentLabel => '獨立設定';
+
+  @override
+  String get generationElasticIndependentHint => '獨立比例';
+
+  @override
+  String get generationElasticSnapshotNotice => '已開始的生成任務使用建立時凍結的預算，不會被追溯修改。';
 
   @override
   String get resourceGenerationProgressTarget => '目標字數';

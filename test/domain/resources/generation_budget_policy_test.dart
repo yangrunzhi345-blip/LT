@@ -131,4 +131,68 @@ void main() {
       expect(ResourceLimits.character.statusFor(21000), CapacityStatus.elastic);
     });
   });
+
+  group('configurable elastic percent (ADR-0003)', () {
+    // Integer arithmetic: C = min((T*(100+E)) ~/ 100, A). The boundary between
+    // an accepted C and a rejected C+1 must never depend on float rounding.
+    for (final e in const [0, 5, 20, 35, 50]) {
+      test('E=$e: target 8000 with unbounded absolute', () {
+        final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
+          target: 8000,
+          absolute: 1 << 31,
+          elasticPercent: e,
+        );
+        expect(ceiling, (8000 * (100 + e)) ~/ 100);
+        // Exactly C is a valid body; the policy itself never truncates.
+        expect(ceiling, greaterThanOrEqualTo(8000));
+      });
+    }
+
+    test('E=0 collapses the ceiling onto the target', () {
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 8000, absolute: 24000, elasticPercent: 0),
+        8000,
+      );
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 1, absolute: 24000, elasticPercent: 0),
+        1,
+      );
+    });
+
+    test('E=50 never crosses the absolute capacity', () {
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 24000, absolute: 24000, elasticPercent: 50),
+        24000,
+      );
+    });
+
+    test('defaults preserve the frozen PR #5 20% behaviour', () {
+      expect(GenerationBudgetPolicy.defaultElasticPercent, 20);
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(target: 8000, absolute: 24000),
+        9600,
+      );
+    });
+
+    test('out-of-range percents fail closed', () {
+      for (final bad in const [-1, 51, 100]) {
+        expect(
+          () => GenerationBudgetPolicy.cumulativeCeiling(
+              target: 1000, absolute: 24000, elasticPercent: bad),
+          throwsArgumentError,
+          reason: 'E=$bad',
+        );
+      }
+    });
+
+    test('normalizeElasticPercent clamps user input', () {
+      expect(GenerationBudgetPolicy.normalizeElasticPercent(-7), 0);
+      expect(GenerationBudgetPolicy.normalizeElasticPercent(0), 0);
+      expect(GenerationBudgetPolicy.normalizeElasticPercent(35), 35);
+      expect(GenerationBudgetPolicy.normalizeElasticPercent(99), 50);
+    });
+  });
 }

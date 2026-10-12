@@ -417,6 +417,11 @@ class AdventureConfig {
   /// projects the legacy `customAttributes` shape instead.
   List<AdventureTrackedStateDefinition> trackedStateDefinitions;
 
+  /// ADR-0003: this adventure's own generation elastic percent (0–50).
+  /// Null = inherit the global default. Only turns that *begin* after a change
+  /// pick up the new value — an in-flight turn keeps its frozen budget.
+  int? generationElasticPercent;
+
   String get bodyDescription => customBodyDescription.isNotEmpty
       ? customBodyDescription
       : _generateBodyDescription();
@@ -488,6 +493,7 @@ class AdventureConfig {
     List<CustomAttributeItem>? customAttributes,
     List<AdventureResourceBinding>? resourceBindings,
     List<AdventureTrackedStateDefinition>? trackedStateDefinitions,
+    this.generationElasticPercent,
   })  : supportingCharacters = supportingCharacters ?? [],
         selectedCharacters =
             _normalizedSelectedCharacters(selectedCharacters ?? []),
@@ -649,6 +655,9 @@ class AdventureConfig {
         'resourceBindings': resourceBindings.map((b) => b.toJson()).toList(),
         'trackedStateDefinitions':
             trackedStateDefinitions.map((d) => d.toJson()).toList(),
+        // ADR-0003: per-adventure elastic override. Absent key = inherit the
+        // global default; older configs without the key stay readable.
+        'generationElasticPercent': generationElasticPercent,
       };
 
   factory AdventureConfig.fromJson(Map<String, dynamic> json) {
@@ -757,6 +766,9 @@ class AdventureConfig {
       trackedStateDefinitions: AdventureTrackedStateDefinition.parseList(
         json['trackedStateDefinitions'] ?? json['tracked_state_definitions'],
       ),
+      generationElasticPercent: json['generationElasticPercent'] is num
+          ? (json['generationElasticPercent'] as num).toInt()
+          : null,
     );
   }
 

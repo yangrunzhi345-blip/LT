@@ -92,6 +92,86 @@ void main() {
     await directory.delete(recursive: true);
   });
 
+  group('AI create page elastic selection (ADR-0003)', () {
+    testWidgets('inherit keeps the global ceiling; independent re-freezes it',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      final container = ProviderContainer();
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        container.dispose();
+      });
+      await tester.runAsync(() => container
+          .read(settingsProvider)
+          .setApiKey('test-only-not-a-real-key'));
+
+      await tester.pumpWidget(UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          initialRoute: '/library',
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
+      ));
+      await _waitFor(tester, find.text('还没有资源'));
+      await tester.tap(find.byKey(const Key('resource-create-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('AI 创建'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ResourceAiCreatePage), findsOneWidget);
+
+      expect(find.byKey(const Key('ai-create-elastic-mode-segmented')),
+          findsOneWidget);
+
+      // Bring the target below nominal first: at the nominal default the
+      // ceiling already sits on the absolute capacity, which would mask the
+      // elasticity. Target 10000 → C(20%) = 12000.
+      final targetInput =
+          find.byKey(const ValueKey('ai_creation_target_words_input'));
+      await tester.ensureVisible(targetInput);
+      await tester.pumpAndSettle();
+      await tester.enterText(targetInput, '10000');
+      await tester
+          .tap(find.byKey(const ValueKey('ai_creation_target_words_confirm')));
+      await tester.pumpAndSettle();
+      const worldNominal = 10000;
+      final ceilingText = tester
+          .widget<Text>(
+              find.byKey(const Key('ai-create-elastic-ceiling-value')))
+          .data!;
+      final uiCeiling =
+          int.parse(ceilingText.replaceAll(RegExp(r'[^0-9]'), ''));
+      expect(uiCeiling, (worldNominal * 120) ~/ 100);
+
+      // Switch to independent 50%: the live ceiling re-computes.
+      await tester.ensureVisible(
+          find.byKey(const Key('ai-create-elastic-mode-segmented')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('独立设置'));
+      await tester.pumpAndSettle();
+      final dropdown =
+          find.byKey(const Key('ai-create-elastic-percent-dropdown'));
+      await tester.ensureVisible(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(dropdown, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final item = find.text('50%').last;
+      await tester.ensureVisible(item);
+      await tester.pumpAndSettle();
+      await tester.tap(item, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final newCeiling = tester
+          .widget<Text>(
+              find.byKey(const Key('ai-create-elastic-ceiling-value')))
+          .data!;
+      expect(int.parse(newCeiling.replaceAll(RegExp(r'[^0-9]'), '')),
+          (worldNominal * 150) ~/ 100);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('AI creation navigates to the production Resource Studio', () {
     for (final type in ResourceType.values) {
       testWidgets(

@@ -1190,6 +1190,60 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('generation elastic override (ADR-0003)', () {
+    testWidgets('summary shows the frozen effective percent', (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      runtime.targetCharacters = 8000;
+      runtime.elasticPercent = 35;
+      await tester.pumpWidget(_app(runtime));
+      await tester.pumpAndSettle();
+      // The label appears twice: once in the override section header (with
+      // the inherit state) and once as the summary row label.
+      expect(find.text('生效弹性'), findsNWidgets(2));
+      expect(find.text('35%'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('override section switches inherit and independent percent',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      runtime.elasticOverridePercent = null;
+      runtime.elasticOverrideUpdatedAt = 'tok-1';
+      await tester.pumpWidget(_app(runtime));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('studio-elastic-mode-segmented')),
+          findsOneWidget);
+
+      // Inherit → independent freezes the default 20%.
+      await tester.tap(find.text('独立设置'));
+      await tester.pumpAndSettle();
+      expect(runtime.setOverridePercent, 20);
+      expect(runtime.setOverrideToken, 'tok-1');
+
+      // Pick an explicit 50%.
+      final dropdown = find.byKey(const Key('studio-elastic-percent-dropdown'));
+      await tester.ensureVisible(dropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(dropdown, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final item = find.text('50%').last;
+      await tester.ensureVisible(item);
+      await tester.pumpAndSettle();
+      await tester.tap(item, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(runtime.setOverridePercent, 50);
+
+      // Back to inherit removes the override (percent null).
+      final inheritSegment = find.text('继承全局');
+      await tester.ensureVisible(inheritSegment);
+      await tester.pumpAndSettle();
+      await tester.tap(inheritSegment, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(runtime.setOverridePercent, isNull);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 Widget _app(

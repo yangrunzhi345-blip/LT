@@ -72,6 +72,15 @@ abstract final class ResourceTreeSchema {
   /// new vocabulary). Provenance is explicitly allowed metadata content.
   static const String metadataAuthoringMethodKey = 'authoring_method';
   static const String metadataAiGenerationDepthKey = 'ai_generation_depth';
+
+  /// Per-resource generation elastic-percent override (ADR-0003).
+  ///
+  /// Integer percent 0–50. Key absent (or null) = inherit the global default;
+  /// removing the key restores inheritance. Only the resource's own row is
+  /// consulted — a reference worldview/character never leaks its override into
+  /// a generated target.
+  static const String metadataGenerationElasticPercentKey =
+      'generationElasticPercent';
 }
 
 /// One Part to be written by a bulk tree create.
@@ -225,6 +234,17 @@ abstract interface class IResourceTreeRepository
     String? name,
     String? summary,
     Map<String, Object?>? metadata,
+  });
+
+  /// Sets or removes the per-resource generation elastic-percent override
+  /// (ADR-0003) without touching any other metadata key.
+  ///
+  /// [percent] null restores inheritance by removing the key. The write is
+  /// CAS-guarded on [expectedUpdatedAt] like every other resource update.
+  Future<void> updateGenerationElasticOverride({
+    required ResourceId id,
+    required String expectedUpdatedAt,
+    int? percent,
   });
 
   /// Updates title / summary / status of one section.

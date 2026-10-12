@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/app_config.dart';
 import '../core/theme/app_colors.dart';
+import '../domain/resources/resource_limits.dart';
 import '../models/completion_params.dart';
 import '../models/dialogue_level.dart';
 import '../models/model_capabilities.dart';
@@ -57,6 +58,23 @@ class SettingsProvider extends ChangeNotifier {
       _characterCardDeepThinkingGeneration;
   DialogueLevel _dialogueLevel = DialogueLevel.defaultLevel;
   DialogueLevel get dialogueLevel => _dialogueLevel;
+
+  /// 全局默认 AI 生成弹性预算（整数百分比，0–50，默认 20 = PR #5 行为）。
+  ///
+  /// 只影响之后创建的生成任务；已冻结预算快照的任务不追溯。
+  int _globalGenerationElasticPercent =
+      GenerationBudgetPolicy.defaultElasticPercent;
+  int get globalGenerationElasticPercent => _globalGenerationElasticPercent;
+
+  Future<void> setGlobalGenerationElasticPercent(int percent) async {
+    final normalized = GenerationBudgetPolicy.normalizeElasticPercent(percent);
+    if (_globalGenerationElasticPercent == normalized) return;
+    await _waitForActiveLoad();
+    await _settingsRepo.setSettingInt('generation_elastic_percent', normalized);
+    if (_disposed) return;
+    _globalGenerationElasticPercent = normalized;
+    notifyListeners();
+  }
 
   Future<void> setQuickMode(bool v) async {
     await _waitForActiveLoad();
@@ -350,6 +368,11 @@ class SettingsProvider extends ChangeNotifier {
         3;
     final dialogueLevel = DialogueLevel.fromId(
         settings['dialogue_level'] ?? prefs.getString('dialogue_level'));
+    final globalElasticValue =
+        int.tryParse(settings['generation_elastic_percent'] ?? '');
+    final globalGenerationElasticPercent = globalElasticValue == null
+        ? GenerationBudgetPolicy.defaultElasticPercent
+        : GenerationBudgetPolicy.normalizeElasticPercent(globalElasticValue);
     final themeModeStr =
         settings['theme_mode'] ?? prefs.getString('theme_mode') ?? 'system';
     final themeMode = switch (themeModeStr) {
@@ -419,6 +442,7 @@ class SettingsProvider extends ChangeNotifier {
     _authorsNoteDepth = authorsNoteDepth;
     _authorsNoteFrequency = authorsNoteFrequency;
     _dialogueLevel = dialogueLevel;
+    _globalGenerationElasticPercent = globalGenerationElasticPercent;
     _themeMode = themeMode;
     _colorSeed = colorSeed;
     _chatFontSize = chatFontSize;

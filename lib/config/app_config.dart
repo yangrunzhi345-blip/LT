@@ -34,11 +34,17 @@ class AppConfig {
     int round = 1, // P2-01: 动态字数预算
     DialogueLevel dialogueLevel = DialogueLevel.defaultLevel,
     bool isMultiStage = false,
+    // ADR-0003: the turn's frozen budget. Dart forbids mixing named params
+    // with this function's optional-positional list, so it stays positional;
+    // when omitted the legacy per-level resolution applies (callers without a
+    // snapshot keep legacy behaviour).
+    SceneDialogueOutputBudget? outputBudget,
   ]) {
-    final budget = SceneDialogueOutputBudget.resolve(
-      dialogueLevel,
-      quickMode: quickMode,
-    );
+    final budget = outputBudget ??
+        SceneDialogueOutputBudget.resolve(
+          dialogueLevel,
+          quickMode: quickMode,
+        );
     final diffConfig = switch (difficulty) {
       'easy' => '选项后果温和，失败可重来；资源充裕',
       'hard' => '选择后果显著，可能有不可逆的剧情转折；资源稀缺',
