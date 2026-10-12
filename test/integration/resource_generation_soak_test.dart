@@ -732,6 +732,9 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
       false;
 
   @override
+  Future<int?> creationTargetCharacters(String sessionId) async => null;
+
+  @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
   ) =>

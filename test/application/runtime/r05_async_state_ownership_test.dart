@@ -608,6 +608,9 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
       false;
 
   @override
+  Future<int?> creationTargetCharacters(String sessionId) async => null;
+
+  @override
   Future<StreamingGenerationSession?> ensureSession(
     ResourceId resourceId,
   ) async =>

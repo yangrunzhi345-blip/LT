@@ -1914,6 +1914,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get resourceGenerationElasticCeilingLabel => '生成許容上限';
 
   @override
+  String get resourceGenerationProgressTarget => '目標文字数';
+
+  @override
+  String get resourceGenerationProgressCommitted => '保存済み本文';
+
+  @override
+  String get resourceGenerationProgressPreview => '生成中プレビュー';
+
+  @override
+  String get resourceGenerationProgressProjected => '予想合計';
+
+  @override
+  String get resourceGenerationProgressDeviation => '目標偏差';
+
+  @override
+  String get resourceGenerationProgressRemaining => '残り容量';
+
+  @override
   String resourceTargetCharactersValue(Object count) {
     return '$count 文字';
   }

@@ -328,6 +328,136 @@ void main() {
     });
   });
 
+  group('generation budget progress', () {
+    test('committed characters separate saved body from uncommitted preview',
+        () async {
+      runtime.targetCharacters = 8000;
+      final controller = ResourceStudioController(
+          runtime: runtime, sessionId: session.sessionId);
+      addTearDown(controller.dispose);
+      await controller.load();
+
+      expect(controller.targetCharacters, 8000);
+      final partId = tree.parts.single.id;
+      // The seeded tree Part carries 5 committed characters.
+      expect(controller.committedCharacters, 5);
+      expect(controller.inFlightCharacters.value, 0);
+
+      runtime.eventsController.add(PartStarted(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        partId: partId,
+        taskId: 'task',
+        attemptId: 'attempt',
+        attemptNumber: 1,
+        timestamp: DateTime(2026),
+      ));
+      runtime.eventsController.add(PatchReceived(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        partId: partId,
+        taskId: 'task',
+        attemptId: 'attempt',
+        patch: ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          sectionId: tree.sections.single.id,
+          partId: partId,
+          attemptId: 'attempt',
+          sequence: 1,
+          op: ResourcePatchOp.appendText,
+          textDelta: '流式预览正文',
+          cursor: 6,
+        ),
+        accumulatedLength: 6,
+        timestamp: DateTime(2026),
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 220));
+
+      // The preview stays out of the committed total; the projection replaces
+      // the old body instead of stacking on it.
+      expect(controller.committedCharacters, 5);
+      expect(controller.inFlightCharacters.value, 6);
+      expect(controller.projectedCharacters, 6);
+
+      runtime.eventsController.add(PartCompleted(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        partId: partId,
+        taskId: 'task',
+        attemptId: 'attempt',
+        characterCount: 6,
+        timestamp: DateTime(2026),
+      ));
+      await Future<void>.delayed(Duration.zero);
+
+      // Committed switches to the new body exactly once — no double count.
+      expect(controller.committedCharacters, 6);
+      expect(controller.inFlightCharacters.value, 0);
+      expect(controller.projectedCharacters, 6);
+      expect(controller.inFlightCharacters.value, 0);
+    });
+
+    testWidgets('summary renders budget rows without overflow at 320px',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      runtime.targetCharacters = 8000;
+      runtime.session = buildStudioTestSession(tree).copyWith(
+        status: StreamingLifecycleStatus.generatingPart,
+      );
+      await tester.pumpWidget(_app(runtime));
+      // A generating session keeps an indeterminate indicator alive, so a
+      // fixed pump sequence replaces pumpAndSettle here.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('目标字数'), findsOneWidget);
+      expect(find.text('已保存正文'), findsOneWidget);
+      expect(find.text('目标偏差'), findsOneWidget);
+      expect(find.text('允许生成上界'), findsOneWidget);
+      expect(find.text('剩余容量'), findsOneWidget);
+      expect(find.text('-99.9%'), findsOneWidget);
+      expect(find.text('生成中预览'), findsNothing, reason: 'no live preview yet');
+      expect(tester.takeException(), isNull);
+
+      runtime.eventsController.add(PatchReceived(
+        generationId: session.sessionId,
+        resourceId: session.resourceId,
+        partId: tree.parts.single.id,
+        taskId: 'task',
+        attemptId: 'attempt',
+        patch: ResourceGenerationPatch(
+          protocolVersion: 1,
+          generationId: session.sessionId,
+          resourceId: session.resourceId,
+          sectionId: tree.sections.single.id,
+          partId: tree.parts.single.id,
+          attemptId: 'attempt',
+          sequence: 1,
+          op: ResourcePatchOp.appendText,
+          textDelta: '新的预览内容',
+          cursor: 6,
+        ),
+        accumulatedLength: 6,
+        timestamp: DateTime(2026),
+      ));
+      await tester.pump(const Duration(milliseconds: 220));
+      expect(find.text('生成中预览'), findsOneWidget);
+      expect(find.text('预计总长'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('summary stays hidden without a persisted target',
+        (tester) async {
+      setViewport(tester, width: 320, height: 568);
+      await tester.pumpWidget(_app(runtime));
+      await tester.pumpAndSettle();
+      expect(find.text('目标字数'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('ResourceStudioPage', () {
     for (final width in [
       320.0,

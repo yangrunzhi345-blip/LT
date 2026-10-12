@@ -3704,6 +3704,42 @@ abstract class AppLocalizations {
   /// **'Allowed generation ceiling'**
   String get resourceGenerationElasticCeilingLabel;
 
+  /// No description provided for @resourceGenerationProgressTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target word count'**
+  String get resourceGenerationProgressTarget;
+
+  /// No description provided for @resourceGenerationProgressCommitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved body'**
+  String get resourceGenerationProgressCommitted;
+
+  /// No description provided for @resourceGenerationProgressPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating preview'**
+  String get resourceGenerationProgressPreview;
+
+  /// No description provided for @resourceGenerationProgressProjected.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected total'**
+  String get resourceGenerationProgressProjected;
+
+  /// No description provided for @resourceGenerationProgressDeviation.
+  ///
+  /// In en, this message translates to:
+  /// **'Target deviation'**
+  String get resourceGenerationProgressDeviation;
+
+  /// No description provided for @resourceGenerationProgressRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining capacity'**
+  String get resourceGenerationProgressRemaining;
+
   /// No description provided for @resourceTargetCharactersValue.
   ///
   /// In en, this message translates to:

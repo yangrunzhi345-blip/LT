@@ -1998,6 +1998,24 @@ class AppLocalizationsEn extends AppLocalizations {
       'Allowed generation ceiling';
 
   @override
+  String get resourceGenerationProgressTarget => 'Target word count';
+
+  @override
+  String get resourceGenerationProgressCommitted => 'Saved body';
+
+  @override
+  String get resourceGenerationProgressPreview => 'Generating preview';
+
+  @override
+  String get resourceGenerationProgressProjected => 'Projected total';
+
+  @override
+  String get resourceGenerationProgressDeviation => 'Target deviation';
+
+  @override
+  String get resourceGenerationProgressRemaining => 'Remaining capacity';
+
+  @override
   String resourceTargetCharactersValue(Object count) {
     return '$count chars';
   }

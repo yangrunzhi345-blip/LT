@@ -1930,6 +1930,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get resourceGenerationElasticCeilingLabel => '생성 허용 상한';
 
   @override
+  String get resourceGenerationProgressTarget => '목표 글자 수';
+
+  @override
+  String get resourceGenerationProgressCommitted => '저장된 본문';
+
+  @override
+  String get resourceGenerationProgressPreview => '생성 중 미리보기';
+
+  @override
+  String get resourceGenerationProgressProjected => '예상 합계';
+
+  @override
+  String get resourceGenerationProgressDeviation => '목표 편차';
+
+  @override
+  String get resourceGenerationProgressRemaining => '남은 용량';
+
+  @override
   String resourceTargetCharactersValue(Object count) {
     return '$count 자';
   }

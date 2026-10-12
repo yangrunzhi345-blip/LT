@@ -122,6 +122,13 @@ void main() {
         ),
         CapacityStatus.elastic,
       );
+      // The end-to-end matrix bands: 20,000 normal, 21,000 elastic.
+      expect(
+        ResourceLimits.character
+            .statusFor(ResourceLimits.characterNominalCharacters),
+        CapacityStatus.normal,
+      );
+      expect(ResourceLimits.character.statusFor(21000), CapacityStatus.elastic);
     });
   });
 }

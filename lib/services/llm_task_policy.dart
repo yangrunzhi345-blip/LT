@@ -107,8 +107,14 @@ class LlmTaskPolicyTable {
     ),
     LlmTask.resourcePartGeneration: LlmTaskPolicy(
       task: LlmTask.resourcePartGeneration,
-      thinking: ThinkingPolicy.followUserSetting,
-      reasoningEffort: 'medium',
+      // Part generation runs non-thinking by design: the fixed 4096-token
+      // output budget must carry the whole NDJSON body, and DeepSeek counts
+      // reasoning tokens inside that same budget (thinking would risk
+      // `finish_reason=length` truncating the protocol tail). Both streaming
+      // and raw gateways pass `enableThinking: false`, so this is also what
+      // production has always done — declared here instead of implied.
+      thinking: ThinkingPolicy.disabled,
+      reasoningEffort: 'low',
       preferJsonOutput: false,
       maxTokens: 4096,
       temperature: 0.7,
