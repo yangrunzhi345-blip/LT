@@ -373,8 +373,9 @@ class _RealApiBudget {
     final text = error.toString();
     if (error is _BudgetExhaustedException) return '累计生成预算超限';
     if (text.contains('LLMResponseIncompleteException')) return '模型输出长度截断';
-    if (text.contains('ApiError') || text.contains('HTTP'))
+    if (text.contains('ApiError') || text.contains('HTTP')) {
       return 'API HTTP 错误';
+    }
     if (text.contains('GenerationPatchParseException') ||
         text.contains('PatchSequenceGapException') ||
         text.contains('PatchCursorMismatchException')) {
