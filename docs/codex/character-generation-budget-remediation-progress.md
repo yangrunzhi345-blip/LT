@@ -118,3 +118,24 @@ resources/sections/parts/sessions/blueprints/tasks/attempts/revisions 逐表不�
 R4 有限范围 PASSED，未解决 BLOCKER/MAJOR/MINOR=0；独立六组 63 PASS、10 项
 精确边界探针 PASS、analyze/format/diff-check PASS。测试组合有重叠，不加总计数。
 完整 Phase 3 和任务整体仍未 ACCEPTED。
+
+## R6：独立诊断生命周期修复
+
+- 真正创建 UI timer 时重设基线；新增 owner 复用现有 timer，不更改 interval 或阈值。
+- 停止段标为 unobserved，GAP 只描述观测间隔，不能据此断言 CPU 阻塞。
+  活跃首 tick 及后续真实延迟仍报告；连续 SSE 进展不被当成死锁。
+- 默认单例继续使用 Stopwatch；测试只注入单调 elapsed，执行同一 Timer.periodic。
+  无新依赖，不改变 timeout、流消费、业务数据库或网络逻辑。
+- resetForTesting 清理自身 UI/watchdog timer、owners 与 heartbeat 状态；测试在 body
+  finally 中释放 timer，符合 WidgetTester 在外层 tearDown 前检查 timer 的要求。
+
+真实验证：最终三组 27 PASS，日志 `/tmp/lt-budget-r6-tests.log`。临时 mutation 分别
+移除重启基线、允许追加 owner 改 interval，两组各 3 PASS / 1 FAIL，均由对应语义
+断言杀死；文件已 byte-for-byte 恢复，再运行当前代码回归 PASS。
+日志 `/tmp/lt-budget-r6-mutation-restart.log`、`/tmp/lt-budget-r6-mutation-owner.log`。
+初次 3 FAIL / 1 PASS 含测试 timer 清理问题，不能全部视为纯业务复现。
+
+独立审查：`character-generation-budget-r6-diagnostics-independent-review.md`，
+R6 有限范围 PASSED，未解决 BLOCKER/MAJOR/MINOR=0；独立四组 58 PASS、共享 LLM
+47 PASS、analyze/format/diff-check PASS。修复同组件残留的无证据 CPU 阻塞注释。
+这些结果不替代 Phase 6 跨模块集成门禁、全量回归或真实设备现场证据。

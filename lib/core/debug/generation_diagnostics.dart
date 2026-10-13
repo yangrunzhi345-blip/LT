@@ -8,21 +8,29 @@ import 'package:flutter/foundation.dart';
 ///
 /// Every Part lifecycle boundary in the production path records a monotonic
 /// marker here, plus two independent heartbeats that let a real-device freeze
-/// be classified into one of four cases:
+/// be investigated using four observations (not diagnoses on their own):
 ///
-/// - CASE 1: UI heartbeat AND runtime heartbeat stop -> main isolate
-///   starvation (synchronous infinite work).
+/// - CASE 1: both heartbeats stop -> check lifecycle/background suspension
+///   and main isolate work before attributing the gap to starvation.
 /// - CASE 2: UI heartbeat alive, runtime heartbeat stopped -> generation
-///   Future/DB/network/scheduler stall.
+///   Future/DB/network/scheduler progress is not being observed.
 /// - CASE 3: runtime heartbeat alive, UI heartbeat stopped -> Flutter
-///   layout/render/event queue starvation.
-/// - CASE 4: both alive but input dead -> pointer/modal interception bug.
+///   layout/render/event queue and heartbeat ownership need inspection.
+/// - CASE 4: both alive but input dead -> inspect pointer/modal interception.
 ///
 /// The watchdog dumps the last markers, heartbeat ages, durations, counters
 /// and caller-registered state snapshots without ever mutating generation
 /// data. Everything is a no-op in release builds.
 final class GenerationDiagnostics {
-  GenerationDiagnostics._();
+  GenerationDiagnostics._({Duration Function()? elapsed}) : _elapsed = elapsed;
+
+  /// Uses a controlled monotonic clock with the real heartbeat timer code.
+  @visibleForTesting
+  factory GenerationDiagnostics.forTesting(
+          {required Duration Function() elapsed}) =>
+      GenerationDiagnostics._(elapsed: elapsed);
+
+  final Duration Function()? _elapsed;
 
   static final GenerationDiagnostics instance = GenerationDiagnostics._();
 
@@ -59,7 +67,8 @@ final class GenerationDiagnostics {
 
   /// Starts the periodic watchdog that dumps diagnostics when the runtime
   /// heartbeat stalls (generation side) or the UI heartbeat shows a gap
-  /// (isolate was blocked and recovered). Idempotent. Never mutates
+  /// (an observed timer delay, whose cause needs separate evidence).
+  /// Idempotent. Never mutates
   /// generation data.
   void startWatchdog({
     Duration interval = const Duration(seconds: 5),
@@ -91,7 +100,7 @@ final class GenerationDiagnostics {
   final Map<String, Map<String, Object?> Function()> _snapshotProviders =
       <String, Map<String, Object?> Function()>{};
 
-  Duration get _now => _clock.elapsed;
+  Duration get _now => _elapsed?.call() ?? _clock.elapsed;
 
   String _formatElapsed(Duration d) =>
       '${(d.inMicroseconds / 1000).toStringAsFixed(1)}ms';
@@ -138,19 +147,20 @@ final class GenerationDiagnostics {
       {Duration interval = const Duration(milliseconds: 250)}) {
     if (!enabled) return;
     _uiHeartbeatOwners++;
+    if (_uiHeartbeatTimer != null) return;
     _uiHeartbeatInterval = interval;
-    _uiHeartbeatTimer ??= Timer.periodic(interval, (_) {
-      // Freeze detection: if this tick ran long after the previous one, the
-      // main isolate was blocked in between (frames, input and timers all
-      // stalled together). Dump on recovery so the gap is measurable.
+    // A stopped interval is unobserved, not evidence of active isolate work.
+    // Additional owners keep the existing timer and its threshold unchanged.
+    _lastUiHeartbeat = _now;
+    _uiHeartbeatTimer = Timer.periodic(interval, (_) {
+      // Record an observed delay. Lifecycle pauses and isolate load require
+      // separate evidence; a timer gap alone cannot identify the cause.
       final now = _now;
-      if (_uiHeartbeatTicks > 0 &&
-          now - _lastUiHeartbeat > _uiHeartbeatInterval * 4) {
+      if (now - _lastUiHeartbeat > _uiHeartbeatInterval * 4) {
         dump(
           reason: 'UI_HEARTBEAT_GAP '
               'age=${_formatElapsed(now - _lastUiHeartbeat)} '
-              '(main isolate was blocked; check the last marker printed '
-              'before this gap)',
+              '(observed timer delay; inspect lifecycle and isolate activity)',
         );
       }
       _uiHeartbeatTicks++;
@@ -245,6 +255,8 @@ final class GenerationDiagnostics {
     final runtimeAge = _now - _lastRuntimeHeartbeat;
     report
       ..writeln('uiHeartbeat: ticks=$_uiHeartbeatTicks, '
+          'owners=$_uiHeartbeatOwners, '
+          'state=${_uiHeartbeatTimer == null ? 'unobserved' : 'active'}, '
           'interval=${_uiHeartbeatInterval.inMilliseconds}ms, '
           'age=${_formatElapsed(uiAge)}')
       ..writeln('runtimeHeartbeat: seq=$_runtimeHeartbeatSeq, '
@@ -306,6 +318,15 @@ final class GenerationDiagnostics {
     _runtimeStallDumped = false;
     _watchdogTimer?.cancel();
     _watchdogTimer = null;
+    _uiHeartbeatTimer?.cancel();
+    _uiHeartbeatTimer = null;
+    _uiHeartbeatOwners = 0;
+    _uiHeartbeatTicks = 0;
+    _lastUiHeartbeat = Duration.zero;
+    _uiHeartbeatInterval = const Duration(milliseconds: 250);
+    _lastRuntimeHeartbeat = Duration.zero;
+    _lastRuntimeStage = '';
+    _runtimeHeartbeatSeq = 0;
   }
 
   /// Test/inspection seam: the raw marker tail.
