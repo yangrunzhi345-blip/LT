@@ -291,6 +291,16 @@ final class NarrativeContext {
   /// intact unless the configured hard input limit cannot contain it.
   final String plannedUserInput;
   final String characterContext;
+
+  /// Profiles of characters the player mentioned this turn that are **not**
+  /// present. Kept separate so the prompt can label them as mention-only:
+  /// their presence in the context must never imply scene participation.
+  final String absentMentionedCharacterContext;
+
+  /// Stable id → display name for every roster character the resolver knows
+  /// (protagonist, selected characters, legacy supporting characters). The
+  /// prompt compiler needs it to render an authoritative presence list.
+  final Map<String, String> knownCharacterNames;
   final RelationshipNarrativeContext relationships;
   final RelationshipNarrativeContext plannedRelationships;
 
@@ -317,6 +327,8 @@ final class NarrativeContext {
     required this.world,
     required this.plannedUserInput,
     required this.characterContext,
+    this.absentMentionedCharacterContext = '',
+    this.knownCharacterNames = const {},
     this.relationships = const RelationshipNarrativeContext(),
     this.plannedRelationships = const RelationshipNarrativeContext(),
     this.plannedRelationshipContext = '',
@@ -1008,6 +1020,11 @@ final class WorldContextBuilder {
 
 /// Coordinates runtime sources and applies a single budget before prompting.
 final class ContextOrchestrator {
+  /// Hard bound for mention-only (absent) character profiles. They are
+  /// reference material, never the active cast, so they must not compete
+  /// with present profiles or history for the input window.
+  static const int maximumAbsentMentionedTokens = 512;
+
   final IntentResolver intentResolver;
   final NarrativeConflictResolver conflictResolver;
   final WorldContextBuilder worldBuilder;
@@ -1038,14 +1055,19 @@ final class ContextOrchestrator {
     int? adventureId,
     ContextWeightProfile weightProfile = const ContextWeightProfile(),
   }) {
+    // `adventureCharacterNames` is the single roster projection: it already
+    // carries every stable id and legacy alias (characterId, row id) with
+    // non-empty checks. Rebuilding entries here used to add an empty key for
+    // legacy rows without a characterId and could overwrite the protagonist's
+    // real name with the adventure title.
     final knownCharacters = <String, String>{
       ...adventureCharacterNames(config),
-      'protagonist': config?.name ?? '主角',
-      for (final character in _legacySupportingCharacters(config))
-        character.id: character.name,
-      for (final character in config?.selectedCharacters ?? const [])
-        character.characterId: character.characterName,
     };
+    if (!knownCharacters.containsKey('protagonist')) {
+      final fallbackName = config?.name.trim() ?? '';
+      knownCharacters['protagonist'] =
+          fallbackName.isNotEmpty ? fallbackName : '主角';
+    }
     final intent = intentResolver.resolve(
       rawInput,
       knownCharacters: knownCharacters,
@@ -1122,14 +1144,19 @@ final class ContextOrchestrator {
     Duration semanticTimeout = const Duration(seconds: 3),
     ContextWeightProfile weightProfile = const ContextWeightProfile(),
   }) async {
+    // `adventureCharacterNames` is the single roster projection: it already
+    // carries every stable id and legacy alias (characterId, row id) with
+    // non-empty checks. Rebuilding entries here used to add an empty key for
+    // legacy rows without a characterId and could overwrite the protagonist's
+    // real name with the adventure title.
     final knownCharacters = <String, String>{
       ...adventureCharacterNames(config),
-      'protagonist': config?.name ?? '主角',
-      for (final character in _legacySupportingCharacters(config))
-        character.id: character.name,
-      for (final character in config?.selectedCharacters ?? const [])
-        character.characterId: character.characterName,
     };
+    if (!knownCharacters.containsKey('protagonist')) {
+      final fallbackName = config?.name.trim() ?? '';
+      knownCharacters['protagonist'] =
+          fallbackName.isNotEmpty ? fallbackName : '主角';
+    }
     final intent = intentResolver.resolve(
       rawInput,
       knownCharacters: knownCharacters,
@@ -1205,11 +1232,19 @@ final class ContextOrchestrator {
     required Persona? persona,
     required ContextWeightProfile weightProfile,
   }) {
-    final rawCharacterContext = _buildCharacterContext(
+    final characterSections = _buildCharacterContext(
       config,
       conflict.sceneState,
       rawInput,
       knownCharacters,
+    );
+    final rawCharacterContext = characterSections.present;
+    // Mentioned-but-absent profiles are reference material only. They are
+    // bounded independently of the planner so a large absent profile can
+    // never squeeze out the present cast or the recent history.
+    final absentMentionedContext = _truncateToTokens(
+      characterSections.absentMentioned,
+      maximumAbsentMentionedTokens,
     );
     // R05-C (M13): character context is deducted from the budget but was
     // never truncated, so a huge card could consume the whole input window
@@ -1442,6 +1477,7 @@ final class ContextOrchestrator {
     );
     final fixedTokens = worldTokens +
         TokenEstimator(characterContext).tokens +
+        TokenEstimator(absentMentionedContext).tokens +
         TokenEstimator(plannedRelationshipContext).tokens +
         TokenEstimator(runtimeMemory).tokens +
         archiveFacts.fold<int>(
@@ -1663,6 +1699,8 @@ final class ContextOrchestrator {
       world: world,
       plannedUserInput: plannedUserInput,
       characterContext: characterContext,
+      absentMentionedCharacterContext: absentMentionedContext,
+      knownCharacterNames: Map.unmodifiable(knownCharacters),
       relationships: relationshipContext,
       plannedRelationships: plannedRelationships,
       plannedRelationshipContext: plannedRelationshipContext,
@@ -1698,34 +1736,52 @@ final class ContextOrchestrator {
     return value.clamp(minimum, maximum).toInt();
   }
 
-  String _buildCharacterContext(
+  /// Splits roster profiles into the characters that are actually present
+  /// (they may interact) and the ones merely mentioned by the player this
+  /// turn (they may only be referenced). The split is what lets the prompt
+  /// state an authoritative, closed presence set instead of implying that
+  /// every profiled character is participating.
+  ({String present, String absentMentioned}) _buildCharacterContext(
     AdventureConfig? config,
     SceneState state,
     String query,
     Map<String, String> names,
   ) {
-    if (config == null) return '';
-    final relevantIds = <String>{
+    if (config == null) return (present: '', absentMentioned: '');
+    final presentIds = <String>{
       'protagonist',
       ...state.presentCharacterIds,
+    };
+    final relevantIds = <String>{
+      ...presentIds,
       for (final entry in names.entries)
         if (query.contains(entry.value)) entry.key,
     };
-    final lines = <String>[];
+    final presentLines = <String>[];
+    final absentLines = <String>[];
+    void addLine(String id, String line) {
+      if (line.isEmpty) return;
+      (presentIds.contains(id) ? presentLines : absentLines).add(line);
+    }
+
     if (relevantIds.contains('protagonist')) {
-      lines.add([
-        config.name,
-        config.protagonistClass,
-        config.personality,
-      ].where((value) => value.trim().isNotEmpty).join('；'));
+      addLine(
+          'protagonist',
+          [
+            config.name,
+            config.protagonistClass,
+            config.personality,
+          ].where((value) => value.trim().isNotEmpty).join('；'));
     }
     for (final character in _legacySupportingCharacters(config)) {
       if (!relevantIds.contains(character.id)) continue;
-      lines.add([
-        character.name,
-        character.role,
-        character.personality,
-      ].where((value) => value.trim().isNotEmpty).join('；'));
+      addLine(
+          character.id,
+          [
+            character.name,
+            character.role,
+            character.personality,
+          ].where((value) => value.trim().isNotEmpty).join('；'));
     }
     for (final selected in config.selectedCharacters) {
       if (!relevantIds.contains(selected.characterId)) continue;
@@ -1733,18 +1789,31 @@ final class ContextOrchestrator {
       final data = card['data'] is Map
           ? Map<String, dynamic>.from(card['data'] as Map)
           : card;
-      lines.add([
-        selected.characterName,
-        selected.effectiveRole,
-        data['personality']?.toString() ?? '',
-        (data['world_profile'] is Map
-                    ? (data['world_profile'] as Map)['public_goal']
-                    : null)
-                ?.toString() ??
-            '',
-      ].where((value) => value.trim().isNotEmpty).join('；'));
+      // Presence may reference the frozen id or its legacy alias; route the
+      // profile to the section the stored presence actually uses.
+      final routingId = presentIds.contains(selected.characterId)
+          ? selected.characterId
+          : presentIds.contains(selected.id)
+              ? selected.id
+              : selected.characterId;
+      addLine(
+          routingId,
+          [
+            selected.characterName,
+            selected.effectiveRole,
+            data['personality']?.toString() ?? '',
+            (data['world_profile'] is Map
+                        ? (data['world_profile'] as Map)['public_goal']
+                        : null)
+                    ?.toString() ??
+                '',
+          ].where((value) => value.trim().isNotEmpty).join('；'));
     }
-    return lines.where((line) => line.isNotEmpty).toSet().join('\n');
+    return (
+      present: presentLines.where((line) => line.isNotEmpty).toSet().join('\n'),
+      absentMentioned:
+          absentLines.where((line) => line.isNotEmpty).toSet().join('\n'),
+    );
   }
 
   Iterable<SupportingCharacter> _legacySupportingCharacters(

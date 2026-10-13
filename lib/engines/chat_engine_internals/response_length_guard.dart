@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../../models/adventure_response.dart';
 import '../../models/completion_params.dart';
 import '../../utils/chinese_character_counter.dart';
 
@@ -23,7 +24,14 @@ final class NarrativeResponseParts {
 enum NarrativeLengthVerdict {
   underflow,
   withinRange,
-  overflow;
+  overflow,
+
+  /// The narrative ended at an explicit player decision point
+  /// ([AdventureResponse.playerStopMarker]) before reaching the minimum. This
+  /// is a legitimate stop, not a length failure: the word minimum exists to
+  /// guarantee narrative richness, never to force the model past a point where
+  /// the player has to decide.
+  decisionStop;
 
   /// Stable token written to `diagnostics_json`, so the persisted diagnostics
   /// and the runtime monitor can never disagree about the final verdict by
@@ -32,6 +40,7 @@ enum NarrativeLengthVerdict {
         NarrativeLengthVerdict.underflow => 'underflow',
         NarrativeLengthVerdict.withinRange => 'within_range',
         NarrativeLengthVerdict.overflow => 'overflow',
+        NarrativeLengthVerdict.decisionStop => 'decision_stop',
       };
 }
 
@@ -51,6 +60,11 @@ final class NarrativeLengthGuardResult {
   /// cap, and was successfully corrected".
   final bool overflowDetected;
 
+  /// True when the narrative ended at an explicit player decision point
+  /// ([AdventureResponse.playerStopMarker]). A stopped turn never receives a
+  /// length supplement and never counts as an underflow.
+  final bool stoppedAtDecision;
+
   const NarrativeLengthGuardResult({
     required this.content,
     required this.initialChineseChars,
@@ -59,14 +73,40 @@ final class NarrativeLengthGuardResult {
     required this.supplementAttempted,
     required this.supplementSucceeded,
     this.overflowDetected = false,
+    this.stoppedAtDecision = false,
   });
 
+  NarrativeLengthGuardResult copyWith({
+    String? content,
+    int? initialChineseChars,
+    int? supplementChineseChars,
+    int? finalChineseChars,
+    bool? supplementAttempted,
+    bool? supplementSucceeded,
+    bool? overflowDetected,
+    bool? stoppedAtDecision,
+  }) =>
+      NarrativeLengthGuardResult(
+        content: content ?? this.content,
+        initialChineseChars: initialChineseChars ?? this.initialChineseChars,
+        supplementChineseChars:
+            supplementChineseChars ?? this.supplementChineseChars,
+        finalChineseChars: finalChineseChars ?? this.finalChineseChars,
+        supplementAttempted: supplementAttempted ?? this.supplementAttempted,
+        supplementSucceeded: supplementSucceeded ?? this.supplementSucceeded,
+        overflowDetected: overflowDetected ?? this.overflowDetected,
+        stoppedAtDecision: stoppedAtDecision ?? this.stoppedAtDecision,
+      );
+
   bool passed(int minimumChineseChars) =>
-      finalChineseChars >= minimumChineseChars;
+      stoppedAtDecision || finalChineseChars >= minimumChineseChars;
 
   bool withinMaximum(int hardMaximum) => finalChineseChars <= hardMaximum;
 
   NarrativeLengthVerdict verdict(int minimumChineseChars, int hardMaximum) {
+    if (stoppedAtDecision && finalChineseChars < minimumChineseChars) {
+      return NarrativeLengthVerdict.decisionStop;
+    }
     if (finalChineseChars < minimumChineseChars) {
       return NarrativeLengthVerdict.underflow;
     }
@@ -94,14 +134,32 @@ final class NarrativeLengthGuard {
     final markerIndex = rawResponse.indexOf(jsonMarker);
     if (markerIndex < 0) {
       return NarrativeResponseParts(
-        narrative: rawResponse.trim(),
+        narrative: _stripStopMarker(rawResponse.trim()),
         payload: '',
       );
     }
     return NarrativeResponseParts(
-      narrative: rawResponse.substring(0, markerIndex).trim(),
+      narrative: _stripStopMarker(rawResponse.substring(0, markerIndex).trim()),
       payload: rawResponse.substring(markerIndex).trim(),
     );
+  }
+
+  /// True when the raw response ends with a standalone
+  /// [AdventureResponse.playerStopMarker] line.
+  static bool endsWithPlayerStopMarker(String rawResponse) {
+    final trimmed = rawResponse.trimRight();
+    return trimmed.endsWith(AdventureResponse.playerStopMarker);
+  }
+
+  /// Removes a trailing standalone stop-marker line so its characters never
+  /// pollute the pure-Chinese narrative count.
+  static String _stripStopMarker(String narrative) {
+    if (!endsWithPlayerStopMarker(narrative)) return narrative;
+    final withoutMarker = narrative
+        .substring(
+            0, narrative.length - AdventureResponse.playerStopMarker.length)
+        .trimRight();
+    return withoutMarker;
   }
 
   /// Counts canonical Chinese characters via the shared
@@ -201,6 +259,8 @@ final class NarrativeLengthGuard {
       finalChineseChars: countChinese(narrative),
       supplementAttempted: true,
       supplementSucceeded: supplementSucceeded,
+      stoppedAtDecision: endsWithPlayerStopMarker(initialRawResponse) ||
+          endsWithPlayerStopMarker(supplementRawResponse),
     );
   }
 
@@ -214,6 +274,7 @@ final class NarrativeLengthGuard {
       finalChineseChars: chars,
       supplementAttempted: false,
       supplementSucceeded: false,
+      stoppedAtDecision: endsWithPlayerStopMarker(rawResponse),
     );
   }
 

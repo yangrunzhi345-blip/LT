@@ -27,10 +27,18 @@ class AdventureResponseParse {
   final List<String> narrative;
   final Map<String, dynamic>? payload;
 
+  /// True when the model ended the narrative with the explicit player-decision
+  /// marker ([AdventureResponse.playerStopMarker]). The marker itself is
+  /// stripped from [narrative]; the flag lets the engine stop a multi-stage
+  /// loop or a length supplement at a legitimate player decision point
+  /// instead of forcing the model to fill a word minimum.
+  final bool stoppedAtDecision;
+
   const AdventureResponseParse({
     required this.kind,
     this.narrative = const [],
     this.payload,
+    this.stoppedAtDecision = false,
   });
 
   bool get hasPayload => payload != null;
@@ -135,6 +143,12 @@ class AdventureResponse with Equatable {
   /// Canonical separator between human narrative and the settlement payload.
   static const jsonSeparator = '---JSON---';
 
+  /// Standalone final narrative line the model emits when the scene has
+  /// reached a player decision point. It is a legitimate early stop that
+  /// outranks any word-count minimum, and it is always stripped from what the
+  /// player sees, what TTS reads and what is sent back as history.
+  static const playerStopMarker = '---等待玩家---';
+
   /// Tolerates the separator variants models actually emit: `---JSON---`,
   /// `--- JSON ---`, `---\nJSON---`, plus arbitrary surrounding whitespace.
   static final RegExp _separatorPattern =
@@ -177,7 +191,39 @@ class AdventureResponse with Equatable {
   /// The engine must never show raw structured data as narrative, so every
   /// caller works from one of these four explicit kinds instead of guessing
   /// with string heuristics at the UI layer.
-  static AdventureResponseParse parse(String content) {
+  static AdventureResponseParse parse(String content) =>
+      _applyStopMarker(_parseRaw(content));
+
+  /// Strips a trailing [playerStopMarker] line from the narrative and reports
+  /// it through [AdventureResponseParse.stoppedAtDecision]. The marker only
+  /// counts when it is a standalone final line (its own paragraph, or the
+  /// last line of the final paragraph), so prose that merely contains the
+  /// marker text inside a sentence is never mistaken for a stop request.
+  static AdventureResponseParse _applyStopMarker(
+      AdventureResponseParse parsed) {
+    if (parsed.narrative.isEmpty) return parsed;
+    final lastIndex = parsed.narrative.length - 1;
+    final last = parsed.narrative[lastIndex].trimRight();
+    final String updatedLast;
+    if (last == playerStopMarker) {
+      updatedLast = '';
+    } else if (last.endsWith('\n$playerStopMarker')) {
+      updatedLast =
+          last.substring(0, last.length - playerStopMarker.length).trimRight();
+    } else {
+      return parsed;
+    }
+    final narrative = <String>[...parsed.narrative.sublist(0, lastIndex)];
+    if (updatedLast.isNotEmpty) narrative.add(updatedLast);
+    return AdventureResponseParse(
+      kind: parsed.kind,
+      narrative: List.unmodifiable(narrative),
+      payload: parsed.payload,
+      stoppedAtDecision: true,
+    );
+  }
+
+  static AdventureResponseParse _parseRaw(String content) {
     final trimmed = content.trim();
     if (trimmed.isEmpty) {
       return const AdventureResponseParse(
@@ -262,11 +308,17 @@ class AdventureResponse with Equatable {
   /// Rewrites any response into the canonical `narrative + ---JSON--- + payload`
   /// (or payload-only) form.  Malformed structured tails are stripped so raw
   /// JSON can never survive into the displayed narrative.
+  ///
+  /// A standalone [playerStopMarker] line anywhere in the narrative is
+  /// scrubbed: a trailing one is the legitimate stop (already handled by
+  /// [parse]); a mid-text one is a protocol deviation and must not leak into
+  /// the bubble, TTS or history either.
   static String canonicalize(String content) {
     final parsed = parse(content);
     switch (parsed.kind) {
       case AdventureResponseKind.narrativeWithPayload:
-        final narrative = parsed.narrative.join('\n\n').trim();
+        final narrative =
+            _stripStandaloneStopMarkers(parsed.narrative.join('\n\n').trim());
         final payload = jsonEncode(parsed.payload);
         return narrative.isEmpty
             ? '$jsonSeparator\n$payload'
@@ -280,8 +332,20 @@ class AdventureResponse with Equatable {
         // paragraphs so a damaged payload cannot ride along as prose.
         return parsed.narrative.isEmpty
             ? _proseBeforeStructured(content)
-            : parsed.narrative.join('\n\n').trim();
+            : _stripStandaloneStopMarkers(parsed.narrative.join('\n\n').trim());
     }
+  }
+
+  /// Removes every standalone [playerStopMarker] line from narrative text.
+  /// A marker inside a sentence is left alone: only whole lines count, so
+  /// prose that merely quotes the marker text is never damaged.
+  static String _stripStandaloneStopMarkers(String narrative) {
+    if (!narrative.contains(playerStopMarker)) return narrative;
+    return narrative
+        .split('\n')
+        .where((line) => line.trim() != playerStopMarker)
+        .join('\n')
+        .trim();
   }
 
   /// Merges locally owned presentation fields using the formal response parser.
@@ -467,18 +531,29 @@ class AdventureResponse with Equatable {
         .toList();
   }
 
+  /// Matches a trailing standalone [playerStopMarker] line. Built by
+  /// concatenation because a raw string cannot interpolate an expression.
+  static final RegExp _trailingStopMarkerPattern =
+      RegExp(r'\n?\s*' + RegExp.escape(playerStopMarker) + r'\s*$');
+
   /// Get streaming display text.  Hides both a completed `---JSON---` section
   /// and a payload that is still being streamed (including pure JSON), so a
   /// partially received settlement never flashes into the narrative bubble.
+  /// A trailing [playerStopMarker] is stripped as soon as it arrives so the
+  /// protocol marker is never shown or read aloud.
   static String streamingDisplayText(String accumulated) {
     if (accumulated.isEmpty) return accumulated;
-    final match = RegExp(r'\n?\s*---JSON---').firstMatch(accumulated);
-    if (match != null) return accumulated.substring(0, match.start);
-    final structuredStart = _streamingStructuredStart(accumulated);
-    if (structuredStart >= 0) {
-      return accumulated.substring(0, structuredStart);
+    var text = accumulated;
+    if (_trailingStopMarkerPattern.hasMatch(text)) {
+      text = text.replaceFirst(_trailingStopMarkerPattern, '');
     }
-    return accumulated;
+    final match = RegExp(r'\n?\s*---JSON---').firstMatch(text);
+    if (match != null) return text.substring(0, match.start);
+    final structuredStart = _streamingStructuredStart(text);
+    if (structuredStart >= 0) {
+      return text.substring(0, structuredStart);
+    }
+    return text;
   }
 
   /// Index where a trailing/embedded settlement payload begins, if any.

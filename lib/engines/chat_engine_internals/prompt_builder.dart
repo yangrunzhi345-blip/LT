@@ -1,6 +1,7 @@
 import '../../application/narrative/narrative_context.dart';
 import '../../application/narrative/prompt_compiler.dart';
 import '../../application/narrative/relationship_context.dart';
+import '../../application/narrative/user_intent.dart';
 import '../../config/app_config.dart';
 import '../../models/dialogue_level.dart';
 import '../../models/model_capabilities.dart';
@@ -19,6 +20,9 @@ class PromptBuilder {
   SceneState? lastSceneState;
   RelationshipNarrativeContext lastRelationships =
       const RelationshipNarrativeContext();
+
+  /// The intent the orchestrator derived for the most recent [buildMessages].
+  NarrativeIntent? lastIntent;
 
   /// Current player turn, accounting for an already-appended current input.
   int? lastRound;
@@ -71,7 +75,7 @@ class PromptBuilder {
         ? '$customPrompt\n\n---\n\n$adventurePrompt'
         : adventurePrompt;
     final skillSection = _buildSkillSummary(host);
-    final affinitySection = _buildAffinitySummary(host);
+    final affinitySection = _buildAffinitySummary(host, content);
     final hasCustomStatus = (host.adventureConfig?.allTrackedCustomAttributes ??
             host.adventureConfig?.customAttributes ??
             const [])
@@ -138,6 +142,10 @@ class PromptBuilder {
     lastContextTrace = compiled.trace;
     lastSceneState = context.sceneState;
     lastRelationships = context.plannedRelationships;
+    // Exposed so the engine can apply the same conservative intent reading
+    // (exclusions, invitations, scene/time guards) to output authorization
+    // without recomputing it from the raw input.
+    lastIntent = context.intent;
     lastHistoryItems = [
       for (final message in context.recentHistory)
         {'id': message.id, 'role': message.isUser ? 'user' : 'assistant'},
@@ -154,6 +162,8 @@ class PromptBuilder {
           '整轮的篇幅范围适用于所有幕合并后的叙事正文，不要求每一幕达到该范围。\n'
           '当前幕的篇幅与是否为终幕，以本次最后一条用户消息的分幕指令为准。\n'
           '中间幕只写正文，不输出分隔符、JSON、选项或状态；仅终幕输出 ---JSON--- 和 JSON。\n'
+          '任何一幕到达玩家决策点时，在正文最后一行单独输出 `---等待玩家---` 并停笔：'
+          '该幕即为终幕，不再续写，也不要求达到整轮字数下限。\n'
           '所有幕延续同一个叙事节拍，不替玩家行动、不跨越时间、不自行结束场景。';
     }
     // 字数数值与 JSON 字段骨架已在系统提示词中完整定义，这里只做格式锚定，
@@ -164,7 +174,7 @@ class PromptBuilder {
     return '''
 【本轮生成流程与格式强制检查】
 严格遵循生成流程：正文 ➔ 状态评估（逐项列出全部被追踪状态，若无自定义状态则跳过）➔ 选项：
-1. 叙事正文：遵守当前 ${dialogueLevel.id} ${dialogueLevel.label} 档位的字数要求，只推进一个叙事节拍，不得替玩家行动、不得跨越时间、不得自行收束场景；不得在正文中堆砌装备属性或身世清单。
+1. 叙事正文：遵守当前 ${dialogueLevel.id} ${dialogueLevel.label} 档位的字数要求，只推进一个叙事节拍，不得替玩家行动、不得跨越时间、不得自行收束场景；不得在正文中堆砌装备属性或身世清单。已到达玩家决策点时，在正文最后一行单独输出 `---等待玩家---` 并停笔，优先于字数要求；输出标记后不要输出 `---JSON---`、选项或状态。
 2. 紧接一行 `---JSON---`，然后紧接一行合法 JSON（必须包含 options 数组$statusRequirement）。
 
 禁止省略 `---JSON---`，禁止省略 options，禁止只写叙事正文。options 必须贴合本轮剧情，不能使用泛化模板。
@@ -212,13 +222,35 @@ options 还不得重复或高度相似于最近几轮已经出现过的选项；
     return buf.toString();
   }
 
-  String _buildAffinitySummary(ChatEngineHost host) {
+  String _buildAffinitySummary(ChatEngineHost host, String content) {
     final affMgr = host.gameEngine?.affinityMgr;
     final config = host.adventureConfig;
     if (config == null) return '';
+    // Only characters the player can actually engage this turn appear in the
+    // affinity summary: those present in the scene, plus any the player names
+    // in this turn's own input. Listing every living NPC (name + affinity +
+    // tracked status) implies absent characters are participating and invites
+    // the model to pull them into the scene — the P2 root cause. Never fall
+    // back to the whole roster: naming the absent is the only way in.
+    //
+    // The dead list below stays complete because it is a prohibition, not an
+    // invitation.
+    final presentIds = host.sceneParticipantIds.toSet();
+    // A character the player excluded this turn must not surface here even if
+    // the raw presence set still contains them: the authoritative presence
+    // list in the same prompt has already dropped them, and echoing their
+    // affinity would contradict it.
+    final excluded = const IntentResolver()
+        .resolve(content, knownCharacters: adventureCharacterNames(config))
+        .excludedCharacterIds
+        .toSet();
     final buf = StringBuffer();
     final affinities = <String, int>{};
-    for (final npc in config.supportingCharacters.where((n) => n.isAlive)) {
+    for (final npc in config.supportingCharacters.where((n) =>
+        n.isAlive &&
+        !excluded.contains(n.id) &&
+        (presentIds.contains(n.id) ||
+            (n.name.trim().length >= 2 && content.contains(n.name))))) {
       affinities[npc.name] = npc.affinity;
       if (npc.customAttributes.isNotEmpty) {
         final attrs =

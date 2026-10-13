@@ -1,14 +1,27 @@
 import '../models/scene_dialogue.dart';
+import '../models/scene_state.dart';
+import 'scene_entry_authorizer.dart';
 
 /// Deterministic first-pass continuity guard. It never mutates a response;
 /// callers may use its result to request one narrative-only repair.
 class SceneConsistencyValidator {
   const SceneConsistencyValidator();
 
+  /// Bounded, diagnostic-only heuristic for the classic "third party barges
+  /// into a private scene" failure: the narrative frames an arrival as a
+  /// sudden interruption while the player never invited anyone. It never
+  /// blocks a turn — deciding whether a surprise arrival was dramatically
+  /// justified is semantic and stays with the prompt contract — but it makes
+  /// the pattern observable in the persisted turn diagnostics.
+  static final RegExp _interruptionPattern =
+      NarrativeArrivalVocabulary.interruption;
+
   SceneConsistencyResult validate({
     required SceneDialogueContextSnapshot snapshot,
     required String narrative,
     required Map<String, dynamic>? payload,
+    String userInput = '',
+    Set<String> invitedCharacterIds = const {},
   }) {
     final warnings = <String>[];
     final names = snapshot.presentParticipants.map((p) => p.name).toSet();
@@ -41,6 +54,17 @@ class SceneConsistencyValidator {
           mentionedActor.isNotEmpty &&
           !names.contains(mentionedActor)) {
         warnings.add('状态补丁包含不在场角色');
+      }
+      final entering = SceneStateChangeProposal.parse(
+        payload['scene_state_changes'],
+        diagnostics: <String>[],
+      )?.charactersEnter;
+      if (entering != null &&
+          entering.isNotEmpty &&
+          userInput.trim().isNotEmpty &&
+          _interruptionPattern.hasMatch(narrative) &&
+          !invitedCharacterIds.any(entering.contains)) {
+        warnings.add('叙事以突发方式引入入场角色，且玩家未邀请：${entering.join('、')}');
       }
     }
     return SceneConsistencyResult(warnings);

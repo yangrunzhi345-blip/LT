@@ -38,6 +38,7 @@ import '../services/repositories/adventure_repository.dart';
 import '../services/custom_status_merger.dart';
 import '../services/runtime_state_validator.dart';
 import '../services/scene_consistency_validator.dart';
+import '../services/scene_entry_authorizer.dart';
 import 'chat_engine_host.dart';
 import 'chat_engine_internals/prompt_builder.dart';
 import 'chat_engine_internals/response_length_guard.dart';
@@ -267,6 +268,12 @@ class ChatEngine {
   int _underflowDeficit = 0;
   int _underflowLastActual = 0;
 
+  /// Consecutive turns that ended below the word minimum via the explicit
+  /// player-decision marker. The marker is a legitimate stop, but a model
+  /// could otherwise use it to bypass the length contract entirely, so a
+  /// streak escalates a reminder instead of silently accepting it.
+  int _consecutiveDecisionStops = 0;
+
   static const CompletionParams _optionRepairParams = CompletionParams(
     temperature: 0.45,
     topP: 0.8,
@@ -400,8 +407,9 @@ class ChatEngine {
   Future<void> _applyNarrativeResponse(String content) async {
     final response = await compute(parseResponseInIsolate, content);
     final gs = _host.gameState;
-    final effects = SceneDialogueEffects.fromJson(_sceneResponseMap(content));
-    _pendingSceneEffects = effects;
+    final parsedEffects =
+        SceneDialogueEffects.fromJson(_sceneResponseMap(content));
+    _pendingSceneEffects = parsedEffects;
 
     _pendingCustomStatusChanges = const [];
     _pendingCustomStatusEvaluations = null;
@@ -417,7 +425,7 @@ class ChatEngine {
     _narrativeOptions = const [];
 
     if (response == null) {
-      _stagePendingState(effects.applyState(gs));
+      _stagePendingState(parsedEffects.applyState(gs));
       _pendingLegacyCustomStatus = const [];
       _parsedOptions = _lastValidOptions.isNotEmpty
           ? List<String>.from(_lastValidOptions)
@@ -426,7 +434,7 @@ class ChatEngine {
     }
 
     final patch = response.patch;
-    _stagePendingState(effects.applyState(gs.copyWith(
+    _stagePendingState(parsedEffects.applyState(gs.copyWith(
       hp: patch.hp ?? gs.hp,
       maxHp: patch.maxHp ?? gs.maxHp,
       energy: patch.energy ?? gs.energy,
@@ -438,16 +446,30 @@ class ChatEngine {
 
     final payload = _sceneResponseMap(content);
     final narrativeRuntimeDiagnostics = <String>[];
-    _pendingNarrativeRuntimeChanges = RuntimeStateChangeProposal.parse(
-      payload?['runtime_state_changes'],
+    _pendingNarrativeRuntimeChanges = _filterExcludedRuntimeChanges(
+      RuntimeStateChangeProposal.parse(
+        payload?['runtime_state_changes'],
+        diagnostics: narrativeRuntimeDiagnostics,
+      ),
+      _promptBuilder.lastIntent,
       diagnostics: narrativeRuntimeDiagnostics,
     );
+    // A player-excluded character must not gain state through the legacy
+    // narrative path either (it is the fallback when settlement fails).
+    final excludedNarrative = _filterExcludedNarrativeState(
+      effects: parsedEffects,
+      evaluations: response.customStatusEvaluations,
+      changes: response.customStatusChanges,
+      intent: _promptBuilder.lastIntent,
+    );
+    _pendingSceneEffects = excludedNarrative.effects;
     _pendingLegacyCustomStatus = response.customStatus;
-    _pendingNarrativeEvaluations = response.customStatusEvaluations;
-    _pendingNarrativeStatusChanges = response.customStatusChanges;
+    _pendingNarrativeEvaluations = excludedNarrative.evaluations;
+    _pendingNarrativeStatusChanges = excludedNarrative.changes;
     _pendingNarrativeStatusDiagnostics = List<String>.unmodifiable([
       ...response.parseDiagnostics,
       ...narrativeRuntimeDiagnostics,
+      ...excludedNarrative.diagnostics,
     ]);
     _narrativeOptions = List<String>.from(response.options);
 
@@ -468,7 +490,23 @@ class ChatEngine {
   /// merged), so it sees the final prose. The legacy narrative snapshot is
   /// cleared here so it can never be applied on top of a settlement delta.
   void _applySettlement(TurnSettlement settlement) {
-    final evaluations = settlement.customStatusEvaluations;
+    final excluded = _excludedEntities(_promptBuilder.lastIntent);
+    final evaluations = settlement.customStatusEvaluations
+        ?.where((evaluation) => !_isExcludedStatusEntry(
+              evaluation.characterId,
+              evaluation.characterName,
+              excluded,
+            ))
+        .toList(growable: false);
+    final settlementDiagnostics = <String>[];
+    for (final evaluation in settlement.customStatusEvaluations ??
+        const <CustomStatusEvaluation>[]) {
+      if (_isExcludedStatusEntry(
+          evaluation.characterId, evaluation.characterName, excluded)) {
+        settlementDiagnostics.add(
+            'custom_status_evaluation:excluded:${evaluation.characterId ?? evaluation.characterName ?? '?'}');
+      }
+    }
     _pendingCustomStatusEvaluations = evaluations;
     _pendingStatusParseDiagnostics =
         List<String>.unmodifiable(settlement.parseDiagnostics);
@@ -476,10 +514,33 @@ class ChatEngine {
       if (evaluations != null)
         for (final evaluation in evaluations)
           if (evaluation.changed) evaluation.toChange(),
-      ...settlement.customStatusChanges,
+      ...settlement.customStatusChanges
+          .where((change) => !_isExcludedStatusEntry(
+                change.characterId,
+                change.characterName,
+                excluded,
+              )),
     ];
+    for (final change in settlement.customStatusChanges) {
+      if (_isExcludedStatusEntry(
+          change.characterId, change.characterName, excluded)) {
+        settlementDiagnostics.add(
+            'custom_status_change:excluded:${change.characterId ?? change.characterName ?? '?'}');
+      }
+    }
     _pendingLegacyCustomStatus = const [];
-    _pendingRuntimeChanges = settlement.runtimeChanges;
+    // A player-excluded character must not gain state from this turn either.
+    _pendingRuntimeChanges = _filterExcludedRuntimeChanges(
+      settlement.runtimeChanges,
+      _promptBuilder.lastIntent,
+      diagnostics: settlementDiagnostics,
+    );
+    if (settlementDiagnostics.isNotEmpty) {
+      _pendingSettlementDiagnostics = List<String>.unmodifiable([
+        ..._pendingSettlementDiagnostics,
+        ...settlementDiagnostics,
+      ]);
+    }
     // 逐状态诊断：模型到底评估了什么、判定变没变。与后续 applied/rejected
     // 诊断对照，即可定位「AI 判定没变」还是「系统把变化吃掉了」。
     _pendingSettlementStatusDiagnostics = List.unmodifiable([
@@ -837,6 +898,223 @@ class ChatEngine {
   String _finalNarrativeOf(String content) =>
       AdventureResponse.parse(content).narrative.join('\n\n').trim();
 
+  /// The scene location the player currently sees, with the same fallback the
+  /// turn snapshot uses (game state scene before any persisted location).
+  String _currentSceneLocation() {
+    final location = _host.sceneState.location;
+    if (location.trim().isNotEmpty) return location;
+    return _host.gameState.currentScene;
+  }
+
+  /// Presence list for the durable commit: the conflict-resolved projection
+  /// plus any player-excluded id that was already present in the host scene.
+  /// Exclusion is a per-turn prompt constraint (the character may not act
+  /// this turn); it must never rewrite persisted presence. Ids the turn
+  /// explicitly authorized to leave are not restored.
+  List<String> _restoredPresentCharacterIds(
+    SceneState projected,
+    NarrativeIntent? intent,
+    List<String> authorizedLeaves,
+  ) {
+    final excluded = (intent?.excludedCharacterIds ?? const <String>[]).toSet();
+    if (excluded.isEmpty) return projected.presentCharacterIds;
+    final leaving = authorizedLeaves.toSet();
+    final restore = <String>{
+      ..._host.sceneState.presentCharacterIds
+          .where((id) => excluded.contains(id) && !leaving.contains(id)),
+    };
+    if (restore.isEmpty) return projected.presentCharacterIds;
+    // Keep the stored order stable: projected order first, appended extras.
+    final ordered = <String>[...projected.presentCharacterIds];
+    for (final id in _host.sceneState.presentCharacterIds) {
+      if (restore.contains(id) && !ordered.contains(id)) ordered.add(id);
+    }
+    return List.unmodifiable(ordered);
+  }
+
+  /// Builds the authorization context for this turn's scene-state proposal
+  /// from the conservative intent reading and the turn's final narrative.
+  ///
+  /// Narrative basis uses roster names of at least two characters: shorter
+  /// names match too much ordinary prose to be a reliable identity signal.
+  /// Arrival keywords are recorded for diagnostics only — they never
+  /// authorize an entry (see [SceneEntryAuthorizer]).
+  SceneEntryAuthorization _sceneEntryAuthorization(
+    NarrativeIntent? intent,
+    String finalNarrative,
+  ) {
+    final config = _host.adventureConfig;
+    final names = config == null
+        ? const <String, String>{}
+        : AdventureTrackedStateRegistry.entityDisplayNames(config);
+    final narrativeNames = <String>{
+      for (final entry in names.entries)
+        if (entry.value.trim().length >= 2 &&
+            finalNarrative.contains(entry.value.trim()))
+          entry.value.trim(),
+    };
+    return SceneEntryAuthorization(
+      excludedCharacterIds:
+          (intent?.excludedCharacterIds ?? const <String>[]).toSet(),
+      invitedCharacterIds:
+          (intent?.invitedCharacterIds ?? const <String>[]).toSet(),
+      dismissedCharacterIds:
+          (intent?.dismissedCharacterIds ?? const <String>[]).toSet(),
+      narrativeNames: narrativeNames,
+      narrativeHasArrival:
+          NarrativeArrivalVocabulary.arrival.hasMatch(finalNarrative),
+      characterNames: names,
+      allowsLocationChange: intent?.forbidsSceneChange != true,
+      allowsTimeChange: intent?.forbidsTimeSkip != true,
+    );
+  }
+
+  /// Drops runtime state changes for entities the player explicitly excluded
+  /// this turn: an excluded character must not gain state either.
+  List<RuntimeStateChangeProposal> _filterExcludedRuntimeChanges(
+    List<RuntimeStateChangeProposal> changes,
+    NarrativeIntent? intent, {
+    required List<String> diagnostics,
+  }) {
+    final excluded = (intent?.excludedCharacterIds ?? const <String>[]).toSet();
+    if (excluded.isEmpty || changes.isEmpty) return changes;
+    final kept = <RuntimeStateChangeProposal>[];
+    for (final change in changes) {
+      if (excluded.contains(change.entityId)) {
+        diagnostics
+            .add('runtime_state_change:excluded_entity:${change.entityId}');
+        continue;
+      }
+      kept.add(change);
+    }
+    return kept;
+  }
+
+  /// Ids and display names of the characters the player excluded this turn.
+  ///
+  /// The prompt promises an excluded character "不得以任何方式参与本轮互动",
+  /// so every state channel that names a character has to honour it: tracked
+  /// status evaluations/changes, affinity and death effects, and the local
+  /// keyword affinity analysis.
+  ({Set<String> ids, Set<String> names}) _excludedEntities(
+      NarrativeIntent? intent) {
+    final ids = (intent?.excludedCharacterIds ?? const <String>[]).toSet();
+    if (ids.isEmpty) return (ids: const {}, names: const {});
+    final config = _host.adventureConfig;
+    final names = <String>{};
+    if (config != null) {
+      final displayNames =
+          AdventureTrackedStateRegistry.entityDisplayNames(config);
+      for (final id in ids) {
+        final name = displayNames[id];
+        if (name != null && name.trim().isNotEmpty) names.add(name.trim());
+      }
+    }
+    return (ids: ids, names: names);
+  }
+
+  /// True when a status entry refers to an excluded entity (by stable id or
+  /// display name).
+  bool _isExcludedStatusEntry(
+    String? characterId,
+    String? characterName,
+    ({Set<String> ids, Set<String> names}) excluded,
+  ) {
+    if (characterId != null && excluded.ids.contains(characterId)) return true;
+    final name = characterName?.trim();
+    return name != null && name.isNotEmpty && excluded.names.contains(name);
+  }
+
+  /// Removes excluded entities from a narrative payload's effects, tracked
+  /// status evaluations and legacy status changes.
+  ({
+    SceneDialogueEffects effects,
+    List<CustomStatusEvaluation>? evaluations,
+    List<CustomStatusChange> changes,
+    List<String> diagnostics,
+  }) _filterExcludedNarrativeState({
+    required SceneDialogueEffects effects,
+    required List<CustomStatusEvaluation>? evaluations,
+    required List<CustomStatusChange> changes,
+    required NarrativeIntent? intent,
+  }) {
+    final excluded = _excludedEntities(intent);
+    if (excluded.ids.isEmpty) {
+      return (
+        effects: effects,
+        evaluations: evaluations,
+        changes: changes,
+        diagnostics: const [],
+      );
+    }
+    final diagnostics = <String>[];
+    for (final name in effects.deadCharacters) {
+      if (excluded.names.contains(name)) {
+        diagnostics.add('effect:character_dead:excluded:$name');
+      }
+    }
+    for (final name in effects.affinityChanges.keys) {
+      if (excluded.names.contains(name)) {
+        diagnostics.add('effect:affinity_change:excluded:$name');
+      }
+    }
+    final affinityChanges = <String, int>{
+      for (final entry in effects.affinityChanges.entries)
+        if (!excluded.names.contains(entry.key)) entry.key: entry.value,
+    };
+    final deadCharacters = <String>{
+      ...effects.deadCharacters.where((name) => !excluded.names.contains(name)),
+    };
+    final filteredEvaluations = evaluations
+        ?.where((evaluation) => !_isExcludedStatusEntry(
+              evaluation.characterId,
+              evaluation.characterName,
+              excluded,
+            ))
+        .toList(growable: false);
+    for (final evaluation in evaluations ?? const <CustomStatusEvaluation>[]) {
+      if (_isExcludedStatusEntry(
+          evaluation.characterId, evaluation.characterName, excluded)) {
+        diagnostics.add(
+            'custom_status_evaluation:excluded:${evaluation.characterId ?? evaluation.characterName ?? '?'}');
+      }
+    }
+    final filteredChanges = changes
+        .where((change) => !_isExcludedStatusEntry(
+              change.characterId,
+              change.characterName,
+              excluded,
+            ))
+        .toList(growable: false);
+    for (final change in changes) {
+      if (_isExcludedStatusEntry(
+          change.characterId, change.characterName, excluded)) {
+        diagnostics.add(
+            'custom_status_change:excluded:${change.characterId ?? change.characterName ?? '?'}');
+      }
+    }
+    return (
+      effects: SceneDialogueEffects(
+        level: effects.level,
+        experience: effects.experience,
+        mp: effects.mp,
+        maxMp: effects.maxMp,
+        baseAtk: effects.baseAtk,
+        baseDef: effects.baseDef,
+        baseSpeed: effects.baseSpeed,
+        skillPoints: effects.skillPoints,
+        affinityChanges: affinityChanges,
+        deadCharacters: deadCharacters,
+        itemsGained: effects.itemsGained,
+        enemies: effects.enemies,
+        diagnostics: effects.diagnostics,
+      ),
+      evaluations: filteredEvaluations,
+      changes: filteredChanges,
+      diagnostics: List.unmodifiable(diagnostics),
+    );
+  }
+
   /// Keeps the first proposal per `entity:path`.
   ///
   /// [`RuntimeStateValidator.accept`] throws on a conflicting duplicate, and a
@@ -1129,8 +1407,13 @@ class ChatEngine {
         _decayWarningNextRound = false;
       } else if (_decayWarningNextRound) {
         controlContext =
-            '$controlContext\n🔴 系统检测：上轮纯叙事正文字数显著下降。本轮请推进多幕情节与深入对白，恢复当前档位要求的叙事细节。';
+            '$controlContext\n🔴 系统检测：上轮纯叙事正文字数显著下降。本轮请充实环境、心理与对白细节，恢复当前档位要求的叙事细节密度，但不得以增加事件数量或时间跨度的方式凑字数。';
         _decayWarningNextRound = false;
+      } else if (_consecutiveDecisionStops >= 2) {
+        // The decision-point marker is a legitimate stop, but a streak of
+        // short marker turns means the length contract is being bypassed.
+        controlContext =
+            '$controlContext\n🔴 系统提示：已连续 $_consecutiveDecisionStops 轮以 `---等待玩家---` 停笔且未达到字数底线。`---等待玩家---` 只允许在剧情确实到达需要玩家决定、回应或行动的位置时使用；若本轮剧情尚未到达决策点，必须写满 ${sceneSnapshot.budget.minChineseChars} 纯汉字底线，不得以停笔标记替代叙事篇幅。';
       }
 
       _scenePhase = SceneDialoguePhase.streaming;
@@ -1143,6 +1426,10 @@ class ChatEngine {
       final hardMaxWords = outputBudget.hardMaximum;
       final useMultiStage = outputBudget.usesMultiStage;
       List<Map<String, String>> lengthGuardBaseMessages;
+      // Set when the narrative ends at an explicit player decision point
+      // (`---等待玩家---`). Shared by both generation branches so the length
+      // guard, the verdict and the next-round warnings all agree.
+      var playerStopRequested = false;
 
       if (useMultiStage) {
         // Budget-driven multi-stage generation. There is no fixed act count:
@@ -1182,6 +1469,10 @@ class ChatEngine {
             : '必须逐项输出 custom_status_evaluations：为每个被追踪状态各给一条评估，changed=false 的也要列出并注明 reason；changed=true 时必须给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。';
 
         String lastStagePayload = '';
+        // Set when any stage ends with the explicit player-decision marker.
+        // A stopped turn skips the length supplement and is never counted as
+        // an underflow: reaching the player's decision point is a complete
+        // narrative beat, not a short one.
         for (int stage = 1; stage <= maxAllowedStages; stage++) {
           if (!_isRequestCurrent(
               requestId, requestGeneration, adventureId, branchId)) {
@@ -1304,7 +1595,22 @@ class ChatEngine {
           // 统一使用 AdventureResponse 的结构解析，避免 indexOf('---JSON---')
           // 被 `--- JSON ---` / `---\nJSON---` 等变体绕过而把 JSON 泄漏进正文。
           final stageParsed = AdventureResponse.parse(stageRaw);
+          final stageStopped = stageParsed.stoppedAtDecision;
           final stageNarrative = stageParsed.narrative.join('\n\n').trim();
+          if (stageNarrative.isEmpty && stageStopped) {
+            // Marker + payload (no prose) is a protocol deviation, but the
+            // payload still carries a usable settlement: degrade like the
+            // payload-only path instead of destroying the whole turn.
+            if (stageParsed.payload == null) {
+              throw const FormatException(
+                  'Player-decision stop without narrative');
+            }
+            lastStagePayload = jsonEncode(stageParsed.payload!);
+            playerStopRequested = true;
+            debugPrint(
+                '[ChatEngine] 第 $stage 幕仅有停笔标记与结算数据，按 payload-only 停笔处理');
+            break;
+          }
           if (stageNarrative.isEmpty && !isFinal) {
             throw const FormatException('Non-final stage has no narrative');
           }
@@ -1312,6 +1618,15 @@ class ChatEngine {
           completedNarrativePrefix = stageNarratives.join('\n\n');
           if (stageParsed.payload != null) {
             lastStagePayload = jsonEncode(stageParsed.payload);
+          }
+          if (stageStopped) {
+            // The scene reached a player decision point: this stage is the
+            // final one regardless of the remaining budget, and no
+            // supplement may push the narrative past the decision.
+            playerStopRequested = true;
+            debugPrint(
+                '[ChatEngine] 第 $stage 幕在玩家决策点停笔（${AdventureResponse.playerStopMarker}），本轮提前结束');
+            break;
           }
 
           final totalWordsSoFar = countChinese(stageNarratives.join('\n\n'));
@@ -1384,6 +1699,7 @@ class ChatEngine {
           },
         );
         json = execution.content;
+        playerStopRequested = AdventureResponse.parse(json).stoppedAtDecision;
         reasoningContentCombined = execution.reasoningContent ?? '';
       }
 
@@ -1396,6 +1712,15 @@ class ChatEngine {
       // can never remain embedded in the narrative, which is what previously
       // leaked `{"scene":...}` into the visible body.
       json = AdventureResponse.canonicalize(json);
+      // A bare stop marker with no prose is a protocol failure: refuse it so
+      // the failure path runs instead of committing an empty assistant
+      // bubble, matching the multi-stage path. Deliberately scoped to the
+      // marker-only case: an ordinary empty/truncated response keeps its
+      // existing length-guard recovery (an in-turn supplement request) rather
+      // than turning a recoverable response into a hard error.
+      if (playerStopRequested && json.trim().isEmpty) {
+        throw const FormatException('Player-decision stop without narrative');
+      }
       GenerationDiagnostics.instance.mark('[ChatTurn][LENGTH_START]',
           {'request': requestId, 'contentChars': json.length});
       final lengthGuardResult = await _ensureNarrativeLength(
@@ -1406,10 +1731,16 @@ class ChatEngine {
         requestGeneration: requestGeneration,
         adventureId: adventureId,
         branchId: branchId,
+        playerStopRequested: playerStopRequested,
       );
       // Re-canonicalize after the optional supplement: a continuation that only
       // returned settlement JSON must not be merged into the narrative.
       json = AdventureResponse.canonicalize(lengthGuardResult.content);
+      // The final, canonical narrative every downstream consumer reads:
+      // settlement input, scene authorization basis and the committed message
+      // all see the same text (supplements merged, overflow converged, the
+      // player-decision marker stripped).
+      final finalNarrative = _finalNarrativeOf(json);
       // Replace the transient streamed concatenation with the canonical
       // narrative-plus-single-payload ordering before the bubble drains.
       _streamingContent = json;
@@ -1442,7 +1773,7 @@ class ChatEngine {
       GenerationDiagnostics.instance
           .mark('[ChatTurn][SETTLEMENT_START]', {'request': requestId});
       final settlementOutcome = await _runTurnSettlement(
-        finalNarrative: _finalNarrativeOf(json),
+        finalNarrative: finalNarrative,
         userInput: content,
         requestId: requestId,
         requestGeneration: requestGeneration,
@@ -1523,6 +1854,10 @@ class ChatEngine {
         snapshot: sceneSnapshot,
         narrative: marker < 0 ? json : json.substring(0, marker),
         payload: responseMap,
+        userInput: content,
+        invitedCharacterIds:
+            (_promptBuilder.lastIntent?.invitedCharacterIds ?? const <String>[])
+                .toSet(),
       );
 
       if (_isRepairingOptions) {
@@ -1546,7 +1881,9 @@ class ChatEngine {
       final adSepIdx = json.indexOf('---JSON---');
       final adNarrative = adSepIdx >= 0 ? json.substring(0, adSepIdx) : json;
       final currentWordCount = countChinese(adNarrative);
-      if (_lastAiWordCount > 0 && currentWordCount > 0) {
+      if (_lastAiWordCount > 0 &&
+          currentWordCount > 0 &&
+          !lengthGuardResult.stoppedAtDecision) {
         final drop = (_lastAiWordCount - currentWordCount) / _lastAiWordCount;
         if (drop > 0.25) {
           _decayWarningNextRound = true;
@@ -1580,8 +1917,17 @@ class ChatEngine {
       final affinityMgr = _host.gameEngine?.affinityMgr;
       final affinityConfig = settledConfig ?? _host.adventureConfig;
       if (affinityConfig != null && affinityMgr != null) {
-        effects = effects.withAffinityChanges(affinityMgr.analyzeKeywords(
-            content, affinityConfig.supportingCharacters));
+        // A player-excluded character must not gain affinity from keyword
+        // analysis either — the exclusion covers every state channel.
+        final excludedNames =
+            _excludedEntities(_promptBuilder.lastIntent).names;
+        final analyzable = excludedNames.isEmpty
+            ? affinityConfig.supportingCharacters
+            : affinityConfig.supportingCharacters
+                .where((npc) => !excludedNames.contains(npc.name))
+                .toList(growable: false);
+        effects = effects.withAffinityChanges(
+            affinityMgr.analyzeKeywords(content, analyzable));
       }
       // 本轮 pending 一定由解析阶段写入，不再回退到 host，避免沿用上一轮的残值。
       final state = effects.applyState(_pendingGameState ?? _host.gameState);
@@ -1651,14 +1997,40 @@ class ChatEngine {
               sourceMessageId: aiMsg.id,
             );
       final sceneStateDiagnostics = <String>[];
-      final sceneStateProposal = SceneStateChangeProposal.parse(
+      final parsedSceneStateProposal = SceneStateChangeProposal.parse(
         _sceneResponseMap(json)?['scene_state_changes'],
         diagnostics: sceneStateDiagnostics,
       );
+      // P2/P4: a model-proposed presence, location or time change only lands
+      // when the player authorized it (invitation / dismissal / exclusion /
+      // explicit jump) or when this turn's own final narrative depicts it.
+      // Rejected deltas become diagnostics, never silent drops.
+      final sceneIntent = _promptBuilder.lastIntent;
+      final sceneAuthorization = const SceneEntryAuthorizer().authorize(
+        proposal: parsedSceneStateProposal,
+        authorization: _sceneEntryAuthorization(sceneIntent, finalNarrative),
+        currentLocation: _currentSceneLocation(),
+        currentTime: _host.sceneState.time,
+      );
+      sceneStateDiagnostics.addAll(sceneAuthorization.diagnostics);
+      final sceneStateProposal = sceneAuthorization.proposal;
+      if (sceneStateProposal == null && parsedSceneStateProposal != null) {
+        sceneStateDiagnostics.add('scene_state_changes:fully_unauthorized');
+      }
       final committedSceneState = projectedSceneState?.copyWith(
         location: state.currentScene.isEmpty
             ? projectedSceneState.location
             : state.currentScene,
+        // A per-turn exclusion is prompt semantics, not a presence change:
+        // restore any excluded id that was already present so the first
+        // durable commit of an adventure cannot silently drop a character
+        // the player only asked to sit out this turn. An exclusion that also
+        // authorized the character to leave is honoured, not restored.
+        presentCharacterIds: _restoredPresentCharacterIds(
+          projectedSceneState,
+          _promptBuilder.lastIntent,
+          sceneStateProposal?.charactersLeave ?? const [],
+        ),
       );
       // 本轮最终字数判定的唯一来源，提交诊断与下方的响应监控共用同一份结果。
       // `overflowDetected` 只是「原始响应曾超限并已被收敛」的历史事件，绝不代表
@@ -1673,7 +2045,15 @@ class ChatEngine {
         'verdict': lengthFinalVerdict.diagnosticToken
       });
       final lengthFinalPassed =
-          lengthFinalVerdict == NarrativeLengthVerdict.withinRange;
+          lengthFinalVerdict == NarrativeLengthVerdict.withinRange ||
+              lengthFinalVerdict == NarrativeLengthVerdict.decisionStop;
+      // Track decision-point stop streaks so a model cannot use the marker to
+      // silently bypass the word minimum turn after turn.
+      if (lengthFinalVerdict == NarrativeLengthVerdict.decisionStop) {
+        _consecutiveDecisionStops++;
+      } else {
+        _consecutiveDecisionStops = 0;
+      }
 
       SceneDialogueCommitResult result = SceneDialogueCommitResult(
         applied: true,
@@ -1732,6 +2112,10 @@ class ChatEngine {
             'length_final_verdict': lengthFinalVerdict.diagnosticToken,
             // 历史事件：原始响应曾超过硬上限并被自动收敛（不代表最终失败）。
             'length_overflow_detected': lengthGuardResult.overflowDetected,
+            // 本轮在玩家决策点合法停笔（未达字数下限但不是失败）。
+            'length_stopped_at_decision': lengthGuardResult.stoppedAtDecision,
+            // 连续以决策点停笔的轮数（>=2 时下轮会收到防滥用提醒）。
+            'consecutive_decision_stops': _consecutiveDecisionStops,
             // Turn settlement is a separate, post-narrative request. Its
             // character count is reported for latency triage only — it is never
             // part of the narrative word count.
@@ -2397,14 +2781,23 @@ class ChatEngine {
     required int requestGeneration,
     required int? adventureId,
     required int branchId,
+    bool playerStopRequested = false,
   }) async {
     final initial = _lengthGuard.withoutSupplement(rawResponse);
     final minimum = snapshot.budget.minChineseChars;
     final hardMaximum = snapshot.budget.hardMaximum;
-    if (initial.passed(minimum)) {
+    // An explicit player-decision stop is a complete beat: never supplement
+    // past the point where the player has to act.
+    if (initial.passed(minimum) || playerStopRequested) {
       debugPrint('[LengthGuard] initial=${initial.initialChineseChars} '
-          'required=$minimum hardMax=$hardMaximum passed=true');
-      return _withOverflowGuard(initial, hardMaximum: hardMaximum);
+          'required=$minimum hardMax=$hardMaximum passed=true'
+          '${playerStopRequested ? ' (player decision stop)' : ''}');
+      // The engine passes canonicalized content (marker already stripped), so
+      // the turn-level flag is the authoritative stop signal here.
+      final effective = playerStopRequested && !initial.stoppedAtDecision
+          ? initial.copyWith(stoppedAtDecision: true)
+          : initial;
+      return _withOverflowGuard(effective, hardMaximum: hardMaximum);
     }
 
     if (!_isRequestCurrent(
@@ -2544,6 +2937,7 @@ class ChatEngine {
       supplementAttempted: result.supplementAttempted,
       supplementSucceeded: result.supplementSucceeded,
       overflowDetected: true,
+      stoppedAtDecision: result.stoppedAtDecision,
     );
   }
 
@@ -2867,13 +3261,17 @@ class ChatEngine {
           '前 ${stage - 1} 幕已推进 $currentChars 纯汉字（$rangeNote）。\n'
           '$budgetNote，紧接上文收束本轮叙事节拍，不要超过上限。\n'
           '收束只指结束本轮回复，不得跨越时间或代替玩家行动，也不得自行收束场景或写出结局。\n'
-          '本幕叙事收束后，立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
-          '⚠️ 【状态结算强制要求】：JSON 必须包含 options 数组与 custom_status_evaluations（逐项评估每个被追踪状态，changed=false 也要列出）。$statusHint';
+          '二选一，不得同时做：\n'
+          'A. 若本幕已经到达需要玩家决定、回应或行动的位置：在正文最后一行单独输出 `---等待玩家---` 并停笔，'
+          '不要输出 `---JSON---`、选项或状态（系统会独立结算）。\n'
+          'B. 若剧情仍在继续：收束本幕后立即输出一行分隔符 `---JSON---`，然后紧跟一行合法 JSON。\n'
+          '⚠️ 【状态结算强制要求（仅分支 B）】：JSON 必须包含 options 数组与 custom_status_evaluations（逐项评估每个被追踪状态，changed=false 也要列出）。$statusHint';
     }
     if (stage == 1) {
       return '【分幕流水线·第 1 幕（入境与展开）指令】：\n'
           '本轮为长篇叙事的首发阶段。请展开饱满叙事：环境渲染、角色反应、心理与对白细节（$rangeNote）。\n'
           '只推进一个叙事节拍，不得替玩家行动、不得跨越时间，也不得引出后续事件链。\n'
+          '若已经到达需要玩家决定或行动的位置，在正文最后一行单独输出 `---等待玩家---` 并停笔，本幕即为终幕。\n'
           '本幕叙事正文控制在约 $stageCharTarget 纯汉字以内，不要超出。\n'
           '⚠️ 严禁提前草率收束！绝对严禁输出 ---JSON--- 及任何选项或状态数据！写满后直接以正文停笔。';
     }
@@ -2881,6 +3279,7 @@ class ChatEngine {
         '前 ${stage - 1} 幕已推进 $currentChars 纯汉字（$rangeNote）。\n'
         '请紧接上文继续充实同一个叙事节拍，本幕叙事正文控制在约 $stageCharTarget 纯汉字以内，不要超出。\n'
         '只允许扩充环境、心理、对白细节与瞬时信息密度，不得增加事件数量、时间跨度或推进到结局。\n'
+        '若已经到达需要玩家决定或行动的位置，在正文最后一行单独输出 `---等待玩家---` 并停笔，本幕即为终幕。\n'
         '⚠️ 严禁输出 ---JSON--- 及任何选项或状态数据！写满后直接以正文停笔。';
   }
 
@@ -3415,6 +3814,7 @@ $recent
     _underflowWarningNextRound = false;
     _underflowDeficit = 0;
     _underflowLastActual = 0;
+    _consecutiveDecisionStops = 0;
     _pendingGameState = null;
     _pendingSceneEffects = const SceneDialogueEffects();
     _pendingCustomStatusChanges = const [];

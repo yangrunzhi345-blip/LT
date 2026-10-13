@@ -1544,7 +1544,14 @@ class AdventureRepositoryImpl implements IAdventureRepository {
           if (commit.statusDiagnostics.isNotEmpty)
             'status_diagnostics': commit.statusDiagnostics,
           if (sceneValidation.diagnostics.isNotEmpty)
-            'ignored_scene_state_changes': sceneValidation.diagnostics,
+            // The engine already records the authorization diagnostics under
+            // this key; appending the structural validator's diagnostics keeps
+            // both observable instead of letting one overwrite the other.
+            'ignored_scene_state_changes': [
+              ...(commit.diagnostics['ignored_scene_state_changes'] as List? ??
+                  const <Object?>[]),
+              ...sceneValidation.diagnostics,
+            ],
           if (commit.effects.diagnostics.isNotEmpty)
             'ignored_effects': commit.effects.diagnostics,
           'effect_counts': {
