@@ -143,6 +143,57 @@ R6 有限范围 PASSED，未解决 BLOCKER/MAJOR/MINOR=0；独立四组 58 PASS�
 47 PASS、analyze/format/diff-check PASS。修复同组件残留的无证据 CPU 阻塞注释。
 这些结果不替代 Phase 6 跨模块集成门禁、全量回归或真实设备现场证据。
 
+## R1：预算可行性与未来容量预留（Phase 3 预算核心）
+
+Status: PASSED（仅限 R1 有限范围）
+Acceptance Mode: Independent Review（另一个 Agent 只读审查）
+Commit: `295c7e60d9e2cdf720ff5694e7562d827215bc3d`
+`fix(resources): complete R1 budget reservation`（2026-10-13）
+基线：`31fad52`；工作区在实现方改动下未提交，独立审查只读执行。
+
+- 新增 `lib/domain/resources/generation_budget_allocation.dart`，把冻结 E/C、本段旧正文、
+  其他已保存正文、未完成必填集合、reserve、minimum、recommendedTarget、
+  acceptedMaximum 与 constraint fingerprint 收敛为单一 `PartGenerationBudgetAllocation`。
+- `_budgetAllocationInTransaction` 在同一 SQLite 事务内读取确认蓝图、冻结
+  `elastic_percent`、其他 Part 实际正文与任务完成集合，调度闸门、LLM 请求和事务提交
+  消费同一快照；`commitPartContent` 的 ceiling + reserve 复核在任何写入之前。
+- 不可行路径（planOutOfBounds / ceilingExhausted / minimumTotalExceedsCeiling /
+  belowMinimum）在四个闸门（调度派发、failed 重排、retrySinglePart、
+  _generateSinglePart 预派发及派发后复读）于 `startAttempt` / LLM 调用之前终止，
+  0 模型请求；`resumeGeneration` 经 `startGeneration → generateAllParts` 汇入同一闸门。
+- 未新增 schema / migration，未改动 A/K/E、未截断或重写已保存正文、未删除
+  attempt / revision；历史 NULL E 解析为 20%，无契约 legacy Part 保持 floor 10。
+
+真实验证（独立审查真实执行）：定向 10 文件 **110 PASS**，退出码 0；
+`flutter analyze --no-pub` 零问题；11 个变更 Dart 文件 format 0 changed；
+`git diff --check` PASS。日志 `/tmp/lt_r1_review_tests.log`、`/tmp/lt_r1_review_analyze.log`。
+
+独立审查报告：`character-generation-budget-r1-reservation-independent-review.md`，
+裁决 PASSED，未解决发现 **BLOCKER=0、MAJOR=0、MINOR=4**。
+
+保留在后续风险清单的四项 MINOR（不阻断 R1，不得重复修改已通过的 R1 主体）：
+
+1. MINOR-1：`commitPartContent` 事务内未复核单段 `len(b_i) <= K`；LLM 路径因
+   `D_i = min(K, …)` 不可达，唯一可达为测试 / 内部直写。建议随 R2/Phase 4 契约校验
+   一并补 `len <= ResourceLimits.maxPartCharacters`。
+2. MINOR-2：R4 之前确认、单段 `estimatedLength > 3000` 的旧蓝图会在派发前被判
+   `planOutOfBounds` → 0 请求、任务 failed（旧行为是“以 ≤3000 生成”），属遗留任务
+   可观察行为变化；需确认是否符合产品预期。
+3. MINOR-3：`unfinished` 仅排除 `completed`，`cancelled` 等非 completed 任务仍被计入
+   future reserve `F_i`；混合场景罕见，需按规格语义明确或记录边界。
+4. MINOR-4：ceiling 的 `targetCapacity` 改读 `blueprint_json` 而非 `target_capacity`
+   列；正常数据列与 JSON 一致，畸形 / 极旧行可能改变 C。
+
+尚未完成的 Phase 门禁：R1 只交付预算可行性与容量预留，不代表完整 Phase 3。Phase 3
+仍缺一致预算快照的 UI 展示闭环；R2 正文完成契约（本记录下一工作单元）是 Phase 4
+前提，随 R2 一并补齐 MINOR-1 的提交层 K 守卫。整体 Phase 1–6 与任务整体仍未
+ACCEPTED。
+
+下一工作单元 R2 的依赖：Phase 1 内容契约基础设施（`content_requirements.dart`、
+`PartGenerationValidator`、`BlueprintPart.contentRequirements`、`commitPartContent`）
+已就绪，`PartGenerationRequest` 已携带 `contentRequirements` 与 `acceptedMaximum`，
+R2 在其上接入生产闭环；U6 仍未答复，不得擅自引入 narrative 产品默认阈值。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
@@ -173,6 +224,7 @@ Checkpoint Status: PAUSED / NOT ACCEPTED（保存已完成局部修复，不是�
 | `2144a40` | R3 冲突 seq 拒绝、相同重放幂等、两路传输及 SQLite 保护 | Phase 2 配置文案与真实 UI→SQLite E50 门禁 |
 | `09a49ea` | R4 所有规划分支单段上界与显式 minimum、plan/replan/confirm 保护 | Phase 3 一致预算快照、future reserve、派发及事务内重检 |
 | `0932c6d` | R6 heartbeat owner 生命周期、观测语义及负向 / mutation 回归 | Phase 6 跨模块集成、全仓回归与最终独立验收 |
+| `295c7e6` | R1 预算可行性与未来必填容量预留、四闸门 0 请求预检、事务内 commit 复核 | Phase 3 UI 快照闭环、R2 正文完成契约、4 项 MINOR 与整体验收 |
 
 收尾 commit 另保存两处 fixture 适配、独立报告及本断点记录；其哈希通过分支 HEAD
 获得，避免在 commit 内自引用尚未生成的哈希。不改数据库版本、依赖或用户数据。
