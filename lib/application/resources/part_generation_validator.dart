@@ -1,3 +1,4 @@
+import '../../domain/resources/content_requirements.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/resource_limits.dart';
 
@@ -24,6 +25,13 @@ class PartGenerationValidationException implements Exception {
 
 /// Strict validator for Part generation responses.
 abstract final class PartGenerationValidator {
+  /// Shared pure rules for explicitly confirmed contracts; null remains legacy.
+  static PartContentReview validateContentRequirements({
+    required String content,
+    required ContentRequirements? requirements,
+  }) =>
+      PartContentRequirementsValidator.validate(content, requirements);
+
   /// Set of forbidden keys that would imply an attempt to redefine or mutate
   /// resource hierarchy or sibling nodes.
   static const Set<String> forbiddenStructuralKeys = {

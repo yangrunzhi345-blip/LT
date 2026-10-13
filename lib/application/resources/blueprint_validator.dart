@@ -1,3 +1,4 @@
+import '../../domain/resources/content_requirements.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_limits.dart';
 
@@ -146,6 +147,19 @@ abstract final class BlueprintValidator {
       }
 
       for (final part in section.parts) {
+        final requirements = part.contentRequirements;
+        if (requirements != null) {
+          try {
+            requirements.validateDefinition();
+          } on ContentRequirementException {
+            throw const BlueprintValidationException('Part 内容契约无效或不受支持',
+                field: 'parts.contentRequirements');
+          }
+          if (requirements.minimumCharacters > part.estimatedLength) {
+            throw const BlueprintValidationException('Part 预计长度不足以满足最低内容要求',
+                field: 'parts.contentRequirements');
+          }
+        }
         if (part.id.trim().isEmpty) {
           throw const BlueprintIdException(
             'Part ID 不能为空',

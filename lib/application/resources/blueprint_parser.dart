@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../domain/resources/content_requirements.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 
@@ -166,6 +167,7 @@ abstract final class BlueprintParser {
           estimatedLength: partLength,
           dependencies: dependencies,
           sortOrder: partOrder,
+          contentRequirements: _parseContentRequirements(partItem),
         ));
       }
 
@@ -256,10 +258,28 @@ abstract final class BlueprintParser {
               'estimatedLength': p.estimatedLength,
               'dependencies': p.dependencies,
               'sortOrder': p.sortOrder,
+              if (p.contentRequirements != null)
+                'contentRequirements': p.contentRequirements!.toMap(),
             };
           }).toList(),
         };
       }).toList(),
     };
+  }
+
+  static ContentRequirements? _parseContentRequirements(
+      Map<String, dynamic> part) {
+    if (!part.containsKey('contentRequirements')) return null;
+    final raw = part['contentRequirements'];
+    if (raw is! Map<String, Object?>) {
+      throw const BlueprintParseException('Invalid contentRequirements object');
+    }
+    try {
+      return ContentRequirements.fromMap(raw);
+    } on FormatException {
+      throw const BlueprintParseException('Malformed contentRequirements');
+    } on ContentRequirementException {
+      throw const BlueprintParseException('Unsupported contentRequirements');
+    }
   }
 }

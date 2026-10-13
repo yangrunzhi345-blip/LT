@@ -1,3 +1,4 @@
+import 'content_requirements.dart';
 import 'resource_contracts.dart';
 import 'resource_limits.dart';
 
@@ -67,6 +68,7 @@ final class BlueprintPart {
     required this.estimatedLength,
     this.dependencies = const <String>[],
     this.sortOrder = 0,
+    this.contentRequirements,
   });
 
   /// Client-controlled slot identity (e.g. "part_1").
@@ -90,6 +92,9 @@ final class BlueprintPart {
   /// Order of the part within its section.
   final int sortOrder;
 
+  /// Null for historical plans whose content type was never confirmed.
+  final ContentRequirements? contentRequirements;
+
   BlueprintPart copyWith({
     String? id,
     String? sectionId,
@@ -98,6 +103,7 @@ final class BlueprintPart {
     int? estimatedLength,
     List<String>? dependencies,
     int? sortOrder,
+    ContentRequirements? contentRequirements,
   }) {
     return BlueprintPart(
       id: id ?? this.id,
@@ -109,6 +115,7 @@ final class BlueprintPart {
           ? List<String>.unmodifiable(dependencies)
           : this.dependencies,
       sortOrder: sortOrder ?? this.sortOrder,
+      contentRequirements: contentRequirements ?? this.contentRequirements,
     );
   }
 
@@ -122,6 +129,7 @@ final class BlueprintPart {
           other.generationGoal == generationGoal &&
           other.estimatedLength == estimatedLength &&
           other.sortOrder == sortOrder &&
+          other.contentRequirements == contentRequirements &&
           _listEquals(other.dependencies, dependencies);
 
   @override
@@ -132,6 +140,7 @@ final class BlueprintPart {
         generationGoal,
         estimatedLength,
         sortOrder,
+        contentRequirements,
         Object.hashAll(dependencies),
       );
 
