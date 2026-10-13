@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/errors/app_error.dart';
+import '../../domain/resources/generation_budget_allocation.dart';
 import '../../services/api_error.dart';
 import '../../services/llm_service.dart';
 import '../../services/repositories/resource_tree_repository.dart';
@@ -30,6 +31,8 @@ AppDomainError resourceGenerationError(
     GenerationPatchParseException() =>
       AppErrorCode.resourceParseFailed,
     PartGenerationValidationException(field: 'generation_budget') =>
+      AppErrorCode.resourceGenerationBudgetExceeded,
+    PartGenerationBudgetInfeasibleException() =>
       AppErrorCode.resourceGenerationBudgetExceeded,
     PartGenerationValidationException() => AppErrorCode.resourceContentInvalid,
     PatchSequenceGapException() ||

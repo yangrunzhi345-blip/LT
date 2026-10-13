@@ -241,7 +241,9 @@ void main() {
   test('decoded multilingual JSON body counts actual UTF-16, not wire escapes',
       () async {
     final stack = await create(8000);
-    final task = (await stack.tasks.findReadyTasks(stack.id.value)).first;
+    final readyTasks = await stack.tasks.findReadyTasks(stack.id.value);
+    final task = readyTasks.first;
+    final sibling = readyTasks.firstWhere((t) => t.partId != task.partId);
     final body = jsonEncode({
       '身份': '游侠😀',
       '关系': 'friend\n友人',
@@ -258,13 +260,13 @@ void main() {
             .content;
     expect(jsonDecode(saved), jsonDecode(body));
     expect(saved, body);
-    expect(
-        await stack.tasks.remainingBudget(
-            resourceId: stack.id.value,
-            blueprintId: task.blueprintId,
-            partId: 'not-a-replacement'),
-        // Elastic ceiling C = min(floor(8000*1.2), 24000) = 9600.
-        9600 - body.length);
+    final allocation = await stack.tasks.budgetAllocation(
+        resourceId: stack.id.value,
+        blueprintId: task.blueprintId,
+        partId: sibling.partId);
+    // Elastic ceiling C = min(floor(8000*1.2), 24000) = 9600; the committed
+    // sibling body is the only spending, and its own empty body is excluded.
+    expect(allocation!.remaining, 9600 - body.length);
   });
 
   test('aggregate exhausted before request terminates finitely, preserves text',
@@ -289,10 +291,11 @@ void main() {
         isFalse);
     expect(calls, 0);
     expect((await stack.tasks.findTask(tasks.last.taskId))!.status, 'failed');
+    // R1: an infeasible Part is refused before `startAttempt`, so no generation
+    // lease or attempt row is created at all — not even a failed one.
     final attempts = await fixture.db.query('resource_generation_attempts',
         where: 'task_id = ?', whereArgs: [tasks.last.taskId]);
-    expect(attempts, hasLength(2));
-    expect(attempts.every((a) => a['status'] == 'failed'), isTrue);
+    expect(attempts, isEmpty);
     expect(
         (await ResourceCapacityRepositoryImpl(getDb: () async => fixture.db)
                 .measureResource(stack.id))
@@ -359,10 +362,11 @@ void main() {
     }
     final task = tasks.last;
     expect(
-        await stack.tasks.remainingBudget(
-            resourceId: stack.id.value,
-            blueprintId: task.blueprintId,
-            partId: task.partId),
+        (await stack.tasks.budgetAllocation(
+                resourceId: stack.id.value,
+                blueprintId: task.blueprintId,
+                partId: task.partId))!
+            .remaining,
         500);
     final attempt =
         await stack.tasks.startAttempt(taskId: task.taskId, generationId: 'g');

@@ -28,6 +28,11 @@ abstract final class PartGenerationPromptBuilder {
 
   /// Builds the system prompt enforcing the NDJSON protocol and boundaries.
   static String buildSystemPrompt(PartGenerationRequest request) {
+    final minimum = request.minimumCharacters;
+    final minimumClause = minimum != null && minimum > 0
+        ? '\n本段最低有效内容约 $minimum 个单位：低于该下限会被判定为内容不完整并被拒绝，'
+            '请在满足该下限的前提下自然展开。'
+        : '';
     return '''你是一个专业的 RPG/跑团内容作家与设定规划专家。
 你的任务是为当前资源的指定 Part 生成正文内容（Markdown 格式的正文 prose）。
 
@@ -50,7 +55,7 @@ abstract final class PartGenerationPromptBuilder {
 {"sequence":1,"op":"append_text","text_delta":"正文片段"}
 {"sequence":2,"op":"complete_part","summary":"简短摘要"}
 4. 严禁生成任何其他章节（sections）或部件（parts），严禁篡改 ID，严禁输出未经授权的额外层级。
-5. 正文以约 ${request.targetBudget} 字为软目标（中文通常每字一个 UTF-16 单位，emoji 可能占两个）。软目标只是规划参考：内容质量、设定一致性和叙事完整优先于机械填满字数，按内容需要自然展开即可，不必刻意凑足或压缩。硬边界只有一个：单次接受上限 ${request.maximumAcceptedCharacters} 个单位，包含标点、空格、Markdown 和换行；按解码后的正文计数，不计 JSON 转义与协议字段。不需要你统计此前所有段落的总字数，硬边界由客户端校验。''';
+5. 正文以约 ${request.targetBudget} 字为软目标（中文通常每字一个 UTF-16 单位，emoji 可能占两个）。软目标只是规划参考：内容质量、设定一致性和叙事完整优先于机械填满字数，按内容需要自然展开即可，不必刻意凑足或压缩。硬边界只有一个：单次接受上限 ${request.maximumAcceptedCharacters} 个单位，包含标点、空格、Markdown 和换行；按解码后的正文计数，不计 JSON 转义与协议字段。不需要你统计此前所有段落的总字数，硬边界由客户端校验。$minimumClause''';
   }
 
   /// Builds the user instruction prompt with contextual dependencies and bounds.
@@ -84,6 +89,10 @@ abstract final class PartGenerationPromptBuilder {
     }
     buffer.writeln(
         '正文接受上限：${request.maximumAcceptedCharacters} 个 UTF-16 单位（包含标点、空格、Markdown 和换行，不得超过）');
+    final minimum = request.minimumCharacters;
+    if (minimum != null && minimum > 0) {
+      buffer.writeln('本段最低有效内容：$minimum 个 UTF-16 单位（低于该下限会被判为内容不完整，请确保达到）');
+    }
     buffer.writeln();
 
     if (ctx.dependencySummaries.isNotEmpty) {
