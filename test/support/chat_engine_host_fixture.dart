@@ -26,11 +26,15 @@ class ChatDependencies implements ChatEngineHost {
   @override
   ContextWeightProfile get contextWeightProfile => const ContextWeightProfile();
   @override
-  List<String> get sceneParticipantIds => const ['protagonist'];
+  List<String> get sceneParticipantIds =>
+      _getSceneParticipantIds?.call() ?? const ['protagonist'];
   @override
   ScenePresence? get scenePresence => null;
   @override
-  SceneState get sceneState => const SceneState();
+  SceneState get sceneState => _getSceneState?.call() ?? const SceneState();
+
+  final List<String> Function()? _getSceneParticipantIds;
+  final SceneState Function()? _getSceneState;
   @override
   ModelContextCapability get modelContextCapability => ModelContextCapability(
         providerId: providerType.name,
@@ -256,6 +260,8 @@ class ChatDependencies implements ChatEngineHost {
     DialogueLevel Function() getDialogueLevel = _defaultDialogueLevel,
     void Function(AdventureConfig)? setAdventureConfig,
     void Function(SceneDialogueCommitResult)? onSceneDialogueCommitResult,
+    List<String> Function()? getSceneParticipantIds,
+    SceneState Function()? getSceneState,
   })  : _getApiKey = getApiKey,
         _getApiBaseUrl = getApiBaseUrl,
         _getProviderType = getProviderType,
@@ -288,7 +294,9 @@ class ChatDependencies implements ChatEngineHost {
         _getMessages = getMessages,
         _setMessages = setMessages,
         _advanceSelectedCharacterIfAutoEnabled =
-            advanceSelectedCharacterIfAutoEnabled;
+            advanceSelectedCharacterIfAutoEnabled,
+        _getSceneParticipantIds = getSceneParticipantIds,
+        _getSceneState = getSceneState;
 
   static bool _defaultFalse() => false;
   static DialogueLevel _defaultDialogueLevel() => DialogueLevel.defaultLevel;
