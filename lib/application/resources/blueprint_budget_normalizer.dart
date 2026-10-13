@@ -18,10 +18,25 @@ abstract final class BlueprintBudgetNormalizer {
   }) {
     final parts = blueprint.allParts;
     final total = blueprint.totalEstimatedLength;
-    if (total <= targetCharacters) return blueprint;
+    if (total <= targetCharacters) {
+      for (final part in parts) {
+        BlueprintValidator.validatePartBudget(part);
+      }
+      return blueprint;
+    }
 
-    const minimum = BlueprintValidator.minPartEstimatedLength;
-    final minimumTotal = parts.length * minimum;
+    final minima = <int>[];
+    for (final part in parts) {
+      final minimum = BlueprintValidator.minimumPartBudget(part);
+      if (part.estimatedLength < minimum) {
+        throw BlueprintValidationException(
+          'Part [${part.id}] 预计长度必须大于等于 $minimum 字符',
+          field: 'parts.estimatedLength',
+        );
+      }
+      minima.add(minimum);
+    }
+    final minimumTotal = minima.fold<int>(0, (sum, value) => sum + value);
     if (targetCharacters < minimumTotal) {
       throw BlueprintBudgetExceededException(
         '本次生成目标预算 ($targetCharacters 字) 无法容纳 ${parts.length} 个 Part '
@@ -30,19 +45,10 @@ abstract final class BlueprintBudgetNormalizer {
         budgetLimit: targetCharacters,
       );
     }
-    for (final part in parts) {
-      if (part.estimatedLength < minimum) {
-        throw BlueprintValidationException(
-          'Part [${part.id}] 预计长度必须大于等于 $minimum 字符',
-          field: 'parts.estimatedLength',
-        );
-      }
-    }
-
     final normalizedLengths = _allocate(
       parts.map((part) => part.estimatedLength).toList(growable: false),
       targetCharacters: targetCharacters,
-      minimum: minimum,
+      minima: minima,
       maximum: ResourceLimits.maxPartCharacters,
     );
     var index = 0;
@@ -63,12 +69,16 @@ abstract final class BlueprintBudgetNormalizer {
   static List<int> _allocate(
     List<int> original, {
     required int targetCharacters,
-    required int minimum,
+    required List<int> minima,
     required int maximum,
   }) {
-    final allocation = List<int>.filled(original.length, minimum);
-    var remaining = targetCharacters - (minimum * original.length);
-    final weights = [for (final length in original) length - minimum];
+    final allocation = List<int>.of(minima);
+    var remaining =
+        targetCharacters - minima.fold<int>(0, (sum, value) => sum + value);
+    final weights = [
+      for (var index = 0; index < original.length; index++)
+        original[index] - minima[index]
+    ];
     final active = <int>{
       for (var index = 0; index < original.length; index++)
         if (allocation[index] < maximum) index,

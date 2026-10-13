@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/blueprint_budget_normalizer.dart';
 import 'package:lt_dialogue/application/resources/blueprint_validator.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
+import 'package:lt_dialogue/domain/resources/content_requirements.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 
@@ -34,6 +35,75 @@ void main() {
       );
 
   group('BlueprintBudgetNormalizer', () {
+    for (final target in [10000, 12000]) {
+      test(
+          'should reject an oversized Part even when the total fits target $target',
+          () {
+        final source = blueprintWithLengths([10000]);
+        expect(
+            () => BlueprintBudgetNormalizer.normalizeToGenerationTarget(source,
+                targetCharacters: target),
+            throwsA(isA<BlueprintValidationException>()));
+        expect(
+            () =>
+                BlueprintValidator.validate(source, maxBudgetOverride: target),
+            throwsA(isA<BlueprintValidationException>()));
+        expect(source.allParts.single.estimatedLength, 10000);
+      });
+    }
+    test(
+        'should legally normalize an oversized proposal when the final Part fits',
+        () {
+      final source = blueprintWithLengths([10000, 2000]);
+      final result = BlueprintBudgetNormalizer.normalizeToGenerationTarget(
+          source,
+          targetCharacters: 5000);
+      expect(result.allParts.map((part) => part.estimatedLength),
+          everyElement(lessThanOrEqualTo(3000)));
+      expect(result.totalEstimatedLength, 5000);
+      expect(result.allParts.map((part) => part.id),
+          source.allParts.map((part) => part.id));
+      expect(
+          result.allParts.last.dependencies, source.allParts.last.dependencies);
+      expect(() => BlueprintValidator.validate(result, maxBudgetOverride: 5000),
+          returnsNormally);
+    });
+    test(
+        'should preserve confirmed per-Part minima when reducing planning metadata',
+        () {
+      final requirements = ContentRequirements(
+          kind: PartContentKind.narrative,
+          minimumCharacters: 180,
+          validationProfile: PartValidationProfile.narrativeSectionsV1);
+      final source = blueprintWithLengths([500, 500]);
+      final typed = source.copyWith(sections: [
+        source.sections.single.copyWith(
+            parts: source.allParts
+                .map((part) => part.copyWith(contentRequirements: requirements))
+                .toList())
+      ]);
+      final result = BlueprintBudgetNormalizer.normalizeToGenerationTarget(
+          typed,
+          targetCharacters: 360);
+      expect(result.allParts.map((part) => part.estimatedLength), [180, 180]);
+      expect(result.allParts.map((part) => part.contentRequirements),
+          everyElement(requirements));
+      expect(
+          () => BlueprintBudgetNormalizer.normalizeToGenerationTarget(typed,
+              targetCharacters: 359),
+          throwsA(isA<BlueprintBudgetExceededException>()));
+      final unequal = typed.copyWith(sections: [
+        typed.sections.single.copyWith(parts: [
+          typed.allParts.first.copyWith(estimatedLength: 200),
+          typed.allParts.last.copyWith(estimatedLength: 800),
+        ])
+      ]);
+      final bounded = BlueprintBudgetNormalizer.normalizeToGenerationTarget(
+          unequal,
+          targetCharacters: 400);
+      expect(bounded.allParts.first.estimatedLength, greaterThanOrEqualTo(180));
+      expect(bounded.totalEstimatedLength, 400);
+    });
     test('should normalize 23900 into the 23000 generation target', () {
       final normalized = BlueprintBudgetNormalizer.normalizeToGenerationTarget(
         blueprintWithLengths(

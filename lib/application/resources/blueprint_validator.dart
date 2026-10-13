@@ -57,6 +57,32 @@ abstract final class BlueprintValidator {
   static const int maxPartGoalLength = 500;
   static const int minPartEstimatedLength = 10;
 
+  /// Reads the confirmed floor, retaining ten units for untyped legacy plans.
+  static int minimumPartBudget(BlueprintPart part) {
+    final requirements = part.contentRequirements;
+    if (requirements != null) {
+      try {
+        requirements.validateDefinition();
+      } on ContentRequirementException {
+        throw const BlueprintValidationException('Part 内容契约无效或不受支持',
+            field: 'parts.contentRequirements');
+      }
+    }
+    return requirements?.minimumCharacters ?? minPartEstimatedLength;
+  }
+
+  /// Checks a planned length against the confirmed minimum and transport cap.
+  static void validatePartBudget(BlueprintPart part) {
+    final minimum = minimumPartBudget(part);
+    if (part.estimatedLength < minimum ||
+        part.estimatedLength > ResourceLimits.maxPartCharacters) {
+      throw BlueprintValidationException(
+        'Part [${part.id}] 预计长度必须在 $minimum 到 ${ResourceLimits.maxPartCharacters} 字符之间',
+        field: 'parts.estimatedLength',
+      );
+    }
+  }
+
   /// Validates a [ResourceBlueprint] against all requirements.
   ///
   /// If [idPool] is provided, validates that all Section and Part IDs strictly
@@ -147,19 +173,7 @@ abstract final class BlueprintValidator {
       }
 
       for (final part in section.parts) {
-        final requirements = part.contentRequirements;
-        if (requirements != null) {
-          try {
-            requirements.validateDefinition();
-          } on ContentRequirementException {
-            throw const BlueprintValidationException('Part 内容契约无效或不受支持',
-                field: 'parts.contentRequirements');
-          }
-          if (requirements.minimumCharacters > part.estimatedLength) {
-            throw const BlueprintValidationException('Part 预计长度不足以满足最低内容要求',
-                field: 'parts.contentRequirements');
-          }
-        }
+        validatePartBudget(part);
         if (part.id.trim().isEmpty) {
           throw const BlueprintIdException(
             'Part ID 不能为空',
@@ -194,12 +208,6 @@ abstract final class BlueprintValidator {
           throw BlueprintContentBoundaryException(
             'Part [${part.id}] 生成目标超过 $maxPartGoalLength 字符限制，禁止在生成目标中填入正文',
             field: 'parts.generationGoal',
-          );
-        }
-        if (part.estimatedLength < minPartEstimatedLength) {
-          throw BlueprintValidationException(
-            'Part [${part.id}] 预计长度必须大于等于 $minPartEstimatedLength 字符',
-            field: 'parts.estimatedLength',
           );
         }
         if (part.sortOrder < 0) {

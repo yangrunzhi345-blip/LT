@@ -93,3 +93,28 @@ Implementation: 基础设施已实现；完整阶段产品门禁待确认。
 完整 Phase 2–6 仍待各自门禁；R1–R6 不宣称整体解决。
 全量回归、最终静态分析、mutation 守卫验证、跨模块装配和最终独立审查尚未执行。
 整体不得标记 ACCEPTED；已确认的 MAJOR 根因仍需后续生产接入修复。
+
+## R4：规划单段上界与显式最低量保护
+
+2026-10-13 续执行：基线 `2144a40`，工作区干净；前一目标回合为 progress。
+U6 尚无答复；本项属于第 14.2 节允许独立推进的基础预算 guard，不能替代完整 Phase 3。
+
+- 总计划低于或等于 T 时也验证每段 `minimum ≤ estimatedLength ≤ 3000`。
+- 总计划超过 T 时仍可合法归一化，采用已有确定性 largest-remainder 算法，
+  保留每段已显式提供的契约最低量；不存在契约时保持历史规划下限 10。
+- normalizer / validator 共用最低量读取与契约验证，不擅设 narrative 产品默认比例。
+- plan / replan / direct confirm 的生产路径均执行守卫；无数据库结构、容量、E
+  或旧正文修改。读取旧 confirmed 蓝图及其幂等确认不追溯校验。
+- 聚合超预算测试夹具调整为每段合法 ≤3000，保留原 aggregate 异常与 plannedLength
+  断言，不通过放宽断言制造 PASS。
+
+真实验证：新回归修复前 3 FAIL / 6 PASS，`/tmp/lt-budget-r4-before.log`。
+执行方五组 67 PASS；真实 SQLite 八场景 8 PASS，非法 plan/replan/confirm 的
+resources/sections/parts/sessions/blueprints/tasks/attempts/revisions 逐表不变，
+合法 normalize 后 ID/DAG 保持；日志 `/tmp/lt-budget-r4-tests.log`、
+`/tmp/lt-budget-r4-sqlite.log`。analyze 零问题，format/diff-check PASS。
+
+独立审查：`character-generation-budget-r4-planning-independent-review.md`，
+R4 有限范围 PASSED，未解决 BLOCKER/MAJOR/MINOR=0；独立六组 63 PASS、10 项
+精确边界探针 PASS、analyze/format/diff-check PASS。测试组合有重叠，不加总计数。
+完整 Phase 3 和任务整体仍未 ACCEPTED。

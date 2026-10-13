@@ -16,6 +16,11 @@ void main() {
       ResourceType type = ResourceType.worldview,
       int totalLength = 1200,
     }) {
+      // Keep every Part lawful so capacity tests reach the aggregate guard.
+      final neededParts =
+          (totalLength + ResourceLimits.maxPartCharacters - 1) ~/
+              ResourceLimits.maxPartCharacters;
+      final partCount = neededParts < 2 ? 2 : neededParts;
       return ResourceBlueprint(
         blueprintId: 'bp_test_1',
         sessionId: 'cre_test_1',
@@ -29,23 +34,17 @@ void main() {
             summary: '介绍地理风貌',
             sortOrder: 0,
             parts: [
-              BlueprintPart(
-                id: 'part_1',
-                sectionId: 'sec_1',
-                title: '大陆板块概览',
-                generationGoal: '描写大陆主要地形与三大陆块划分',
-                estimatedLength: totalLength ~/ 2,
-                sortOrder: 0,
-              ),
-              BlueprintPart(
-                id: 'part_2',
-                sectionId: 'sec_1',
-                title: '气候与生态带',
-                generationGoal: '描写极端气候带与灵气流动特征',
-                estimatedLength: totalLength ~/ 2,
-                dependencies: ['part_1'],
-                sortOrder: 1,
-              ),
+              for (var index = 0; index < partCount; index++)
+                BlueprintPart(
+                  id: 'part_${index + 1}',
+                  sectionId: 'sec_1',
+                  title: '大陆板块概览',
+                  generationGoal: '描写大陆主要地形与三大陆块划分',
+                  estimatedLength: totalLength ~/ partCount +
+                      (index < totalLength % partCount ? 1 : 0),
+                  dependencies: index == 0 ? [] : ['part_$index'],
+                  sortOrder: index,
+                ),
             ],
           ),
         ],
