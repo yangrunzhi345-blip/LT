@@ -1160,12 +1160,17 @@ final class PartGenerationCoordinator {
         void dispatchLine(String line) {
           if (line.trim().isEmpty) return;
           final patch = patchDecoder.decodeLine(line);
+          final nextSequence = accumulator.nextSequence;
           try {
             accumulator.applyPatch(patch);
           } catch (_) {
             failureStage = ResourceGenerationFailureStage.parsing;
             rethrow;
           }
+          // Replays have no protocol or presentation side effects. The Studio
+          // consumes deltas here, so forwarding a duplicate would double its
+          // transient preview even though the committed accumulator is correct.
+          if (accumulator.nextSequence == nextSequence) return;
           GenerationDiagnostics.instance
             ..counter('protocol.patchApplied')
             ..setCounter('protocol.lastPatchSeq', patch.sequence)
@@ -1257,6 +1262,7 @@ final class PartGenerationCoordinator {
           if (e is PartGenerationParseException ||
               e is GenerationPatchParseException ||
               e is PatchSequenceGapException ||
+              e is PatchSequenceConflictException ||
               e is PatchCursorMismatchException) {
             await lifecycle(() => callbacks?.onValidationStarted?.call(
                   generationId: generationId,
@@ -1290,7 +1296,9 @@ final class PartGenerationCoordinator {
           failureStage = ResourceGenerationFailureStage.parsing;
           final patches = patchDecoder.decodeNdjson(rawCompletion);
           for (final patch in patches) {
+            final nextSequence = accumulator.nextSequence;
             accumulator.applyPatch(patch);
+            if (accumulator.nextSequence == nextSequence) continue;
             await lifecycle(() => callbacks?.onPatchReceived?.call(
                   generationId: generationId,
                   resourceId: request.resourceId,
@@ -1323,6 +1331,7 @@ final class PartGenerationCoordinator {
           if (e is PartGenerationParseException ||
               e is GenerationPatchParseException ||
               e is PatchSequenceGapException ||
+              e is PatchSequenceConflictException ||
               e is PatchCursorMismatchException) {
             await lifecycle(() => callbacks?.onValidationStarted?.call(
                   generationId: generationId,

@@ -18,6 +18,7 @@ Acceptance Mode: Independent Review（各阶段由另一 Agent 审查）
 ## Phase 1：契约与数据保护基础设施
 
 Implementation: 基础设施已实现；完整阶段产品门禁待确认。
+本地 milestone commit：`ea5de88 feat(resources): add versioned content requirement foundation`。
 
 - `BlueprintPart.contentRequirements` 可选对象，包含 version、kind、required、
   minimumCharacters、受控 validationProfile、requiredFields、requiredHeadings。
@@ -56,8 +57,39 @@ Implementation: 基础设施已实现；完整阶段产品门禁待确认。
 2. Phase 5 是否仅交付显式人工认可合格编辑/缩减候选，再恢复未完成章节，
    本期不增加改变旧任务预算版本功能。
 
+## Phase 2 准备：R3 协议冲突守卫
+
+本部分不依赖产品 minimum 默认值；没有以它替代完整 Phase 1/2 Gate。
+
+- Accumulator 复用 ContentHasher SHA256，记录每个已应用事件的规范指纹与原始
+  应用 offset；包含身份、op、text、summary、fail 信息，缺省 cursor 与相同正确
+  显式 cursor 等价。不同载荷同 seq 抛 PatchSequenceConflictException，禁止响应导出。
+- 保留全部有界指纹，默认最多 6002 新事件；允许逐 UTF-16 单位 append，空事件不能
+  无限占用历史。超限和 terminal 后新事件显式解析失败，不静默遗忘旧指纹。
+- 两种传输路径都将冲突投影为 resourceParseFailed 并发送验证失败事件。
+- 重放没有协议/预览 callback 副作用；独立审查发现 Studio 消费重复 delta 导致暂时
+  重复预览，已在 coordinator 过滤，仅发布新接受事件，无需扩大 UI 重构。
+- 新增真实 SQLite streaming / collected 冲突与幂等测试，分割 JSON/Unicode/转义文本、
+  无末尾换行；有效原文重生成失败逐表验证正文/hash、section/resource、revision 不变，
+  旧完成 attempt 保留，新 failed attempt 可追溯。
+
+真实验证：
+
+- 修复前冲突回归 5 FAIL / 1 PASS：`/tmp/lt-budget-phase2-negative-before.log`。
+- 预览 callback 回归修复前 2 FAIL / 3 PASS：
+  `/tmp/lt-budget-phase2-preview-negative-before.log`。
+- 最终含旧正文保护及 callback regression 的八组测试 62 PASS：
+  `/tmp/lt-budget-phase2-tests.log`；包含 E 冻结矩阵、v49 migration 及原有协议/coordinator
+  回归。旧正文 SQLite 单组复跑 5 PASS，不重复加总。
+- 最终 `flutter analyze --no-pub` 零问题；五个变更 Dart 文件 format 0 changed；
+  `git diff --check` PASS。
+- 独立审查：`character-generation-budget-phase2-protocol-independent-review.md`，
+  R3 有限范围 PASSED，未解决 BLOCKER/MAJOR/MINOR=0；独立另一组合八组 115 PASS
+  （含 shared LLM consumer / transport、真实 CAS/Revision 并发），analyze/format/diff-check
+  PASS。与执行方 62 项组合有重叠，不混合加总。完整 Phase 2 与整体仍未验收。
+
 ## 后续阶段
 
-Phase 2–6 仍待实现和各自门禁；R1–R6 不宣称整体解决。
+完整 Phase 2–6 仍待各自门禁；R1–R6 不宣称整体解决。
 全量回归、最终静态分析、mutation 守卫验证、跨模块装配和最终独立审查尚未执行。
 整体不得标记 ACCEPTED；已确认的 MAJOR 根因仍需后续生产接入修复。

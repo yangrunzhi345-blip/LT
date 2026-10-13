@@ -33,6 +33,7 @@ AppDomainError resourceGenerationError(
       AppErrorCode.resourceGenerationBudgetExceeded,
     PartGenerationValidationException() => AppErrorCode.resourceContentInvalid,
     PatchSequenceGapException() ||
+    PatchSequenceConflictException() ||
     PatchCursorMismatchException() =>
       AppErrorCode.resourceParseFailed,
     ResourceTreeConflictException() => AppErrorCode.resourceConflict,

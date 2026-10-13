@@ -4,6 +4,7 @@ import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_generation_patch.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/resource_limits.dart';
+import '../../utils/content_hasher.dart';
 import 'part_generation_parser.dart';
 
 /// Exception thrown when a patch JSON string is malformed or invalid.
@@ -38,6 +39,17 @@ class PatchSequenceGapException implements Exception {
   @override
   String toString() =>
       'PatchSequenceGapException: sequence 缺口 (期望: $expectedSequence, 实际: $actualSequence, partId: $partId)';
+}
+
+/// Rejects a replay whose semantic event differs from the original sequence.
+final class PatchSequenceConflictException implements Exception {
+  const PatchSequenceConflictException(
+      {required this.sequence, required this.partId});
+  final int sequence;
+  final String partId;
+  @override
+  String toString() =>
+      'PatchSequenceConflictException: sequence=$sequence, part=$partId';
 }
 
 /// Thrown when an incoming patch cursor does not match the accumulated character count.
@@ -300,6 +312,7 @@ class GenerationPatchAccumulator {
     required this.expectedPartId,
     required this.expectedAttemptId,
     this.maxCharacters = ResourceLimits.maxPartCharacters,
+    this.maxPatchEvents = ResourceLimits.maxPartCharacters * 2 + 2,
   });
 
   final String expectedGenerationId;
@@ -308,6 +321,12 @@ class GenerationPatchAccumulator {
   final PartId expectedPartId;
   final String expectedAttemptId;
   final int maxCharacters;
+
+  /// Allows one event per UTF-16 unit plus empty events, while bounding replay
+  /// history. No event is evicted: hitting the bound explicitly fails the run.
+  final int maxPatchEvents;
+
+  final Map<int, ({int cursor, String fingerprint})> _appliedEvents = {};
 
   final StringBuffer _buffer = StringBuffer();
   int _currentLength = 0;
@@ -327,7 +346,8 @@ class GenerationPatchAccumulator {
   String get currentText => _buffer.toString();
   String get summary => _summary;
 
-  /// Applies a single patch. Idempotent on duplicate sequence (`patch.sequence < nextSequence`).
+  /// Applies a patch; identical canonical sequence replays are idempotent.
+  /// Conflicting replays fail the attempt, including replays after completion.
   /// Throws [PatchSequenceGapException] if a sequence number is skipped.
   /// Throws [PatchCursorMismatchException] if a supplied legacy cursor does
   /// not match the application-derived accumulated length.
@@ -349,7 +369,14 @@ class GenerationPatchAccumulator {
 
     // 2. Monotonic sequence check (idempotent write for duplicates, gap detection)
     if (patch.sequence < _nextSequence) {
-      // Duplicate patch already applied: ignore without side effects
+      final applied = _appliedEvents[patch.sequence]!;
+      final cursor = patch.cursor ?? applied.cursor;
+      if (cursor != applied.cursor ||
+          _fingerprint(patch, cursor) != applied.fingerprint) {
+        _isFailed = true;
+        throw PatchSequenceConflictException(
+            sequence: patch.sequence, partId: expectedPartId.value);
+      }
       return;
     }
     if (patch.sequence > _nextSequence) {
@@ -360,7 +387,15 @@ class GenerationPatchAccumulator {
       );
     }
 
+    if (_isCompleted || _isFailed || _appliedEvents.length >= maxPatchEvents) {
+      _isFailed = true;
+      throw const GenerationPatchParseException(
+          'Patch stream exceeded its event bound or continued after its terminal event',
+          field: 'sequence');
+    }
+
     _validateReportedCursor(patch);
+    final appliedCursor = _currentLength;
 
     // 3. Operation handling
     switch (patch.op) {
@@ -389,7 +424,6 @@ class GenerationPatchAccumulator {
         break;
 
       case ResourcePatchOp.completePart:
-        if (_isCompleted) return;
         if (!_isStarted && _currentLength == 0) {
           _isStarted = true;
         }
@@ -405,8 +439,28 @@ class GenerationPatchAccumulator {
         break;
     }
 
+    _appliedEvents[patch.sequence] = (
+      cursor: appliedCursor,
+      fingerprint: _fingerprint(patch, appliedCursor)
+    );
     _nextSequence++;
   }
+
+  String _fingerprint(ResourceGenerationPatch patch, int cursor) =>
+      ContentHasher.hash([
+        patch.protocolVersion,
+        patch.generationId,
+        patch.resourceId.value,
+        patch.sectionId.value,
+        patch.partId.value,
+        patch.attemptId,
+        patch.sequence,
+        patch.op.wireValue,
+        patch.textDelta,
+        cursor,
+        patch.summary,
+        patch.errorMessage,
+      ]);
 
   void _validateReportedCursor(ResourceGenerationPatch patch) {
     final reportedCursor = patch.cursor;
