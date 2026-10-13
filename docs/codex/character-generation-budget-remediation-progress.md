@@ -3,8 +3,8 @@
 任务权威：`../character-generation-budget-root-cause-and-remediation.md`、
 `../architecture/configurable-generation-elasticity.md`、`../../AGENTS.md`。
 
-Status: IN PROGRESS（整体未验收）
-Acceptance Mode: Independent Review（各阶段由另一 Agent 审查）
+Status: PAUSED / CHECKPOINT（整体未验收）
+Acceptance Mode: Independent Review（已完成局部范围由另一 Agent 审查，完整阶段未验收）
 
 ## 基线与 Scope
 
@@ -12,7 +12,9 @@ Acceptance Mode: Independent Review（各阶段由另一 Agent 审查）
 - `git fetch origin` 成功，`HEAD...origin/main` 为 0/0。
 - 审计代码基线 `01f6ed0` 后只有方案文档新增，没有生产代码漂移。
 - 应用 `1.2.07+29` / SQLite v49；ADR-0003 确认时冻结 E，历史 NULL=20。
-- 本次按六个 Phase 修复统一资源生成链，禁止 push / 发布，保护用户库。
+- 原实施授权按六个 Phase 修复统一资源生成链，禁止 push / 发布，保护用户库。
+  2026-10-13 用户另行明确授权创建干净断点并推送 GitHub 分支；仅解除本断点分支的
+  push 限制，不授权合并 main、发布产品或继续未完成实现。
 - 未使用真实 API 或读取用户数据库。SQLite 测试只使用临时 fixture 数据库。
 
 ## Phase 1：契约与数据保护基础设施
@@ -91,7 +93,8 @@ Implementation: 基础设施已实现；完整阶段产品门禁待确认。
 ## 后续阶段
 
 完整 Phase 2–6 仍待各自门禁；R1–R6 不宣称整体解决。
-全量回归、最终静态分析、mutation 守卫验证、跨模块装配和最终独立审查尚未执行。
+最终全仓回归、跨阶段 mutation 守卫验证、跨模块装配和最终独立审查尚未执行；
+当前代码静态分析及 R6 局部 mutation 已通过，见下文，不替代最终验收。
 整体不得标记 ACCEPTED；已确认的 MAJOR 根因仍需后续生产接入修复。
 
 ## R4：规划单段上界与显式最低量保护
@@ -139,3 +142,57 @@ R4 有限范围 PASSED，未解决 BLOCKER/MAJOR/MINOR=0；独立六组 63 PASS�
 R6 有限范围 PASSED，未解决 BLOCKER/MAJOR/MINOR=0；独立四组 58 PASS、共享 LLM
 47 PASS、analyze/format/diff-check PASS。修复同组件残留的无证据 CPU 阻塞注释。
 这些结果不替代 Phase 6 跨模块集成门禁、全量回归或真实设备现场证据。
+
+## 2026-10-13 干净断点与恢复入口
+
+Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
+Checkpoint Status: PAUSED / NOT ACCEPTED（保存已完成局部修复，不是完整 Phase 验收）
+
+### 本断点收尾验证
+
+- 资源子系统首轮扩大回归：820 PASS / 3 FAIL，退出码 1。三项失败来自旧 fixture
+  将 5000–50000 字单段当作合法计划，不是通过删除或 skip 消除失败。
+- 两处 fixture 保留聚合容量、模型不能提高目标、编排身份与幂等断言；改用合法分段，
+  并增加原 50000 字单段拒绝且未保存、每段上界等断言。
+- 独立复审 `character-generation-budget-r4-regression-independent-review.md`：PASSED，
+  18 PASS、analyze 零问题、format/diff-check PASS，未解决 BLOCKER/MAJOR/MINOR=0
+  （仅该两处 fixture 范围）。
+- 收尾扩大回归 `flutter test --no-pub --reporter expanded test/application/resources`：
+  **823 PASS，退出码 0**，用时 1:37；日志
+  `/tmp/lt-budget-resources-final-interim-regression.log`。
+- 收尾 `flutter analyze --no-pub`：零问题，退出码 0，2.4s；日志
+  `/tmp/lt-budget-interim-analyze.log`。两个暂停前后台进程均已确认结束。
+- 以上不是全仓测试或最终跨阶段验收。临时日志不保证跨机器保留；正式证据摘要及
+  独立审查报告已入库，测试本身可从本分支重跑。
+
+### 已完成提交边界
+
+| Commit | 已通过的局部范围 | 尚未代表完成的范围 |
+| --- | --- | --- |
+| `ea5de88` | Phase 1 内容契约格式、纯验证规则、legacy / SQLite 保护基础 | 产品默认值、Planner / request / commit / UI 全链接入 |
+| `2144a40` | R3 冲突 seq 拒绝、相同重放幂等、两路传输及 SQLite 保护 | Phase 2 配置文案与真实 UI→SQLite E50 门禁 |
+| `09a49ea` | R4 所有规划分支单段上界与显式 minimum、plan/replan/confirm 保护 | Phase 3 一致预算快照、future reserve、派发及事务内重检 |
+| `0932c6d` | R6 heartbeat owner 生命周期、观测语义及负向 / mutation 回归 | Phase 6 跨模块集成、全仓回归与最终独立验收 |
+
+收尾 commit 另保存两处 fixture 适配、独立报告及本断点记录；其哈希通过分支 HEAD
+获得，避免在 commit 内自引用尚未生成的哈希。不改数据库版本、依赖或用户数据。
+
+### 恢复所需决定与未完成工作
+
+1. 先读取原规格第 6、7、10、13、14.2 节及本记录，不重复全仓根因扫描。
+2. U6 尚未批准：narrative 最低比例 / 必需小节、scalar 人工确认、structured 必填键、
+   legacy 审阅策略，以及 Phase 5 是否仅接受人工认可后的编辑候选。40% 是待决提案，
+   不是已批准产品默认值；旧任务预算执行版本功能也未批准。
+3. R1 / R2 的生产根因仍是未解决 MAJOR：实现一致预算快照、后续必填预留、派发
+   maximum / minimum、自动/manual/resume 预检、事务复核，以及正文完成契约。
+4. 再完成失败分类与持久化 retryDisposition、安全数字错误上下文（R5）、有限重试、
+   显式人工接受与 provenance / 修订历史保护；具体迁移按正式规格验收。
+5. 完成当前冻结预算与后续设置的 UI 区分、真实直接/审阅入口 E50 接线及移动端验证。
+6. 最后执行角色/世界观/NPC、关联、装配、压缩显式采纳和冒险启动集成、全仓测试、
+   静态分析、格式 / diff 检查和独立最终审查；对照 T01–T31 及第 13 节逐项验收。
+   真实模型与设备证据单列，不能把 fixture 验证当现场证明。
+
+恢复先运行 `git status --short`、`git diff`、`git diff --cached`、
+`git log --oneline -10`，核对本分支提交与正式报告，从已通过的局部门禁继续。
+禁止 reset/clean/stash；不得追溯修改旧 E、裁剪已保存正文或清空数据库。
+本断点不标 ACCEPTED，不授权后续自动 push / merge / 发布。

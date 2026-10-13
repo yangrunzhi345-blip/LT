@@ -358,7 +358,7 @@ Future<void> _waitForStatus(
 }
 
 final class _PlanningGateway implements LlmGateway {
-  const _PlanningGateway({this.twoParts = false, this.estimatedLength = 5000});
+  const _PlanningGateway({this.twoParts = false, this.estimatedLength = 3000});
 
   final bool twoParts;
   final int estimatedLength;

@@ -15,7 +15,7 @@
 | 本次文档任务初始工作区 | `git status --short` 为空，未发现原有未提交修改 |
 | 根因调查状态 | AUDIT COMPLETE：关键生产链、确定性缺陷与测试证据已恢复；真实模型质量和部分运行现场仍有未知项 |
 | 实现审计裁决 | FAILED：存在 3 项 MAJOR、3 项 MINOR；没有确认的 BLOCKER |
-| 本文件状态 | 修复方案待实施；本次仅新增本文，不改变生产行为 |
+| 本文件状态 | 原审计与设计保留；2026-10-13 局部修复断点见第 15 节，整体未验收 |
 
 ### 1.1 范围与权威来源
 
@@ -751,3 +751,30 @@ fixture结束关闭/删除自己的临时DB，不能接触用户DB。运行临�
 本次只核对当前基线、恢复证据、创建本文并检查结构 / 链接 / 行号 / 表格 / Mermaid静态结构、数字、源码与历史引用、`git diff --check`、修改范围。没有修改`lib/`、`test/`、schema、配置、旧docs，没有运行付费API，没有提交、push、merge或release。Flutter结果全部来自已恢复审计输出，不作为本次新执行结果。
 
 文档整理完成后停止，等待用户批准后续实施范围。任何执行阶段均须先复核实际HEAD、本文与ADR，避免未来行号或代码改变后照搬旧假设。
+
+## 15. 2026-10-13 已完成范围与暂停断点
+
+本节是后续实施状态补充，第 1–14 节原审计证据与正式验收要求保持有效。
+用户已授权把已完成部分保存并推送到独立分支；没有授权合并 main 或发布。
+
+**Status: PAUSED / NOT ACCEPTED。** 分支：
+`fix/character-generation-budget-checkpoint-20261013`。
+详细证据、提交边界、未完成项及恢复步骤见
+[修复执行记录](codex/character-generation-budget-remediation-progress.md#2026-10-13-干净断点与恢复入口)。
+
+| 规格范围 | 本断点完成情况 | 独立审查与剩余边界 |
+| --- | --- | --- |
+| Phase 1 内容契约基础 | 可选版本化契约、严格解析/序列化、类型/profile 纯验证、旧数据 SQLite 保护已完成 | [基础审查](codex/character-generation-budget-phase1-independent-review.md) PASSED；U6 产品默认值与生产闭环未完成，不能称完整 Phase 1 验收 |
+| R3 / ISSUE-07，Phase 2 协议部分 | 冲突同 seq 显式失败、相同重放副作用至多一次、流式/收集两路及 SQLite 旧正文保护已完成 | [协议审查](codex/character-generation-budget-phase2-protocol-independent-review.md) PASSED；完整 Phase 2 UI 与配置入口门禁仍待完成 |
+| R4 / ISSUE-08，Phase 3 规划部分 | 所有总量分支检查单段上界，归一化保留显式 minimum，plan/replan/confirm 守卫已完成 | [规划审查](codex/character-generation-budget-r4-planning-independent-review.md) PASSED；R1 快照、future reserve、派发与事务复核未完成 |
+| R6 / ISSUE-09，Phase 6 诊断部分 | heartbeat timer 重启基线、owner interval 保护、观测语义及负向/mutation 回归已完成 | [诊断审查](codex/character-generation-budget-r6-diagnostics-independent-review.md) PASSED；不代表跨模块集成或真实设备现场验收 |
+| R4 历史测试适配 | 保留容量、目标权威及幂等断言，合法分段 fixture 与非法单段拒绝回归已完成 | [fixture 复审](codex/character-generation-budget-r4-regression-independent-review.md) PASSED；无删除/skip/放宽断言 |
+
+收尾资源子系统回归 **823 PASS，退出码 0**；`flutter analyze --no-pub` 零问题，
+变更测试格式及 `git diff --check` PASS。这是本轮真实执行结果，区别于第 11 节原审计
+测试记录；没有执行最终全仓回归，也不把重叠测试组合加总为独立覆盖数量。
+
+**仍未完成：** R1/R2 生产链 MAJOR、U6 产品决定、失败分类与 retry 持久化、R5 安全
+错误数字/恢复 UI、人工认可与修订来源、真实 UI→SQLite E50 和移动端验证，以及
+Phase 6 跨模块/全仓回归和最终独立验收。不得因局部 PASSED 将本任务标记 ACCEPTED。
+恢复应先检查 Git 状态并读取执行记录，从已通过局部门禁继续；不重置用户修改或数据库。
