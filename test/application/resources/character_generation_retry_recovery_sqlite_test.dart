@@ -178,9 +178,10 @@ void main() {
     await prefill(tasks, const [399, 399, 400]);
 
     var calls = 0;
+    final sessionRepo =
+        StreamingGenerationSessionRepositoryImpl(getDb: () async => fixture.db);
     final service = StreamingResourceGenerationService(
-      sessionRepository: StreamingGenerationSessionRepositoryImpl(
-          getDb: () async => fixture.db),
+      sessionRepository: sessionRepo,
       taskRepository: stack.tasks,
       blueprintRepository: blueprintRepository(),
       coordinator: coordinator(
@@ -194,6 +195,15 @@ void main() {
     expect(
         await service.startGeneration(sessionId: session.sessionId), isFalse);
     expect(calls, 0, reason: '不可行任务在 start 路径也不得调用模型');
+
+    // The persisted session diagnostic keeps the safe numbers (not a bare code),
+    // so a restart can still explain why the run stopped.
+    final persisted = await sessionRepo.findSession(session.sessionId);
+    final sessionDiag =
+        resourceGenerationErrorFromCode(persisted!.errorMessage);
+    expect(sessionDiag.code, AppErrorCode.resourceGenerationBudgetInfeasible);
+    expect(sessionDiag.parameters['minimum'], 300);
+    expect(sessionDiag.parameters['ceiling'], 1200);
 
     expect(await service.resumeGeneration(session.sessionId), isFalse);
     expect(calls, 0, reason: '恢复路径必须复用同一预算守卫，仍是 0 请求');

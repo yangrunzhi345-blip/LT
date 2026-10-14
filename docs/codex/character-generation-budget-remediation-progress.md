@@ -266,10 +266,17 @@ requiredFields / requiredHeadings 覆盖、legacy `needsContentReview` UI 审阅
 ## R5：错误分类、安全预算诊断、有限重试与恢复保护（Phase 5 核心）
 
 Status: PASSED（仅限 R5 有限范围）
-Acceptance Mode: 独立审查见下方独立审查行；同 Agent 复查为 Integrated Review
+Acceptance Mode: Independent Review
 起始 HEAD：`b79b0ac`（R2 独立审查记录提交后）；工作区干净。
-提交 SHA：`fb4ba8f`（`feat(resources): classify generation failures and carry safe budget diagnostics`）。
-审查报告：`character-generation-budget-r5-classification-integrated-review.md`（Integrated）。
+提交 SHA：`fb4ba8f`（`feat(resources): classify generation failures and carry safe budget diagnostics`）；
+审查后修复提交见下方 Remediation。
+审查报告：`character-generation-budget-r5-classification-integrated-review.md`（Integrated）、
+`character-generation-budget-r5-classification-independent-review.md`（Independent）。
+
+独立审查（另一 Agent，只读）：裁决 **PASSED WITH FINDINGS**，未解决发现
+**BLOCKER=0、MAJOR=0、MINOR=2、INFO=2**。六项不变量逐项成立（分类、仅安全参数、编解码
+向后兼容、AppDomainError 原样返回非破坏、不可行 0 请求、无 U6 决策）。独立审查另跑
+14 用例 PASS、analyze 零问题，未修改任何文件。
 
 实施范围（依据规格 §6.4 / §9）：
 
@@ -284,8 +291,9 @@ Acceptance Mode: 独立审查见下方独立审查行；同 Agent 复查为 Inte
 - 持久化与恢复：新增 `encodeGenerationDiagnostic` —— 无安全参数时写纯稳定码名，有参数时
   写既有安全 `DiagnosticEnvelope`；`resourceGenerationErrorFromCode` 同时解码二者并对
   历史纯码 / 任意旧文本安全降级为 unknown。coordinator 的 `_failureCode`、三处失败回调
-  errorMessage、`exhaustBudget`、流式服务的 session 失败码统一使用同一编码，故安全数字
-  可跨“重启”（新实例重建）还原；未知旧码仍安全降级。
+  errorMessage、`exhaustBudget` 使用同一编码，故安全数字可跨“重启”（新实例重建）还原；
+  未知旧码仍安全降级。流式服务的 session 失败码在审查后修复中也统一为同一编码
+  （见 Remediation）。
 - 有限重试与恢复保护：不可行任务在自动（`generateAllParts` 派发闸门）、手动
   （`retrySinglePart` 预检）、恢复（`resumeGeneration → generateAllParts` 同一闸门）三条
   路径均 0 次模型请求；偶发超量按每 pass `1+maxRetriesPerPart` 有限纠正。未新增持久化
@@ -316,6 +324,20 @@ U6 合规：**未**引入 narrative/scalar/structured 最低阈值，未实现�
 - 失败分类的 `retryDisposition` 仍由既有 allocation / sourceConflict 闸门实现，未新增
   冗余枚举字段（避免过度抽象）。
 - R1 MINOR-2 / 3 / 4、R2-MINOR-1（重复解析蓝图）仍未处理。
+
+### R5 审查后修复（Remediation）
+
+独立审查发现流式服务 `success == false` 分支（不可行 auto / resume 路径）仍写裸码，导致
+会话行丢失安全数字。已最小修复：
+
+- `streaming_resource_generation_service.dart` 该分支改用
+  `encodeGenerationDiagnostic(failureError)` 写会话行与事件 errorMessage（与抛异常路径
+  一致）；无参数时仍为纯码，既有纯码断言不变。
+- `character_generation_retry_recovery_sqlite_test.dart` 的 resume 用例新增断言：不可行
+  运行的会话 `errorMessage` 解码回 `resourceGenerationBudgetInfeasible` 且保留
+  `minimum=300` / `ceiling=1200`。
+- 复核：retry_recovery + streaming + lifecycle **52 PASS**，退出码 0；analyze 零问题；
+  日志 `/tmp/lt-r5-fix.log`。修复提交 SHA 见分支 HEAD。
 
 下一工作单元：独立弹性 E50 的真实 UI→SQLite 验证；随后人工认可与历史修订保护
 （依赖 U6、需 minimal nullable provenance 迁移）、世界观 / 角色 / NPC 集成回归、全仓回归
