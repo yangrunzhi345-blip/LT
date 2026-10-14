@@ -760,6 +760,27 @@ Status: COMPLETE（U6-E；独立审查见下）
 
 下一工作单元：**全仓回归与最终验收**。
 
+## Work Unit 4：全仓回归与最终验收
+
+Status: 见「最终验收矩阵」文档 `character-generation-budget-final-acceptance-matrix.md`
+分支：`fix/u6d-legacy-review-final-20261014`；baseline origin/main `8ad0680`。
+
+- main@`8ad0680` 的 GitHub Actions Quality gate 已通过（含完整 `flutter test`）；本轮对新分支的
+  增量变更重新执行完整 `flutter test --no-pub`。
+- 首轮全仓 **+4082 ~7 -1**：1 项失败为 **U6-D 引入的真实回归** ——
+  `test/application/runtime/r05_async_state_ownership_test.dart` 的 `_ScriptedStudioRuntime`
+  用 `noSuchMethod` 兜底（抛 `UnimplementedError`），未实现新增的
+  `ResourceStudioRuntime.blueprintPartContracts`，导致 `load()` 读契约时抛错 → 状态 `failed`。
+  **最小修复**：为该 fake 补 `blueprintPartContracts` 覆盖（返回空），仅测试夹具，未改生产逻辑；
+  `test/application/runtime` 27 PASS。
+- 静态门禁：`flutter analyze --no-pub` 零问题；`dart format --output=none --set-exit-if-changed lib test`
+  884 文件 0 changed；`git diff --check` PASS。
+- 修复后全仓复跑结果见「最终验收矩阵」的 FULL REGRESSION 行。
+- **修复后全仓 `flutter test --no-pub`：+4083 PASS / ~7 SKIP / 0 FAIL，退出码 0**（12m33s）；
+  日志 `/tmp/lt-full-regression2.log`。
+- 最终验收矩阵：`character-generation-budget-final-acceptance-matrix.md`（R1–R6 / U6-A–E /
+  Phase 1–6 / T01–T31，含 NOT AUTHORIZED 与 NOT VERIFIED 明确标注）。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
