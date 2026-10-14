@@ -197,10 +197,11 @@ R2 在其上接入生产闭环；U6 仍未答复，不得擅自引入 narrative 
 ## R2：正文有效性与完成状态（Phase 4 核心）
 
 Status: PASSED（仅限 R2 有限范围）
-Acceptance Mode: Integrated Single-Agent Review（执行同一 Agent 复查，非独立审查）
+Acceptance Mode: Independent Review（另一 Agent 独立只读审查；同 Agent 复查报告为 Integrated Review）
 起始 HEAD：`58b6e17`（R1 进度文档提交后）；工作区干净。
-提交 SHA：见下方 commit（提交后在后续记录补齐）。审查报告：
-`character-generation-budget-r2-content-contract-integrated-review.md`。
+提交 SHA：`064eb42`（`fix(resources): enforce content contract and K cap at Part completion`）。
+审查报告：`character-generation-budget-r2-content-contract-integrated-review.md`（Integrated）、
+`character-generation-budget-r2-content-contract-independent-review.md`（Independent）。
 
 实施范围（依据实际调用链）：
 
@@ -253,6 +254,14 @@ requiredFields / requiredHeadings 覆盖、legacy `needsContentReview` UI 审阅
 
 下一工作单元：R5 错误分类、安全数值与受保护恢复；随后独立弹性 E50 的真实 UI→SQLite
 验证、人工认可与历史修订保护、世界观 / 角色 / NPC 集成回归、全仓回归与最终独立审查。
+
+独立审查（另一 Agent，只读）：
+`character-generation-budget-r2-content-contract-independent-review.md`，
+裁决 **PASSED WITH FINDINGS**，未解决发现 **BLOCKER=0、MAJOR=0、MINOR=2、INFO=3**。
+六项 R2 声明（契约贯穿 Validator/Commit、K 守卫、无效不 completed、不覆盖旧正文、legacy
+放行、错误映射、R1 不绕过）逐项成立；夹具适配未被削弱。无阻断问题需修复。两项 MINOR 为
+性能（重复解析蓝图）与 U6 边界；三项 INFO 为外观 / 不可达边界。独立审查另跑 60 + 35 + 39
+用例 PASS、analyze 零问题，结束时工作区为空。
 
 ## 2026-10-13 干净断点与恢复入口
 
