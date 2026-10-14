@@ -466,11 +466,75 @@ Validator、Repository、UI 或 SQLite 生成链引用（新文件之外 `lib/` 
   使用 `jsonDecode`（自 `ea5de88` Phase 1 起、当前未修改）。`test/domain/resources` 目录此前各检查点
   从未运行，故此前未暴露。U6-A 未触碰该文件，也**未**在 U6-A 内修复（修复将改动已通过单元或放宽
   purity 守卫断言，超出本轮范围）。建议单列决策：收紧该守卫规则或在后续阶段把结构化 JSON 解码移出
-  领域契约文件。
+  领域契约文件。（**该既有失败已在下一工作单元「守卫修复」中按最小范围解决。**）
 - 该既有失败使 `flutter test test/domain/resources` 目录级结果为 **+261 -1**（1 项既有失败）；
   U6-A 新增用例全部通过。
 
 下一工作单元：**U6-B（未授权）** 接入 Planner / Normalizer / Review / Confirm；等待用户授权。
+
+## 守卫修复：契约层 JSON 守卫精确化（独立工作单元，ADR-0001）
+
+Status: COMPLETE（仅限本守卫修复；未启动 U6-B）
+Acceptance Mode: Independent Review（另一 Agent 只读审查，见下）
+起始 HEAD：`e89e187`；工作区干净。
+提交 SHA：见下方 commit。
+
+原始缺陷（只读复现）：
+
+- `test/domain/resources/resource_contract_layer_test.dart` 用例
+  `never serializes a whole resource as JSON` 在 `e89e187` 基线即为**红色**，offender：
+  `lib/domain/resources/content_requirements.dart uses jsonDecode`。该文件自 `ea5de88`（Phase 1）
+  起即为现状、未被修改；`test/domain/resources` 目录此前各检查点从未运行，故此前未暴露。
+- 根因：守卫按源码**裸字符串**禁止 `jsonEncode`/`jsonDecode`/`toJson`（`resource_contract_layer_test.dart:77-94`），
+  而 `content_requirements.dart:207` 的 `jsonDecode(body)` 仅用于校验**单个 Structured Part**
+  的正文（`structuredObjectV1` profile 的必填字段），不是整个资源树的 JSON 序列化。
+
+ADR-0001 核对（决定是否需要“架构冲突”停止路径）：
+
+- `docs/architecture/adaptive-resource-system.md` §5 禁止的是**把整棵内容树序列化成一个巨型 JSON 列**、
+  物理嵌套与单次调用生成整资源；**未**禁止对**单个有限节点**（Part）正文做 JSON 解析。
+- 结论：**不存在架构冲突**，无需走“停止并提交冲突分析”路径；可按最小范围修正守卫。
+
+修复方法（最小、精确）：
+
+- 在守卫测试中引入**路径 + token** 精确白名单 `_sanctionedJsonCodecUsage`：仅
+  `lib/domain/resources/content_requirements.dart` 允许 `jsonDecode`。
+- `jsonEncode` / `toJson`（序列化）在**所有**契约文件继续禁止，**包括**该白名单文件。
+- `jsonDecode` 在**其它所有**契约文件继续禁止。领域层因此**未**获得任意 JSON 编解码能力。
+- 抽出纯函数 `_jsonSerializationViolations(path→source)`，同一规则既扫描真实文件又支撑负向回归，
+  避免规则复制漂移。
+- 未改动 `lib/domain/resources/content_requirements.dart`（Narrative/Scalar/Structured 语义、
+  合法 `false`/`0`、非法 JSON、空字段行为全部不变）。
+
+负向回归与 mutation 证据：
+
+- 新增 5 个负向用例：其它文件新增 `jsonDecode` → 触发；白名单文件内 `jsonEncode` / `toJson` → 触发；
+  任意契约文件出现整树 `toJson()=>jsonEncode(this)` → 触发；白名单文件仅 `jsonDecode(body)` → 放行。
+- 另加 1 个形态用例：`content_requirements.dart` 只应含 `jsonDecode(body)`，不得含 `jsonEncode`/`toJson`。
+- mutation 探针：临时向 `lib/domain/resources/resource_limits.dart` 注入一行含 `jsonDecode` 的注释，
+  守卫真实文件扫描随即报 `uses jsonDecode` 并 FAIL；随后从备份**逐字节还原**（`sha256sum -c` 通过），
+  守卫复跑全绿。
+
+真实验证：
+
+- 修复前复现：`resource_contract_layer_test` **+4 -1**（offender 已记录）。
+- 修复后 `test/domain/resources`：**268 PASS，退出码 0**（此前 +261 -1）。
+- `test/application/resources` 全量：**852 PASS，退出码 0**（含内容契约与 SQLite 提交回归）。
+- `flutter analyze --no-pub` 零问题；变更测试 format 0 changed；`git diff --check` PASS。
+
+独立审查（另一 Agent，只读）：裁决 **PASSED WITH FINDINGS**，未解决发现
+**BLOCKER=0、MAJOR=0、MINOR=2、INFO=1**。独立复核：四条规则全部成立（`jsonEncode`/`toJson`
+在所有契约文件被禁含白名单文件；`jsonDecode` 仅白名单文件允许；白名单按**精确路径 + 精确
+token** 键控，无法误放行；导入纯净 / 容量常量 / ResourcePart-content 三项守卫未被削弱）。
+并独立确认：`jsonDecode` 在 `lib/domain/resources` 中唯一出现于
+`content_requirements.dart:207`；`content_requirements.dart` 逐字节未修改；**不存在架构冲突**，
+无需走“停止并提交冲突分析”路径（ADR-0001 §5 只禁整树序列化）。两项 MINOR 已处理：
+1. `jsonDecode\(body\)` 过度耦合变量名 → 已改为按**意图**匹配（`jsonDecode(` 调用 + 存在
+   `structuredObjectV1` profile），行为等价的改名不再误报。
+2. token 采用子串匹配，理论上 `myToJson` 之类同名片段会误报（**fail-closed**、既有行为、
+   当前无误报对象）；本轮保留该保守语义并在本记录登记为已知 MINOR，不做放宽。
+
+下一工作单元：**U6-B（未授权）**；等待用户授权。
 
 ## 2026-10-13 干净断点与恢复入口
 
