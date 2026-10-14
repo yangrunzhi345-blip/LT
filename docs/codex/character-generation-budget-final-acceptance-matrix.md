@@ -57,7 +57,7 @@ Acceptance Mode: Independent Review（各工作单元由另一只读 Agent 审�
 | ID | 状态 | 依据 |
 | --- | --- | --- |
 | T01 | PASS | `generation_budget_policy_test` / `configurable_elastic_budget_sqlite_test`（E20 C12000，C/C+1） |
-| T02 | PASS | 直接创建真实 35% 冻结（`resource_ai_create_studio_navigation_test`）+ E50 真机 UI→SQLite 套件 |
+| T02 | PASS | 直接创建真实 35% 冻结（`resource_ai_create_studio_navigation_test`：**自动化** Widget→runtime→SQLite，**非真机**）+ E50 **自动化** UI→SQLite 端到端（`e50_elastic_budget_end_to_end_test`）。**真实设备/真机未验证（NOT VERIFIED）** |
 | T03 | PASS | `elastic_budget_matrix_test`（全局50/本次20 分辨率） |
 | T04 | PASS | U6-E + elastic matrix（确认后改设置不追溯） |
 | T05 | PASS | `generation_budget_policy_test`（E0/20/50，A 截顶） |
