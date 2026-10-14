@@ -781,6 +781,34 @@ Status: 见「最终验收矩阵」文档 `character-generation-budget-final-acc
 - 最终验收矩阵：`character-generation-budget-final-acceptance-matrix.md`（R1–R6 / U6-A–E /
   Phase 1–6 / T01–T31，含 NOT AUTHORIZED 与 NOT VERIFIED 明确标注）。
 
+## P2 修复：Legacy 契约读取不得阻止 Studio 打开（PR #7 反馈）
+
+Status: FIXED（PR #7 Codex Review P2）。
+分支：`fix/u6d-legacy-review-final-20261014`。
+
+反馈（`resource_studio_controller.dart:232`）：当 AI 资源关联的已存 Blueprint JSON 损坏或与当前解析器不兼容时，
+`blueprintPartContracts` 抛错，`load()` 将其视为整个 Studio 失败；而资源树与用户正文可能仍然有效。
+
+确定性复现（修复前）：新增 `test/application/resources/u6d_contract_projection_resilience_sqlite_test.dart`
+——有效资源树 + 损坏 `blueprint_json` → 契约投影抛 `FormatException`、`load()` 状态 `failed`。
+
+修复原则与范围（受控降级，仅限**可选蓝图读取**边界）：
+
+- 契约投影（P2 明确位置）与 `ensureSession` 的蓝图读取均改为 **fail-quiet**：损坏/不兼容蓝图 → 该资源
+  Part 一律 `PartContractStatus.unavailable`（**绝不**伪造 `legacyUnknownContract`），或会话解析返回 null；
+  Studio 仍打开。仅保留安全诊断 `errorType` + `resourceId`，不含正文或 Blueprint 内容。
+- **主体资源树读取（`readTree`）保持致命**，未被吞掉（回归用例 #4 断言仍 `failed`）。
+- 控制器边界再加一层防御：投影调用抛错时按已加载树的 Part 降级为 `unavailable`。
+- 未改 Schema / 正文 / Hash / Attempt / Revision / 完成状态；无模型调用、无数据库写入。
+
+回归用例（真实 SQLite + 生产读取链）：1) 损坏蓝图 → 投影不抛、Studio 可打开；2) 状态为 `unavailable`
+且不显示 Legacy 提示；3) 正常 legacy / 已确认契约分类不变；4) 真实树读取失败仍按原错误处理；
+5) 旧查询不覆盖新状态（既有 R05 竞态用例覆盖）；6) 历史一字正文与 Hash / Revision 原样保留；
+7) 无模型调用 / 数据库写入副作用。
+
+真实验证：P2 定向 **6 PASS**；U6-D 领域/SQLite/Widget + Studio/Controller 组合 **122 PASS**；
+`flutter analyze` 零问题；`dart format` 0 changed；`git diff --check` PASS；全仓回归见下。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`

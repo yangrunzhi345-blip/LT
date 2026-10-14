@@ -10,13 +10,16 @@ Acceptance Mode: Independent Review（各工作单元由另一只读 Agent 审�
 
 ## FULL REGRESSION
 
-- `flutter test --no-pub`（全仓，371 个 `*_test.dart`）：**+4083 PASS / ~7 SKIP / 0 FAIL，退出码 0**（12m33s）；
-  日志 `/tmp/lt-full-regression2.log`。
+- `flutter test --no-pub`（全仓，372 个 `*_test.dart`）：**+4089 PASS / ~7 SKIP / 0 FAIL，退出码 0**（12m33s）；
+  日志 `/tmp/lt-p2-full.log`。
 - 首轮曾 **+4082 ~7 -1**：唯一失败是 U6-D 引入的真实回归
   （`r05_async_state_ownership_test.dart` 的 `_ScriptedStudioRuntime` 未实现新增
-  `blueprintPartContracts` 且以 `noSuchMethod` 抛错）；已最小修复测试夹具后全仓全绿。
+  `blueprintPartContracts` 且以 `noSuchMethod` 抛错）；已最小修复测试夹具。
+- **PR #7 P2 反馈修复**：损坏/不兼容的关联 Blueprint JSON 曾使 `ResourceStudioController.load()` 整体失败；
+  已在可选蓝图读取边界（契约投影 + `ensureSession`）实施 fail-quiet 降级为 `unavailable`，
+  主体资源树读取仍致命。复现与回归见 `u6d_contract_projection_resilience_sqlite_test.dart`（6 PASS）。
 - `flutter analyze --no-pub`：No issues found!　`dart format --output=none --set-exit-if-changed lib test`：
-  884 文件 0 changed。`git diff --check`：PASS。
+  885 文件 0 changed。`git diff --check`：PASS。
 - main@`8ad0680` 的 GitHub Actions Quality gate 此前已通过（含完整 `flutter test`）。
 
 ## R1–R6 + E50

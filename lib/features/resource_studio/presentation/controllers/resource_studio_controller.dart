@@ -227,9 +227,21 @@ final class ResourceStudioController extends ChangeNotifier {
       final elasticOverride = resolvedResourceId == null
           ? null
           : await _runtime.readGenerationElasticOverride(resolvedResourceId);
-      final contractStatuses = resolvedResourceId == null
-          ? const <String, PartContractStatus>{}
-          : await _runtime.blueprintPartContracts(resolvedResourceId);
+      // P2: the contract projection is optional display data. Any failure here
+      // must never block opening a resource whose tree loaded successfully, so
+      // degrade to `unavailable` (no legacy hint) instead of failing `load()`.
+      var contractStatuses = const <String, PartContractStatus>{};
+      if (resolvedResourceId != null) {
+        try {
+          contractStatuses =
+              await _runtime.blueprintPartContracts(resolvedResourceId);
+        } on Object {
+          contractStatuses = {
+            for (final part in tree?.parts ?? const <ResourcePart>[])
+              part.id.value: PartContractStatus.unavailable,
+          };
+        }
+      }
       if (_disposed || generation != _stateGeneration) return;
       // A fresh load re-derives state from persistence, so any Part-scoped
       // banner ownership from the previous view is dropped with it.

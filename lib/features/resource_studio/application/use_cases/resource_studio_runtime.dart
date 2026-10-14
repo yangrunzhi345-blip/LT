@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../../../../core/debug/generation_diagnostics.dart';
 import '../../../../application/resources/streaming_generation_session_repository.dart';
 import '../../../../application/resources/resource_blueprint_repository.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
@@ -260,8 +261,18 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
   Future<Map<String, PartContractStatus>> blueprintPartContracts(
     ResourceId resourceId,
   ) async {
-    final tree = await _treeRepository.readTree(resourceId);
+    // P2: the contract projection is OPTIONAL, read-only display data. Its own
+    // secondary tree read must never be reported as the resource's primary read
+    // error; a failure here simply yields no statuses.
+    final ResourceTree? tree;
+    try {
+      tree = await _treeRepository.readTree(resourceId);
+    } on Object {
+      return const <String, PartContractStatus>{};
+    }
     if (tree == null) return const <String, PartContractStatus>{};
+    final partIds =
+        tree.parts.map((part) => part.id.value).toList(growable: false);
     final metadata = tree.resource.metadata;
     final authoring =
         metadata[ResourceTreeSchema.metadataAuthoringMethodKey]?.toString();
@@ -272,18 +283,44 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
       authoringMethod: authoring,
       creationSessionId: sessionId,
     );
+    if (!isAi) {
+      return PartContractProjection.project(
+        isAiResource: false,
+        confirmedBlueprint: null,
+        resourceId: resourceId.value,
+        partIds: partIds,
+      );
+    }
     ResourceBlueprint? confirmedBlueprint;
-    if (isAi) {
+    try {
       final confirmedId = metadata['confirmed_blueprint_id']?.toString() ?? '';
       confirmedBlueprint = confirmedId.isNotEmpty
           ? await _blueprintRepository.findBlueprint(confirmedId)
           : await _blueprintRepository.findLatestBlueprint(sessionId!);
+    } on Object catch (error) {
+      // A malformed or parser-incompatible stored blueprint is an optional
+      // display input: degrade every Part to `unavailable` (never fabricate
+      // `legacyUnknownContract`) so the resource still opens. Safe diagnostic
+      // only — no resource content or blueprint payload is retained.
+      GenerationDiagnostics.instance.mark(
+        'U6D_CONTRACT_PROJECTION_UNAVAILABLE',
+        {
+          'resourceId': resourceId.value,
+          'errorType': error.runtimeType.toString(),
+        },
+      );
+      return PartContractProjection.project(
+        isAiResource: true,
+        confirmedBlueprint: null,
+        resourceId: resourceId.value,
+        partIds: partIds,
+      );
     }
     return PartContractProjection.project(
-      isAiResource: isAi,
+      isAiResource: true,
       confirmedBlueprint: confirmedBlueprint,
       resourceId: resourceId.value,
-      partIds: tree.parts.map((part) => part.id.value),
+      partIds: partIds,
     );
   }
 
@@ -302,8 +339,23 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     final creationSessionId =
         tree?.resource.metadata['creation_session_id']?.toString() ?? '';
     if (creationSessionId.isEmpty) return null;
-    final blueprint =
-        await _blueprintRepository.findLatestBlueprint(creationSessionId);
+    final ResourceBlueprint? blueprint;
+    try {
+      blueprint =
+          await _blueprintRepository.findLatestBlueprint(creationSessionId);
+    } on Object catch (error) {
+      // P2 (same root cause): a malformed / parser-incompatible stored blueprint
+      // is an optional input to session resolution. No session can be resolved,
+      // but the resource tree must still open. Safe diagnostic only.
+      GenerationDiagnostics.instance.mark(
+        'STUDIO_ENSURE_SESSION_BLUEPRINT_UNREADABLE',
+        {
+          'resourceId': resourceId.value,
+          'errorType': error.runtimeType.toString(),
+        },
+      );
+      return null;
+    }
     if (blueprint == null ||
         blueprint.resourceId != resourceId ||
         blueprint.status != BlueprintStatus.confirmed) {
