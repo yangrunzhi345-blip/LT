@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_svg_icon.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/part_contract_status.dart';
 import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -19,6 +20,7 @@ final class ResourceStudioOutline extends StatefulWidget {
     required this.selectedPartId,
     required this.onPartSelected,
     this.partTaskStatuses = const <String, PartTaskStatus>{},
+    this.partContractStatuses = const <String, PartContractStatus>{},
     this.retryingPartIds = const <String>{},
     this.onRetryPart,
     super.key,
@@ -32,6 +34,11 @@ final class ResourceStudioOutline extends StatefulWidget {
   /// Persisted per-Part generation status; absent entries fall back to
   /// content-derived labels.
   final Map<String, PartTaskStatus> partTaskStatuses;
+
+  /// U6-D: read-only per-Part content-contract status. Only
+  /// [PartContractStatus.legacyUnknownContract] shows the low-key legacy review
+  /// hint; every other status (including absence) shows nothing.
+  final Map<String, PartContractStatus> partContractStatuses;
 
   /// Parts whose targeted regeneration is in flight.
   final Set<String> retryingPartIds;
@@ -125,6 +132,7 @@ final class _ResourceStudioOutlineState extends State<ResourceStudioOutline> {
             onPartSelected: widget.onPartSelected,
             partKeys: _partKeys,
             partTaskStatuses: widget.partTaskStatuses,
+            partContractStatuses: widget.partContractStatuses,
             retryingPartIds: widget.retryingPartIds,
             onRetryPart: widget.onRetryPart,
           ),
@@ -141,6 +149,7 @@ final class _SectionGroup extends StatelessWidget {
     required this.onPartSelected,
     required this.partKeys,
     required this.partTaskStatuses,
+    required this.partContractStatuses,
     required this.retryingPartIds,
     required this.onRetryPart,
   });
@@ -151,6 +160,7 @@ final class _SectionGroup extends StatelessWidget {
   final ValueChanged<PartId> onPartSelected;
   final Map<String, GlobalKey> partKeys;
   final Map<String, PartTaskStatus> partTaskStatuses;
+  final Map<String, PartContractStatus> partContractStatuses;
   final Set<String> retryingPartIds;
   final ValueChanged<PartId>? onRetryPart;
 
@@ -205,17 +215,57 @@ final class _SectionGroup extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            subtitle: Text(
-              _statusLabel(context, part),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: partTaskStatuses[part.id.value] == PartTaskStatus.failed
-                  ? TextStyle(color: theme.colorScheme.error)
-                  : null,
-            ),
+            subtitle: _subtitle(context, part, theme),
             trailing: _trailing(context, part),
             onTap: () => onPartSelected(part.id),
           ),
+      ],
+    );
+  }
+
+  /// U6-D: the Part subtitle. A legacy Part (an authoritative historical AI
+  /// blueprint exists but this Part carries no contract) gets a low-key,
+  /// non-blocking review hint; it never changes status, body or readiness.
+  Widget _subtitle(BuildContext context, ResourcePart part, ThemeData theme) {
+    final label = _statusLabel(context, part);
+    final failed = partTaskStatuses[part.id.value] == PartTaskStatus.failed;
+    final isLegacy = partContractStatuses[part.id.value] ==
+        PartContractStatus.legacyUnknownContract;
+    if (!isLegacy) {
+      return Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: failed ? TextStyle(color: theme.colorScheme.error) : null,
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        const SizedBox(height: 2),
+        Row(
+          children: [
+            AppSvgIcon(
+              'info',
+              size: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                _l10n(context).partContentIntegrityUnconfirmed,
+                key: ValueKey<String>('outline-legacy-review-${part.id.value}'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

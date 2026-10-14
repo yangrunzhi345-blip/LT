@@ -4641,6 +4641,12 @@ abstract class AppLocalizations {
   /// **'Generated'**
   String get outlinePartGenerated;
 
+  /// No description provided for @partContentIntegrityUnconfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Content completeness not yet verified'**
+  String get partContentIntegrityUnconfirmed;
+
   /// No description provided for @operationFailedRetry.
   ///
   /// In en, this message translates to:

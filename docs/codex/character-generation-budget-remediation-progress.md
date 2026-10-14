@@ -680,6 +680,47 @@ U6-D §7–§9 要求在 Studio 对 `contentRequirements == null` 的历史 Part
 
 本轮**未**创建 `completion_provenance` 迁移，未合并 main，未发布。整体仍 **NOT ACCEPTED**。
 
+## U6-D：Legacy 历史审阅兼容（只读契约投影 + 低干扰提示）
+
+Status: COMPLETE（U6-D；独立审查见下）
+分支：`fix/u6d-legacy-review-final-20261014`（基线 origin/main `8ad0680`）。
+提交 SHA：见下方 commit。
+
+批准方案 Option 1（只读投影）：
+
+- 新增 `lib/domain/resources/part_contract_status.dart`：枚举 `PartContractStatus`
+  {confirmedContract, legacyUnknownContract, notApplicable, unavailable} 与**纯**投影
+  `PartContractProjection`。判定**只**依据资源自身创建元数据
+  （`authoring_method == 'aiReference'` 且 `creation_session_id` 非空）与其**已确认蓝图**的 Part 契约；
+  **不**用「没有生成任务」「正文很短」「找不到蓝图」推断 legacy（缺失/不可靠 → `unavailable`）。
+- `ResourceStudioRuntime.blueprintPartContracts(ResourceId)`（只读；接口默认返回空，实现读取 tree +
+  已确认蓝图并投影）；`ResourceStudioController.partContractStatuses` 在 `load()` 一并读取。
+- Studio outline 仅对 `legacyUnknownContract` 显示低干扰提示「内容完整性尚未确认」
+  （`outline-legacy-review-<id>`，info SVG，`onSurfaceVariant`），不改变 completed 状态 / 正文 /
+  hash / attempt / revision / E/C / 装配资格。**未**新增数据库字段或 `completion_provenance` 迁移。
+- 新增 6 locale 文案 `partContentIntegrityUnconfirmed` 并重新生成 l10n。
+
+真实验证：
+
+- 新增测试：领域投影 7 PASS、运行时+SQLite 5 PASS（真实 SQLite：legacy AI 蓝图→legacyUnknownContract、
+  新 U6 计划→confirmedContract、手工→notApplicable、只读不改写且保留历史 1 字正文/hash、
+  重启后状态一致）、outline Widget 8 PASS（仅 legacy 显示提示、其余状态不显示、6 locale、
+  320px + textScale 1.0/1.8 无溢出）。
+- U6-D 定向 20 PASS；Studio 相关组合 110 PASS；`test/widget`+`test/application/resources`
+  +`test/domain/resources` **2436 PASS，退出码 0**；analyze 零问题；format 0 changed；diff-check PASS。
+- 无 LLM 调用、无数据库写入副作用（投影仅读）。
+
+独立审查（另一 Agent，只读）：裁决 **VERIFIED / PASSED**，未解决发现 **BLOCKER=0、MAJOR=0**。
+独立复跑三个 U6-D 文件 **20 PASS**（退出码 0）；独立确认：状态**仅**由
+`authoring_method=='aiReference'` + 非空 `creation_session_id` + 已确认蓝图上的 Part 契约推导
+（`part_contract_status.dart`），缺失蓝图 → `unavailable`（fail-quiet），**从不**用缺失任务 / 短正文
+推断；运行时仅 `readTree`/`findBlueprint`/`findLatestBlueprint` 读取、无写入无 LLM
+（`resource_studio_runtime.dart`）；提示仅在 `legacyUnknownContract` 显示（`resource_studio_outline.dart`）；
+无 schema/migration 变更。审查未覆盖：多语言文案正确性、soak 行为、控制器生命周期竞态（由本单元
+6 locale Widget 用例与 2436 项回归另行覆盖）。
+
+下一工作单元：**U6-E**（跨模块集成）。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`

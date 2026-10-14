@@ -8,6 +8,7 @@ import '../../../../application/resource_library/accept_generated_related_charac
 import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../controllers/streaming_resource_generation_controller.dart';
 import '../../../../domain/resources/resource_contracts.dart';
+import '../../../../domain/resources/part_contract_status.dart';
 import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../domain/resources/resource_blueprint.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
@@ -58,6 +59,15 @@ abstract interface class ResourceStudioRuntime {
     required String expectedUpdatedAt,
     int? percent,
   }) async {}
+
+  /// U6-D: read-only per-Part content-contract status for the resource, used to
+  /// show a non-destructive legacy review hint. Derived ONLY from the resource's
+  /// own creation metadata and its confirmed blueprint; never from task presence
+  /// or body length. Null default keeps fakes honest without forcing overrides.
+  Future<Map<String, PartContractStatus>> blueprintPartContracts(
+    ResourceId resourceId,
+  ) async =>
+      const <String, PartContractStatus>{};
 
   Future<StreamingGenerationSession?> getLatestSessionForResource(
     String resourceId,
@@ -245,6 +255,37 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
         expectedUpdatedAt: expectedUpdatedAt,
         percent: percent,
       );
+
+  @override
+  Future<Map<String, PartContractStatus>> blueprintPartContracts(
+    ResourceId resourceId,
+  ) async {
+    final tree = await _treeRepository.readTree(resourceId);
+    if (tree == null) return const <String, PartContractStatus>{};
+    final metadata = tree.resource.metadata;
+    final authoring =
+        metadata[ResourceTreeSchema.metadataAuthoringMethodKey]?.toString();
+    final sessionId =
+        metadata[ResourceCreationPipeline.metadataCreationSessionId]
+            ?.toString();
+    final isAi = PartContractProjection.isAiCreatedResource(
+      authoringMethod: authoring,
+      creationSessionId: sessionId,
+    );
+    ResourceBlueprint? confirmedBlueprint;
+    if (isAi) {
+      final confirmedId = metadata['confirmed_blueprint_id']?.toString() ?? '';
+      confirmedBlueprint = confirmedId.isNotEmpty
+          ? await _blueprintRepository.findBlueprint(confirmedId)
+          : await _blueprintRepository.findLatestBlueprint(sessionId!);
+    }
+    return PartContractProjection.project(
+      isAiResource: isAi,
+      confirmedBlueprint: confirmedBlueprint,
+      resourceId: resourceId.value,
+      partIds: tree.parts.map((part) => part.id.value),
+    );
+  }
 
   @override
   Future<StreamingGenerationSession?> getLatestSessionForResource(

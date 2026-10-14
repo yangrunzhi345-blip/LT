@@ -1045,6 +1045,7 @@
   "capacityStatusOverflow": "予算超過",
   "outlinePartPending": "生成待ち",
   "outlinePartGenerated": "生成済み",
+  "partContentIntegrityUnconfirmed": "内容の完全性は未確認です",
   "operationFailedRetry": "操作に失敗しました。再試行してください",
   "resourceImportReturnToEdit": "修正に戻る",
   "resourceImportConfirmSave": "保存を確認",

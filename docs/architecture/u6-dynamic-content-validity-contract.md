@@ -33,9 +33,9 @@
 | §4 Structured V1 顶层必填字段 | APPROVED | IMPLEMENTED（Phase 1）；**必填字段仅来自客户端 spec（U6-B）**；嵌套字段/值类型**不在 V1** |
 | §5 契约单源、`1≤m≤p≤3000`、UTF-16 计量 | APPROVED | **IMPLEMENTED（U6-B）**：唯一公式 `NarrativeMinimumPolicy`；`BlueprintValidator.validateContentContracts` |
 | §5 契约在归一化后生成、冻结 | APPROVED | **IMPLEMENTED（U6-B）**：`BlueprintPlanner` 在 `normalize` 后生成并冻结 |
-| §6 Legacy 兼容（不补造 / 不改写 / `needsContentReview`） | APPROVED | 领域侧 IMPLEMENTED；无版本标记的蓝图保持 legacy 放行；**审阅提示 UI NOT IMPLEMENTED（U6-D）** |
-| §7 失败分类与体验 | APPROVED | 分类 IMPLEMENTED（R5）；**审阅页契约展示 IMPLEMENTED（U6-B 最小）**；数字文案仍部分 NOT IMPLEMENTED |
-| §8 验收标准 A–E | APPROVED | A/B/C 多数 IMPLEMENTED（U6-A/B）；**D 真实设备/E 全仓仍 NOT IMPLEMENTED** |
+| §6 Legacy 兼容（不补造 / 不改写 / `needsContentReview`） | APPROVED | 领域侧 IMPLEMENTED；无版本标记的蓝图保持 legacy 放行；**只读契约投影 + 低干扰审阅提示 IMPLEMENTED（U6-D）**（`part_contract_status.dart`、`ResourceStudioRuntime.blueprintPartContracts`、outline 提示） |
+| §7 失败分类与体验 | APPROVED | 分类 IMPLEMENTED（R5）；审阅页契约展示 IMPLEMENTED（U6-B 最小）；**失败/旧正文区分与 U6-D 提示 IMPLEMENTED** |
+| §8 验收标准 A–E | APPROVED | A/B/C 多数 IMPLEMENTED（U6-A/B/C）；**D 真实设备/E 全仓仍 NOT IMPLEMENTED** |
 | §9 明确不在本次范围 | 生效 | — |
 | 决策 6（追溯预算 / 自动压缩 / 人工认可迁移） | 不批准 | **NOT AUTHORIZED** |
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/part_contract_status.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resource_library/character_generation_reference.dart';
@@ -78,6 +79,16 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   String? elasticOverrideUpdatedAt = 'fake-override-token';
   int? setOverridePercent;
   String? setOverrideToken;
+
+  /// U6-D: per-Part contract status reported by [blueprintPartContracts].
+  Map<String, PartContractStatus> partContractStatuses =
+      const <String, PartContractStatus>{};
+
+  @override
+  Future<Map<String, PartContractStatus>> blueprintPartContracts(
+    ResourceId resourceId,
+  ) async =>
+      partContractStatuses;
 
   @override
   Future<int?> sessionElasticPercent(String sessionId) async => elasticPercent;

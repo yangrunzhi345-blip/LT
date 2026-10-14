@@ -975,6 +975,7 @@
   "capacityStatusOverflow": "Over Budget",
   "outlinePartPending": "Pending",
   "outlinePartGenerated": "Generated",
+  "partContentIntegrityUnconfirmed": "Content completeness not yet verified",
   "operationFailedRetry": "Operation failed, please try again",
   "resourceImportReturnToEdit": "Back to Edit",
   "resourceImportConfirmSave": "Confirm & Save",
