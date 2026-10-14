@@ -3462,6 +3462,17 @@
   "errorServerUnavailable": "サービスを一時的に利用できません。しばらくしてから再試行してください。",
   "resourceErrorParseFailed": "生成された本文を解析できません。失敗した段落を再試行してください。",
   "resourceErrorContentInvalid": "生成された本文が検証に合格しませんでした。失敗した段落を再試行してください。",
+  "resourceErrorContentIncomplete": "本文が内容要件を満たしていません（最小 {minimum} 字、実際 {actual} 字）。保存済み内容は保持されます。この段落を再試行してください。",
+  "@resourceErrorContentIncomplete": {
+    "placeholders": {
+      "minimum": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
   "resourceErrorPersistenceFailed": "生成された本文を保存できません。空き容量を確認して再試行してください。",
   "resourceErrorLifecycleFailed": "生成処理を次の段階に進めません。リソースを開き直して再試行してください。",
   "resourceErrorProviderIncomplete": "モデルサービスの応答が不完全です。失敗した段落を再試行してください。",
@@ -3966,6 +3977,26 @@
   "readinessCompressionProposed": "候補の本文",
   "readinessCompressionCancel": "キャンセル",
   "errorResourceGenerationBudgetExceeded": "生成内容がリソースまたは段落の予算を超えています。この段落の文字数を減らして再試行してください。保存済み内容は保持されます。",
+  "resourceErrorGenerationBudgetInfeasible": "凍結された予算内ではこの段落を生成できません：リソース上限 {ceiling}、保存済み {saved}、後続必須分の予約 {reserve}、この段落の最小 {minimum}、許容上限 {allowed}。保存済み内容は保持されます。計画を調整するか前段を圧縮して再試行してください。",
+  "@resourceErrorGenerationBudgetInfeasible": {
+    "placeholders": {
+      "ceiling": {
+        "type": "int"
+      },
+      "saved": {
+        "type": "int"
+      },
+      "reserve": {
+        "type": "int"
+      },
+      "minimum": {
+        "type": "int"
+      },
+      "allowed": {
+        "type": "int"
+      }
+    }
+  },
   "readinessActualCapacity": "実際の本文：{actual} 文字、絶対上限：{absolute} 文字。",
   "@readinessActualCapacity": {
     "placeholders": {

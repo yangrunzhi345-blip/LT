@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/part_generation_validator.dart';
+import 'package:lt_dialogue/domain/resources/content_requirements.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
@@ -271,6 +272,89 @@ void main() {
           )),
         );
       }
+    });
+
+    PartGenerationRequest withRequirements(ContentRequirements? requirements) =>
+        PartGenerationRequest(
+          protocolVersion: 1,
+          generationId: defaultRequest.generationId,
+          resourceId: defaultRequest.resourceId,
+          sectionId: defaultRequest.sectionId,
+          partId: defaultRequest.partId,
+          attemptId: defaultRequest.attemptId,
+          targetBudget: defaultRequest.targetBudget,
+          remainingResourceBudget: 1200,
+          contentRequirements: requirements,
+          promptGoal: defaultRequest.promptGoal,
+          context: defaultRequest.context,
+        );
+
+    PartGenerationResponse withContent(String content) =>
+        PartGenerationResponse(
+          protocolVersion: 1,
+          generationId: defaultRequest.generationId,
+          resourceId: defaultRequest.resourceId,
+          sectionId: defaultRequest.sectionId,
+          partId: defaultRequest.partId,
+          attemptId: defaultRequest.attemptId,
+          content: content,
+        );
+
+    test('rejects a narrative body below the confirmed minimum', () {
+      final request = withRequirements(ContentRequirements(
+        kind: PartContentKind.narrative,
+        minimumCharacters: 180,
+        validationProfile: PartValidationProfile.narrativeSectionsV1,
+      ));
+      expect(
+        () => PartGenerationValidator.validate(
+            request: request, response: withContent('荒')),
+        throwsA(predicate<PartGenerationValidationException>(
+            (e) => e.field == 'content_requirements')),
+      );
+    });
+
+    test('accepts a scalar contract with a legal short value', () {
+      final request = withRequirements(ContentRequirements(
+        kind: PartContentKind.scalar,
+        minimumCharacters: 1,
+        validationProfile: PartValidationProfile.scalarTextV1,
+      ));
+      expect(
+        () => PartGenerationValidator.validate(
+            request: request, response: withContent('导师')),
+        returnsNormally,
+      );
+    });
+
+    test('rejects a structured body missing a required field', () {
+      final request = withRequirements(ContentRequirements(
+        kind: PartContentKind.structured,
+        minimumCharacters: 1,
+        validationProfile: PartValidationProfile.structuredObjectV1,
+        requiredFields: const ['name', 'role'],
+      ));
+      expect(
+        () => PartGenerationValidator.validate(
+            request: request, response: withContent('{"name":"林恩"}')),
+        throwsA(predicate<PartGenerationValidationException>(
+            (e) => e.field == 'content_requirements')),
+      );
+    });
+
+    test('keeps a null (legacy) contract permissive but still non-empty', () {
+      final request = withRequirements(null);
+      expect(
+        () => PartGenerationValidator.validate(
+            request: request, response: withContent('荒')),
+        returnsNormally,
+      );
+      expect(
+        () => PartGenerationValidator.validate(
+            request: request, response: withContent('   ')),
+        throwsA(predicate<PartGenerationValidationException>(
+            (e) => e.field == 'content')),
+      );
     });
   });
 }

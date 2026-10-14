@@ -37,6 +37,10 @@ import '../helpers/responsive_test_helper.dart';
 import '../helpers/localization_test_helper.dart';
 import '../helpers/studio_scroll_helper.dart';
 
+/// U6: a confirmed narrative contract requires the body to reach the dynamic
+/// minimum (340 for an 800-length plan), so the fake AI body is long enough.
+final String _aiPartBody = 'AI生成正文：山海之间的城市和居民。${'补充正文内容。' * 60}';
+
 Finder _fieldByLabel(String label) => find.descendant(
       of: find.widgetWithText(AppTextField, label),
       matching: find.byType(TextField),
@@ -233,7 +237,7 @@ void main() {
             findsOneWidget);
         final rows = await tester.runAsync(() async =>
             (await DatabaseService.database).query('resource_parts'));
-        expect(rows!.single['content'], 'AI生成正文：山海之间的城市和居民。');
+        expect(rows!.single['content'], _aiPartBody);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
@@ -557,7 +561,7 @@ final class _AiResponses implements LlmGateway {
     ]) {
       ids[key] = RegExp('"$key": "(.*?)"').firstMatch(systemPrompt)!.group(1)!;
     }
-    const content = 'AI生成正文：山海之间的城市和居民。';
+    final content = _aiPartBody;
     return [
       {
         'protocol_version': 1,

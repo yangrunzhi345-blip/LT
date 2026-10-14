@@ -169,20 +169,21 @@ void main() {
       // The recovered Part's budget still reads the frozen 35% ceiling
       // (C = 10800), not the new global 0% (C = 8000).
       final tasks = await recoveredTasks.findReadyTasks(stack.id.value);
-      final remaining = await recoveredTasks.remainingBudget(
+      final allocation = await recoveredTasks.budgetAllocation(
           resourceId: stack.id.value,
           blueprintId: stack.blueprintId,
           partId: tasks.first.partId);
-      expect(remaining, (8000 * 135) ~/ 100);
+      expect(allocation!.remaining, (8000 * 135) ~/ 100);
 
       // Committing the recovered Part consumes the pool exactly once.
       await coordinator(recoveredTasks, '文' * 2000).retrySinglePart(
           blueprintId: stack.blueprintId, partId: tasks.first.partId);
-      final afterCommit = await recoveredTasks.remainingBudget(
+      final afterAllocation = await recoveredTasks.budgetAllocation(
           resourceId: stack.id.value,
           blueprintId: stack.blueprintId,
           partId: tasks[1].partId);
-      expect(afterCommit, (8000 * 135) ~/ 100 - 2000, reason: '恢复后的提交不得重复消费预算');
+      expect(afterAllocation!.remaining, (8000 * 135) ~/ 100 - 2000,
+          reason: '恢复后的提交不得重复消费预算');
     });
   });
 

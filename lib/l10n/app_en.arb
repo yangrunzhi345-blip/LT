@@ -3392,6 +3392,17 @@
   "errorServerUnavailable": "The service is temporarily unavailable. Please retry later.",
   "resourceErrorParseFailed": "The generated text could not be read. Retry the failed part.",
   "resourceErrorContentInvalid": "The generated text did not pass validation. Retry the failed part.",
+  "resourceErrorContentIncomplete": "The generated text did not meet its content requirements (minimum {minimum}, actual {actual}). Saved content is preserved; retry this Part.",
+  "@resourceErrorContentIncomplete": {
+    "placeholders": {
+      "minimum": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
   "resourceErrorPersistenceFailed": "The generated text could not be saved. Check available storage, then retry.",
   "resourceErrorLifecycleFailed": "Generation could not advance to the next step. Reopen the resource and retry.",
   "resourceErrorProviderIncomplete": "The provider returned an incomplete response. Retry the failed part.",
@@ -3966,6 +3977,26 @@
   "readinessCompressionProposed": "Proposed content",
   "readinessCompressionCancel": "Cancel",
   "errorResourceGenerationBudgetExceeded": "Generated content exceeds the resource or Part budget. Reduce this Part and retry; saved content is preserved.",
+  "resourceErrorGenerationBudgetInfeasible": "This Part cannot be generated within the frozen budget: resource ceiling {ceiling}, already saved {saved}, reserved for later required Parts {reserve}, minimum for this Part {minimum}, allowed {allowed}. Saved content is preserved; adjust the plan or compress earlier content, then retry.",
+  "@resourceErrorGenerationBudgetInfeasible": {
+    "placeholders": {
+      "ceiling": {
+        "type": "int"
+      },
+      "saved": {
+        "type": "int"
+      },
+      "reserve": {
+        "type": "int"
+      },
+      "minimum": {
+        "type": "int"
+      },
+      "allowed": {
+        "type": "int"
+      }
+    }
+  },
   "readinessActualCapacity": "Actual body: {actual} characters; absolute capacity: {absolute}.",
   "@readinessActualCapacity": {
     "placeholders": {

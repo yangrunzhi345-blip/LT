@@ -83,6 +83,49 @@ abstract final class BlueprintValidator {
     }
   }
 
+  /// Fail-closed gate for a blueprint's content contracts (U6).
+  ///
+  /// A blueprint stamped with a content-contract version (every planner-produced
+  /// plan) MUST have a valid contract on every Part — including the case where a
+  /// below-floor Part left the whole plan unresolved — so a direct repository
+  /// confirm can never run a Part without a client-authoritative contract or
+  /// half-specify one. A legacy blueprint without the stamp and without any
+  /// contract stays permitted (the approved legacy rule).
+  static void validateContentContracts(ResourceBlueprint blueprint) {
+    final parts = blueprint.allParts;
+    final contracted =
+        parts.where((part) => part.contentRequirements != null).length;
+    final contractEnforced = blueprint.contentContractVersion != null;
+    if (!contractEnforced && contracted == 0) return;
+    if (contracted != parts.length) {
+      throw const BlueprintValidationException(
+        '部分 Part 缺少内容契约：新任务不允许只对部分 Part 定义契约',
+        field: 'parts.contentRequirements',
+      );
+    }
+    for (final part in parts) {
+      final requirements = part.contentRequirements!;
+      try {
+        requirements.validateDefinition();
+      } on ContentRequirementException {
+        throw BlueprintValidationException(
+          'Part [${part.id}] 的内容契约无效或不受支持',
+          field: 'parts.contentRequirements',
+        );
+      }
+      if (requirements.minimumCharacters < 1 ||
+          part.estimatedLength < requirements.minimumCharacters ||
+          part.estimatedLength > ResourceLimits.maxPartCharacters) {
+        throw BlueprintValidationException(
+          'Part [${part.id}] 契约与规划长度不一致：需满足 '
+          '1 ≤ 最低量(${requirements.minimumCharacters}) ≤ '
+          '计划(${part.estimatedLength}) ≤ ${ResourceLimits.maxPartCharacters}',
+          field: 'parts.contentRequirements',
+        );
+      }
+    }
+  }
+
   /// Validates a [ResourceBlueprint] against all requirements.
   ///
   /// If [idPool] is provided, validates that all Section and Part IDs strictly

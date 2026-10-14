@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import '../../core/debug/generation_diagnostics.dart';
+import '../../domain/resources/generation_budget_allocation.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_generation_patch.dart';
@@ -349,6 +350,11 @@ final class PartGenerationCoordinator {
     // scheduler does not repeat the terminal write every iteration.
     final budgetExhausted = <String>{};
 
+    // R1: tasks the frozen budget cannot satisfy without starving a later
+    // required Part. They are converged to `failed` once and never re-dispatched
+    // in this pass, so an infeasible run never spends another model request.
+    final budgetInfeasible = <String>{};
+
     /// Attempts a single task may consume in this pass.
     ///
     /// The FIRST dispatch is the original generation, so the user's configured
@@ -421,8 +427,10 @@ final class PartGenerationCoordinator {
         });
       await _taskRepository.markRetryExhausted(
         taskId: task.taskId,
-        errorMessage:
-            resourceGenerationErrorFromCode(task.errorMessage).code.name,
+        // Keep the last failure's safe diagnostic (code + numbers) instead of
+        // flattening it to a bare code, so a restart can still show the reason.
+        errorMessage: encodeGenerationDiagnostic(
+            resourceGenerationErrorFromCode(task.errorMessage)),
       );
     }
 
@@ -534,6 +542,37 @@ final class PartGenerationCoordinator {
           if (taskHandle?.isCancelled == true) break;
 
           final taskId = task.taskId;
+
+          // R1 budget-feasibility gate. A read-only allocation snapshot decides
+          // whether this Part can be dispatched without starving a later
+          // required Part. Infeasible tasks converge to `failed` with a safe
+          // budget code and are never dispatched (0 model requests); the atomic
+          // commit re-checks the same invariant under the write lock.
+          if (budgetInfeasible.contains(taskId)) continue;
+          final dispatchAllocation = await _budgetAllocationFor(task);
+          if (dispatchAllocation != null && dispatchAllocation.isInfeasible) {
+            budgetInfeasible.add(taskId);
+            GenerationDiagnostics.instance.mark(
+              'PART[${task.partId}] BUDGET_INFEASIBLE',
+              {
+                'reason': dispatchAllocation.infeasibility.name,
+                'ceiling': dispatchAllocation.ceiling,
+                'savedOther': dispatchAllocation.savedOther,
+                'futureReserve': dispatchAllocation.futureReserve,
+                'minimum': dispatchAllocation.minimumCharacters,
+                'dispatchableMaximum': dispatchAllocation.dispatchableMaximum,
+                'fingerprint': dispatchAllocation.constraintFingerprint,
+              },
+            );
+            await _taskRepository.markRetryExhausted(
+              taskId: taskId,
+              errorMessage: _failureCode(
+                PartGenerationBudgetInfeasibleException(dispatchAllocation),
+              ),
+            );
+            await emitProgress();
+            continue;
+          }
 
           // Hard retry-budget gate. Evaluated BEFORE every dispatch, so a task
           // that keeps failing without ever reaching an HTTP request cannot be
@@ -660,6 +699,15 @@ final class PartGenerationCoordinator {
               // R02-B: a stale source conflict is terminal. Re-running it would
               // regenerate from — and then overwrite — the user's newer edit.
               if (sourceConflicted.contains(failedTask.taskId)) continue;
+              // R1: a budget-infeasible failure is not retried until the run's
+              // constraints change. Re-readying it would only burn attempts on
+              // an impossible dispatch.
+              if (budgetInfeasible.contains(failedTask.taskId)) continue;
+              final retryAllocation = await _budgetAllocationFor(failedTask);
+              if (retryAllocation != null && retryAllocation.isInfeasible) {
+                budgetInfeasible.add(failedTask.taskId);
+                continue;
+              }
               if (!canDispatch(failedTask.taskId)) {
                 await exhaustBudget(
                   failedTask,
@@ -789,6 +837,13 @@ final class PartGenerationCoordinator {
     if (task == null) {
       throw StateError('未找到对应的 Part 生成任务: $partId');
     }
+    // R1 manual-retry gate: a manual retry cannot bypass the shared budget
+    // guard. When the frozen constraints still make the Part infeasible the
+    // task is left untouched and no model request is made.
+    final manualAllocation = await _budgetAllocationFor(task);
+    if (manualAllocation != null && manualAllocation.isInfeasible) {
+      throw PartGenerationBudgetInfeasibleException(manualAllocation);
+    }
     if (task.status == PartTaskStatus.failed.storageValue) {
       await _taskRepository.markTaskReady(task.taskId);
     }
@@ -846,6 +901,15 @@ final class PartGenerationCoordinator {
         );
       }
       return;
+    }
+
+    // R1 pre-dispatch gate: refuse an infeasible Part BEFORE acquiring a lease,
+    // so a known-impossible dispatch never creates an attempt row and never
+    // calls the model. The allocation is re-read after the lease (concurrent
+    // commits can change it) and re-validated inside the commit transaction.
+    final preDispatchAllocation = await _budgetAllocationFor(task);
+    if (preDispatchAllocation != null && preDispatchAllocation.isInfeasible) {
+      throw PartGenerationBudgetInfeasibleException(preDispatchAllocation);
     }
 
     // 1. Start attempt in database. The returned handle carries the Part's
@@ -987,22 +1051,20 @@ final class PartGenerationCoordinator {
 
       var targetCharacters = task.estimatedLength;
       int? remainingResourceBudget;
-      final budgetReader = _taskRepository;
-      if (budgetReader is IPartGenerationBudgetReader) {
-        final remaining = await (budgetReader as IPartGenerationBudgetReader)
-            .remainingBudget(
-                resourceId: task.resourceId,
-                blueprintId: task.blueprintId,
-                partId: task.partId);
-        remainingResourceBudget = remaining;
-        if (remaining != null) {
-          if (remaining <= 0) {
-            throw const PartGenerationValidationException(
-                '资源生成预算已用尽，请编辑资源或调整本段后重试，已保存正文保持不变',
-                field: 'generation_budget');
-          }
-          if (remaining < targetCharacters) targetCharacters = remaining;
+      int? acceptedMaximum;
+      int? minimumCharacters;
+      final allocation = await _budgetAllocationFor(task);
+      if (allocation != null && !allocation.isBudgetless) {
+        if (allocation.isInfeasible) {
+          // The constraints changed between the pre-dispatch gate and this
+          // point (e.g. a concurrent Part committed). Refuse here as well; the
+          // attempt is failed below with the safe budget code.
+          throw PartGenerationBudgetInfeasibleException(allocation);
         }
+        remainingResourceBudget = allocation.remaining;
+        targetCharacters = allocation.recommendedTarget;
+        acceptedMaximum = allocation.dispatchableMaximum;
+        minimumCharacters = allocation.minimumCharacters;
       }
       GenerationDiagnostics.instance.mark('PART[${task.partId}] BUDGET', {
         'resourceId': task.resourceId,
@@ -1011,6 +1073,10 @@ final class PartGenerationCoordinator {
         'estimatedLength': task.estimatedLength,
         'targetCharacters': targetCharacters,
         'remainingResourceBudget': remainingResourceBudget,
+        'acceptedMaximum': acceptedMaximum,
+        'minimumCharacters': minimumCharacters,
+        'futureReserve': allocation?.futureReserve,
+        'infeasibility': allocation?.infeasibility.name,
       });
       final request = PartGenerationRequest(
         protocolVersion: currentPartGenerationProtocolVersion,
@@ -1022,6 +1088,9 @@ final class PartGenerationCoordinator {
         attemptNumber: attemptNumber,
         targetBudget: targetCharacters,
         remainingResourceBudget: remainingResourceBudget,
+        acceptedMaximum: acceptedMaximum,
+        minimumCharacters: minimumCharacters,
+        contentRequirements: bpPart?.contentRequirements,
         promptGoal: task.promptGoal,
         context: context,
         userInstruction: userInstruction,
@@ -1278,7 +1347,7 @@ final class PartGenerationCoordinator {
                   taskId: task.taskId,
                   attemptId: attemptId,
                   errorMessage:
-                      resourceGenerationError(e, stage: failureStage).code.name,
+                      encodeGenerationDiagnostic(e, stage: failureStage),
                 ));
           }
           rethrow;
@@ -1347,7 +1416,7 @@ final class PartGenerationCoordinator {
                   taskId: task.taskId,
                   attemptId: attemptId,
                   errorMessage:
-                      resourceGenerationError(e, stage: failureStage).code.name,
+                      encodeGenerationDiagnostic(e, stage: failureStage),
                 ));
           }
           rethrow;
@@ -1397,8 +1466,7 @@ final class PartGenerationCoordinator {
               partId: request.partId,
               taskId: task.taskId,
               attemptId: attemptId,
-              errorMessage:
-                  resourceGenerationError(e, stage: failureStage).code.name,
+              errorMessage: encodeGenerationDiagnostic(e, stage: failureStage),
             ));
         rethrow;
       }
@@ -1525,5 +1593,23 @@ final class PartGenerationCoordinator {
     return text;
   }
 
-  String _failureCode(Object error) => resourceGenerationError(error).code.name;
+  /// Resolves the frozen budget allocation for one Part.
+  ///
+  /// Returns null when the repository cannot provide a consistent snapshot
+  /// (a non-SQLite fake or a blueprint/Part the run does not own), in which
+  /// case the caller keeps the legacy transport-only bound rather than
+  /// inventing a ceiling.
+  Future<PartGenerationBudgetAllocation?> _budgetAllocationFor(
+    ResourceGenerationTask task,
+  ) async {
+    final reader = _taskRepository;
+    if (reader is! IPartGenerationBudgetReader) return null;
+    return (reader as IPartGenerationBudgetReader).budgetAllocation(
+      resourceId: task.resourceId,
+      blueprintId: task.blueprintId,
+      partId: task.partId,
+    );
+  }
+
+  String _failureCode(Object error) => encodeGenerationDiagnostic(error);
 }

@@ -156,11 +156,11 @@ void main() {
         where: 'blueprint_id = ?', whereArgs: [stack.blueprintId]);
     // C = min(floor(8000*1.20), 24000) = 9600.
     final tasks = await stack.tasks.findReadyTasks(stack.id.value);
-    final remaining = await stack.tasks.remainingBudget(
+    final allocation = await stack.tasks.budgetAllocation(
         resourceId: stack.id.value,
         blueprintId: stack.blueprintId,
         partId: tasks.first.partId);
-    expect(remaining, 9600);
+    expect(allocation!.remaining, 9600);
   });
 
   group('frozen 0% collapses the ceiling onto the target', () {
@@ -170,11 +170,11 @@ void main() {
       final stack = await confirmAndPrepare(session);
       expect(await frozenPercent(stack.blueprintId), 0);
       final tasks = await stack.tasks.findReadyTasks(stack.id.value);
-      final remaining = await stack.tasks.remainingBudget(
+      final allocation = await stack.tasks.budgetAllocation(
           resourceId: stack.id.value,
           blueprintId: stack.blueprintId,
           partId: tasks.first.partId);
-      expect(remaining, 8000);
+      expect(allocation!.remaining, 8000);
     });
 
     test('commit at exactly C is accepted and C+1 rejected', () async {

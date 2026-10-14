@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
+import '../../domain/resources/content_requirements.dart';
+import '../../domain/resources/generation_budget_allocation.dart';
+import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_generation_protocol.dart';
 import '../../domain/resources/resource_limits.dart';
@@ -9,6 +12,8 @@ import '../../domain/resources/section_control.dart';
 import '../../services/repositories/resource_tree_repository.dart'
     show ResourceTreeConflictException;
 import '../../services/repositories/resource_tree_row_mapper.dart';
+import 'blueprint_parser.dart';
+import 'blueprint_validator.dart';
 import 'resource_blueprint_repository.dart';
 import 'part_generation_validator.dart';
 import 'resource_revision_service.dart';
@@ -59,11 +64,16 @@ final class PartGenerationAttemptState {
 }
 
 /// Read-only planning view; final enforcement still happens under the write lock.
+///
+/// Returns one consistent allocation snapshot rather than a bare remaining
+/// count, so the dispatch gate, the LLM request and the atomic commit all read
+/// the same frozen ceiling, saved total and future reserve.
 abstract interface class IPartGenerationBudgetReader {
-  Future<int?> remainingBudget(
-      {required String resourceId,
-      required String blueprintId,
-      required String partId});
+  Future<PartGenerationBudgetAllocation?> budgetAllocation({
+    required String resourceId,
+    required String blueprintId,
+    required String partId,
+  });
 }
 
 /// Contract for managing Part generation tasks and execution attempts.
@@ -418,24 +428,18 @@ class PartGenerationTaskRepositoryImpl
   }
 
   @override
-  Future<int?> remainingBudget(
-      {required String resourceId,
-      required String blueprintId,
-      required String partId}) async {
+  Future<PartGenerationBudgetAllocation?> budgetAllocation({
+    required String resourceId,
+    required String blueprintId,
+    required String partId,
+  }) async {
     final db = await _getDb();
-    return db.transaction((txn) async {
-      final ceiling = await _cumulativeCeilingInTransaction(txn, blueprintId);
-      if (ceiling == null) return null;
-      final other = await txn.rawQuery(
-          'SELECT p.content FROM resource_parts p '
-          'JOIN resource_sections s ON s.id = p.section_id '
-          "WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL "
-          "AND p.status != 'archived' AND p.id != ?",
-          [resourceId, partId]);
-      return ceiling -
-          other.fold<int>(
-              0, (sum, row) => sum + (row['content']?.toString() ?? '').length);
-    });
+    return db.transaction((txn) => _budgetAllocationInTransaction(
+          txn,
+          resourceId: resourceId,
+          blueprintId: blueprintId,
+          partId: partId,
+        ));
   }
 
   /// The cumulative acceptance ceiling C for one generation run:
@@ -464,20 +468,189 @@ class PartGenerationTaskRepositoryImpl
     );
   }
 
-  Future<int?> _cumulativeCeilingInTransaction(
+  /// Reads the confirmed blueprint and its frozen elastic percent inside
+  /// [txn], so the ceiling and the per-Part requirements come from one
+  /// consistent snapshot.
+  Future<
+      ({
+        ResourceBlueprint blueprint,
+        int? elasticPercent,
+        int targetCapacity,
+      })?> _readBlueprintBudgetInTransaction(
     DatabaseExecutor txn,
     String blueprintId,
   ) async {
-    final rows = await txn.query('resource_blueprints',
-        columns: ['target_capacity', 'resource_type', 'elastic_percent'],
-        where: 'blueprint_id = ?',
-        whereArgs: [blueprintId],
-        limit: 1);
+    final rows = await txn.query(
+      'resource_blueprints',
+      where: 'blueprint_id = ?',
+      whereArgs: [blueprintId],
+      limit: 1,
+    );
     if (rows.isEmpty) return null;
-    return _cumulativeCeilingOf(
-      (rows.first['target_capacity'] as num?)?.toInt() ?? 0,
-      rows.first['resource_type']?.toString() ?? '',
-      (rows.first['elastic_percent'] as num?)?.toInt(),
+    final row = rows.first;
+    final resourceIdStr = row['resource_id'] as String?;
+    final blueprint = BlueprintParser.deserializeFromJson(
+      row['blueprint_json'] as String? ?? '{}',
+      blueprintId: row['blueprint_id'] as String,
+      sessionId: row['session_id'] as String,
+      resourceType: ResourceType.fromStorageValue(
+        row['resource_type']?.toString(),
+      ),
+      revision: (row['revision'] as num?)?.toInt() ?? 1,
+      status: BlueprintStatus.fromStorage(row['status']?.toString()),
+      resourceId: resourceIdStr != null && resourceIdStr.isNotEmpty
+          ? ResourceId(resourceIdStr)
+          : null,
+      createdAt: row['created_at'] as String? ?? '',
+      updatedAt: row['updated_at'] as String? ?? '',
+    );
+    return (
+      blueprint: blueprint,
+      elasticPercent: (row['elastic_percent'] as num?)?.toInt(),
+      // The NOT NULL `target_capacity` column is authoritative for the
+      // ceiling; the JSON copy is only a fallback for rows that predate it.
+      targetCapacity:
+          (row['target_capacity'] as num?)?.toInt() ?? blueprint.targetCapacity,
+    );
+  }
+
+  /// Reads the Part's confirmed content contract inside [txn], or null for a
+  /// legacy Part whose content type was never established.
+  ///
+  /// The contract is never inferred from the title and absence stays legacy, so
+  /// old Parts keep their historical behaviour and are never auto-rejected.
+  Future<ContentRequirements?> _contentRequirementsInTransaction(
+    DatabaseExecutor txn, {
+    required String blueprintId,
+    required String resourceId,
+    required String partId,
+  }) async {
+    final read = await _readBlueprintBudgetInTransaction(txn, blueprintId);
+    if (read == null) return null;
+    final prefix = '${resourceId}_';
+    final rawPartId =
+        partId.startsWith(prefix) ? partId.substring(prefix.length) : partId;
+    return read.blueprint.findPart(rawPartId)?.contentRequirements;
+  }
+
+  /// Builds the [PartBudgetRequirement] for one Part, or null when the
+  /// blueprint does not authorize it.
+  PartBudgetRequirement? _requirementFor(
+    ResourceBlueprint blueprint, {
+    required String resourceId,
+    required String fullPartId,
+    required Map<String, int> savedByPartId,
+    required Map<String, String> statusByPartId,
+  }) {
+    final prefix = '${resourceId}_';
+    final rawPartId = fullPartId.startsWith(prefix)
+        ? fullPartId.substring(prefix.length)
+        : fullPartId;
+    final part = blueprint.findPart(rawPartId);
+    if (part == null) return null;
+    final requirements = part.contentRequirements;
+    return PartBudgetRequirement(
+      partId: rawPartId,
+      required: requirements?.required ?? true,
+      completed:
+          statusByPartId[fullPartId] == PartTaskStatus.completed.storageValue,
+      // A legacy Part keeps the historical planning floor; the contract's
+      // explicit minimum is used whenever one was confirmed. No product
+      // narrative threshold is invented here.
+      minimumCharacters: requirements?.minimumCharacters ??
+          BlueprintValidator.minPartEstimatedLength,
+      plannedLength: part.estimatedLength,
+      savedLength: savedByPartId[fullPartId] ?? 0,
+    );
+  }
+
+  /// Active (non-deleted, non-archived) Part body lengths for one resource,
+  /// keyed by full Part id.
+  Future<Map<String, int>> _activePartLengthsInTransaction(
+    DatabaseExecutor txn,
+    String resourceId,
+  ) async {
+    final rows = await txn.rawQuery(
+        'SELECT p.id, p.content FROM resource_parts p '
+        'JOIN resource_sections s ON s.id = p.section_id '
+        "WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL "
+        "AND p.status != 'archived'",
+        [resourceId]);
+    final lengths = <String, int>{};
+    for (final row in rows) {
+      final id = row['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      lengths[id] = (row['content']?.toString() ?? '').length;
+    }
+    return lengths;
+  }
+
+  /// Reads one consistent allocation snapshot. Returns null only when the
+  /// blueprint or the target Part is unknown, in which case callers fall back
+  /// to the legacy transport-only bound instead of inventing a ceiling.
+  Future<PartGenerationBudgetAllocation?> _budgetAllocationInTransaction(
+    DatabaseExecutor txn, {
+    required String resourceId,
+    required String blueprintId,
+    required String partId,
+  }) async {
+    final read = await _readBlueprintBudgetInTransaction(txn, blueprintId);
+    if (read == null) return null;
+    final blueprint = read.blueprint;
+
+    final savedByPartId =
+        await _activePartLengthsInTransaction(txn, resourceId);
+    var savedOther = 0;
+    for (final entry in savedByPartId.entries) {
+      // The current Part's own body is replaceable, so it never counts as
+      // "spent" against its own dispatch.
+      if (entry.key != partId) savedOther += entry.value;
+    }
+
+    final taskRows = await txn.query(
+      tasksTable,
+      columns: const ['part_id', 'status'],
+      where: 'blueprint_id = ?',
+      whereArgs: [blueprintId],
+    );
+    final statusByPartId = <String, String>{
+      for (final row in taskRows)
+        row['part_id'].toString(): row['status']?.toString() ?? '',
+    };
+
+    final current = _requirementFor(
+      blueprint,
+      resourceId: resourceId,
+      fullPartId: partId,
+      savedByPartId: savedByPartId,
+      statusByPartId: statusByPartId,
+    );
+    if (current == null) return null;
+
+    final unfinished = <PartBudgetRequirement>[];
+    for (final part in blueprint.allParts) {
+      final fullPartId = '${resourceId}_${part.id}';
+      final requirement = _requirementFor(
+        blueprint,
+        resourceId: resourceId,
+        fullPartId: fullPartId,
+        savedByPartId: savedByPartId,
+        statusByPartId: statusByPartId,
+      );
+      if (requirement != null && !requirement.completed) {
+        unfinished.add(requirement);
+      }
+    }
+
+    return PartGenerationBudgetAllocation.compute(
+      current: current,
+      savedOther: savedOther,
+      unfinishedParts: unfinished,
+      ceiling: _cumulativeCeilingOf(
+        read.targetCapacity,
+        blueprint.resourceType.storageValue,
+        read.elasticPercent,
+      ),
     );
   }
 
@@ -563,23 +736,96 @@ class PartGenerationTaskRepositoryImpl
       // The ceiling is the elastic budget C = min(floor(T*(100+E)/100), A)
       // with the blueprint's frozen E, never the raw target T, so a natural
       // over-expansion of early Parts cannot starve the tail of the run.
-      final budget = await _cumulativeCeilingInTransaction(
-          txn, taskRow['blueprint_id']?.toString() ?? '');
-      final activeRows = await txn.rawQuery(
-          'SELECT p.id, p.content FROM resource_parts p '
-          'JOIN resource_sections s ON s.id = p.section_id '
-          "WHERE s.resource_id = ? AND s.deleted_at IS NULL AND p.deleted_at IS NULL "
-          "AND p.status != 'archived' AND p.id != ?",
-          [response.resourceId.value, response.partId.value]);
-      final otherCharacters = activeRows.fold<int>(
-          0, (sum, row) => sum + (row['content']?.toString() ?? '').length);
-      if (budget != null &&
-          otherCharacters + response.content.length > budget) {
+      //
+      // The commit must satisfy BOTH the cumulative ceiling and the future
+      // reserve F_i for every later required Part. A body that fits C but would
+      // starve a required tail Part is rejected here, inside the write
+      // transaction, and the previously saved content is left untouched.
+      final blueprintId = taskRow['blueprint_id']?.toString() ?? '';
+
+      // Content-contract + transport-cap guards, both inside this transaction
+      // and before any write. The confirmed blueprint is the authority for the
+      // Part's contract, so a body that the generation path accepted (or a
+      // caller that bypassed `PartGenerationValidator`) can never be written as
+      // `completed` when its prose is structurally incomplete. A legacy Part
+      // has a null contract and is never auto-rejected here.
+      //
+      // `len(body) <= K` is re-checked here as defence in depth: the generation
+      // path already clamps the request to `D_i = min(K, …)`, but the commit is
+      // the write boundary and must not rely on a caller's cooperation.
+      final requirements = await _contentRequirementsInTransaction(
+        txn,
+        blueprintId: blueprintId,
+        resourceId: response.resourceId.value,
+        partId: response.partId.value,
+      );
+      if (requirements != null) {
+        try {
+          PartContentRequirementsValidator.validate(
+              response.content, requirements);
+        } on ContentRequirementException catch (error) {
+          throw PartGenerationValidationException(
+            '提交被拒绝：生成正文不满足已确认的内容契约，已保存内容保持不变',
+            field: 'content_requirements',
+            expected: requirements.kind.name,
+            actual: error.reason.name,
+          );
+        }
+      }
+      if (response.content.length > ResourceLimits.maxPartCharacters) {
         throw PartGenerationValidationException(
-            '资源生成累计预算不足，请减少本段字数后重试，已保存内容保持不变',
+          '提交被拒绝：正文超过单段传输上限，已保存内容保持不变',
+          field: 'content_length',
+          expected: '<= ${ResourceLimits.maxPartCharacters}',
+          actual: '${response.content.length}',
+        );
+      }
+
+      final allocation = await _budgetAllocationInTransaction(
+        txn,
+        resourceId: response.resourceId.value,
+        blueprintId: blueprintId,
+        partId: response.partId.value,
+      );
+      if (allocation != null && !allocation.isBudgetless) {
+        final ceiling = allocation.ceiling!;
+        final projected = allocation.savedOther + response.content.length;
+        if (projected > ceiling ||
+            projected + allocation.futureReserve > ceiling) {
+          throw PartGenerationValidationException(
+            '资源生成累计预算不足：本段会侵蚀后续必填章节的最低容量，'
+            '已保存内容保持不变，请减少本段字数或调整规划后重试',
             field: 'generation_budget',
-            expected: '<= $budget',
-            actual: '${otherCharacters + response.content.length}');
+            expected:
+                '<= ${ceiling - allocation.futureReserve}（含后续必填预留 ${allocation.futureReserve}）',
+            actual: '$projected',
+          );
+        }
+      } else if (allocation == null) {
+        // Unknown blueprint / Part: keep the pre-allocation ceiling-only guard
+        // instead of silently trusting the response.
+        final read = await _readBlueprintBudgetInTransaction(txn, blueprintId);
+        final fallbackCeiling = read == null
+            ? null
+            : _cumulativeCeilingOf(
+                read.targetCapacity,
+                read.blueprint.resourceType.storageValue,
+                read.elasticPercent,
+              );
+        if (fallbackCeiling != null) {
+          final lengths = await _activePartLengthsInTransaction(
+              txn, response.resourceId.value);
+          final otherCharacters = lengths.entries
+              .where((entry) => entry.key != response.partId.value)
+              .fold<int>(0, (sum, entry) => sum + entry.value);
+          if (otherCharacters + response.content.length > fallbackCeiling) {
+            throw PartGenerationValidationException(
+                '资源生成累计预算不足，请减少本段字数后重试，已保存内容保持不变',
+                field: 'generation_budget',
+                expected: '<= $fallbackCeiling',
+                actual: '${otherCharacters + response.content.length}');
+          }
+        }
       }
       final hadConfirmedContent =
           (existingPartRows.first['content']?.toString() ?? '').isNotEmpty;

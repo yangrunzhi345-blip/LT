@@ -5036,6 +5036,11 @@ class AppLocalizationsJa extends AppLocalizations {
       '生成された本文が検証に合格しませんでした。失敗した段落を再試行してください。';
 
   @override
+  String resourceErrorContentIncomplete(int minimum, int actual) {
+    return '本文が内容要件を満たしていません（最小 $minimum 字、実際 $actual 字）。保存済み内容は保持されます。この段落を再試行してください。';
+  }
+
+  @override
   String get resourceErrorPersistenceFailed =>
       '生成された本文を保存できません。空き容量を確認して再試行してください。';
 
@@ -6325,6 +6330,12 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get errorResourceGenerationBudgetExceeded =>
       '生成内容がリソースまたは段落の予算を超えています。この段落の文字数を減らして再試行してください。保存済み内容は保持されます。';
+
+  @override
+  String resourceErrorGenerationBudgetInfeasible(
+      int ceiling, int saved, int reserve, int minimum, int allowed) {
+    return '凍結された予算内ではこの段落を生成できません：リソース上限 $ceiling、保存済み $saved、後続必須分の予約 $reserve、この段落の最小 $minimum、許容上限 $allowed。保存済み内容は保持されます。計画を調整するか前段を圧縮して再試行してください。';
+  }
 
   @override
   String readinessActualCapacity(int actual, int absolute) {

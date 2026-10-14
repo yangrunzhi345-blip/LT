@@ -257,6 +257,13 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
       // Re-validate blueprint integrity before committing into formal resource tree (M4)
       BlueprintValidator.validate(blueprint);
 
+      // U6: a blueprint carrying client contracts (every planner-produced plan)
+      // must be all-or-nothing and internally valid before it may create any
+      // generation task, so a direct repository confirm cannot run a Part with
+      // no client-authoritative contract. Legacy contract-less blueprints stay
+      // permitted (approved legacy rule).
+      BlueprintValidator.validateContentContracts(blueprint);
+
       // Verify creation session
       final sessionRows = await txn.query(
         sessionsTable,

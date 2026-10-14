@@ -142,6 +142,27 @@ void main() {
             response,
       );
 
+  // Aggregate capacity probes must use lawful Parts to reach that boundary.
+  String budgetJson(int total, {int? targetCapacity}) {
+    final count = (total + ResourceLimits.maxPartCharacters - 1) ~/
+        ResourceLimits.maxPartCharacters;
+    return llmJson(
+      lengths: [
+        [
+          for (var index = 0; index < count; index++)
+            total ~/ count + (index < total % count ? 1 : 0)
+        ]
+      ],
+      deps: [
+        [for (var index = 0; index < count; index++) <String>[]]
+      ],
+      partIds: [
+        for (var index = 0; index < count; index++) 'part_${index + 1}'
+      ],
+      targetCapacity: targetCapacity,
+    );
+  }
+
   Future<void> expectCounts({
     required int resources,
     required int sections,
@@ -253,34 +274,36 @@ void main() {
         () async {
       final session = await newSession(type: ResourceType.worldview);
 
-      final atLimit = await plannerWith(llmJson(
-        lengths: const [
-          [50000]
-        ],
-        deps: const [
-          [[]]
-        ],
-        partIds: const ['part_1'],
-      )).plan(sessionId: session.sessionId);
+      // The old single 50000-unit fixture is explicitly rejected by R4.
+      await expectLater(
+          plannerWith(llmJson(
+            lengths: const [
+              [50000]
+            ],
+            deps: const [
+              [[]]
+            ],
+            partIds: const ['part_1'],
+          )).plan(sessionId: session.sessionId),
+          throwsA(isA<BlueprintValidationException>()));
+      expect(
+          await blueprintRepo.findLatestBlueprint(session.sessionId), isNull);
+      final atLimit = await plannerWith(budgetJson(50000))
+          .plan(sessionId: session.sessionId);
       expect(atLimit.totalEstimatedLength,
           ResourceLimits.worldviewNominalCharacters);
-      expect(atLimit.allParts.single.estimatedLength,
-          ResourceLimits.worldviewNominalCharacters);
+      expect(atLimit.allParts.map((part) => part.estimatedLength),
+          everyElement(lessThanOrEqualTo(ResourceLimits.maxPartCharacters)));
       expect(await blueprintRepo.findBlueprint(atLimit.blueprintId), isNotNull);
 
-      final overTarget = await plannerWith(llmJson(
-        lengths: const [
-          [50001]
-        ],
-        deps: const [
-          [[]]
-        ],
-        partIds: const ['part_1'],
-      )).plan(sessionId: session.sessionId);
+      final overTarget = await plannerWith(budgetJson(50001))
+          .plan(sessionId: session.sessionId);
       expect(overTarget.totalEstimatedLength,
           lessThanOrEqualTo(ResourceLimits.worldviewNominalCharacters));
-      expect(overTarget.allParts.single.estimatedLength,
-          ResourceLimits.maxPartCharacters);
+      expect(overTarget.totalEstimatedLength,
+          ResourceLimits.worldviewNominalCharacters);
+      expect(overTarget.allParts.map((part) => part.estimatedLength),
+          everyElement(lessThanOrEqualTo(ResourceLimits.maxPartCharacters)));
     });
 
     test('I-5 character/NPC normalize planning metadata above 20000', () async {
@@ -314,16 +337,9 @@ void main() {
     test('I-6 the model cannot raise its own budget via targetCapacity',
         () async {
       final session = await newSession(type: ResourceType.character);
-      final blueprint = await plannerWith(llmJson(
-        lengths: const [
-          [9000]
-        ],
-        deps: const [
-          [[]]
-        ],
-        partIds: const ['part_1'],
-        targetCapacity: 999999,
-      )).plan(sessionId: session.sessionId);
+      final blueprint =
+          await plannerWith(budgetJson(9000, targetCapacity: 999999))
+              .plan(sessionId: session.sessionId);
       expect(
           blueprint.targetCapacity, ResourceLimits.characterNominalCharacters,
           reason: 'server-side generation target must win over model metadata');

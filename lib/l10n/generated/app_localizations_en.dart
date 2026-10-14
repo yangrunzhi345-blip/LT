@@ -5322,6 +5322,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'The generated text did not pass validation. Retry the failed part.';
 
   @override
+  String resourceErrorContentIncomplete(int minimum, int actual) {
+    return 'The generated text did not meet its content requirements (minimum $minimum, actual $actual). Saved content is preserved; retry this Part.';
+  }
+
+  @override
   String get resourceErrorPersistenceFailed =>
       'The generated text could not be saved. Check available storage, then retry.';
 
@@ -6657,6 +6662,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorResourceGenerationBudgetExceeded =>
       'Generated content exceeds the resource or Part budget. Reduce this Part and retry; saved content is preserved.';
+
+  @override
+  String resourceErrorGenerationBudgetInfeasible(
+      int ceiling, int saved, int reserve, int minimum, int allowed) {
+    return 'This Part cannot be generated within the frozen budget: resource ceiling $ceiling, already saved $saved, reserved for later required Parts $reserve, minimum for this Part $minimum, allowed $allowed. Saved content is preserved; adjust the plan or compress earlier content, then retry.';
+  }
 
   @override
   String readinessActualCapacity(int actual, int absolute) {

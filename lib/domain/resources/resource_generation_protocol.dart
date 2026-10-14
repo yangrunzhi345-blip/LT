@@ -1,3 +1,4 @@
+import 'content_requirements.dart';
 import 'resource_contracts.dart';
 import 'resource_limits.dart';
 
@@ -175,6 +176,9 @@ final class PartGenerationRequest {
     this.attemptNumber = 1,
     this.userInstruction = '',
     this.remainingResourceBudget,
+    this.acceptedMaximum,
+    this.minimumCharacters,
+    this.contentRequirements,
   });
 
   /// Incremental protocol version; must equal [currentPartGenerationProtocolVersion].
@@ -206,8 +210,31 @@ final class PartGenerationRequest {
   /// the atomic commit remains the final authority for concurrent spending.
   final int? remainingResourceBudget;
 
+  /// The authorized maximum for this Part (`D_i`), already reduced by the
+  /// capacity reserved for every later required Part. Null means the run has
+  /// no ceiling (legacy budgetless) or no persisted reader, so the transport
+  /// cap alone bounds the body.
+  final int? acceptedMaximum;
+
+  /// The Part's minimum body length (`m_i`). Comes from the confirmed content
+  /// contract with a legacy floor when none was ever confirmed; used for
+  /// prompt guidance and (with [contentRequirements]) for completion checks.
+  final int? minimumCharacters;
+
+  /// The confirmed content contract, or null for a legacy Part whose type was
+  /// never established. Never inferred from the title.
+  final ContentRequirements? contentRequirements;
+
   /// Transport capacity stays bounded even when the resource has more room.
+  ///
+  /// When the run resolved an allocation, [acceptedMaximum] is authoritative:
+  /// it already reserves the minimums of later required Parts, so a body that
+  /// fits `C` but would starve the tail is still rejected here.
   int get maximumAcceptedCharacters {
+    final explicit = acceptedMaximum;
+    if (explicit != null) {
+      return explicit.clamp(0, ResourceLimits.maxPartCharacters).toInt();
+    }
     final remaining = remainingResourceBudget;
     return remaining == null
         ? ResourceLimits.maxPartCharacters

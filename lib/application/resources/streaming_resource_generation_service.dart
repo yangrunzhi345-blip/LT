@@ -568,17 +568,21 @@ final class StreamingResourceGenerationService {
         final failedPartId = failure == null ? null : PartId(failure.partId);
         final failureError =
             resourceGenerationErrorFromCode(failure?.errorMessage ?? 'unknown');
+        // Same encoding as the throw path: a bare code when there is nothing
+        // extra, or a safe DiagnosticEnvelope so an infeasible run keeps its
+        // budget numbers in the persisted session diagnostic.
+        final errorMessage = encodeGenerationDiagnostic(failureError);
         await _sessionRepository.updateStatus(
           sessionId,
           StreamingLifecycleStatus.failed,
-          errorMessage: failureError.code.name,
+          errorMessage: errorMessage,
           clearActiveTask: failedPartId == null,
         );
 
         _emit(GenerationFailed(
           generationId: sessionId,
           resourceId: session.resourceId,
-          errorMessage: failureError.code.name,
+          errorMessage: errorMessage,
           error: failureError,
           failedPartId: failedPartId,
           timestamp: DateTime.now(),
@@ -599,7 +603,7 @@ final class StreamingResourceGenerationService {
         }
       }
       final failureError = resourceGenerationError(e, stage: failureStage);
-      final errorMessage = failureError.code.name;
+      final errorMessage = encodeGenerationDiagnostic(e, stage: failureStage);
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.failed,
@@ -1035,7 +1039,7 @@ final class StreamingResourceGenerationService {
             task.currentAttemptId == retryAttemptId
         ? resourceGenerationErrorFromCode(task.errorMessage)
         : resourceGenerationError(error, stage: failureStage);
-    final errorMessage = failureError.code.name;
+    final errorMessage = encodeGenerationDiagnostic(failureError);
     final current = await _sessionRepository.findSession(session.sessionId);
     if (current != null &&
         StreamingLifecycleStateMachine.canTransition(

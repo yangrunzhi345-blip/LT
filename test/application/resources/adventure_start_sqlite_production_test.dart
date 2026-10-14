@@ -904,7 +904,10 @@ final class _AiResponses implements LlmGateway {
     ]) {
       ids[key] = RegExp('"$key": "(.*?)"').firstMatch(systemPrompt)!.group(1)!;
     }
-    final content = 'AI生成正文：山海之间的城市和居民。第${++generatedParts}次生成。';
+    // U6: a confirmed narrative contract requires the body to reach the dynamic
+    // minimum (340 for an 800-length plan), so the fixture body is long enough.
+    final content = 'AI生成正文：山海之间的城市和居民。第${++generatedParts}次生成。'
+        '${'补充正文内容。' * 60}';
     return [
       {
         'protocol_version': 1,

@@ -10,6 +10,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_action_button.dart';
 import '../../../../core/widgets/app_page_scaffold.dart';
+import '../../../../domain/resources/content_requirements.dart';
 import '../../../../domain/resources/resource_blueprint.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -88,6 +89,11 @@ class _ResourceBlueprintReviewPageState
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final bp = widget.plan.blueprint;
+    // U6: a contract-enforced plan (the planner stamps a version) must not start
+    // generation while any Part is unresolved. A legacy plan without the stamp
+    // keeps its existing, permissive behaviour.
+    final hasContractGap = bp.contentContractVersion != null &&
+        bp.allParts.any((part) => part.contentRequirements == null);
     final safeName = ResourcePresentationResolver.safeName(
       bp.suggestedName.isNotEmpty ? bp.suggestedName : widget.draft.name,
       l10n,
@@ -256,6 +262,26 @@ class _ResourceBlueprintReviewPageState
 
             const SizedBox(height: AppSpacing.xl),
 
+            if (hasContractGap) ...[
+              Container(
+                key: const Key('blueprint-contract-gap-notice'),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: colorScheme.error),
+                ),
+                child: Text(
+                  '存在未确定内容契约的段落：请调整规划（增加容量、合并或重新分类）后重新规划，'
+                  '在契约确定前不会开始正文生成。',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onErrorContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+
             // Confirm & Start button
             AppPrimaryButton(
               key: const Key('blueprint-confirm-button'),
@@ -263,7 +289,9 @@ class _ResourceBlueprintReviewPageState
               iconWidget: const AppSvgIcon('check_circle'),
               fullWidth: true,
               isLoading: _submitting,
-              onPressed: _selectedPartIds.isEmpty ? null : _confirmAndStart,
+              onPressed: _selectedPartIds.isEmpty || hasContractGap
+                  ? null
+                  : _confirmAndStart,
             ),
             const SizedBox(height: AppSpacing.lg),
           ],
@@ -337,7 +365,7 @@ class _ResourceBlueprintReviewPageState
                 style: theme.textTheme.bodyMedium,
               ),
               subtitle: Text(
-                '${part.generationGoal.isNotEmpty ? ResourcePresentationResolver.sanitize(part.generationGoal) : ''} · 约 ${part.estimatedLength} 字',
+                _partSubtitle(part),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
@@ -349,4 +377,24 @@ class _ResourceBlueprintReviewPageState
       ),
     );
   }
+
+  /// U6: one Part's review subtitle — planned length plus the
+  /// client-authoritative content contract (kind + minimum). A Part with no
+  /// contract is unresolved and blocks confirm.
+  String _partSubtitle(BlueprintPart part) {
+    final goal = part.generationGoal.isNotEmpty
+        ? ResourcePresentationResolver.sanitize(part.generationGoal)
+        : '';
+    final contract = part.contentRequirements;
+    final contractLabel = contract == null
+        ? '待重新规划 · 无内容契约'
+        : '${_kindLabel(contract.kind)} · 最低 ${contract.minimumCharacters} 字';
+    return '$goal · 约 ${part.estimatedLength} 字 · $contractLabel';
+  }
+
+  String _kindLabel(PartContentKind kind) => switch (kind) {
+        PartContentKind.narrative => '叙述',
+        PartContentKind.scalar => '短字段',
+        PartContentKind.structured => '结构化',
+      };
 }

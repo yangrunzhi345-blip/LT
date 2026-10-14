@@ -45,7 +45,10 @@ void main() {
     }) async {
       if (!generationStarted.isCompleted) generationStarted.complete();
       await allowGeneration.future;
-      return r01Completion(systemPrompt, '统一 Authority 生成的正文。');
+      // U6: the confirmed narrative contract requires the body to reach the
+      // dynamic minimum (e.g. 1000 for a 3000-length plan), so the fixture
+      // produces a realistically long body.
+      return r01Completion(systemPrompt, '统一 Authority 生成的正文。' * 80);
     });
     controller = StreamingResourceGenerationController(
       service: service,
@@ -358,7 +361,7 @@ Future<void> _waitForStatus(
 }
 
 final class _PlanningGateway implements LlmGateway {
-  const _PlanningGateway({this.twoParts = false, this.estimatedLength = 5000});
+  const _PlanningGateway({this.twoParts = false, this.estimatedLength = 3000});
 
   final bool twoParts;
   final int estimatedLength;

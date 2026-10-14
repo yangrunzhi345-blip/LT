@@ -5062,6 +5062,11 @@ class AppLocalizationsKo extends AppLocalizations {
       '생성된 본문이 검증을 통과하지 못했습니다. 실패한 단락을 다시 시도하세요.';
 
   @override
+  String resourceErrorContentIncomplete(int minimum, int actual) {
+    return '생성된 본문이 내용 요구사항을 충족하지 못했습니다(최소 $minimum자, 실제 $actual자). 저장된 내용은 유지됩니다. 이 단락을 다시 시도하세요.';
+  }
+
+  @override
   String get resourceErrorPersistenceFailed =>
       '생성된 본문을 저장할 수 없습니다. 저장 공간을 확인한 후 다시 시도하세요.';
 
@@ -6354,6 +6359,12 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get errorResourceGenerationBudgetExceeded =>
       '생성 내용이 리소스 또는 문단 예산을 초과했습니다. 이 문단의 글자 수를 줄여 재시도하세요. 저장된 내용은 유지됩니다。';
+
+  @override
+  String resourceErrorGenerationBudgetInfeasible(
+      int ceiling, int saved, int reserve, int minimum, int allowed) {
+    return '고정된 예산 내에서 이 단락을 생성할 수 없습니다: 리소스 상한 $ceiling, 저장됨 $saved, 이후 필수 예약 $reserve, 이 단락 최소 $minimum, 허용 상한 $allowed. 저장된 내용은 유지됩니다. 계획을 조정하거나 앞부분을 압축한 뒤 다시 시도하세요.';
+  }
 
   @override
   String readinessActualCapacity(int actual, int absolute) {
