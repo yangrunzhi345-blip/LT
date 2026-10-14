@@ -644,6 +644,42 @@ Status: COMPLETE（仅限 U6-C；未启动 U6-D/E；**未改动生产代码**）
 
 下一工作单元：**U6-D**（Legacy 历史审阅兼容）。
 
+## U6-D / U6-E：暂停点与恢复指令（2026-10-14）
+
+Status: PAUSED（U6-C 已通过；U6-D UI 子项阻塞于产品/架构决策；U6-E 与全仓回归未开始）
+起始 HEAD：`96ea31b`（U6-C）。
+
+### U6-D 已具备（无需改动）
+
+非破坏性 Legacy 保障已由既有已通过测试覆盖（`test/application/resources/content_requirements_sqlite_test.dart`）：
+历史 1 字（`荒`）与 2 字（`导师`）已完成正文**逐字保留**，`content_hash` / Attempt / Revision /
+Part / Section / resource / Task 逐表不变，无模型调用；`ContentRequirements == null` 时领域返回
+`PartContentReview.needsContentReview`（不推断类型、不计算 minimum、不改 completed）。旧正文与本次
+生成失败的区分已由 Studio 任务状态（failed vs content 非空）在数据层成立。
+
+### U6-D 阻塞点（需产品/架构决策，未擅自实现）
+
+U6-D §7–§9 要求在 Studio 对 `contentRequirements == null` 的历史 Part 显示**低干扰、可解释**的
+“内容完整性尚未确认”审阅提示。阻塞原因：**Studio 的读取路径拿不到 Part 的契约状态**——
+`ResourcePart`（树实体）不含 `contentRequirements`，`ResourceStudioRuntime` 不暴露蓝图契约，
+且不得新增 schema / `completion_provenance` 迁移。可选方案：
+
+1. **（推荐）只读读取缝**：在 `ResourceStudioRuntime` 增加只读 `blueprintPartContracts(...)`，
+   控制器加载后把每个 Part 的契约有无传给 outline；无 schema 变更、无破坏性行为、不动历史数据。
+2. 新增 nullable 持久化标记：需 schema 迁移，超出本轮授权范围（`completion_provenance` 已明确禁止）。
+3. 以“无生成任务”推断 legacy：**否决**——会误标手工 / 导入资源，非权威。
+
+在方案 1 获批准前，不得擅自接线或猜测“可疑极短”阈值（不得引入新产品阈值）。
+
+### 后续（未开始）
+
+- U6-D：按方案 1 实现只读契约可见性 + 提示（6 locale + 生成文件、320×568、textScale 1.0/1.8、
+  语义标签），并补 §10 的 UI 用例。
+- U6-E：世界观 / 角色卡 / NPC / 关联 / 压缩 / 装配 / 冒险启动的跨模块集成回归 + 独立审查。
+- 全仓 `flutter test`、最终矩阵与最终独立审查。
+
+本轮**未**创建 `completion_provenance` 迁移，未合并 main，未发布。整体仍 **NOT ACCEPTED**。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
