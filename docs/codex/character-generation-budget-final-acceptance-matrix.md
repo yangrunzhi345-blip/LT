@@ -98,3 +98,10 @@ Acceptance Mode: Independent Review（各工作单元由另一只读 Agent 审�
 已授权范围（U6-A/B/C/D/E + R1–R6 + E50 + 全仓回归）在 BLOCKER=0、MAJOR=0 下通过，各单元均有独立审查。
 因 **T31 未授权** 且 **真实模型/设备未验证**，整体状态为
 **ACCEPTED WITH EXPLICIT SCOPE LIMITATIONS**，**不得**标记为完整 ACCEPTED，也不自动合并 main 或发布。
+
+最终独立审查（另一 Agent，只读，独立上下文）：裁决 **ACCEPTED WITH EXPLICIT SCOPE LIMITATIONS**，
+BLOCKER=0、MAJOR=0。独立复跑 `part_contract_status_test` + `u6e_cross_module_integration_test` +
+`r05_async_state_ownership_test` **26 PASS（退出码 0）**；独立核对 diff 26 文件 / 3 提交，
+`grep migration|completion_provenance|database_service|adventure|root-cause` 返回 **NONE**（无未授权内容）；
+确认矩阵诚实（T31 NOT AUTHORIZED、真实设备/模型 NOT VERIFIED、无 main 合并）。审查未覆盖：全仓套件
+（由本轮 FULL REGRESSION 另行覆盖）、真实设备/模型、T31 路径。
