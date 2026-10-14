@@ -721,6 +721,45 @@ Status: COMPLETE（U6-D；独立审查见下）
 
 下一工作单元：**U6-E**（跨模块集成）。
 
+## U6-E：跨模块综合回归（资源 / 装配 / 冒险启动）
+
+Status: COMPLETE（U6-E；独立审查见下）
+分支：`fix/u6d-legacy-review-final-20261014`。
+
+范围：验证 U6 新契约不破坏 LT 原有资源体系与装配 / 冒险启动。**以既有真实集成回归为主，
+未做生产代码改动**（仅新增一个 U6 专项集成测试文件）。
+
+- 既有跨模块套件复跑 PASS：`adventure_start_sqlite_production_test`（世界观/角色/NPC → 装配 →
+  冒险启动 + 首轮）、`adventure_compression_lifecycle_sqlite_test`（压缩候选/发布生命周期）、
+  `assembly_readiness_coordinator_test`、`compression_pipeline_test`、`compression_concurrency_test`、
+  `compression_worker_test`、`phase10_index_and_compression_test`、`resource_assembly_builder_test`、
+  `worldview_reference_generation_test`、`generation_aggregate_budget_sqlite_test`。
+- 新增 `test/application/resources/u6e_cross_module_integration_test.dart`（5 例，真实 SQLite +
+  真实 coordinator/pipeline；仅模型正文为假）：
+  1. 角色 T=10000、E20：10 段 ×动态最低契约 → 全部完成，总量 10000 ≤ 冻结 C=12000
+     （future reserve 在提交期被尊重）；
+  2. E50：run-scoped 50% 在 confirm 冻结 → 总量 10000 ≤ C=15000，无漂移；
+  3. 世界观 T=20000、单段 3000：含 Unicode/Markdown/无末尾换行的长正文**逐字保存**（长度一致）；
+  4. NPC：合法短 Scalar（"导师"）完成，同资源 narrative 段因过短失败 —— 两类契约共存且各自把关；
+  5. 旧 Legacy 无契约资源：confirm 放行、契约保持 null、树可读、`AssemblyReadinessCoordinator.prepare`
+     正常运行（新契约不阻断旧资源打开）。
+
+真实验证：
+
+- U6-E 定向（含既有跨模块）**91 PASS，退出码 0**；`/tmp/lt-u6e.log`。
+- 既有跨模块 10 套件 **133 PASS**；`/tmp/lt-u6e-existing.log`。
+- `flutter analyze --no-pub` 零问题；format 0 changed；`git diff --check` PASS。
+- 未发现需要修复的真实缺陷；**未**绕过任何就绪校验，压缩仍为候选 + 显式发布。
+
+独立审查（另一 Agent，只读）：裁决 **PASS / VERIFIED**，未解决发现 **BLOCKER=0、MAJOR=0**。
+独立复跑 U6-E + 冒险启动 + 装配就绪 + 压缩 4 文件 **58 PASS**（退出码 0）；独立确认断言为真实链
+（真实 SQLite `phase10_fixture.dart:32-37`、真实 `AssemblyReadinessCoordinator`），仅模型正文为假；
+**无就绪校验绕过**（legacy 用例调用真实 `fixture.coordinator.prepare` 并断言 `record.state != null`，
+`u6e_cross_module_integration_test.dart:225-229`），无自动压缩发布捷径。审查未覆盖：`flutter analyze`、
+全仓套件、真实 UI/桌面（由本轮其他门禁与 Work Unit 4 覆盖）。
+
+下一工作单元：**全仓回归与最终验收**。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
