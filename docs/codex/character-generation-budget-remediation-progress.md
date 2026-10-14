@@ -409,6 +409,69 @@ Provider/Controller/Repository/Pipeline；仅 `llmGatewayProvider` 被替换为�
   仅当该表单用于“已有覆盖资源”的再生时会分歧。属既有设计边界，本轮不改。
 - U6 未决项（正文阈值、人工认可、旧预算版本）本轮未触碰。
 
+## U6-A：Narrative 动态最低量纯函数（规格 v0.1 已批准）
+
+Status: COMPLETE（仅限 U6-A；纯函数 + 单元测试 + 规格入库，未接线）
+Acceptance Mode: Independent Review（另一 Agent 只读审查，见下方审查行）
+起始 HEAD：`e33206f`；工作区干净。
+提交 SHA：见下方 commit。
+
+已批准产品决策（记录于
+`docs/architecture/u6-dynamic-content-validity-contract.md`，状态 APPROVED v0.1）：
+
+1. Narrative 50% / 40% / 30% 分段累积，分界点 200 / 800 UTF-16；最低规划长度 80，不另设绝对下限。
+2. Narrative 默认自由叙述；仅明确确认分节结构时才要求 Markdown 标题。
+3. 类型无法确定时确认前必须让用户选择或调整规划，不静默生成无契约 Part。
+4. Scalar 最低 1；Structured 继续 V1 顶层必填字段。
+5. Legacy 保留原文 / 状态 / 历史；仅非破坏性审阅提示。
+6. 不批准旧任务预算追溯修改、自动压缩、人工认可迁移。
+
+实施范围（U6-A）：
+
+- 新增 `lib/domain/resources/narrative_minimum_policy.dart`（纯领域策略）：
+  `NarrativeMinimumPolicy.minimumCharactersFor(p)` 以**纯整数**实现
+  `m = ceil(0.50·min(p,200) + 0.40·min(max(p−200,0),600) + 0.30·max(p−800,0))`，
+  用 `(50a+40b+30c + 99) ~/ 100` 的 `ceil`；发布常量 `firstBreakpoint=200`、
+  `secondBreakpoint=800`、`first/second/thirdSegmentPercent=50/40/30`、
+  `minimumPlannedLength=80`、`maximumPlannedLength=ResourceLimits.maxPartCharacters`、`isPlannable`。
+  `p` 超出 `[80,3000]` **fail-closed** 抛 `ArgumentError`（对应 §2.2「必须重规划 / 合并 /
+  重分类」），不返回猜测值。
+- 新增 `test/domain/resources/narrative_minimum_policy_test.dart`（**22 PASS**）：批准参数表
+  （100/200/450/800/1000/1500/3000）、分段边界（199/200/201/799/800/801/2999/3000）、
+  单调非降（80..3000 全覆盖）、`1 ≤ m ≤ p`、确定性、`p<80`/`p>3000`/0/负数 fail-closed、
+  `isPlannable` 与函数域一致。
+- 新增 `docs/architecture/u6-dynamic-content-validity-contract.md`：记录 APPROVED 规格，并明确
+  区分「已批准 / 已实现（Phase 1 / R2 / R5 / U6-A）/ 尚未实现（U6-B–E）」与「不授权」项。
+
+未接线声明（合规核对）：`NarrativeMinimumPolicy` **未**被 BlueprintPlanner、Normalizer、
+Validator、Repository、UI 或 SQLite 生成链引用（新文件之外 `lib/` 无引用）；本轮 `lib/` 仅新增
+一个纯文件，未修改任何 R1–R6 已通过行为。
+
+真实验证：
+
+- U6-A 定向 **22 PASS**，退出码 0；`/tmp/lt-u6a.log`。
+- `flutter analyze --no-pub` 零问题；两个新 Dart 文件 format 0 changed；`git diff --check` PASS。
+
+独立审查（另一 Agent，只读）：裁决 **PASSED WITH FINDINGS**，未解决发现
+**BLOCKER=0、MAJOR=0、MINOR=0、INFO=2**。独立复核要点：纯整数、无浮点、无 JSON；
+`ceil=(w+99)~/100` 对全部 401 个可整除边界精确；对 p∈[80,3000] 与浮点参考实现比对
+**mismatches=0、非单调=0、越界=0**；非法输入 8/8 拒绝；`isPlannable` 与函数域 0 分歧；
+`NarrativeMinimumPolicy` 仅出现在自身与新测试中，无生产接线；HEAD 未变。两项 INFO：审查期间
+进度文档被实现方并发写入（纯文档）；`resource_contract_layer_test` 的既有红（见下，非 U6-A）。
+
+遗留风险 / 既有缺陷（**非 U6-A 引入**）：
+
+- `test/domain/resources/resource_contract_layer_test.dart` 用例 “never serializes a whole
+  resource as JSON” 在**本基线即为红色**：offender 为 `lib/domain/resources/content_requirements.dart`
+  使用 `jsonDecode`（自 `ea5de88` Phase 1 起、当前未修改）。`test/domain/resources` 目录此前各检查点
+  从未运行，故此前未暴露。U6-A 未触碰该文件，也**未**在 U6-A 内修复（修复将改动已通过单元或放宽
+  purity 守卫断言，超出本轮范围）。建议单列决策：收紧该守卫规则或在后续阶段把结构化 JSON 解码移出
+  领域契约文件。
+- 该既有失败使 `flutter test test/domain/resources` 目录级结果为 **+261 -1**（1 项既有失败）；
+  U6-A 新增用例全部通过。
+
+下一工作单元：**U6-B（未授权）** 接入 Planner / Normalizer / Review / Confirm；等待用户授权。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
