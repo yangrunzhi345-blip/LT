@@ -266,9 +266,10 @@ requiredFields / requiredHeadings 覆盖、legacy `needsContentReview` UI 审阅
 ## R5：错误分类、安全预算诊断、有限重试与恢复保护（Phase 5 核心）
 
 Status: PASSED（仅限 R5 有限范围）
-Acceptance Mode: 待独立审查补齐（见下方独立审查行）
+Acceptance Mode: 独立审查见下方独立审查行；同 Agent 复查为 Integrated Review
 起始 HEAD：`b79b0ac`（R2 独立审查记录提交后）；工作区干净。
-提交 SHA：见下方 commit。
+提交 SHA：`fb4ba8f`（`feat(resources): classify generation failures and carry safe budget diagnostics`）。
+审查报告：`character-generation-budget-r5-classification-integrated-review.md`（Integrated）。
 
 实施范围（依据规格 §6.4 / §9）：
 
