@@ -343,6 +343,72 @@ U6 合规：**未**引入 narrative/scalar/structured 最低阈值，未实现�
 （依赖 U6、需 minimal nullable provenance 迁移）、世界观 / 角色 / NPC 集成回归、全仓回归
 与最终独立审查。
 
+## E50：弹性预算 UI→Controller→Repository→SQLite 端到端验收（Phase 2 / 6）
+
+Status: PASSED（仅限本轮验收范围；未发现产品缺陷，未改动生产代码）
+Acceptance Mode: Independent Review（另一 Agent 只读审查）
+起始 HEAD：`a74120e`；工作区干净。
+提交 SHA：见下方 commit。
+审查报告：`e50-elastic-budget-ui-sqlite-independent-review.md`。
+
+新增 `test/widget/e50_elastic_budget_end_to_end_test.dart`（**12 例**，全部真实 SQLite + 真实
+Provider/Controller/Repository/Pipeline；仅 `llmGatewayProvider` 被替换为本地假网关）。
+
+覆盖与结论（对照本轮验收清单）：
+
+1. **全局 20% vs 资源独立 50% 优先级**：真实 confirm 事务按
+   `sessionOverride → resource.metadata.generationElasticPercent → settings.generation_elastic_percent`
+   解析并冻结；会话覆盖 35 优先于资源 50，资源 50 优先于全局 20，均读真实
+   `resource_blueprints.elastic_percent`。
+2. **直接创建 / 蓝图审阅 / 确认 / 生成 / 失败重试 / 重启恢复**（本轮均在文件内真实驱动）：
+   - 直接创建：`ai-create-submit-button` 直提 → Studio，确认冻结全局 20%（并真实启动生成，
+     假网关走 Part 协议分支）；
+   - 蓝图审阅：plan → `ResourceBlueprintReviewPage` → “确认并开始生成”，冻结全局 45%；
+   - 确认：`seedRun` 走真实 `confirmBlueprint`，冻结列落库；
+   - 失败重试：三兄弟已完成 9000 后，把全局与资源覆盖都漂移到 0，再经真实
+     `retrySinglePart` 提交 3000，总量 12000 = 冻结 50% 的 C（若用漂移后的 0% 会以 8000 拒绝）；
+   - 重启恢复：真实 `startAttempt` 把任务置为 `generating`，`recoverInterruptedTasks` 恢复为
+     ready，冻结列与 `budgetAllocation.ceiling` 仍为 12000；
+   - 注：既有 `resource_ai_create_studio_navigation_test.dart`（35%）与
+     `elastic_budget_matrix_test.dart`（H 重启 / I 重试）与本文件互补，未重复实现。
+3. **`resource_blueprints.elastic_percent` 正确冻结、旧任务不随设置变化**：confirm 后把全局
+   改为 50、把资源覆盖改为 0，冻结列与 `budgetAllocation` 均不变；全新 ProviderContainer
+   重开真实 DB，Studio 摘要仍显示冻结 E=20 / C=9600。
+4. **UI 展示与实际冻结 T/E/C 一致**：Studio 摘要行按标签断言（`目标字数`/`生效弹性`/
+   `允许生成上界`），T=8000、E=20/35/50%、C=9600/10800/12000 与冻结列一致。
+5. **真实 Widget→Controller→Repository→SQLite**：设置页 `GenerationElasticSection` 输入
+   50% 落库 `settings.generation_elastic_percent`；Studio `studio-elastic-mode-segmented` +
+   `studio-elastic-percent-dropdown` 落库 `resources.metadata_json.generationElasticPercent`，
+   切回“继承全局”删除该键；均已回读真实行断言。
+6. **320px + 大字体**：320×568 且 textScale 1.0 / 1.8 下 Studio 覆盖控件 + 摘要无异常。
+
+真实验证：
+
+- E50 定向 **12 PASS**，退出码 0；`/tmp/lt-e50e.log`。
+- 弹性相关组合（Studio/设置/创建导航/配置冻结矩阵/策略矩阵）**110 PASS**，退出码 0；
+  `/tmp/lt-e50-reg2.log`。
+- 全 widget 回归 **1246 PASS**，退出码 0；`/tmp/lt-e50-widget-reg.log`。
+- 资源子系统回归 **852 PASS**，退出码 0；`/tmp/lt-e50-res-reg.log`。
+- `flutter analyze --no-pub` 零问题；变更测试 format 0 changed；`git diff --check` PASS。
+
+独立审查（另一 Agent，只读）：裁决 **PASSED WITH FINDINGS**。产品缺陷 **0**（两个消费点
+`budgetAllocation` / `commitPartContent` 与 Studio 摘要均读同一冻结列）。发现：
+- MAJOR（覆盖面表述）——初稿声称“直接创建 / 重启恢复”但文件内未真实驱动；**已修复**：补
+  直接创建路径与 `recoverInterruptedTasks` 重启恢复用例，并把失败重试改为真实
+  `retrySinglePart`（消除 `_E50Gateway` Part 分支的死代码）。
+- MINOR（已随上述修复消除）：重试用例原先只调 `budgetAllocation`，未驱动真实失败尝试 + 重试。
+- INFO：摘要 T 为种子参数、C 为按冻结 E 重算，仅 E 单独回读冻结列；C 的边界由既有矩阵
+  测试另行覆盖。INFO：创建页 C 预览不读目标资源覆盖（见下）。
+
+结论与风险：
+
+- 本轮**未发现 E50 链路产品缺陷**，未改动任何生产代码（A/K/E 上限、历史正文、SQLite 原子性
+  保持不变）。
+- 已记录边界（非缺陷）：创建页 C 预览只用“本次运行选择 / 全局”，不读目标资源覆盖
+  （`resource_ai_create_page.dart` 的 `_effectiveElasticPercent`）；对新资源创建二者等价，
+  仅当该表单用于“已有覆盖资源”的再生时会分歧。属既有设计边界，本轮不改。
+- U6 未决项（正文阈值、人工认可、旧预算版本）本轮未触碰。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
