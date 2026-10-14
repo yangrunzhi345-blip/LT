@@ -601,6 +601,49 @@ legacy 规则放行（生产新任务始终带版本）。
 
 下一工作单元：**U6-C / U6-D / U6-E（未授权）**；等待用户授权。
 
+## U6-C：生成 / 校验 / 提交 / 重试恢复闭环（生产链验收）
+
+Status: COMPLETE（仅限 U6-C；未启动 U6-D/E；**未改动生产代码**）
+起始 HEAD：`cf17555`（U6-B）。
+提交 SHA：见下方 commit。
+
+目标：证明已确认的 `ContentRequirements` 真正控制生产正文。复核结论是 **R2（Validator + commit 契约）
+与 R5（分类 / 恢复）+ R1（reserve）已完整闭环**，故本轮只新增**验收测试**，未修改 `lib/`。
+
+新增 `test/application/resources/u6c_content_contract_production_chain_test.dart`（22 例）：真实
+`PartGenerationCoordinator` + 真实 `PartGenerationTaskRepositoryImpl` + 真实 SQLite
+（`Phase10Fixture`），仅模型正文为确定性假数据。覆盖：
+
+- §5.1 Narrative 动态最低量真实链：p=100/450/1000/3000 各自「低于 minimum 拒绝（1 字『荒』）」与
+  「达到 minimum 完成」；自由叙述不要求 Markdown 标题；分节叙述缺真实非空小节拒绝；**围栏代码块内
+  伪标题不满足必填小节**；minimum 是下界而非精确目标（2500 字 ≤ 授权上限内被接受）。
+- §5.2 Scalar：单字 / 双字合法值完成；多行与纯空白拒绝。
+- §5.3 Structured：合法对象完成；非法 JSON / 缺顶层必填 / 必填空串拒绝；合法 `false` / `0` 通过；
+  未引入嵌套字段契约。
+
+真实验证：
+
+- U6-C 定向单文件 **22 PASS**，退出码 0。
+- U6-C 组合（本文件 + 内容契约 + R1 reserve + R5 recovery + CAS + 并发 + E0/20/50 + legacy 矩阵
+  + Confirm SQLite）**118 PASS，退出码 0**；`/tmp/lt-u6c.log`。
+- `flutter analyze --no-pub` 零问题；format 0 changed；`git diff --check` PASS。
+
+§5.4 / §5.5 由既有已通过套件覆盖（本轮复跑）：原子提交与旧正文保护 / K 守卫
+（`character_generation_content_contract_sqlite_test`）、source CAS 与并发
+（`r02_part_content_source_cas_test`、`phase9_concurrency_test`）、R1 future reserve 与 0 请求不可行
+（`character_generation_budget_reservation_sqlite_test`）、auto/manual/resume 0 请求与安全数字跨重启
+（`character_generation_retry_recovery_sqlite_test`）、E0/E20/E50 与 legacy NULL=20%
+（`configurable_elastic_budget_sqlite_test`、`elastic_budget_matrix_test`）。
+
+独立审查（另一 Agent，只读）：裁决 **PASSED WITH FINDINGS**，未解决发现
+**BLOCKER=0、MAJOR=0、MINOR=1、INFO=2**。独立复跑 U6-C 单文件 22 PASS 与组合 32 PASS、analyze
+零问题；逐条确认 §5.1–§5.5 由真实链（真实 coordinator / repository / commitPartContent / SQLite，
+仅模型正文为假）覆盖，且**无任何 §5.4/§5.5 要求缺少覆盖**。MINOR：审查期间进度文档被实现方并发
+写入（纯文档，非代码）；INFO：无 `lib/` 改动；低于 minimum 的负例用 1 字而非恰好 m−1；`phase9`
+未被审查方执行（仅抽取存在性）。
+
+下一工作单元：**U6-D**（Legacy 历史审阅兼容）。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
