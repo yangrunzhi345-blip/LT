@@ -236,6 +236,7 @@ final class ResourceBlueprint {
     this.resourceId,
     this.createdAt = '',
     this.updatedAt = '',
+    this.contentContractVersion,
   })  : sections = List<BlueprintSection>.unmodifiable(sections),
         targetCapacity = targetCapacity ??
             ResourceLimits.policyFor(resourceType).nominalCharacters;
@@ -252,6 +253,12 @@ final class ResourceBlueprint {
   final ResourceId? resourceId;
   final String createdAt;
   final String updatedAt;
+
+  /// U6: non-null marks a blueprint whose Parts must all carry a
+  /// client-authoritative [ContentRequirements] contract before they may be
+  /// confirmed. Null means a legacy plan that predates U6 and stays permissive.
+  /// The planner always writes `1`; the value only ever grows.
+  final int? contentContractVersion;
 
   /// Sum of estimated character counts across all parts.
   int get totalEstimatedLength =>
@@ -292,6 +299,7 @@ final class ResourceBlueprint {
     ResourceId? resourceId,
     String? createdAt,
     String? updatedAt,
+    int? contentContractVersion,
   }) {
     return ResourceBlueprint(
       blueprintId: blueprintId ?? this.blueprintId,
@@ -306,6 +314,8 @@ final class ResourceBlueprint {
       resourceId: resourceId ?? this.resourceId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      contentContractVersion:
+          contentContractVersion ?? this.contentContractVersion,
     );
   }
 
@@ -322,6 +332,7 @@ final class ResourceBlueprint {
           other.status == status &&
           other.targetCapacity == targetCapacity &&
           other.resourceId == resourceId &&
+          other.contentContractVersion == contentContractVersion &&
           _listEquals(other.sections, sections);
 
   @override
@@ -335,6 +346,7 @@ final class ResourceBlueprint {
         status,
         targetCapacity,
         resourceId,
+        contentContractVersion,
         Object.hashAll(sections),
       );
 

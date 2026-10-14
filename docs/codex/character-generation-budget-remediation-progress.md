@@ -536,6 +536,71 @@ token** 键控，无法误放行；导入纯净 / 容量常量 / ResourcePart-co
 
 下一工作单元：**U6-B（未授权）**；等待用户授权。
 
+## U6-B：动态正文契约生产接线（Planner / Normalizer / Review / Confirm）
+
+Status: COMPLETE（仅限 U6-B；未启动 U6-C/D/E）
+起始 HEAD：`845dc71`；工作区干净。
+提交 SHA：见下方 commit。
+
+实施范围与结论：
+
+- 新增 `lib/domain/resources/blueprint_content_contract_planner.dart`（纯领域）：在最终 `p` 确定后，
+  为每个 Part 生成**客户端权威** `ContentRequirements`；`NarrativeMinimumPolicy` 是唯一 narrative
+  最低量来源（无复制公式、无浮点）。**未指定类型的 Part 默认自由叙述**（最严格方向，不静默退回
+  无契约）；Scalar / Structured 仅由客户端 `PartContentSpec`（模板 / 用户确认）指定；模型自报的
+  `minimumCharacters` / `profile` / 字段一律被覆盖或清除。`p < 80` 记为 gap（不产出契约）。
+- `ResourceBlueprint` 新增可选版本化标记 `contentContractVersion`（经 `BlueprintParser` 往返），
+  由契约规划器写 `1`，用于区分 U6 强制蓝图与 Legacy。
+- `BlueprintValidator.validateContentContracts`（fail-closed 门禁）：带版本的蓝图必须**每个** Part
+  都有合法契约且 `1 ≤ m ≤ p ≤ K`（包括“全部 gap”）；无版本且无契约的 Legacy 蓝图保持放行；
+  部分契约一律拒绝。
+- `BlueprintPlanner.plan` / `replan`：在 `BlueprintBudgetNormalizer` 之后应用契约，再 `validate`、
+  保存；replan 按新规划重算，不沿用旧 minimum。
+- `ResourceBlueprintRepositoryImpl.confirmBlueprint`：在任何写入前调用 `validateContentContracts`，
+  因此 **createAndStart（无审阅直接确认）与 Review 页面两条路径共用同一权威校验**，直接调用
+  Repository 也无法绕过；确认后重新读取契约不变（幂等）。
+- Review 页面最小实现：每个 Part 显示 `类型 · 最低 m 字`；契约强制蓝图存在未确定 Part 时显示
+  阻断提示并禁用确认；Legacy 蓝图不误阻断。未做类型/字段选择 UI（见边界）。
+
+客户端类型来源决策（U6-B）：默认自由叙述。此为本轮实现选择，符合已批准 §2.3「Narrative 默认
+自由叙述」与 §1「不得静默退回无契约模式」；未新增产品阈值。
+
+真实验证：
+
+- 领域契约规划器 **14 PASS**；Blueprint→Confirm SQLite **8 PASS**；Review 页面 Widget（含
+  320px + textScale 1.8）**4 PASS**。
+- `test/application/resources` + `test/domain/resources` 合计 **1141 PASS**，退出码 0。
+- `test/widget` + `test/integration` + `test/services` 合计 **1431 PASS / 6 skipped（既有跳过）/ 0 failed**。
+- `flutter analyze --no-pub` 零问题；变更 Dart 文件 format 0 changed；`git diff --check` PASS。
+
+验收清单覆盖（用户 §8）：1–7（纯函数 / 下限 / Scalar / Structured / Normalizer / replan / 模型伪造）
+由领域与 SQLite 测试覆盖；8/9/10（审阅持久化 / 直接入口 / Repository 直连）由 SQLite + Widget 覆盖；
+11（保存-确认-重开一致）、12（Legacy 不变）、14（失败无半成品写入）由 SQLite 覆盖；13（E50/R1/R2
+不退化）由资源/域/Widget 回归覆盖。
+
+适配说明（**非放宽断言**）：AI 路径测试的假网关正文原先过短（24 字），在新叙述契约下会被判
+`resourceContentIncomplete`；仅将假正文加长到满足动态 minimum（§8 的“较短但合法正文”语义），
+未删除 / Skip / 放宽任何断言（`resource_library_production_test` 的正文相等断言改为对同一新常量
+断言，仍为精确相等）。
+
+已记录边界 / 未实现（不属本轮）：Scalar / Structured 的**类型选择 UI** 与模型类型建议未实现
+（当前提示词不产出类型，客户端默认叙述）；Scalar 规划默认 ≤96 未实现；`needsContentReview`
+历史审阅 UI（U6-D）；真实设备 / 全仓最终验收（U6-E）。无版本且无契约的 Legacy 蓝图按既定
+legacy 规则放行（生产新任务始终带版本）。
+
+独立审查（另一 Agent，只读）：裁决 **PASSED**，未解决发现 **BLOCKER=0、MAJOR=0**。独立复跑
+`blueprint_content_contract_confirm_sqlite_test`（8 PASS，退出码 0）；独立确认**不存在确认路径
+绕过**：`confirmBlueprint` 在建立树/任务前调用 `validateContentContracts`
+（`resource_blueprint_repository.dart:260-264`），其调用方 `blueprint_planner.dart:279`、
+`resource_creation_pipeline.dart:579`（→ orchestrator.confirmAndStart:243）、
+`streaming_resource_generation_service.dart:275`（自动确认回退）全部经此；Review 页与
+`createAndStart` 亦同。独立确认：规划器在每次 apply 都写入 `contentContractVersion=1`
+（`blueprint_content_contract_planner.dart:114`），即使全部 Part 为 gap 也被门禁拒绝
+（`blueprint_validator.dart:93-100`）；无版本且无契约的 Legacy 仍放行。审查未覆盖：全仓回归、
+非 lib 调用方、版本列 SQLite 往返（由本单元 8 项 SQLite 与 1141 项回归覆盖）。
+
+下一工作单元：**U6-C / U6-D / U6-E（未授权）**；等待用户授权。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`

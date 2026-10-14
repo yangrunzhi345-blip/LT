@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../core/debug/generation_diagnostics.dart';
+import '../../domain/resources/blueprint_content_contract_planner.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../models/llm_task.dart';
@@ -144,8 +145,14 @@ final class BlueprintPlanner {
       parsedBlueprint,
       targetCharacters: targetCharacters,
     );
+    // U6: attach the client-authoritative content contract once the final Part
+    // lengths are decided. Any contract the model emitted is replaced, so it can
+    // never lower a minimum. Parts below the narrative planning floor are left
+    // unresolved and block confirm until the plan is reworked.
+    final contracted =
+        BlueprintContentContractPlanner.apply(normalizedBlueprint);
     BlueprintValidator.validate(
-      normalizedBlueprint,
+      contracted.blueprint,
       idPool: pool,
       maxBudgetOverride: targetCharacters,
     );
@@ -154,15 +161,16 @@ final class BlueprintPlanner {
       ..recordDuration('plan.parse', parseWatch.elapsed)
       ..recordDuration('plan.normalizeValidate', normalizeWatch.elapsed)
       ..mark('PLAN[$sessionId] VALIDATED', {
-        'sections': normalizedBlueprint.sections.length,
-        'parts': normalizedBlueprint.sections
+        'sections': contracted.blueprint.sections.length,
+        'parts': contracted.blueprint.sections
             .fold<int>(0, (sum, section) => sum + section.parts.length),
+        'contractGaps': contracted.gaps.length,
         'parseMs': parseWatch.elapsedMilliseconds,
         'normalizeValidateMs': normalizeWatch.elapsedMilliseconds,
       });
 
     final saveWatch = Stopwatch()..start();
-    await _blueprintRepository.saveBlueprint(normalizedBlueprint);
+    await _blueprintRepository.saveBlueprint(contracted.blueprint);
     saveWatch.stop();
     GenerationDiagnostics.instance
       ..recordDuration('plan.saveBlueprint', saveWatch.elapsed)
@@ -171,7 +179,7 @@ final class BlueprintPlanner {
         'saveMs': saveWatch.elapsedMilliseconds,
         'totalMs': planWatch.elapsedMilliseconds,
       });
-    return normalizedBlueprint;
+    return contracted.blueprint;
   }
 
   /// Replans an existing blueprint with user feedback, preserving history as revision N.
@@ -248,14 +256,18 @@ final class BlueprintPlanner {
       parsedBlueprint,
       targetCharacters: targetCharacters,
     );
+    // U6: a replan gets a freshly generated contract for the NEW plan; the
+    // previous revision's contract never carries over.
+    final contracted =
+        BlueprintContentContractPlanner.apply(normalizedBlueprint);
     BlueprintValidator.validate(
-      normalizedBlueprint,
+      contracted.blueprint,
       idPool: pool,
       maxBudgetOverride: targetCharacters,
     );
 
-    await _blueprintRepository.saveBlueprint(normalizedBlueprint);
-    return normalizedBlueprint;
+    await _blueprintRepository.saveBlueprint(contracted.blueprint);
+    return contracted.blueprint;
   }
 
   /// Confirms a blueprint, creating formal tree placeholders and generation tasks in a single transaction.

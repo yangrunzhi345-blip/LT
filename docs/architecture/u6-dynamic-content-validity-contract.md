@@ -26,21 +26,23 @@
 | 范围 | 决策状态 | 实现状态 |
 | --- | --- | --- |
 | §2.1 Narrative 动态最低量**纯函数** | APPROVED | **IMPLEMENTED（U6-A）**：`lib/domain/resources/narrative_minimum_policy.dart` + `test/domain/resources/narrative_minimum_policy_test.dart` |
-| §2.2 `p < 80` 需重规划 / 合并 / 重分类 | APPROVED | 策略常量与 `isPlannable` 已实现；**生产门禁 NOT IMPLEMENTED（U6-B）** |
+| §2.2 `p < 80` 需重规划 / 合并 / 重分类 | APPROVED | **IMPLEMENTED（U6-B）**：契约规划器产出 gap，确认门禁拒绝；直接路径安全停止 |
 | §2.3 Narrative 结构检查（ATX 标题、排除代码块） | APPROVED | IMPLEMENTED（Phase 1：`content_requirements.dart`） |
 | §2.4 完成条件（协议 / minimum / 标题 / K / maximum / reserve / 事务） | APPROVED | IMPLEMENTED（R2 + R1 + R4） |
-| §3 Scalar 规则；规划默认 ≤96 | APPROVED | 校验 IMPLEMENTED（Phase 1）；规划默认 **NOT IMPLEMENTED** |
-| §4 Structured V1 顶层必填字段 | APPROVED | IMPLEMENTED（Phase 1）；嵌套字段/值类型**不在 V1** |
-| §5 契约单源、`1≤m≤p≤3000`、UTF-16 计量 | APPROVED | 校验 IMPLEMENTED；**单一公式接线 NOT IMPLEMENTED（U6-B）** |
-| §5 契约在归一化后生成、冻结 | APPROVED | **NOT IMPLEMENTED（U6-B）**：当前 Planner 不产出契约 |
-| §6 Legacy 兼容（不补造 / 不改写 / `needsContentReview`） | APPROVED | 领域侧 IMPLEMENTED；**审阅提示 UI NOT IMPLEMENTED（U6-D）** |
-| §7 失败分类与体验 | APPROVED | 分类 IMPLEMENTED（R5）；**部分 UI 文案 NOT IMPLEMENTED** |
-| §8 验收标准 A–E | APPROVED | A 的纯函数部分 IMPLEMENTED；其余 **NOT IMPLEMENTED** |
+| §3 Scalar 规则；规划默认 ≤96 | APPROVED | 校验 IMPLEMENTED；**契约由客户端 `PartContentSpec` 生成（U6-B）**；规划默认 ≤96 **NOT IMPLEMENTED** |
+| §4 Structured V1 顶层必填字段 | APPROVED | IMPLEMENTED（Phase 1）；**必填字段仅来自客户端 spec（U6-B）**；嵌套字段/值类型**不在 V1** |
+| §5 契约单源、`1≤m≤p≤3000`、UTF-16 计量 | APPROVED | **IMPLEMENTED（U6-B）**：唯一公式 `NarrativeMinimumPolicy`；`BlueprintValidator.validateContentContracts` |
+| §5 契约在归一化后生成、冻结 | APPROVED | **IMPLEMENTED（U6-B）**：`BlueprintPlanner` 在 `normalize` 后生成并冻结 |
+| §6 Legacy 兼容（不补造 / 不改写 / `needsContentReview`） | APPROVED | 领域侧 IMPLEMENTED；无版本标记的蓝图保持 legacy 放行；**审阅提示 UI NOT IMPLEMENTED（U6-D）** |
+| §7 失败分类与体验 | APPROVED | 分类 IMPLEMENTED（R5）；**审阅页契约展示 IMPLEMENTED（U6-B 最小）**；数字文案仍部分 NOT IMPLEMENTED |
+| §8 验收标准 A–E | APPROVED | A/B/C 多数 IMPLEMENTED（U6-A/B）；**D 真实设备/E 全仓仍 NOT IMPLEMENTED** |
 | §9 明确不在本次范围 | 生效 | — |
 | 决策 6（追溯预算 / 自动压缩 / 人工认可迁移） | 不批准 | **NOT AUTHORIZED** |
 
-**U6-A 之外均未授权实施。** 不得据此修改 BlueprintPlanner、UI、SQLite 生成链，或改动
-R1–R6 已通过的核心行为。
+**U6-C / U6-D / U6-E 未授权实施。** U6-B 只接线 Planner / Normalizer / Review / Confirm 与必要测试，
+不修改 R1–R6 已通过的核心行为。客户端类型来源（U6-B 决策）：**未指定类型的 Part 默认自由叙述
+（最严格方向）**；Scalar / Structured 仅由客户端 `PartContentSpec`（模板或用户确认）指定，模型
+自报的类型 / minimum / 字段一律被覆盖。
 
 ---
 

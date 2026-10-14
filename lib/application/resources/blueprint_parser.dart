@@ -193,6 +193,7 @@ abstract final class BlueprintParser {
       resourceId: resourceId,
       createdAt: createdAt,
       updatedAt: updatedAt,
+      contentContractVersion: (map['contentContractVersion'] as num?)?.toInt(),
     );
   }
 
@@ -243,6 +244,8 @@ abstract final class BlueprintParser {
       'status': blueprint.status.storageValue,
       'targetCapacity': blueprint.targetCapacity,
       'resourceId': blueprint.resourceId?.value,
+      if (blueprint.contentContractVersion != null)
+        'contentContractVersion': blueprint.contentContractVersion,
       'sections': blueprint.sections.map((sec) {
         return {
           'id': sec.id,
