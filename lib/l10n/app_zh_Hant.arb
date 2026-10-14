@@ -3462,6 +3462,17 @@
   "errorServerUnavailable": "服務暫時無法使用，請稍後重試。",
   "resourceErrorParseFailed": "正文格式無法解析，請重試失敗段落。",
   "resourceErrorContentInvalid": "正文未通過驗證，請重試失敗段落。",
+  "resourceErrorContentIncomplete": "正文未滿足內容要求（最低 {minimum} 字，實際 {actual} 字）。已保存內容保持不變，請重試該段。",
+  "@resourceErrorContentIncomplete": {
+    "placeholders": {
+      "minimum": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
   "resourceErrorPersistenceFailed": "正文儲存失敗，請檢查可用儲存空間後重試。",
   "resourceErrorLifecycleFailed": "生成流程無法進入下一步，請重新開啟資源後重試。",
   "resourceErrorProviderIncomplete": "模型服務傳回的回應不完整，請重試失敗段落。",
@@ -3966,6 +3977,26 @@
   "readinessCompressionProposed": "候選正文",
   "readinessCompressionCancel": "取消",
   "errorResourceGenerationBudgetExceeded": "生成正文超過資源或本段預算，請減少本段字數後重試；已保存內容保持不變。",
+  "resourceErrorGenerationBudgetInfeasible": "在凍結預算內無法生成該段：資源上限 {ceiling}，已保存 {saved}，後續必填預留 {reserve}，本段最低 {minimum}，本段可用上限 {allowed}。已保存內容保持不變，請調整規劃或壓縮前段後重試。",
+  "@resourceErrorGenerationBudgetInfeasible": {
+    "placeholders": {
+      "ceiling": {
+        "type": "int"
+      },
+      "saved": {
+        "type": "int"
+      },
+      "reserve": {
+        "type": "int"
+      },
+      "minimum": {
+        "type": "int"
+      },
+      "allowed": {
+        "type": "int"
+      }
+    }
+  },
   "readinessActualCapacity": "實際正文：{actual} 字元；絕對容量：{absolute} 字元。",
   "@readinessActualCapacity": {
     "placeholders": {

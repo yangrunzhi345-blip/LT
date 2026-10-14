@@ -45,8 +45,21 @@ String localizeAppError(AppLocalizations l10n, AppDomainError error) {
       return l10n.resourceErrorParseFailed;
     case AppErrorCode.resourceGenerationBudgetExceeded:
       return l10n.errorResourceGenerationBudgetExceeded;
+    case AppErrorCode.resourceGenerationBudgetInfeasible:
+      return l10n.resourceErrorGenerationBudgetInfeasible(
+        (p['ceiling'] as num?)?.toInt() ?? 0,
+        (p['saved'] as num?)?.toInt() ?? 0,
+        (p['reserve'] as num?)?.toInt() ?? 0,
+        (p['minimum'] as num?)?.toInt() ?? 0,
+        (p['allowed'] as num?)?.toInt() ?? 0,
+      );
     case AppErrorCode.resourceContentInvalid:
       return l10n.resourceErrorContentInvalid;
+    case AppErrorCode.resourceContentIncomplete:
+      return l10n.resourceErrorContentIncomplete(
+        (p['minimum'] as num?)?.toInt() ?? 0,
+        (p['actual'] as num?)?.toInt() ?? 0,
+      );
     case AppErrorCode.resourcePersistenceFailed:
       return l10n.resourceErrorPersistenceFailed;
     case AppErrorCode.resourceLifecycleFailed:

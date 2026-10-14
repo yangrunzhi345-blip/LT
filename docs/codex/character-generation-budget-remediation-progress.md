@@ -263,6 +263,63 @@ requiredFields / requiredHeadings 覆盖、legacy `needsContentReview` UI 审阅
 性能（重复解析蓝图）与 U6 边界；三项 INFO 为外观 / 不可达边界。独立审查另跑 60 + 35 + 39
 用例 PASS、analyze 零问题，结束时工作区为空。
 
+## R5：错误分类、安全预算诊断、有限重试与恢复保护（Phase 5 核心）
+
+Status: PASSED（仅限 R5 有限范围）
+Acceptance Mode: 待独立审查补齐（见下方独立审查行）
+起始 HEAD：`b79b0ac`（R2 独立审查记录提交后）；工作区干净。
+提交 SHA：见下方 commit。
+
+实施范围（依据规格 §6.4 / §9）：
+
+- 错误分类拆分：新增 `AppErrorCode.resourceGenerationBudgetInfeasible`（冻结预算无法满足
+  本段，约束不变前不得请求）与 `resourceContentIncomplete`（正文未过已确认内容契约）；
+  `resourceGenerationBudgetExceeded` 保留给“本次输出超授权量”的有限纠正。
+  `resource_generation_error.dart` 按领域类型 / 字段映射，不再把不可行与超量混为同一码。
+- 安全预算诊断：`PartGenerationValidationException` 增加可选 `parameters`（仅安全数字）；
+  `resourceGenerationError` 为不可行附带 `ceiling/saved/remaining/reserve/minimum/allowed/
+  unfinished`，为内容不足附带 `minimum/actual`，为超量附带 `allowed/actual`。不含 prompt、
+  正文、Authorization、密钥或模型响应。
+- 持久化与恢复：新增 `encodeGenerationDiagnostic` —— 无安全参数时写纯稳定码名，有参数时
+  写既有安全 `DiagnosticEnvelope`；`resourceGenerationErrorFromCode` 同时解码二者并对
+  历史纯码 / 任意旧文本安全降级为 unknown。coordinator 的 `_failureCode`、三处失败回调
+  errorMessage、`exhaustBudget`、流式服务的 session 失败码统一使用同一编码，故安全数字
+  可跨“重启”（新实例重建）还原；未知旧码仍安全降级。
+- 有限重试与恢复保护：不可行任务在自动（`generateAllParts` 派发闸门）、手动
+  （`retrySinglePart` 预检）、恢复（`resumeGeneration → generateAllParts` 同一闸门）三条
+  路径均 0 次模型请求；偶发超量按每 pass `1+maxRetriesPerPart` 有限纠正。未新增持久化
+  status 字符串、未新增 schema / migration。
+- 本地化：6 个 locale 新增 `resourceErrorContentIncomplete` /
+  `resourceErrorGenerationBudgetInfeasible`（参数化安全数字）与 `@` 元数据，经
+  `flutter gen-l10n` 重新生成；`app_error_localizer` 渲染安全数字。
+
+真实验证：
+
+- R5 定向（`character_generation_retry_recovery_sqlite_test` + `resource_generation_error_test`）
+  **12 PASS**，退出码 0；`/tmp/lt-r5-new2.log`。
+- 错误分类 / 关联（localizer + 预算预留 + 内容契约 + 冲突 + 畸形流）+ **55 PASS**；
+  `/tmp/lt-r5-tests1.log`。
+- 流式 / 生命周期 / 段一致性 **48 PASS**，退出码 0；`/tmp/lt-r5-streaming.log`。
+- 资源子系统 + unit 扩大回归 **2012 PASS / 1 skipped（既有跳过，非本次）**，退出码 0；
+  `/tmp/lt-r5-regression.log`。
+- Studio widget **71 PASS**，退出码 0；`/tmp/lt-r5-widget.log`。
+- `flutter analyze --no-pub` 零问题；变更 Dart 文件 format 0 changed；`git diff --check` PASS。
+
+U6 合规：**未**引入 narrative/scalar/structured 最低阈值，未实现人工认可，未改变旧任务
+冻结预算或版本；`resourceContentIncomplete` 仅在蓝图存在已确认契约时触发。
+
+未解决问题：
+
+- R5 未持久化“实际正文长度”等仅在请求期可知的数字到独立列；安全数字经
+  `DiagnosticEnvelope` 存入既有 `error_message` 文本列往返（已测），未新增 schema。
+- 失败分类的 `retryDisposition` 仍由既有 allocation / sourceConflict 闸门实现，未新增
+  冗余枚举字段（避免过度抽象）。
+- R1 MINOR-2 / 3 / 4、R2-MINOR-1（重复解析蓝图）仍未处理。
+
+下一工作单元：独立弹性 E50 的真实 UI→SQLite 验证；随后人工认可与历史修订保护
+（依赖 U6、需 minimal nullable provenance 迁移）、世界观 / 角色 / NPC 集成回归、全仓回归
+与最终独立审查。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`

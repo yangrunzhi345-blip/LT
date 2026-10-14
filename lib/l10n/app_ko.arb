@@ -3462,6 +3462,17 @@
   "errorServerUnavailable": "서비스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도하세요.",
   "resourceErrorParseFailed": "생성된 본문을 해석할 수 없습니다. 실패한 단락을 다시 시도하세요.",
   "resourceErrorContentInvalid": "생성된 본문이 검증을 통과하지 못했습니다. 실패한 단락을 다시 시도하세요.",
+  "resourceErrorContentIncomplete": "생성된 본문이 내용 요구사항을 충족하지 못했습니다(최소 {minimum}자, 실제 {actual}자). 저장된 내용은 유지됩니다. 이 단락을 다시 시도하세요.",
+  "@resourceErrorContentIncomplete": {
+    "placeholders": {
+      "minimum": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
   "resourceErrorPersistenceFailed": "생성된 본문을 저장할 수 없습니다. 저장 공간을 확인한 후 다시 시도하세요.",
   "resourceErrorLifecycleFailed": "생성 과정이 다음 단계로 진행되지 못했습니다. 리소스를 다시 열고 재시도하세요.",
   "resourceErrorProviderIncomplete": "모델 서비스의 응답이 불완전합니다. 실패한 단락을 다시 시도하세요.",
@@ -3966,6 +3977,26 @@
   "readinessCompressionProposed": "제안된 내용",
   "readinessCompressionCancel": "취소",
   "errorResourceGenerationBudgetExceeded": "생성 내용이 리소스 또는 문단 예산을 초과했습니다. 이 문단의 글자 수를 줄여 재시도하세요. 저장된 내용은 유지됩니다。",
+  "resourceErrorGenerationBudgetInfeasible": "고정된 예산 내에서 이 단락을 생성할 수 없습니다: 리소스 상한 {ceiling}, 저장됨 {saved}, 이후 필수 예약 {reserve}, 이 단락 최소 {minimum}, 허용 상한 {allowed}. 저장된 내용은 유지됩니다. 계획을 조정하거나 앞부분을 압축한 뒤 다시 시도하세요.",
+  "@resourceErrorGenerationBudgetInfeasible": {
+    "placeholders": {
+      "ceiling": {
+        "type": "int"
+      },
+      "saved": {
+        "type": "int"
+      },
+      "reserve": {
+        "type": "int"
+      },
+      "minimum": {
+        "type": "int"
+      },
+      "allowed": {
+        "type": "int"
+      }
+    }
+  },
   "readinessActualCapacity": "실제 본문: {actual}자, 절대 한도: {absolute}자.",
   "@readinessActualCapacity": {
     "placeholders": {

@@ -599,7 +599,7 @@ final class StreamingResourceGenerationService {
         }
       }
       final failureError = resourceGenerationError(e, stage: failureStage);
-      final errorMessage = failureError.code.name;
+      final errorMessage = encodeGenerationDiagnostic(e, stage: failureStage);
       await _sessionRepository.updateStatus(
         sessionId,
         StreamingLifecycleStatus.failed,
@@ -1035,7 +1035,7 @@ final class StreamingResourceGenerationService {
             task.currentAttemptId == retryAttemptId
         ? resourceGenerationErrorFromCode(task.errorMessage)
         : resourceGenerationError(error, stage: failureStage);
-    final errorMessage = failureError.code.name;
+    final errorMessage = encodeGenerationDiagnostic(failureError);
     final current = await _sessionRepository.findSession(session.sessionId);
     if (current != null &&
         StreamingLifecycleStateMachine.canTransition(

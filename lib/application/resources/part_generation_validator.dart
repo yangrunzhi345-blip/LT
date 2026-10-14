@@ -10,12 +10,17 @@ class PartGenerationValidationException implements Exception {
     this.field = '',
     this.expected = '',
     this.actual = '',
+    this.parameters = const <String, Object?>{},
   });
 
   final String message;
   final String field;
   final String expected;
   final String actual;
+
+  /// Safe, structured numbers for the failure (e.g. the authorized maximum and
+  /// the actual length). Never contains prose, prompts or credentials.
+  final Map<String, Object?> parameters;
 
   @override
   String toString() => 'PartGenerationValidationException: $message'
@@ -132,6 +137,10 @@ abstract final class PartGenerationValidator {
         field: 'content_length',
         expected: '<= $maxChars',
         actual: '${response.content.length}',
+        parameters: {
+          'allowed': maxChars,
+          'actual': response.content.length,
+        },
       );
     }
 
@@ -143,6 +152,10 @@ abstract final class PartGenerationValidator {
         field: 'generation_budget',
         expected: '<= ${request.maximumAcceptedCharacters}',
         actual: '${response.content.length}',
+        parameters: {
+          'allowed': request.maximumAcceptedCharacters,
+          'actual': response.content.length,
+        },
       );
     }
 
@@ -164,6 +177,10 @@ abstract final class PartGenerationValidator {
           field: 'content_requirements',
           expected: requirements.validationProfile.name,
           actual: error.reason.name,
+          parameters: {
+            if (error.minimum != null) 'minimum': error.minimum,
+            if (error.actual != null) 'actual': error.actual,
+          },
         );
       }
     }

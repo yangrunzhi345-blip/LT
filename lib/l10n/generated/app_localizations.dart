@@ -9180,6 +9180,12 @@ abstract class AppLocalizations {
   /// **'The generated text did not pass validation. Retry the failed part.'**
   String get resourceErrorContentInvalid;
 
+  /// No description provided for @resourceErrorContentIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated text did not meet its content requirements (minimum {minimum}, actual {actual}). Saved content is preserved; retry this Part.'**
+  String resourceErrorContentIncomplete(int minimum, int actual);
+
   /// No description provided for @resourceErrorPersistenceFailed.
   ///
   /// In en, this message translates to:
@@ -11586,6 +11592,13 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generated content exceeds the resource or Part budget. Reduce this Part and retry; saved content is preserved.'**
   String get errorResourceGenerationBudgetExceeded;
+
+  /// No description provided for @resourceErrorGenerationBudgetInfeasible.
+  ///
+  /// In en, this message translates to:
+  /// **'This Part cannot be generated within the frozen budget: resource ceiling {ceiling}, already saved {saved}, reserved for later required Parts {reserve}, minimum for this Part {minimum}, allowed {allowed}. Saved content is preserved; adjust the plan or compress earlier content, then retry.'**
+  String resourceErrorGenerationBudgetInfeasible(
+      int ceiling, int saved, int reserve, int minimum, int allowed);
 
   /// No description provided for @readinessActualCapacity.
   ///

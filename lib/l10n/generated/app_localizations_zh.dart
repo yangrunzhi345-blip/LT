@@ -4963,6 +4963,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get resourceErrorContentInvalid => '正文未通过校验，请重试失败段落。';
 
   @override
+  String resourceErrorContentIncomplete(int minimum, int actual) {
+    return '正文未满足内容要求（最低 $minimum 字，实际 $actual 字）。已保存内容保持不变，请重试该段。';
+  }
+
+  @override
   String get resourceErrorPersistenceFailed => '正文保存失败，请检查可用存储空间后重试。';
 
   @override
@@ -6234,6 +6239,12 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get errorResourceGenerationBudgetExceeded =>
       '生成正文超过资源或本段预算，请减少本段字数后重试；已保存内容保持不变。';
+
+  @override
+  String resourceErrorGenerationBudgetInfeasible(
+      int ceiling, int saved, int reserve, int minimum, int allowed) {
+    return '在冻结预算内无法生成该段：资源上限 $ceiling，已保存 $saved，后续必填预留 $reserve，本段最低 $minimum，本段可用上限 $allowed。已保存内容保持不变，请调整规划或压缩前段后重试。';
+  }
 
   @override
   String readinessActualCapacity(int actual, int absolute) {
@@ -11200,6 +11211,11 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get resourceErrorContentInvalid => '正文未通过校验，请重试失败段落。';
 
   @override
+  String resourceErrorContentIncomplete(int minimum, int actual) {
+    return '正文未满足内容要求（最低 $minimum 字，实际 $actual 字）。已保存内容保持不变，请重试该段。';
+  }
+
+  @override
   String get resourceErrorPersistenceFailed => '正文保存失败，请检查可用存储空间后重试。';
 
   @override
@@ -12471,6 +12487,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get errorResourceGenerationBudgetExceeded =>
       '生成正文超过资源或本段预算，请减少本段字数后重试；已保存内容保持不变。';
+
+  @override
+  String resourceErrorGenerationBudgetInfeasible(
+      int ceiling, int saved, int reserve, int minimum, int allowed) {
+    return '在冻结预算内无法生成该段：资源上限 $ceiling，已保存 $saved，后续必填预留 $reserve，本段最低 $minimum，本段可用上限 $allowed。已保存内容保持不变，请调整规划或压缩前段后重试。';
+  }
 
   @override
   String readinessActualCapacity(int actual, int absolute) {
@@ -17437,6 +17459,11 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get resourceErrorContentInvalid => '正文未通過驗證，請重試失敗段落。';
 
   @override
+  String resourceErrorContentIncomplete(int minimum, int actual) {
+    return '正文未滿足內容要求（最低 $minimum 字，實際 $actual 字）。已保存內容保持不變，請重試該段。';
+  }
+
+  @override
   String get resourceErrorPersistenceFailed => '正文儲存失敗，請檢查可用儲存空間後重試。';
 
   @override
@@ -18708,6 +18735,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get errorResourceGenerationBudgetExceeded =>
       '生成正文超過資源或本段預算，請減少本段字數後重試；已保存內容保持不變。';
+
+  @override
+  String resourceErrorGenerationBudgetInfeasible(
+      int ceiling, int saved, int reserve, int minimum, int allowed) {
+    return '在凍結預算內無法生成該段：資源上限 $ceiling，已保存 $saved，後續必填預留 $reserve，本段最低 $minimum，本段可用上限 $allowed。已保存內容保持不變，請調整規劃或壓縮前段後重試。';
+  }
 
   @override
   String readinessActualCapacity(int actual, int absolute) {

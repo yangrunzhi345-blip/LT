@@ -4,8 +4,11 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:lt_dialogue/application/resources/part_generation_validator.dart';
 import 'package:lt_dialogue/application/resources/resource_generation_error.dart';
+import 'package:lt_dialogue/core/localization/app_error_localizer.dart';
 import 'package:lt_dialogue/domain/errors/app_error.dart';
+import 'package:lt_dialogue/domain/resources/generation_budget_allocation.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/resource_studio_user_message.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/services/api_error.dart';
@@ -111,6 +114,85 @@ void main() {
         ]) {
           expect(resourceStudioUserMessage(code, l10n), isNot(unknown));
         }
+      }
+    });
+
+    const infeasibleAllocation = PartGenerationBudgetAllocation(
+      ceiling: 1200,
+      transportCap: 3000,
+      savedOther: 1100,
+      remaining: 100,
+      futureReserve: 180,
+      dispatchableMaximum: 0,
+      recommendedTarget: 0,
+      minimumCharacters: 180,
+      infeasibility: BudgetInfeasibility.belowMinimum,
+      unfinishedRequiredCount: 2,
+    );
+
+    test('should split infeasible, over-budget and content-incomplete codes',
+        () {
+      final infeasible = resourceGenerationError(
+          const PartGenerationBudgetInfeasibleException(infeasibleAllocation));
+      expect(infeasible.code, AppErrorCode.resourceGenerationBudgetInfeasible);
+      expect(infeasible.parameters['ceiling'], 1200);
+      expect(infeasible.parameters['minimum'], 180);
+      expect(infeasible.parameters['allowed'], 0);
+      expect(infeasible.parameters['reserve'], 180);
+
+      final overBudget = resourceGenerationError(
+          const PartGenerationValidationException('x',
+              field: 'generation_budget',
+              parameters: {'allowed': 10, 'actual': 20}));
+      expect(overBudget.code, AppErrorCode.resourceGenerationBudgetExceeded);
+      expect(overBudget.parameters['actual'], 20);
+
+      final contentIncomplete = resourceGenerationError(
+          const PartGenerationValidationException('x',
+              field: 'content_requirements',
+              parameters: {'minimum': 180, 'actual': 1}));
+      expect(contentIncomplete.code, AppErrorCode.resourceContentIncomplete);
+      expect(contentIncomplete.parameters['minimum'], 180);
+
+      final other = resourceGenerationError(
+          const PartGenerationValidationException('x', field: 'part_id'));
+      expect(other.code, AppErrorCode.resourceContentInvalid);
+    });
+
+    test('should round-trip safe numbers through the persisted diagnostic', () {
+      final encoded = encodeGenerationDiagnostic(
+          const PartGenerationBudgetInfeasibleException(infeasibleAllocation));
+      final decoded = resourceGenerationErrorFromCode(encoded);
+      expect(decoded.code, AppErrorCode.resourceGenerationBudgetInfeasible);
+      expect(decoded.parameters['ceiling'], 1200);
+      expect(decoded.parameters['minimum'], 180);
+
+      // Codes with nothing extra stay plain, so historical rows and existing
+      // consumers are unaffected and no ad-hoc JSON is written.
+      expect(encodeGenerationDiagnostic(StateError('x')),
+          AppErrorCode.unknown.name);
+      expect(
+          resourceGenerationErrorFromCode(AppErrorCode.resourceParseFailed.name)
+              .code,
+          AppErrorCode.resourceParseFailed);
+      expect(resourceGenerationErrorFromCode('legacy-secret').code,
+          AppErrorCode.unknown);
+    });
+
+    test('should render infeasible numbers safely in every locale', () {
+      final error = resourceGenerationError(
+          const PartGenerationBudgetInfeasibleException(infeasibleAllocation));
+      for (final locale in const [
+        Locale('en'),
+        Locale('ja'),
+        Locale('ko'),
+        Locale('zh'),
+        Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+        Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
+      ]) {
+        final copy = localizeAppError(lookupAppLocalizations(locale), error);
+        expect(copy, contains('1200'), reason: locale.toString());
+        expect(copy, contains('180'), reason: locale.toString());
       }
     });
   });

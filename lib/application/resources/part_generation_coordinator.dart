@@ -427,8 +427,10 @@ final class PartGenerationCoordinator {
         });
       await _taskRepository.markRetryExhausted(
         taskId: task.taskId,
-        errorMessage:
-            resourceGenerationErrorFromCode(task.errorMessage).code.name,
+        // Keep the last failure's safe diagnostic (code + numbers) instead of
+        // flattening it to a bare code, so a restart can still show the reason.
+        errorMessage: encodeGenerationDiagnostic(
+            resourceGenerationErrorFromCode(task.errorMessage)),
       );
     }
 
@@ -1345,7 +1347,7 @@ final class PartGenerationCoordinator {
                   taskId: task.taskId,
                   attemptId: attemptId,
                   errorMessage:
-                      resourceGenerationError(e, stage: failureStage).code.name,
+                      encodeGenerationDiagnostic(e, stage: failureStage),
                 ));
           }
           rethrow;
@@ -1414,7 +1416,7 @@ final class PartGenerationCoordinator {
                   taskId: task.taskId,
                   attemptId: attemptId,
                   errorMessage:
-                      resourceGenerationError(e, stage: failureStage).code.name,
+                      encodeGenerationDiagnostic(e, stage: failureStage),
                 ));
           }
           rethrow;
@@ -1464,8 +1466,7 @@ final class PartGenerationCoordinator {
               partId: request.partId,
               taskId: task.taskId,
               attemptId: attemptId,
-              errorMessage:
-                  resourceGenerationError(e, stage: failureStage).code.name,
+              errorMessage: encodeGenerationDiagnostic(e, stage: failureStage),
             ));
         rethrow;
       }
@@ -1610,5 +1611,5 @@ final class PartGenerationCoordinator {
     );
   }
 
-  String _failureCode(Object error) => resourceGenerationError(error).code.name;
+  String _failureCode(Object error) => encodeGenerationDiagnostic(error);
 }
