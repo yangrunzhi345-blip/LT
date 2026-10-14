@@ -20,6 +20,7 @@ import 'package:lt_dialogue/core/debug/generation_diagnostics.dart';
 import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/resources/part_contract_status.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/controllers/resource_studio_controller.dart';
@@ -736,6 +737,12 @@ final class _SoakStudioRuntime implements ResourceStudioRuntime {
 
   @override
   Future<int?> sessionElasticPercent(String sessionId) async => null;
+
+  @override
+  Future<Map<String, PartContractStatus>> blueprintPartContracts(
+    ResourceId resourceId,
+  ) async =>
+      const <String, PartContractStatus>{};
 
   @override
   Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(

@@ -2471,6 +2471,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get outlinePartGenerated => '생성됨';
 
   @override
+  String get partContentIntegrityUnconfirmed => '콘텐츠 완전성이 아직 확인되지 않았습니다';
+
+  @override
   String get operationFailedRetry => '작업 실패, 다시 시도해 주세요';
 
   @override

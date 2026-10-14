@@ -8,6 +8,7 @@ import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
 import '../../../../application/resource_library/character_generation_reference.dart';
 import '../../../../domain/resources/resource_generation_patch.dart';
+import '../../../../domain/resources/part_contract_status.dart';
 import '../../../../domain/resources/resource_generation_protocol.dart';
 import '../../../../domain/resources/streaming_generation_runtime_contracts.dart';
 import '../../application/use_cases/resource_studio_runtime.dart';
@@ -68,6 +69,11 @@ final class ResourceStudioController extends ChangeNotifier {
   int? _elasticOverridePercent;
   String? _elasticOverrideUpdatedAt;
 
+  /// U6-D: read-only content-contract status per Part (keyed by full Part id),
+  /// for the non-destructive legacy review hint. Empty until loaded.
+  Map<String, PartContractStatus> _partContractStatuses =
+      const <String, PartContractStatus>{};
+
   /// The attempt currently owning each Part, so a late failure event from a
   /// superseded attempt can never be applied to the current one.
   final Map<String, String> _currentAttemptByPart = <String, String>{};
@@ -116,6 +122,11 @@ final class ResourceStudioController extends ChangeNotifier {
 
   /// CAS token of the last override read, null when no resource is loaded.
   String? get elasticOverrideUpdatedAt => _elasticOverrideUpdatedAt;
+
+  /// U6-D: per-Part content-contract status. Only [PartContractStatus
+  /// .legacyUnknownContract] shows the legacy review hint in the Studio.
+  Map<String, PartContractStatus> get partContractStatuses =>
+      _partContractStatuses;
 
   /// Persists an independent elastic override for the loaded resource, or
   /// restores inheritance with null. Reloads afterwards so the effective
@@ -216,6 +227,21 @@ final class ResourceStudioController extends ChangeNotifier {
       final elasticOverride = resolvedResourceId == null
           ? null
           : await _runtime.readGenerationElasticOverride(resolvedResourceId);
+      // P2: the contract projection is optional display data. Any failure here
+      // must never block opening a resource whose tree loaded successfully, so
+      // degrade to `unavailable` (no legacy hint) instead of failing `load()`.
+      var contractStatuses = const <String, PartContractStatus>{};
+      if (resolvedResourceId != null) {
+        try {
+          contractStatuses =
+              await _runtime.blueprintPartContracts(resolvedResourceId);
+        } on Object {
+          contractStatuses = {
+            for (final part in tree?.parts ?? const <ResourcePart>[])
+              part.id.value: PartContractStatus.unavailable,
+          };
+        }
+      }
       if (_disposed || generation != _stateGeneration) return;
       // A fresh load re-derives state from persistence, so any Part-scoped
       // banner ownership from the previous view is dropped with it.
@@ -224,6 +250,7 @@ final class ResourceStudioController extends ChangeNotifier {
       _elasticPercent = elasticPercent;
       _elasticOverridePercent = elasticOverride?.percent;
       _elasticOverrideUpdatedAt = elasticOverride?.updatedAt;
+      _partContractStatuses = contractStatuses;
       _snapshotPersistedLengths(tree);
       _setState(_state.copyWith(
         status: _statusForSession(session),

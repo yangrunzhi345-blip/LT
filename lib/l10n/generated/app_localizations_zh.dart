@@ -2429,6 +2429,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get outlinePartGenerated => '已生成';
 
   @override
+  String get partContentIntegrityUnconfirmed => '内容完整性尚未确认';
+
+  @override
   String get operationFailedRetry => '操作失败，请重试';
 
   @override
@@ -8677,6 +8680,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get outlinePartGenerated => '已生成';
 
   @override
+  String get partContentIntegrityUnconfirmed => '内容完整性尚未确认';
+
+  @override
   String get operationFailedRetry => '操作失败，请重试';
 
   @override
@@ -14923,6 +14929,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get outlinePartGenerated => '已生成';
+
+  @override
+  String get partContentIntegrityUnconfirmed => '內容完整性尚未確認';
 
   @override
   String get operationFailedRetry => '操作失敗，請重試';

@@ -2553,6 +2553,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get outlinePartGenerated => 'Generated';
 
   @override
+  String get partContentIntegrityUnconfirmed =>
+      'Content completeness not yet verified';
+
+  @override
   String get operationFailedRetry => 'Operation failed, please try again';
 
   @override

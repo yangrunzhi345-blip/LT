@@ -1045,6 +1045,7 @@
   "capacityStatusOverflow": "超出预算",
   "outlinePartPending": "待生成",
   "outlinePartGenerated": "已生成",
+  "partContentIntegrityUnconfirmed": "内容完整性尚未确认",
   "operationFailedRetry": "操作失败，请重试",
   "resourceImportReturnToEdit": "返回修改",
   "resourceImportConfirmSave": "确认保存",

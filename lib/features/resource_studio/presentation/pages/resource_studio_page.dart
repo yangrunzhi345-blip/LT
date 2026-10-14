@@ -493,6 +493,7 @@ final class _ResourceStudioPageState extends ConsumerState<ResourceStudioPage> {
         parts: state.tree!.parts,
         selectedPartId: state.selectedPartId,
         partTaskStatuses: state.partTaskStatuses,
+        partContractStatuses: _controller.partContractStatuses,
         retryingPartIds: state.retryingPartIds,
         onRetryPart: (partId) => unawaited(_controller.retryPart(partId)),
         onPartSelected: (partId) {

@@ -1045,6 +1045,7 @@
   "capacityStatusOverflow": "예산 초과",
   "outlinePartPending": "생성 대기",
   "outlinePartGenerated": "생성됨",
+  "partContentIntegrityUnconfirmed": "콘텐츠 완전성이 아직 확인되지 않았습니다",
   "operationFailedRetry": "작업 실패, 다시 시도해 주세요",
   "resourceImportReturnToEdit": "수정으로 돌아가기",
   "resourceImportConfirmSave": "저장 확인",

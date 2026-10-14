@@ -2453,6 +2453,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get outlinePartGenerated => '生成済み';
 
   @override
+  String get partContentIntegrityUnconfirmed => '内容の完全性は未確認です';
+
+  @override
   String get operationFailedRetry => '操作に失敗しました。再試行してください';
 
   @override

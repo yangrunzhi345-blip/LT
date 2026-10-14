@@ -680,6 +680,135 @@ U6-D §7–§9 要求在 Studio 对 `contentRequirements == null` 的历史 Part
 
 本轮**未**创建 `completion_provenance` 迁移，未合并 main，未发布。整体仍 **NOT ACCEPTED**。
 
+## U6-D：Legacy 历史审阅兼容（只读契约投影 + 低干扰提示）
+
+Status: COMPLETE（U6-D；独立审查见下）
+分支：`fix/u6d-legacy-review-final-20261014`（基线 origin/main `8ad0680`）。
+提交 SHA：见下方 commit。
+
+批准方案 Option 1（只读投影）：
+
+- 新增 `lib/domain/resources/part_contract_status.dart`：枚举 `PartContractStatus`
+  {confirmedContract, legacyUnknownContract, notApplicable, unavailable} 与**纯**投影
+  `PartContractProjection`。判定**只**依据资源自身创建元数据
+  （`authoring_method == 'aiReference'` 且 `creation_session_id` 非空）与其**已确认蓝图**的 Part 契约；
+  **不**用「没有生成任务」「正文很短」「找不到蓝图」推断 legacy（缺失/不可靠 → `unavailable`）。
+- `ResourceStudioRuntime.blueprintPartContracts(ResourceId)`（只读；接口默认返回空，实现读取 tree +
+  已确认蓝图并投影）；`ResourceStudioController.partContractStatuses` 在 `load()` 一并读取。
+- Studio outline 仅对 `legacyUnknownContract` 显示低干扰提示「内容完整性尚未确认」
+  （`outline-legacy-review-<id>`，info SVG，`onSurfaceVariant`），不改变 completed 状态 / 正文 /
+  hash / attempt / revision / E/C / 装配资格。**未**新增数据库字段或 `completion_provenance` 迁移。
+- 新增 6 locale 文案 `partContentIntegrityUnconfirmed` 并重新生成 l10n。
+
+真实验证：
+
+- 新增测试：领域投影 7 PASS、运行时+SQLite 5 PASS（真实 SQLite：legacy AI 蓝图→legacyUnknownContract、
+  新 U6 计划→confirmedContract、手工→notApplicable、只读不改写且保留历史 1 字正文/hash、
+  重启后状态一致）、outline Widget 8 PASS（仅 legacy 显示提示、其余状态不显示、6 locale、
+  320px + textScale 1.0/1.8 无溢出）。
+- U6-D 定向 20 PASS；Studio 相关组合 110 PASS；`test/widget`+`test/application/resources`
+  +`test/domain/resources` **2436 PASS，退出码 0**；analyze 零问题；format 0 changed；diff-check PASS。
+- 无 LLM 调用、无数据库写入副作用（投影仅读）。
+
+独立审查（另一 Agent，只读）：裁决 **VERIFIED / PASSED**，未解决发现 **BLOCKER=0、MAJOR=0**。
+独立复跑三个 U6-D 文件 **20 PASS**（退出码 0）；独立确认：状态**仅**由
+`authoring_method=='aiReference'` + 非空 `creation_session_id` + 已确认蓝图上的 Part 契约推导
+（`part_contract_status.dart`），缺失蓝图 → `unavailable`（fail-quiet），**从不**用缺失任务 / 短正文
+推断；运行时仅 `readTree`/`findBlueprint`/`findLatestBlueprint` 读取、无写入无 LLM
+（`resource_studio_runtime.dart`）；提示仅在 `legacyUnknownContract` 显示（`resource_studio_outline.dart`）；
+无 schema/migration 变更。审查未覆盖：多语言文案正确性、soak 行为、控制器生命周期竞态（由本单元
+6 locale Widget 用例与 2436 项回归另行覆盖）。
+
+下一工作单元：**U6-E**（跨模块集成）。
+
+## U6-E：跨模块综合回归（资源 / 装配 / 冒险启动）
+
+Status: COMPLETE（U6-E；独立审查见下）
+分支：`fix/u6d-legacy-review-final-20261014`。
+
+范围：验证 U6 新契约不破坏 LT 原有资源体系与装配 / 冒险启动。**以既有真实集成回归为主，
+未做生产代码改动**（仅新增一个 U6 专项集成测试文件）。
+
+- 既有跨模块套件复跑 PASS：`adventure_start_sqlite_production_test`（世界观/角色/NPC → 装配 →
+  冒险启动 + 首轮）、`adventure_compression_lifecycle_sqlite_test`（压缩候选/发布生命周期）、
+  `assembly_readiness_coordinator_test`、`compression_pipeline_test`、`compression_concurrency_test`、
+  `compression_worker_test`、`phase10_index_and_compression_test`、`resource_assembly_builder_test`、
+  `worldview_reference_generation_test`、`generation_aggregate_budget_sqlite_test`。
+- 新增 `test/application/resources/u6e_cross_module_integration_test.dart`（5 例，真实 SQLite +
+  真实 coordinator/pipeline；仅模型正文为假）：
+  1. 角色 T=10000、E20：10 段 ×动态最低契约 → 全部完成，总量 10000 ≤ 冻结 C=12000
+     （future reserve 在提交期被尊重）；
+  2. E50：run-scoped 50% 在 confirm 冻结 → 总量 10000 ≤ C=15000，无漂移；
+  3. 世界观 T=20000、单段 3000：含 Unicode/Markdown/无末尾换行的长正文**逐字保存**（长度一致）；
+  4. NPC：合法短 Scalar（"导师"）完成，同资源 narrative 段因过短失败 —— 两类契约共存且各自把关；
+  5. 旧 Legacy 无契约资源：confirm 放行、契约保持 null、树可读、`AssemblyReadinessCoordinator.prepare`
+     正常运行（新契约不阻断旧资源打开）。
+
+真实验证：
+
+- U6-E 定向（含既有跨模块）**91 PASS，退出码 0**；`/tmp/lt-u6e.log`。
+- 既有跨模块 10 套件 **133 PASS**；`/tmp/lt-u6e-existing.log`。
+- `flutter analyze --no-pub` 零问题；format 0 changed；`git diff --check` PASS。
+- 未发现需要修复的真实缺陷；**未**绕过任何就绪校验，压缩仍为候选 + 显式发布。
+
+独立审查（另一 Agent，只读）：裁决 **PASS / VERIFIED**，未解决发现 **BLOCKER=0、MAJOR=0**。
+独立复跑 U6-E + 冒险启动 + 装配就绪 + 压缩 4 文件 **58 PASS**（退出码 0）；独立确认断言为真实链
+（真实 SQLite `phase10_fixture.dart:32-37`、真实 `AssemblyReadinessCoordinator`），仅模型正文为假；
+**无就绪校验绕过**（legacy 用例调用真实 `fixture.coordinator.prepare` 并断言 `record.state != null`，
+`u6e_cross_module_integration_test.dart:225-229`），无自动压缩发布捷径。审查未覆盖：`flutter analyze`、
+全仓套件、真实 UI/桌面（由本轮其他门禁与 Work Unit 4 覆盖）。
+
+下一工作单元：**全仓回归与最终验收**。
+
+## Work Unit 4：全仓回归与最终验收
+
+Status: 见「最终验收矩阵」文档 `character-generation-budget-final-acceptance-matrix.md`
+分支：`fix/u6d-legacy-review-final-20261014`；baseline origin/main `8ad0680`。
+
+- main@`8ad0680` 的 GitHub Actions Quality gate 已通过（含完整 `flutter test`）；本轮对新分支的
+  增量变更重新执行完整 `flutter test --no-pub`。
+- 首轮全仓 **+4082 ~7 -1**：1 项失败为 **U6-D 引入的真实回归** ——
+  `test/application/runtime/r05_async_state_ownership_test.dart` 的 `_ScriptedStudioRuntime`
+  用 `noSuchMethod` 兜底（抛 `UnimplementedError`），未实现新增的
+  `ResourceStudioRuntime.blueprintPartContracts`，导致 `load()` 读契约时抛错 → 状态 `failed`。
+  **最小修复**：为该 fake 补 `blueprintPartContracts` 覆盖（返回空），仅测试夹具，未改生产逻辑；
+  `test/application/runtime` 27 PASS。
+- 静态门禁：`flutter analyze --no-pub` 零问题；`dart format --output=none --set-exit-if-changed lib test`
+  884 文件 0 changed；`git diff --check` PASS。
+- 修复后全仓复跑结果见「最终验收矩阵」的 FULL REGRESSION 行。
+- **修复后全仓 `flutter test --no-pub`：+4083 PASS / ~7 SKIP / 0 FAIL，退出码 0**（12m33s）；
+  日志 `/tmp/lt-full-regression2.log`。
+- 最终验收矩阵：`character-generation-budget-final-acceptance-matrix.md`（R1–R6 / U6-A–E /
+  Phase 1–6 / T01–T31，含 NOT AUTHORIZED 与 NOT VERIFIED 明确标注）。
+
+## P2 修复：Legacy 契约读取不得阻止 Studio 打开（PR #7 反馈）
+
+Status: FIXED（PR #7 Codex Review P2）。
+分支：`fix/u6d-legacy-review-final-20261014`。
+
+反馈（`resource_studio_controller.dart:232`）：当 AI 资源关联的已存 Blueprint JSON 损坏或与当前解析器不兼容时，
+`blueprintPartContracts` 抛错，`load()` 将其视为整个 Studio 失败；而资源树与用户正文可能仍然有效。
+
+确定性复现（修复前）：新增 `test/application/resources/u6d_contract_projection_resilience_sqlite_test.dart`
+——有效资源树 + 损坏 `blueprint_json` → 契约投影抛 `FormatException`、`load()` 状态 `failed`。
+
+修复原则与范围（受控降级，仅限**可选蓝图读取**边界）：
+
+- 契约投影（P2 明确位置）与 `ensureSession` 的蓝图读取均改为 **fail-quiet**：损坏/不兼容蓝图 → 该资源
+  Part 一律 `PartContractStatus.unavailable`（**绝不**伪造 `legacyUnknownContract`），或会话解析返回 null；
+  Studio 仍打开。仅保留安全诊断 `errorType` + `resourceId`，不含正文或 Blueprint 内容。
+- **主体资源树读取（`readTree`）保持致命**，未被吞掉（回归用例 #4 断言仍 `failed`）。
+- 控制器边界再加一层防御：投影调用抛错时按已加载树的 Part 降级为 `unavailable`。
+- 未改 Schema / 正文 / Hash / Attempt / Revision / 完成状态；无模型调用、无数据库写入。
+
+回归用例（真实 SQLite + 生产读取链）：1) 损坏蓝图 → 投影不抛、Studio 可打开；2) 状态为 `unavailable`
+且不显示 Legacy 提示；3) 正常 legacy / 已确认契约分类不变；4) 真实树读取失败仍按原错误处理；
+5) 旧查询不覆盖新状态（既有 R05 竞态用例覆盖）；6) 历史一字正文与 Hash / Revision 原样保留；
+7) 无模型调用 / 数据库写入副作用。
+
+真实验证：P2 定向 **6 PASS**；U6-D 领域/SQLite/Widget + Studio/Controller 组合 **122 PASS**；
+`flutter analyze` 零问题；`dart format` 0 changed；`git diff --check` PASS；全仓回归见下。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`

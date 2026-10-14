@@ -15,6 +15,7 @@ import 'package:lt_dialogue/domain/resources/section_control_events.dart';
 import 'package:lt_dialogue/domain/resources/streaming_generation_runtime_contracts.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_capacity_runtime.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_revision_runtime.dart';
+import 'package:lt_dialogue/domain/resources/part_contract_status.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/resource_studio_runtime.dart';
 import 'package:lt_dialogue/features/resource_studio/application/use_cases/section_control_runtime.dart';
 import 'package:lt_dialogue/features/resource_studio/domain/models/resource_capacity_view_state.dart';
@@ -640,6 +641,12 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
 
   @override
   Future<int?> sessionElasticPercent(String sessionId) async => null;
+
+  @override
+  Future<Map<String, PartContractStatus>> blueprintPartContracts(
+    ResourceId resourceId,
+  ) async =>
+      const <String, PartContractStatus>{};
 
   @override
   Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(
