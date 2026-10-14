@@ -398,6 +398,15 @@ void main() {
   group('acceptance matrix at the SQLite commit boundary', () {
     // Spec 8.1 realized end-to-end against real persistence: a commit at
     // exactly C succeeds, one code unit above C is rejected fail-closed.
+    //
+    // Each tuple is (target, total, accepted): the run must land on exactly C
+    // (accept) or C + 1 (reject). The body under test is committed through the
+    // real CAS path, so it must respect the single-Part transport cap
+    // K = 3000 that the commit transaction re-checks. The sibling Part is
+    // written directly and carries the remainder, so the cumulative-ceiling
+    // boundary is still exercised without committing an illegal oversized
+    // Part. This adapts the R4-era fixture to the new commit-layer K guard
+    // without weakening the boundary assertion.
     final matrix = <(int, int, bool)>[
       (1000, 1200, true),
       (1000, 1201, false),
@@ -410,18 +419,25 @@ void main() {
       (20000, 24000, true),
       (20000, 24001, false),
     ];
-    for (final (target, actual, accepted) in matrix) {
-      test('target $target, body $actual → ${accepted ? 'accept' : 'reject'}',
+    for (final (target, total, accepted) in matrix) {
+      test('target $target, total $total → ${accepted ? 'accept' : 'reject'}',
           () async {
         final stack = await create(target, partCount: 2);
         final tasks = await stack.tasks.findReadyTasks(stack.id.value);
         expect(tasks, hasLength(2));
-        // The sibling Part carries C − actual characters so the candidate
-        // under test lands exactly on the matrix boundary.
+        // The sibling Part carries the remainder so the candidate under test
+        // still lands exactly on the matrix boundary.
         final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
             target: target,
             absolute: ResourceLimits.characterAbsoluteCharacters);
-        final other = (ceiling - actual).clamp(0, ceiling);
+        // The matrix only exercises the two boundary cases: exactly C accepts,
+        // exactly C + 1 rejects.
+        expect(total == ceiling || total == ceiling + 1, isTrue,
+            reason: 'matrix total $total must be C=$ceiling or C+1');
+        final candidate = total <= ResourceLimits.maxPartCharacters
+            ? total
+            : ResourceLimits.maxPartCharacters;
+        final other = total - candidate;
         await fixture.db.update('resource_parts', {'content': '原' * other},
             where: 'id = ?', whereArgs: [tasks.first.partId]);
         await fixture.db.update(
@@ -437,7 +453,7 @@ void main() {
             sectionId: SectionId(task.sectionId),
             partId: PartId(task.partId),
             attemptId: attempt.attemptId,
-            content: '文' * actual);
+            content: '文' * candidate);
         if (accepted) {
           await stack.tasks.commitPartContent(
               response: response,
@@ -447,7 +463,7 @@ void main() {
           expect(
               (await stack.tasks.getPartsContent([task.partId]))[task.partId]!
                   .content,
-              '文' * actual);
+              '文' * candidate);
         } else {
           await expectLater(
               stack.tasks.commitPartContent(
@@ -461,6 +477,11 @@ void main() {
                   .content,
               isEmpty);
         }
+        expect(
+            (await fixture.db.query('resource_parts',
+                    where: 'id = ?', whereArgs: [tasks.first.partId]))
+                .single['content'],
+            '原' * other);
       });
     }
   });
@@ -470,8 +491,9 @@ void main() {
     // A 20,000-target card that naturally expands to 24,000 must still start
     // an adventure: elastic capacity assembles directly, compression is only
     // demanded for overflow. Content is committed through the real CAS path so
-    // the revision head exists for the readiness gate.
-    final stack = await create(20000, partCount: 4);
+    // the revision head exists for the readiness gate. Eight Parts of 3,000
+    // respect K; four oversized 6,000 Parts would now be rejected at commit.
+    final stack = await create(20000, partCount: 8);
     final tasks = await stack.tasks.findReadyTasks(stack.id.value);
     for (final task in tasks) {
       final attempt = await stack.tasks
@@ -484,7 +506,7 @@ void main() {
               sectionId: SectionId(task.sectionId),
               partId: PartId(task.partId),
               attemptId: attempt.attemptId,
-              content: '文' * 6000),
+              content: '文' * 3000),
           taskId: task.taskId,
           attemptId: attempt.attemptId,
           expectedSourceToken: attempt.sourceToken);

@@ -146,6 +146,28 @@ abstract final class PartGenerationValidator {
       );
     }
 
+    // 8b. Confirmed content contract (narrative / scalar / structured).
+    //
+    // A Part whose type was never confirmed has a null contract and stays
+    // legacy: it is never auto-rejected here. When a contract exists, the body
+    // must satisfy its kind/profile/minimum, so a `complete_part` marker can
+    // never finish a Part whose prose is structurally incomplete. The atomic
+    // commit re-checks the same rule before any write.
+    final requirements = request.contentRequirements;
+    if (requirements != null) {
+      try {
+        PartContentRequirementsValidator.validate(
+            response.content, requirements);
+      } on ContentRequirementException catch (error) {
+        throw PartGenerationValidationException(
+          '生成的正文不满足已确认的内容契约（${requirements.kind.name}）',
+          field: 'content_requirements',
+          expected: requirements.validationProfile.name,
+          actual: error.reason.name,
+        );
+      }
+    }
+
     // 9. Strict allowlist on rawDecodedMap to prevent structural mutation or field injection
     if (rawDecodedMap != null) {
       const allowedKeys = {

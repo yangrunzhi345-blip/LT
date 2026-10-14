@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
+import '../../domain/resources/content_requirements.dart';
 import '../../domain/resources/generation_budget_allocation.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
@@ -513,6 +514,25 @@ class PartGenerationTaskRepositoryImpl
     );
   }
 
+  /// Reads the Part's confirmed content contract inside [txn], or null for a
+  /// legacy Part whose content type was never established.
+  ///
+  /// The contract is never inferred from the title and absence stays legacy, so
+  /// old Parts keep their historical behaviour and are never auto-rejected.
+  Future<ContentRequirements?> _contentRequirementsInTransaction(
+    DatabaseExecutor txn, {
+    required String blueprintId,
+    required String resourceId,
+    required String partId,
+  }) async {
+    final read = await _readBlueprintBudgetInTransaction(txn, blueprintId);
+    if (read == null) return null;
+    final prefix = '${resourceId}_';
+    final rawPartId =
+        partId.startsWith(prefix) ? partId.substring(prefix.length) : partId;
+    return read.blueprint.findPart(rawPartId)?.contentRequirements;
+  }
+
   /// Builds the [PartBudgetRequirement] for one Part, or null when the
   /// blueprint does not authorize it.
   PartBudgetRequirement? _requirementFor(
@@ -722,12 +742,45 @@ class PartGenerationTaskRepositoryImpl
       // starve a required tail Part is rejected here, inside the write
       // transaction, and the previously saved content is left untouched.
       final blueprintId = taskRow['blueprint_id']?.toString() ?? '';
-      // NOTE: the single-Part transport cap K is enforced on the generation path
-      // by `PartGenerationValidator` (via `maximumAcceptedCharacters = D_i`,
-      // and `D_i = min(K, …)`). It is deliberately NOT re-added here: the commit
-      // boundary is the cumulative-ceiling + future-reserve authority, and the
-      // commit-level content contract re-check (including `len <= K`) ships with
-      // the R2/Phase 4 content-contract integration.
+
+      // Content-contract + transport-cap guards, both inside this transaction
+      // and before any write. The confirmed blueprint is the authority for the
+      // Part's contract, so a body that the generation path accepted (or a
+      // caller that bypassed `PartGenerationValidator`) can never be written as
+      // `completed` when its prose is structurally incomplete. A legacy Part
+      // has a null contract and is never auto-rejected here.
+      //
+      // `len(body) <= K` is re-checked here as defence in depth: the generation
+      // path already clamps the request to `D_i = min(K, …)`, but the commit is
+      // the write boundary and must not rely on a caller's cooperation.
+      final requirements = await _contentRequirementsInTransaction(
+        txn,
+        blueprintId: blueprintId,
+        resourceId: response.resourceId.value,
+        partId: response.partId.value,
+      );
+      if (requirements != null) {
+        try {
+          PartContentRequirementsValidator.validate(
+              response.content, requirements);
+        } on ContentRequirementException catch (error) {
+          throw PartGenerationValidationException(
+            '提交被拒绝：生成正文不满足已确认的内容契约，已保存内容保持不变',
+            field: 'content_requirements',
+            expected: requirements.kind.name,
+            actual: error.reason.name,
+          );
+        }
+      }
+      if (response.content.length > ResourceLimits.maxPartCharacters) {
+        throw PartGenerationValidationException(
+          '提交被拒绝：正文超过单段传输上限，已保存内容保持不变',
+          field: 'content_length',
+          expected: '<= ${ResourceLimits.maxPartCharacters}',
+          actual: '${response.content.length}',
+        );
+      }
+
       final allocation = await _budgetAllocationInTransaction(
         txn,
         resourceId: response.resourceId.value,

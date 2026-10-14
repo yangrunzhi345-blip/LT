@@ -194,6 +194,66 @@ ACCEPTED。
 已就绪，`PartGenerationRequest` 已携带 `contentRequirements` 与 `acceptedMaximum`，
 R2 在其上接入生产闭环；U6 仍未答复，不得擅自引入 narrative 产品默认阈值。
 
+## R2：正文有效性与完成状态（Phase 4 核心）
+
+Status: PASSED（仅限 R2 有限范围）
+Acceptance Mode: Integrated Single-Agent Review（执行同一 Agent 复查，非独立审查）
+起始 HEAD：`58b6e17`（R1 进度文档提交后）；工作区干净。
+提交 SHA：见下方 commit（提交后在后续记录补齐）。审查报告：
+`character-generation-budget-r2-content-contract-integrated-review.md`。
+
+实施范围（依据实际调用链）：
+
+- `PartGenerationValidator.validate` 新增第 8b 步：当 `request.contentRequirements`
+  非空时调用 `PartContentRequirementsValidator.validate`，narrative / scalar /
+  structured 分别按 kind / profile / minimum 校验；失败抛
+  `PartGenerationValidationException(field: 'content_requirements')`。`complete_part`
+  仅代表协议结束，不再构成正文有效性证明。
+- `commitPartContent` 在同一 SQLite 事务内、任何写入之前，新增：
+  1. 内容契约复核（`_contentRequirementsInTransaction` 从确认蓝图解析契约，
+     null 契约保持 legacy 放行）；
+  2. 提交层 K 守卫 `len(b_i) <= ResourceLimits.maxPartCharacters`（R1 MINOR-1）。
+  两者先于既有累计 C + future reserve 复核，保持事务原子性与旧正文保护。
+- 未改动 UI：Studio 完成标签已由权威 task 状态派生（`resource_studio_outline.dart`
+  `_statusLabel`、`resource_studio_controller.dart` 的 `PartCompleted`），提交是唯一
+  completed 权威，故无效正文不会显示“已生成”。legacy `needsContentReview` 审阅信号与
+  “旧正文已保存 / 本次重生成失败”的区分属 R5 / Phase 5 与 U6。
+
+真实验证：
+
+- R2 定向三文件 **60 PASS**，退出码 0；`/tmp/lt-r2-final-check.log`。
+- 预算/契约/CAS/协调器组合 16 文件 **177 PASS**，退出码 0；`/tmp/lt-budget-r2-tests2.log`。
+- 资源子系统扩大回归 **844 PASS**，退出码 0（断点基线 823，增量来自新增用例）；
+  `/tmp/lt-budget-r2-resources-regression.log`。
+- 流式 / 生命周期 / 集成（含 soak）**72 PASS**，退出码 0；`/tmp/lt-r2-extra.log`。
+- 负向证明：临时还原两个 `lib/` 文件为 R2 前内容，R2 定向用例 **+5 -7**（7 个“拒绝”
+  用例 FAIL、5 个“接受 / legacy”用例 PASS），随后 byte-for-byte 还原并 `sha256sum -c`
+  校验通过，复跑全 PASS。
+- `flutter analyze --no-pub` 零问题；5 个变更 Dart 文件 format 0 changed；
+  `git diff --check` PASS。
+
+测试夹具适配（非放宽断言）：`generation_aggregate_budget_sqlite_test.dart` 原先直接经
+`commitPartContent` 提交 >3000 的正文（R1 MINOR-1 已认定真实生成路径不可达、仅测试直写
+可达）。补齐 K 守卫后改为合法候选 `min(total, K)` + 兄弟 Part 承载 remainder，仍精确落在
+C / C+1 边界并新增矩阵边界断言；target-boundary 用例改为 8×3000。断言未放宽、无 skip、
+无 mock 真实持久化。与 R4 聚合夹具适配先例一致。
+
+未解决问题：
+
+- R2-MINOR-1：commit 现重复解析蓝图（契约与 allocation 各一次），可后续合并；不影响正确性。
+- R2-MINOR-2：Planner 当前不产出 `contentRequirements`，新任务默认 legacy，1–2 字 narrative
+  在生产中仍可能 completed —— 这是 **U6 未决**的直接后果，非 R2 缺陷；待 U6 批准后由
+  Planner / 客户端 profile 产出契约，R2 确定性校验即自动生效。
+- `content_requirements` 失败暂映射既有 `resourceContentInvalid`，未新增 `contentIncomplete`
+  / `retryDisposition`（R5 范围）。
+- R1 MINOR-2 / 3 / 4 本次未处理。
+
+U6 待决子项（暂停，不猜测）：Planner narrative/scalar/structured profile 与最低阈值、
+requiredFields / requiredHeadings 覆盖、legacy `needsContentReview` UI 审阅策略。
+
+下一工作单元：R5 错误分类、安全数值与受保护恢复；随后独立弹性 E50 的真实 UI→SQLite
+验证、人工认可与历史修订保护、世界观 / 角色 / NPC 集成回归、全仓回归与最终独立审查。
+
 ## 2026-10-13 干净断点与恢复入口
 
 Checkpoint Branch: `fix/character-generation-budget-checkpoint-20261013`
@@ -225,6 +285,8 @@ Checkpoint Status: PAUSED / NOT ACCEPTED（保存已完成局部修复，不是�
 | `09a49ea` | R4 所有规划分支单段上界与显式 minimum、plan/replan/confirm 保护 | Phase 3 一致预算快照、future reserve、派发及事务内重检 |
 | `0932c6d` | R6 heartbeat owner 生命周期、观测语义及负向 / mutation 回归 | Phase 6 跨模块集成、全仓回归与最终独立验收 |
 | `295c7e6` | R1 预算可行性与未来必填容量预留、四闸门 0 请求预检、事务内 commit 复核 | Phase 3 UI 快照闭环、R2 正文完成契约、4 项 MINOR 与整体验收 |
+| `58b6e17` | R1 进度文档补齐（提交状态、110 PASS、4 MINOR、后续依赖） | 不改变整体状态，仍 NOT ACCEPTED |
+| R2 commit | 内容契约贯穿 Validator 与 SQLite Commit、complete_part 不越权、提交层 K 守卫 | Planner 产出契约（依赖 U6）、R5 分类与 UI 审阅信号 |
 
 收尾 commit 另保存两处 fixture 适配、独立报告及本断点记录；其哈希通过分支 HEAD
 获得，避免在 commit 内自引用尚未生成的哈希。不改数据库版本、依赖或用户数据。
