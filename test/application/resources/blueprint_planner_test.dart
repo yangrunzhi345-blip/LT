@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:lt_dialogue/application/llm/ai_generator_llm_gateway.dart';
 import 'package:lt_dialogue/application/resources/blueprint_parser.dart';
 import 'package:lt_dialogue/application/resources/blueprint_planner.dart';
 import 'package:lt_dialogue/application/resources/blueprint_validator.dart';
@@ -13,6 +17,7 @@ import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/services/ai_generator_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -836,5 +841,166 @@ void main() {
       expect(cancellationObserved, isTrue);
       expect(requestHandle!.isCancelled, isTrue);
     });
+  });
+
+  group('BlueprintPlanner production transport and SQLite boundary', () {
+    BlueprintPlanner plannerForWire(String wire) {
+      final llm = LLMService(
+        const LLMConfig(
+          provider: LLMProvider.deepseek,
+          apiKey: 'fixture-key',
+          baseUrl: 'https://example.invalid',
+          model: 'deepseek-flash',
+        ),
+        clientFactory: () => MockClient((request) async {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['max_tokens'], 4096);
+          expect(body['thinking'], {'type': 'disabled'});
+          expect(body['response_format'], {'type': 'json_object'});
+          return http.Response(wire, 200,
+              headers: {'content-type': 'text/event-stream; charset=utf-8'});
+        }),
+      );
+      return BlueprintPlanner(
+        pipeline: pipeline,
+        blueprintRepository: blueprintRepo,
+        gateway: AiGeneratorLlmGateway(
+          () => AiGeneratorService(llm),
+          llmResolver: () => llm,
+        ),
+      );
+    }
+
+    String wireFor({
+      required String content,
+      String? finish = 'stop',
+      bool done = true,
+      bool reasoningOnly = false,
+    }) =>
+        'data:${jsonEncode({
+              'choices': [
+                {
+                  'delta': {
+                    if (reasoningOnly) 'reasoning_content': 'fixture analysis',
+                    'content': content,
+                  },
+                  if (finish != null) 'finish_reason': finish,
+                }
+              ]
+            })}\r\n\r\n${done ? 'data:[DONE]\r\n\r\n' : ''}';
+
+    for (final target in [10000, 25000, 50000]) {
+      test('should persist and reopen a complete plan for target $target',
+          () async {
+        final session = await setupSession(targetCharacters: target);
+        final planner = plannerForWire(wireFor(content: buildMockJson()));
+        final blueprint = await planner.plan(sessionId: session.sessionId);
+        final result =
+            await planner.confirm(blueprintId: blueprint.blueprintId);
+        expect(blueprint.targetCapacity, target);
+        expect(result.blueprint.status, BlueprintStatus.confirmed);
+        final tasks =
+            await blueprintRepo.findGenerationTasks(blueprint.blueprintId);
+        expect(tasks, hasLength(2));
+        expect(tasks.every((task) => task.status == 'pending'), isTrue);
+
+        // Closing the test database and reopening from the same temporary
+        // directory exercises durable planning/confirmation, not body generation
+        // or Android process restart. Existing Part regressions cover commits.
+        await DatabaseService.resetDatabase();
+        final reopened =
+            await blueprintRepo.findBlueprint(blueprint.blueprintId);
+        expect(reopened?.status, BlueprintStatus.confirmed);
+        expect(reopened?.targetCapacity, target);
+        expect(await treeRepo.findResource(result.resourceId), isNotNull);
+        expect(await blueprintRepo.findGenerationTasks(blueprint.blueprintId),
+            hasLength(2));
+      });
+    }
+
+    test('should accept complete stop without DONE through the planner',
+        () async {
+      final session = await setupSession();
+      final blueprint = await plannerForWire(
+        wireFor(content: buildMockJson(), done: false),
+      ).plan(sessionId: session.sessionId);
+      expect(blueprint.status, BlueprintStatus.draft);
+    });
+
+    for (final scenario in [
+      (
+        name: 'length even with syntactically complete JSON',
+        finish: 'length',
+        done: true,
+        content: buildMockJson(),
+        reasoningOnly: false,
+        incomplete: true
+      ),
+      (
+        name: 'connection EOF without terminal evidence',
+        finish: null,
+        done: false,
+        content: buildMockJson(),
+        reasoningOnly: false,
+        incomplete: true
+      ),
+      (
+        name: 'empty completed response',
+        finish: 'stop',
+        done: true,
+        content: '',
+        reasoningOnly: false,
+        incomplete: false
+      ),
+      (
+        name: 'reasoning-only stop',
+        finish: 'stop',
+        done: true,
+        content: '',
+        reasoningOnly: true,
+        incomplete: false
+      ),
+      (
+        name: 'invalid JSON with stop',
+        finish: 'stop',
+        done: true,
+        content: 'not JSON',
+        reasoningOnly: false,
+        incomplete: false
+      ),
+      (
+        name: 'partial JSON with stop',
+        finish: 'stop',
+        done: true,
+        content: '{"sections":[',
+        reasoningOnly: false,
+        incomplete: false
+      ),
+    ]) {
+      test('should reject ${scenario.name} without saving a Blueprint',
+          () async {
+        final session = await setupSession();
+        final planner = plannerForWire(wireFor(
+          content: scenario.content,
+          finish: scenario.finish,
+          done: scenario.done,
+          reasoningOnly: scenario.reasoningOnly,
+        ));
+        await expectLater(
+          planner.plan(sessionId: session.sessionId),
+          throwsA(scenario.incomplete
+              ? isA<LLMResponseIncompleteException>()
+              : isA<BlueprintParseException>()),
+        );
+        expect(
+            await blueprintRepo.findLatestBlueprint(session.sessionId), isNull);
+        final db = await DatabaseService.database;
+        expect(_count(await db.rawQuery('SELECT COUNT(*) FROM resources')), 0);
+        expect(_count(await db.rawQuery('SELECT COUNT(*) FROM resource_parts')),
+            0);
+        expect((await pipeline.findSession(session.sessionId))?.awaitsPlanning,
+            isTrue);
+      });
+    }
   });
 }

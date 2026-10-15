@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
+import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:http/http.dart' as http;
 import 'package:lt_dialogue/core/debug/generation_diagnostics.dart';
 import 'package:lt_dialogue/application/resources/generation_patch_parser.dart';
@@ -1032,6 +1034,433 @@ void main() {
         throwsA(isA<_SentinelException>()),
       );
     });
+  });
+
+  group('LLMService safe diagnostics', () {
+    late DebugPrintCallback previousPrinter;
+    late bool previousPrinting;
+    final output = <String>[];
+    setUp(() {
+      output.clear();
+      previousPrinter = debugPrint;
+      previousPrinting = GenerationDiagnostics.printingEnabled;
+      GenerationDiagnostics.printingEnabled = false;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) output.add(message);
+      };
+    });
+    tearDown(() {
+      debugPrint = previousPrinter;
+      GenerationDiagnostics.printingEnabled = previousPrinting;
+    });
+    List<Map<String, dynamic>> records() => output
+        .map((line) => jsonDecode(line.substring('[lt-safe-llm] '.length))
+            as Map<String, dynamic>)
+        .toList();
+
+    test('should expose safe metadata without payloads, credentials or IDs',
+        () async {
+      Map<String, dynamic>? wire;
+      final client = _FakeStreamedClient((request) async {
+        wire =
+            jsonDecode((request as http.Request).body) as Map<String, dynamic>;
+        return http.StreamedResponse(
+            Stream.value(utf8.encode(
+                'data: {"choices":[{"delta":{"content":"private-body","reasoning_content":"private-reasoning"},"finish_reason":"stop"}]}\n'
+                'data: {"choices":[],"usage":{"prompt_tokens":13,"completion_tokens":21,"prompt_cache_hit_tokens":8,"prompt_cache_miss_tokens":5}}\n'
+                'data: [DONE]\n')),
+            200);
+      });
+      final service = LLMService(
+        const LLMConfig(
+          provider: LLMProvider.deepseek,
+          apiKey: 'private-key',
+          baseUrl: 'https://private-user:private-password@example.invalid/'
+              'private-path?private-query=1',
+          model: 'deepseek-flash',
+        ),
+        clientFactory: () => client,
+      );
+      final result = await service.sendMessageStreamDetailedTyped(
+        [LlmMessage.user('private-prompt')],
+        (_) {},
+        () {},
+        onReasoningChunk: (_) {},
+        taskHandle: GenerationTaskHandle(taskId: 'private-task')
+            .forRequest('private-request'),
+        params: const CompletionParams(
+            diagnosticTask: LlmTask.resourceBlueprintPlanning),
+      );
+      expect(result.content, 'private-body');
+      expect(wire!.containsKey('diagnosticTask'), isFalse);
+      expect(wire.toString(), isNot(contains('resourceBlueprintPlanning')));
+      for (final secret in [
+        'private-key',
+        'private-user',
+        'private-password',
+        'private-path',
+        'private-query',
+        'private-body',
+        'private-reasoning',
+        'private-prompt',
+        'private-task',
+        'private-request',
+        'Authorization',
+        'stackTrace',
+      ]) {
+        expect(output.join(), isNot(contains(secret)));
+      }
+      if (!GenerationDiagnostics.safeLlmEnabled) {
+        expect(output, isEmpty);
+        return;
+      }
+      final events = records();
+      expect(events.map((event) => event['attemptSequence']).toSet(),
+          hasLength(1));
+      expect(
+          events.every((event) => event['task'] == 'resourceBlueprintPlanning'),
+          isTrue);
+      expect(events.first['provider'], 'deepseek');
+      expect(events.first['model'], 'deepseek-flash');
+      expect(events.first['platform'], defaultTargetPlatform.name);
+      expect(events.first['buildMode'], 'debug');
+      expect(events.first['gitSha'], 'unknown');
+      expect(events.first['version'], 'unknown');
+      expect(
+          events.singleWhere((e) => e['event'] == 'ENDPOINT')['endpointHost'],
+          'example.invalid');
+      expect(events.singleWhere((e) => e['event'] == 'HEADERS')['httpStatus'],
+          200);
+      final shape = events.singleWhere((e) => e['event'] == 'REQUEST_SHAPE');
+      expect(shape['max_tokens'], 4096);
+      expect(shape['thinking.type'], 'disabled');
+      expect(shape['response_format_present'], isFalse);
+      final done = events.singleWhere((e) => e['event'] == 'ATTEMPT_DONE');
+      expect(done['resultFinishReason'], 'stop');
+      expect(done['responseCompleted'], isTrue);
+      expect(done['doneMarker'], isTrue);
+      expect(done['contentChars'], 'private-body'.length);
+      expect(done['reasoningChars'], 'private-reasoning'.length);
+      expect(done['promptTokens'], 13);
+      expect(done['completionTokens'], 21);
+      expect(done['promptCacheHitTokens'], 8);
+      expect(done['promptCacheMissTokens'], 5);
+      expect(done['malformedEvents'], 0);
+    });
+
+    test('should distinguish retries and retain HTTP failure classification',
+        () async {
+      var attempts = 0;
+      final client = _FakeStreamedClient((_) async {
+        if (++attempts == 1) {
+          return http.StreamedResponse(
+              Stream.value(
+                  utf8.encode('{"error":{"message":"private-error"}}')),
+              503);
+        }
+        return http.StreamedResponse(
+            Stream.value(utf8.encode(
+                'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n')),
+            200);
+      });
+      expect(
+          await _service(client: client)
+              .sendMessageStreamTyped([LlmMessage.user('hi')], (_) {}, () {}),
+          'ok');
+      expect(client.sendCalls, 2);
+      expect(output.join(), isNot(contains('private-error')));
+      if (!GenerationDiagnostics.safeLlmEnabled) {
+        expect(output, isEmpty);
+        return;
+      }
+      final events = records();
+      final starts =
+          events.where((e) => e['event'] == 'ATTEMPT_START').toList();
+      expect(starts, hasLength(2));
+      expect(starts[1]['attemptSequence'],
+          greaterThan(starts[0]['attemptSequence'] as int));
+      final failure = events.singleWhere((e) => e['event'] == 'ATTEMPT_FAILED');
+      expect(failure['attemptSequence'], starts[0]['attemptSequence']);
+      expect(failure['failureClass'], 'serverError');
+      expect(failure['retryDecision'], isTrue);
+      expect(failure['retryReason'], 'no-visible-output');
+      expect(
+          events
+              .where((e) => e['event'] == 'HEADERS')
+              .map((e) => e['httpStatus']),
+          [503, 200]);
+    });
+
+    for (final finish in ['length', null]) {
+      test('should retain rejection evidence for finish=$finish', () async {
+        final client = _FakeStreamedClient((_) async => http.StreamedResponse(
+              Stream.value(utf8.encode('data: ${jsonEncode({
+                    'choices': [
+                      {
+                        'delta': {'content': 'private-body'},
+                        if (finish != null) 'finish_reason': finish,
+                      },
+                    ],
+                  })}\n')),
+              200,
+            ));
+        await expectLater(
+            _service(client: client)
+                .sendMessageStreamTyped([LlmMessage.user('hi')], (_) {}, () {}),
+            throwsA(isA<LLMResponseIncompleteException>()));
+        expect(output.join(), isNot(contains('private-body')));
+        if (!GenerationDiagnostics.safeLlmEnabled) {
+          expect(output, isEmpty);
+          return;
+        }
+        final done = records().singleWhere((e) => e['event'] == 'ATTEMPT_DONE');
+        expect(done['resultFinishReason'], finish ?? 'interrupted');
+        expect(done['responseCompleted'], finish != null);
+        expect(done['doneMarker'], isFalse);
+      });
+    }
+
+    test('should record timeout phase without exception details', () async {
+      final client = _FakeStreamedClient(_neverCompletes);
+      await expectLater(
+        _service(
+                client: client,
+                policy: const LLMStreamTimeoutPolicy(
+                    connect: Duration(milliseconds: 10),
+                    firstEvent: Duration(seconds: 1),
+                    idle: Duration(seconds: 1),
+                    overall: Duration(seconds: 1)))
+            .sendMessageStreamDetailedTyped(
+                [LlmMessage.user('hi')], (_) {}, () {}),
+        throwsA(isA<LLMStreamTimeoutException>()),
+      );
+      expect(client.sendCalls, 3);
+      if (!GenerationDiagnostics.safeLlmEnabled) {
+        expect(output, isEmpty);
+        return;
+      }
+      final failures =
+          records().where((e) => e['event'] == 'ATTEMPT_FAILED').toList();
+      expect(failures, hasLength(3));
+      expect(
+          failures.every((e) =>
+              e['timeoutPhase'] == 'connect' && e['failureClass'] == 'timeout'),
+          isTrue);
+      expect(failures.last['retryDecision'], isFalse);
+      expect(failures.last['retryReason'], 'max-attempts');
+    });
+
+    for (final cancel in [false, true]) {
+      test(
+          'should classify ${cancel ? 'cancellation' : 'consumer failure'} safely',
+          () async {
+        final handle = GenerationTaskHandle();
+        final client = _FakeStreamedClient((_) async => http.StreamedResponse(
+            Stream.value(utf8
+                .encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n')),
+            200));
+        await expectLater(
+            _service(client: client).sendMessageStreamDetailedTyped(
+              [LlmMessage.user('hi')],
+              (_) {
+                if (cancel) {
+                  unawaited(handle.cancel());
+                } else {
+                  throw StateError('private-exception');
+                }
+              },
+              () {},
+              taskHandle: handle,
+            ),
+            cancel
+                ? throwsA(isA<GenerationCancelledException>())
+                : throwsStateError);
+        expect(client.sendCalls, 1);
+        expect(output.join(), isNot(contains('private-exception')));
+        expect(output.join(), isNot(contains('stackTrace')));
+        if (!GenerationDiagnostics.safeLlmEnabled) {
+          expect(output, isEmpty);
+          return;
+        }
+        final failure =
+            records().singleWhere((e) => e['event'] == 'ATTEMPT_FAILED');
+        expect(failure['failureClass'], cancel ? 'cancelled' : 'internal');
+        expect(failure['retryDecision'], isFalse);
+        expect(
+            failure['retryReason'], cancel ? 'cancelled' : 'consumer-failed');
+      });
+    }
+  });
+
+  group('LLMService P0-SSE regression', () {
+    _FakeStreamedClient clientFor(String wire, {bool fragmentBytes = false}) {
+      final bytes = utf8.encode(wire);
+      return _FakeStreamedClient((_) async => http.StreamedResponse(
+            Stream<List<int>>.fromIterable(
+                fragmentBytes ? bytes.map((byte) => [byte]) : [bytes]),
+            200,
+          ));
+    }
+
+    for (final prefix in ['data:', 'data: ']) {
+      test('should accept $prefix with CRLF and fragmented UTF-8 through DONE',
+          () async {
+        const content = '{"world":"银月城"}';
+        final payload = jsonEncode({
+          'choices': [
+            {
+              'delta': {'content': content},
+            },
+          ],
+        });
+        final client = clientFor(
+          ': keepalive\r\n'
+          'metadata:$payload\r\n'
+          'data :$payload\r\n'
+          '$prefix$payload\r\n\r\n'
+          '$prefix[DONE]\r\n\r\n',
+          fragmentBytes: true,
+        );
+        final chunks = <String>[];
+        var doneCalls = 0;
+        final result = await _service(client: client)
+            .sendMessageStreamDetailedTyped(
+                [LlmMessage.user('hi')], chunks.add, () => doneCalls++);
+
+        expect(result.content, content);
+        expect(chunks, [content]);
+        expect(result.responseCompleted, isTrue);
+        expect(result.finishReason, LLMFinishReason.completed);
+        expect(result.malformedEventCount, 0);
+        expect(doneCalls, 1);
+        expect(client.sendCalls, 1);
+      });
+
+      for (final finish in ['stop', 'length', null]) {
+        test(
+            'should preserve strict completion with $prefix and finish=$finish',
+            () async {
+          const content = '{"world":"银月城"}';
+          final payload = jsonEncode({
+            'choices': [
+              {
+                'delta': {'content': content},
+                if (finish != null) 'finish_reason': finish,
+              },
+            ],
+          });
+          final client = clientFor('$prefix$payload\n\n'
+              '${finish == 'length' ? '$prefix[DONE]\n\n' : ''}');
+          final chunks = <String>[];
+          var doneCalls = 0;
+          final response = _service(client: client).sendMessageStreamTyped(
+              [LlmMessage.user('hi')], chunks.add, () => doneCalls++);
+
+          if (finish == 'stop') {
+            expect(await response, content,
+                reason: 'an explicit stop completes even without DONE');
+          } else {
+            await expectLater(
+              response,
+              throwsA(isA<LLMResponseIncompleteException>()
+                  .having((e) => e.result.content, 'content', content)
+                  .having(
+                      (e) => e.result.finishReason,
+                      'finishReason',
+                      finish == 'length'
+                          ? LLMFinishReason.length
+                          : LLMFinishReason.interrupted)
+                  .having((e) => e.result.responseCompleted,
+                      'responseCompleted', finish == 'length')),
+            );
+          }
+          expect(chunks, [content]);
+          expect(doneCalls, finish == null ? 0 : 1);
+          expect(client.sendCalls, 1);
+        });
+      }
+    }
+
+    for (final includeChoices in [false, true]) {
+      for (final finish in ['stop', 'length', null]) {
+        test(
+            'should retain usage-only tail with choices=$includeChoices '
+            'without changing finish=$finish', () async {
+          const content = '{"world":"银月城"}';
+          final payload = jsonEncode({
+            'choices': [
+              {
+                'delta': {'content': content},
+                if (finish != null) 'finish_reason': finish,
+              },
+            ],
+          });
+          final usage = jsonEncode({
+            if (includeChoices) 'choices': <Object>[],
+            'usage': {
+              'prompt_tokens': 13,
+              'completion_tokens': 21,
+              'prompt_cache_hit_tokens': 8,
+              'prompt_cache_miss_tokens': 5,
+            },
+          });
+          final client = clientFor('data: $payload\n\n'
+              'data: $usage\n\n');
+          final chunks = <String>[];
+          var doneCalls = 0;
+          final result = await _service(client: client)
+              .sendMessageStreamDetailedTyped(
+                  [LlmMessage.user('hi')], chunks.add, () => doneCalls++);
+
+          expect(result.promptTokens, 13);
+          expect(result.completionTokens, 21);
+          expect(result.promptCacheHitTokens, 8);
+          expect(result.promptCacheMissTokens, 5);
+          expect(result.content, content);
+          expect(chunks, [content]);
+          expect(result.reasoningContent, isNull);
+          expect(
+              result.finishReason,
+              finish == null
+                  ? LLMFinishReason.interrupted
+                  : LLMFinishReason.fromProvider(finish));
+          expect(result.responseCompleted, finish != null);
+          expect(result.malformedEventCount, 0);
+          expect(doneCalls, finish == null ? 0 : 1);
+          expect(client.sendCalls, 1);
+        });
+      }
+    }
+
+    for (final choices in <Object>[
+      'invalid',
+      [42],
+      [
+        {'delta': 42},
+      ],
+    ]) {
+      test('should reject malformed choices with usage: $choices', () async {
+        final malformed = jsonEncode({
+          'choices': choices,
+          'usage': {'completion_tokens': 99},
+        });
+        final client = clientFor('data: $malformed\n\n'
+            'data: {}\n\n'
+            'data: {"choices":[]}\n\n'
+            'data: {"choices":[{"delta":{"content":"valid"},"finish_reason":"stop"}]}\n\n');
+        final chunks = <String>[];
+        final result = await _service(client: client)
+            .sendMessageStreamDetailedTyped(
+                [LlmMessage.user('hi')], chunks.add, () {});
+
+        expect(result.malformedEventCount, 1);
+        expect(result.completionTokens, isNull);
+        expect(result.content, 'valid');
+        expect(chunks, ['valid']);
+        expect(result.finishReason, LLMFinishReason.stop);
+        expect(result.responseCompleted, isTrue);
+      });
+    }
   });
 
   group('R04-D wire protocol handling (shared by streaming and fallback)', () {

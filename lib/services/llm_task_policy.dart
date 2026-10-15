@@ -176,6 +176,7 @@ class LlmTaskResolver {
       enableThinking: thinkingEnabled,
       reasoningEffort: reasoningEffort,
       responseFormat: responseFormat,
+      diagnosticTask: task,
     );
   }
 }

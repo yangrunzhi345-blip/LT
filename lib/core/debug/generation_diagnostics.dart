@@ -1,7 +1,11 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+
+import '../../models/llm_provider.dart';
+import '../../models/llm_task.dart';
 
 /// Debug/profile-only structured tracing for the streaming resource generation
 /// pipeline (P0 freeze investigation).
@@ -20,7 +24,8 @@ import 'package:flutter/foundation.dart';
 ///
 /// The watchdog dumps the last markers, heartbeat ages, durations, counters
 /// and caller-registered state snapshots without ever mutating generation
-/// data. Everything is a no-op in release builds.
+/// data. The general tracing channel is a no-op in release builds; the
+/// separate safe LLM channel requires an explicit compile-time opt-in.
 final class GenerationDiagnostics {
   GenerationDiagnostics._({Duration Function()? elapsed}) : _elapsed = elapsed;
 
@@ -36,6 +41,167 @@ final class GenerationDiagnostics {
 
   /// Tracing is active in debug and profile builds only.
   static bool get enabled => kDebugMode || kProfileMode;
+
+  /// Enables only payload-free LLM metadata, including in release builds.
+  static const safeLlmEnabled = bool.fromEnvironment('LT_SAFE_LLM_DIAGNOSTICS');
+
+  /// Emits a bounded JSON record through a separate, strict allowlist.
+  ///
+  /// Arbitrary debug labels, snapshots, identifiers and exception text never
+  /// enter this channel. Callers must supply the locally assigned attempt
+  /// sequence, rather than a task or session identifier.
+  void markSafeLlm(
+    String event, {
+    required int attemptSequence,
+    Map<String, Object?> details = const {},
+  }) {
+    if (!safeLlmEnabled || attemptSequence <= 0) return;
+    const events = {
+      'ATTEMPT_START',
+      'REQUEST_SHAPE',
+      'ENDPOINT',
+      'HEADERS',
+      'FIRST_EVENT',
+      'FIRST_REASONING',
+      'FIRST_CONTENT',
+      'STREAM_CLOSED',
+      'DONE',
+      'ATTEMPT_DONE',
+      'ATTEMPT_FAILED',
+    };
+    if (!events.contains(event)) return;
+    final record = <String, Object?>{
+      'event': event,
+      'attemptSequence': attemptSequence,
+      'platform': kIsWeb ? 'web' : defaultTargetPlatform.name,
+      'buildMode': kReleaseMode
+          ? 'release'
+          : kProfileMode
+              ? 'profile'
+              : 'debug',
+      'gitSha': _buildValue(const String.fromEnvironment('LT_BUILD_GIT_SHA'),
+          RegExp(r'^[a-fA-F0-9]{7,40}$')),
+      'version': _buildValue(const String.fromEnvironment('LT_BUILD_VERSION'),
+          RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}(?:\+\d{1,9})?$')),
+    };
+    const counts = {
+      'attempt',
+      'maximumAttempts',
+      'elapsedMs',
+      'max_tokens',
+      'contentChars',
+      'reasoningChars',
+      'contentDeltas',
+      'reasoningDeltas',
+      'promptTokens',
+      'completionTokens',
+      'promptCacheHitTokens',
+      'promptCacheMissTokens',
+      'malformedEvents',
+    };
+    const flags = {
+      'response_format_present',
+      'temperature_present',
+      'top_p_present',
+      'doneMarker',
+      'responseCompleted',
+      'streamClosedNormally',
+      'acceptedContent',
+      'acceptedReasoning',
+      'retryDecision',
+    };
+    const categories = <String, Set<String>>{
+      'thinking.type': {'enabled', 'disabled'},
+      'reasoning_effort': {'low', 'medium', 'high', 'max'},
+      'finishReason': {
+        'stop',
+        'completed',
+        'length',
+        'maxTokens',
+        'contentFilter',
+        'toolCall',
+        'cancelled',
+        'interrupted',
+        'error',
+        'unknown',
+      },
+      'resultFinishReason': {
+        'stop',
+        'completed',
+        'length',
+        'maxTokens',
+        'contentFilter',
+        'toolCall',
+        'cancelled',
+        'interrupted',
+        'error',
+        'unknown',
+      },
+      'failureClass': {
+        'timeout',
+        'networkUnavailable',
+        'rateLimited',
+        'unauthorized',
+        'paymentRequired',
+        'forbidden',
+        'notFound',
+        'serverError',
+        'invalidRequest',
+        'unknown',
+        'internal',
+        'cancelled',
+      },
+      'timeoutPhase': {'connect', 'firstEvent', 'idle', 'overall'},
+      'retryReason': {
+        'consumer-failed',
+        'cancelled',
+        'content-already-emitted',
+        'visible-reasoning-already-emitted',
+        'max-attempts',
+        'no-visible-output',
+        'non-retryable-error',
+      },
+    };
+    for (final entry in details.entries) {
+      final key = entry.key;
+      final value = entry.value;
+      if (counts.contains(key) && value is int && value >= 0) {
+        record[key] = value;
+      } else if (flags.contains(key) && value is bool) {
+        record[key] = value;
+      } else if (key == 'httpStatus' &&
+          value is int &&
+          value >= 100 &&
+          value <= 599) {
+        record[key] = value;
+      } else if (key == 'task' && value is LlmTask) {
+        record[key] = value.name;
+      } else if (key == 'provider' &&
+          value is String &&
+          LLMProvider.values.any((provider) => provider.name == value)) {
+        record[key] = value;
+      } else if (key == 'model' &&
+          value is String &&
+          value.length <= 128 &&
+          RegExp(r'^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$').stringMatch(value) ==
+              value) {
+        record[key] = value;
+      } else if (key == 'endpointHost' &&
+          value is String &&
+          value.length <= 253 &&
+          RegExp(r'^[a-zA-Z0-9:.\[\]-]+$').stringMatch(value) == value) {
+        record[key] = value;
+      } else if (value is String && categories[key]?.contains(value) == true) {
+        record[key] = value;
+      }
+    }
+    debugPrint('[lt-safe-llm] ${jsonEncode(record)}');
+  }
+
+  static String _buildValue(String value, RegExp format) =>
+      value.length <= 64 && format.stringMatch(value) == value
+          ? value
+          : 'unknown';
 
   /// Console printing gate for tests: markers/counters stay recorded even
   /// when printing is off, so high-volume soak runs keep test output sane.
