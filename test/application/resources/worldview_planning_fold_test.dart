@@ -5,7 +5,6 @@ import 'package:lt_dialogue/application/resources/blueprint_planner.dart';
 import 'package:lt_dialogue/application/resources/resource_blueprint_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
-import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/services/database_service.dart';
@@ -239,7 +238,7 @@ void main() {
       expect(reopened.totalEstimatedLength, 40000);
 
       final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
-        target: reopened.targetCapacity!,
+        target: reopened.targetCapacity,
         absolute: ResourceLimits.worldviewAbsoluteCharacters,
         elasticPercent: GenerationBudgetPolicy.defaultElasticPercent,
       );
