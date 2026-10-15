@@ -109,7 +109,10 @@ void main() {
       test(
           'should reject an under-target oversized model Part before saving a $type plan',
           () async {
-        final sessionId = await createSession('initial', type, 12000);
+        // 15000 keeps a single 10000-char Part under the (folded) planning
+        // target for every type, so the oversized Part is rejected rather than
+        // silently redistributed by the normalizer.
+        final sessionId = await createSession('initial', type, 15000);
         final before = await snapshot();
         await expectLater(planner([10000]).plan(sessionId: sessionId),
             throwsA(isA<BlueprintValidationException>()));
@@ -118,7 +121,7 @@ void main() {
       test(
           'should preserve previous draft, IDs and revisions after invalid $type replan',
           () async {
-        final sessionId = await createSession('replan', type, 12000);
+        final sessionId = await createSession('replan', type, 15000);
         final previous = await planner([500, 500]).plan(sessionId: sessionId);
         final before = await snapshot();
         await expectLater(
@@ -148,10 +151,16 @@ void main() {
       test(
           'should confirm legally normalized $type plans with the original authorized DAG',
           () async {
-        final sessionId = await createSession('normalize', type, 5000);
+        // The plan is normalized to the type's *planning* target (worldview
+        // folds the user target), while the persisted capacity still equals the
+        // user's real target.
+        const userTarget = 5000;
+        final plannedTarget =
+            BlueprintPlanner.planningTargetFor(type, userTarget);
+        final sessionId = await createSession('normalize', type, userTarget);
         final normalized =
             await planner([10000, 2000]).plan(sessionId: sessionId);
-        expect(normalized.totalEstimatedLength, 5000);
+        expect(normalized.totalEstimatedLength, plannedTarget);
         expect(normalized.allParts.map((part) => part.estimatedLength),
             everyElement(lessThanOrEqualTo(ResourceLimits.maxPartCharacters)));
         final result = await stack.blueprintRepository

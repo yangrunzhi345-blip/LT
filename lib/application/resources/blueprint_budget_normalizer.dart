@@ -12,9 +12,18 @@ abstract final class BlueprintBudgetNormalizer {
   /// For an over-target plan, preserves Section/Part order and distributes the
   /// target by the model's original proportions. Largest remainders use the
   /// original Part order as a deterministic tie-breaker.
+  ///
+  /// [targetCharacters] sizes the *plan* (the Parts' final [estimatedLength]).
+  /// [targetCapacityOverride] lets the caller keep a different, authoritative
+  /// generation ceiling on the blueprint (e.g. the user's real target when the
+  /// plan itself was folded down): only the Part distribution follows
+  /// [targetCharacters], while `targetCapacity` uses the override. Without an
+  /// override the previous behaviour is unchanged and `targetCapacity` equals
+  /// [targetCharacters].
   static ResourceBlueprint normalizeToGenerationTarget(
     ResourceBlueprint blueprint, {
     required int targetCharacters,
+    int? targetCapacityOverride,
   }) {
     final parts = blueprint.allParts;
     final total = blueprint.totalEstimatedLength;
@@ -53,7 +62,7 @@ abstract final class BlueprintBudgetNormalizer {
     );
     var index = 0;
     return blueprint.copyWith(
-      targetCapacity: targetCharacters,
+      targetCapacity: targetCapacityOverride ?? targetCharacters,
       sections: [
         for (final section in blueprint.sections)
           section.copyWith(

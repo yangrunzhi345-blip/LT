@@ -125,7 +125,10 @@ void main() {
       ),
     ]);
     final planned = await planner.plan(sessionId: session.sessionId!);
-    expect(planned.allParts.single.contentRequirements!.minimumCharacters, 1000,
+    // Worldview plans are folded to 80% of the target (3000 -> 2400), so the
+    // client policy derives the minimum from the folded length (2400 -> 820),
+    // never from the model's forged minimum=1.
+    expect(planned.allParts.single.contentRequirements!.minimumCharacters, 820,
         reason: '模型伪造的 minimum=1 必须被客户端覆盖');
   });
 

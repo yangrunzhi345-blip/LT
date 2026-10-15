@@ -172,6 +172,10 @@ void main() {
 
     test('custom target enters the prompt, blueprint, and budget validator',
         () async {
+      // Worldview plans are folded to 80% of the user's target so the model's
+      // known over-generation still lands inside the elastic ceiling. Only the
+      // PLAN is folded: the user's real target is still what the blueprint
+      // persists (`targetCapacity`) and what the validator bounds against.
       final session = await setupSession(targetCharacters: 3000);
       var capturedSystemPrompt = '';
       final planner = BlueprintPlanner(
@@ -189,8 +193,8 @@ void main() {
 
       final blueprint = await planner.plan(sessionId: session.sessionId);
 
-      expect(capturedSystemPrompt, contains('约 3000 字'));
-      expect(capturedSystemPrompt, contains('不能超过 3000 字'));
+      expect(capturedSystemPrompt, contains('约 2400 字'));
+      expect(capturedSystemPrompt, contains('不能超过 2400 字'));
       expect(blueprint.targetCapacity, 3000);
 
       final secondSession = await setupSession(targetCharacters: 3000);
@@ -208,7 +212,9 @@ void main() {
       final normalized = await overBudgetPlanner.plan(
         sessionId: secondSession.sessionId,
       );
-      expect(normalized.totalEstimatedLength, 3000);
+      // The plan total is folded to 2400 but the persisted capacity stays 3000.
+      expect(normalized.totalEstimatedLength, 2400);
+      expect(normalized.targetCapacity, 3000);
     });
 
     test('2. Character Blueprint planning produces character specific outline',
@@ -963,7 +969,9 @@ void main() {
       final large = largeRequests.single['max_tokens'] as int;
       expect(small, isNot(4096));
       expect(large, greaterThan(small));
-      expect(large, greaterThan(16384));
+      // Worldview plans are folded, so the 50,000 target grants the budget of a
+      // 40,000 plan — still far above the old fixed 4,096 and model-derived.
+      expect(large, greaterThan(8192));
       expect(large, lessThanOrEqualTo(393216));
     });
 
@@ -988,7 +996,7 @@ void main() {
       expect(requests, hasLength(2));
       for (final body in requests) {
         final maxTokens = body['max_tokens'] as int;
-        expect(maxTokens, greaterThan(16384));
+        expect(maxTokens, greaterThan(8192));
         expect(maxTokens, lessThanOrEqualTo(393216));
       }
     });
@@ -1004,7 +1012,7 @@ void main() {
 
       final body = requests.single;
       expect(body['max_tokens'], isA<int>());
-      expect(body['max_tokens'] as int, greaterThan(16384));
+      expect(body['max_tokens'] as int, greaterThan(8192));
       expect(body['max_tokens'] as int, lessThanOrEqualTo(393216));
       expect(body['thinking'], {'type': 'disabled'});
       expect(body['response_format'], {'type': 'json_object'});

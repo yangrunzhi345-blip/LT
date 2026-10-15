@@ -75,6 +75,30 @@ final class BlueprintPlanner {
   /// first, and never more than the model's own ceiling.
   static const int maxPlanningAttempts = 2;
 
+  /// Internal planning-fold factor for worldview blueprints.
+  ///
+  /// The model systematically over-generates relative to the planning scale it
+  /// is asked for. Worldview plans are therefore *planned* to this fraction of
+  /// the user's target so the delivered body still lands inside the elastic
+  /// ceiling. This is a planning-time mitigation only: it is applied exactly
+  /// once, at the planning entry, and the folded value is never persisted as
+  /// (or written back into) the user's real target or elasticity.
+  static const double planningFoldFactor = 0.8;
+
+  /// The planning-scale target for [resourceType].
+  ///
+  /// Worldview folds the user's target by [planningFoldFactor]; every other
+  /// resource type plans at the full target, so character, NPC, import and
+  /// optimization behaviour is unchanged. `floor` keeps the folded value a
+  /// conservative integer that can never exceed the user's own target.
+  static int planningTargetFor(
+    ResourceType resourceType,
+    int userTargetCharacters,
+  ) {
+    if (resourceType != ResourceType.worldview) return userTargetCharacters;
+    return (userTargetCharacters * planningFoldFactor).floor();
+  }
+
   static ModelCapabilities Function()? _capabilitiesFromGateway(
     LlmGateway? gateway,
   ) {
@@ -118,11 +142,18 @@ final class BlueprintPlanner {
     }
 
     final pool = idPool ?? BlueprintIdPool.createDefault();
-    final targetCharacters = session.targetCharacters;
+    // The user's real target governs the persisted blueprint capacity, the
+    // elastic ceiling and the resource capacity checks. The (worldview-folded)
+    // planning target only sizes the plan the model is asked for.
+    final userTargetCharacters = session.targetCharacters;
+    final planningTargetCharacters = planningTargetFor(
+      session.resourceType,
+      userTargetCharacters,
+    );
     final systemPrompt = BlueprintPromptBuilder.buildSystemPrompt(
       resourceType: session.resourceType,
       idPool: pool,
-      nominalBudget: targetCharacters,
+      nominalBudget: planningTargetCharacters,
     );
     final userInstruction = BlueprintPromptBuilder.buildUserInstruction(
       resourceName: session.name,
@@ -134,14 +165,15 @@ final class BlueprintPlanner {
       'systemLength': systemPrompt.length,
       'instructionLength': userInstruction.length,
       'referenceLength': session.referenceSource.body.length,
-      'targetCharacters': targetCharacters,
+      'userTargetCharacters': userTargetCharacters,
+      'planningTargetCharacters': planningTargetCharacters,
     });
 
     _checkCancellation(taskHandle);
 
     final budget = _computeBudget(
       resourceType: session.resourceType,
-      targetCharacters: targetCharacters,
+      targetCharacters: planningTargetCharacters,
       referenceCharacters: session.referenceSource.body.length,
       systemPrompt: systemPrompt,
       instruction: userInstruction,
@@ -179,7 +211,7 @@ final class BlueprintPlanner {
       resourceType: session.resourceType,
       revision: 1,
       fallbackName: session.name,
-      targetCapacityOverride: targetCharacters,
+      targetCapacityOverride: userTargetCharacters,
     );
     parseWatch.stop();
 
@@ -187,7 +219,8 @@ final class BlueprintPlanner {
     final normalizedBlueprint =
         BlueprintBudgetNormalizer.normalizeToGenerationTarget(
       parsedBlueprint,
-      targetCharacters: targetCharacters,
+      targetCharacters: planningTargetCharacters,
+      targetCapacityOverride: userTargetCharacters,
     );
     // U6: attach the client-authoritative content contract once the final Part
     // lengths are decided. Any contract the model emitted is replaced, so it can
@@ -198,7 +231,7 @@ final class BlueprintPlanner {
     BlueprintValidator.validate(
       contracted.blueprint,
       idPool: pool,
-      maxBudgetOverride: targetCharacters,
+      maxBudgetOverride: userTargetCharacters,
     );
     normalizeWatch.stop();
     GenerationDiagnostics.instance
@@ -260,12 +293,16 @@ final class BlueprintPlanner {
 
     final newRevision = latest.revision + 1;
     final pool = idPool ?? BlueprintIdPool.createDefault();
-    final targetCharacters = session.targetCharacters;
+    final userTargetCharacters = session.targetCharacters;
+    final planningTargetCharacters = planningTargetFor(
+      session.resourceType,
+      userTargetCharacters,
+    );
 
     final systemPrompt = BlueprintPromptBuilder.buildSystemPrompt(
       resourceType: session.resourceType,
       idPool: pool,
-      nominalBudget: targetCharacters,
+      nominalBudget: planningTargetCharacters,
     );
     final userInstruction = BlueprintPromptBuilder.buildReplanInstruction(
       previousBlueprint: latest,
@@ -277,7 +314,7 @@ final class BlueprintPlanner {
 
     final budget = _computeBudget(
       resourceType: session.resourceType,
-      targetCharacters: targetCharacters,
+      targetCharacters: planningTargetCharacters,
       referenceCharacters: session.referenceSource.body.length,
       systemPrompt: systemPrompt,
       instruction: userInstruction,
@@ -305,13 +342,14 @@ final class BlueprintPlanner {
       resourceType: session.resourceType,
       revision: newRevision,
       fallbackName: session.name,
-      targetCapacityOverride: targetCharacters,
+      targetCapacityOverride: userTargetCharacters,
     );
 
     final normalizedBlueprint =
         BlueprintBudgetNormalizer.normalizeToGenerationTarget(
       parsedBlueprint,
-      targetCharacters: targetCharacters,
+      targetCharacters: planningTargetCharacters,
+      targetCapacityOverride: userTargetCharacters,
     );
     // U6: a replan gets a freshly generated contract for the NEW plan; the
     // previous revision's contract never carries over.
@@ -320,7 +358,7 @@ final class BlueprintPlanner {
     BlueprintValidator.validate(
       contracted.blueprint,
       idPool: pool,
-      maxBudgetOverride: targetCharacters,
+      maxBudgetOverride: userTargetCharacters,
     );
 
     await _blueprintRepository.saveBlueprint(contracted.blueprint);

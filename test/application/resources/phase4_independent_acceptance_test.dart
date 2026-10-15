@@ -270,15 +270,20 @@ void main() {
   });
 
   group('Independent Phase 4 — capacity policy boundaries', () {
-    test('I-4 worldview normalizes planning metadata to its generation target',
+    test('I-4 worldview normalizes planning metadata to its planning target',
         () async {
       final session = await newSession(type: ResourceType.worldview);
+      // Worldview plans are folded to 80% of the user's real target.
+      final folded = BlueprintPlanner.planningTargetFor(
+          ResourceType.worldview, ResourceLimits.worldviewNominalCharacters);
 
-      // The old single 50000-unit fixture is explicitly rejected by R4.
+      // An oversized Part that still fits the folded planning target is
+      // rejected by R4 rather than silently redistributed. (A Part above the
+      // folded target is now normalized into the folded plan instead.)
       await expectLater(
           plannerWith(llmJson(
             lengths: const [
-              [50000]
+              [3500]
             ],
             deps: const [
               [[]]
@@ -290,18 +295,15 @@ void main() {
           await blueprintRepo.findLatestBlueprint(session.sessionId), isNull);
       final atLimit = await plannerWith(budgetJson(50000))
           .plan(sessionId: session.sessionId);
-      expect(atLimit.totalEstimatedLength,
-          ResourceLimits.worldviewNominalCharacters);
+      expect(atLimit.totalEstimatedLength, folded);
       expect(atLimit.allParts.map((part) => part.estimatedLength),
           everyElement(lessThanOrEqualTo(ResourceLimits.maxPartCharacters)));
       expect(await blueprintRepo.findBlueprint(atLimit.blueprintId), isNotNull);
 
       final overTarget = await plannerWith(budgetJson(50001))
           .plan(sessionId: session.sessionId);
-      expect(overTarget.totalEstimatedLength,
-          lessThanOrEqualTo(ResourceLimits.worldviewNominalCharacters));
-      expect(overTarget.totalEstimatedLength,
-          ResourceLimits.worldviewNominalCharacters);
+      expect(overTarget.totalEstimatedLength, lessThanOrEqualTo(folded));
+      expect(overTarget.totalEstimatedLength, folded);
       expect(overTarget.allParts.map((part) => part.estimatedLength),
           everyElement(lessThanOrEqualTo(ResourceLimits.maxPartCharacters)));
     });
