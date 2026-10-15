@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'api_error.dart';
 import '../core/debug/generation_diagnostics.dart';
@@ -125,7 +125,10 @@ class LLMStreamRetryPolicy {
 
 /// Payload-free metadata for one actual HTTP attempt.
 final class _LLMAttemptTrace {
-  _LLMAttemptTrace(this.details);
+  _LLMAttemptTrace(this.details) : diagnosticAttempt = ++_nextDiagnosticAttempt;
+
+  static int _nextDiagnosticAttempt = 0;
+  final int diagnosticAttempt;
 
   final Map<String, Object?> details;
   int contentChars = 0;
@@ -169,11 +172,24 @@ final class _LLMAttemptTrace {
   }
 
   void mark(String event, [Map<String, Object?> extra = const {}]) {
-    GenerationDiagnostics.instance.mark('[LLM][$event]', {
+    final metadata = <String, Object?>{
       ...details,
       'elapsedMs': clock.elapsedMilliseconds,
       ...extra,
-    });
+    };
+    // Diagnostics are observability only. A failure in either channel must
+    // never break streaming, drop already-received content or change a retry
+    // decision, so the cascade is isolated from the generation path. Only the
+    // static type name is surfaced on suppression - never the value, which
+    // could carry provider error text or request data.
+    try {
+      GenerationDiagnostics.instance
+        ..markSafeLlm(event,
+            attemptSequence: diagnosticAttempt, details: metadata)
+        ..mark('[LLM][$event]', metadata);
+    } catch (error) {
+      debugPrint('[LLM][DIAGNOSTIC_SUPPRESSED] ${error.runtimeType}');
+    }
   }
 
   void delta(String chunk, {required bool reasoning}) {
@@ -528,6 +544,7 @@ class LLMService with _SseGateTrace {
             'maximumAttempts': RetryManager.maximumAttempts,
             'provider': config.provider.name,
             'model': config.model,
+            'task': params.diagnosticTask,
           });
           trace.mark('ATTEMPT_START');
           try {
@@ -559,6 +576,8 @@ class LLMService with _SseGateTrace {
               'malformedEvents': result.malformedEventCount,
               'promptTokens': result.promptTokens,
               'completionTokens': result.completionTokens,
+              'promptCacheHitTokens': result.promptCacheHitTokens,
+              'promptCacheMissTokens': result.promptCacheMissTokens,
             });
             return result;
           } catch (error, stackTrace) {
@@ -569,6 +588,8 @@ class LLMService with _SseGateTrace {
                     receivedAnyDelta: acceptedContent || acceptedReasoning);
             trace.mark('ATTEMPT_FAILED', {
               ...trace.snapshot(),
+              if (error is LLMStreamTimeoutException)
+                'timeoutPhase': error.phase.name,
               'runtimeType': error.runtimeType.toString(),
               if (error is ApiError && error.cause != null)
                 'causeType': error.cause.runtimeType.toString(),
@@ -746,7 +767,7 @@ class LLMService with _SseGateTrace {
   /// Decodes one OpenAI-compatible SSE `data:` payload. Throws
   /// [_MalformedProviderEvent] for undecodable JSON or an unexpected shape -
   /// provider problems only, never consumer failures. Returns null for
-  /// keepalive/usage-only events that carry no choices.
+  /// keepalive events that carry neither choices nor usage.
   _OpenAiSseEvent? _parseOpenAiSseEvent(String data, _LLMAttemptTrace trace) {
     final dynamic decoded;
     try {
@@ -775,7 +796,15 @@ class LLMService with _SseGateTrace {
 
     final choices = decoded['choices'];
     // Usage-only / keepalive shaped events legitimately carry no choices.
-    if (choices == null || (choices is List && choices.isEmpty)) return null;
+    if (choices == null || (choices is List && choices.isEmpty)) {
+      if (usage is! Map) return null;
+      return _OpenAiSseEvent(
+        promptTokens: promptTokens,
+        completionTokens: completionTokens,
+        promptCacheHitTokens: promptCacheHitTokens,
+        promptCacheMissTokens: promptCacheMissTokens,
+      );
+    }
     if (choices is! List) throw const _MalformedProviderEvent();
     final choice = choices.first;
     if (choice is! Map<String, dynamic>) throw const _MalformedProviderEvent();
@@ -964,8 +993,10 @@ class LLMService with _SseGateTrace {
           if (DateTime.now().difference(startedAt) >= policy.overall) {
             throw LLMStreamTimeoutException(LLMStreamTimeoutPhase.overall);
           }
-          if (!chunk.startsWith('data: ')) continue;
-          final data = chunk.substring(6);
+          if (!chunk.startsWith('data:')) continue;
+          // SSE permits one optional space after the field separator.
+          final value = chunk.substring(5);
+          final data = value.startsWith(' ') ? value.substring(1) : value;
           if (data == '[DONE]') {
             trace.doneMarker = true;
             trace.mark('DONE');
@@ -985,7 +1016,7 @@ class LLMService with _SseGateTrace {
             malformedEventCount++;
             continue;
           }
-          // Usage-only / keepalive event: never a content delta.
+          // Keepalive event: never a content delta.
           if (event == null) continue;
           if (event.promptTokens != null) promptTokens = event.promptTokens;
           if (event.completionTokens != null) {
@@ -1118,6 +1149,14 @@ class LLMService with _SseGateTrace {
       throw const ApiError(
           type: ApiErrorType.invalidRequest, message: '消息包含无法编码的字符');
     }
+
+    trace.mark('REQUEST_SHAPE', {
+      'max_tokens': params.maxTokens,
+      'thinking.type': 'disabled',
+      'response_format_present': false,
+      'temperature_present': true,
+      'top_p_present': true,
+    });
 
     trace.mark('ENDPOINT',
         {'endpointHost': request.url.host, 'endpointPath': request.url.path});

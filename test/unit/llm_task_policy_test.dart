@@ -10,6 +10,27 @@ void main() {
   // A model with no JSON/thinking support (custom provider fallback).
   final plain = ModelCapabilityRegistry.resolve('custom-model');
 
+  group('LlmTaskResolver diagnostic metadata', () {
+    for (final task in LlmTask.values) {
+      test('should propagate $task in memory without wire or storage changes',
+          () {
+        final params = resolver.resolve(task: task, capabilities: flash);
+        final copied = params.copyWith(maxTokens: 1234);
+        expect(params.diagnosticTask, task);
+        expect(copied.diagnosticTask, task);
+        final restored = CompletionParams.fromJson(params.toJson());
+        expect(restored.diagnosticTask, isNull);
+        expect(restored, params,
+            reason: 'diagnostic metadata does not alter value semantics');
+        expect(restored.toRequestMap(capabilities: flash),
+            params.toRequestMap(capabilities: flash));
+        expect(params.toJson().toString(), isNot(contains(task.name)));
+        expect(params.toRequestMap(capabilities: flash).toString(),
+            isNot(contains(task.name)));
+      });
+    }
+  });
+
   group('LlmTaskResolver — thinking policy', () {
     for (final task in const [
       LlmTask.importExtraction,

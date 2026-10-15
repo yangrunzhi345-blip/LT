@@ -42,3 +42,15 @@ jobs:
 
       - name: Test
         run: flutter test --reporter compact
+
+      # The default-off property of the release-safe LLM diagnostics channel is
+      # already covered by the suite above, but every assertion about the
+      # allowlist-when-enabled behaviour is skipped while the compile-time flag
+      # is absent, which would leave the security control untested. Run the two
+      # suites that exercise it with the flag explicitly enabled.
+      - name: Test safe LLM diagnostics allowlist (opt-in enabled)
+        run: >
+          flutter test test/core/debug/safe_llm_diagnostics_test.dart
+          test/services/llm_streaming_reliability_test.dart
+          --reporter compact
+          --dart-define=LT_SAFE_LLM_DIAGNOSTICS=true

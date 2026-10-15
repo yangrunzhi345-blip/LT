@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 import '../core/utils/json_value_reader.dart';
+import 'llm_task.dart';
 import 'model_capabilities.dart';
 
 class CompletionParams with Equatable {
@@ -13,6 +14,10 @@ class CompletionParams with Equatable {
   final String reasoningEffort;
   final Map<String, dynamic>? responseFormat;
 
+  /// Request phase for safe diagnostics only; excluded from requests,
+  /// persistence and value equality.
+  final LlmTask? diagnosticTask;
+
   const CompletionParams({
     this.temperature = 1.0, // 场景叙事与角色扮演官方推荐 1.0 ~ 1.3
     this.topP = 0.95,
@@ -24,6 +29,7 @@ class CompletionParams with Equatable {
     this.enableThinking = false,
     this.reasoningEffort = 'high', // low, medium, high, max
     this.responseFormat,
+    this.diagnosticTask,
   });
 
   /// Serializes request parameters for a specific model.
@@ -135,6 +141,7 @@ class CompletionParams with Equatable {
       enableThinking: enableThinking ?? this.enableThinking,
       reasoningEffort: reasoningEffort ?? this.reasoningEffort,
       responseFormat: responseFormat ?? this.responseFormat,
+      diagnosticTask: diagnosticTask,
     );
   }
 
