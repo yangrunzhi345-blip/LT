@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:http/http.dart' as http;
 import 'api_error.dart';
 import '../core/debug/generation_diagnostics.dart';
@@ -177,10 +177,19 @@ final class _LLMAttemptTrace {
       'elapsedMs': clock.elapsedMilliseconds,
       ...extra,
     };
-    GenerationDiagnostics.instance
-      ..markSafeLlm(event,
-          attemptSequence: diagnosticAttempt, details: metadata)
-      ..mark('[LLM][$event]', metadata);
+    // Diagnostics are observability only. A failure in either channel must
+    // never break streaming, drop already-received content or change a retry
+    // decision, so the cascade is isolated from the generation path. Only the
+    // static type name is surfaced on suppression - never the value, which
+    // could carry provider error text or request data.
+    try {
+      GenerationDiagnostics.instance
+        ..markSafeLlm(event,
+            attemptSequence: diagnosticAttempt, details: metadata)
+        ..mark('[LLM][$event]', metadata);
+    } catch (error) {
+      debugPrint('[LLM][DIAGNOSTIC_SUPPRESSED] ${error.runtimeType}');
+    }
   }
 
   void delta(String chunk, {required bool reasoning}) {

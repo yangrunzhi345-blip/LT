@@ -132,7 +132,17 @@ Release 诊断目前全部关闭（GenerationDiagnostics.enabled = debug/profile
 **Android 构建状态：BLOCKED。** `flutter build apk --release --target-platform android-arm64` 两次失败：① Gradle daemon 崩溃；② `:app:verifyReleaseSigning` 失败，因 `android/key.properties` 不存在。未产出 APK，未伪造签名，未创建 Release/Tag。
 **Android 真机状态：NOT VERIFIED。** `adb devices -l` 无设备。
 
-## Android 下一步实测方法（尚未执行）
+### 阶段 E：P0-DIAG 独立安全审查与修复（2026-10-15 交接后完成）
+
+Release 安全诊断通道由独立 Agent 只读审查，报告见 [p0-diag-safe-llm-channel-independent-review-20261015.md](p0-diag-safe-llm-channel-independent-review-20261015.md)。结论 **CHANGES REQUESTED**，无 BLOCKER，8 项审查中 7 项 SAFE：
+
+- **F1（MAJOR，已修复）**：CI 全量回归不传 `--dart-define=LT_SAFE_LLM_DIAGNOSTICS=true`，enabled-path 断言被 `if (!safeLlmEnabled) return;` 跳过，泄漏断言在空输出上空真——安全控制无自动回归保护。已新增定向 CI 步骤（仅两个测试文件）并补 3 个探针（`attemptSequence` 注入、allowlisted 键异常值不抛、`endpointHost` userinfo 拒绝）。
+- **F2（MINOR，已修复）**：`_LLMAttemptTrace.mark` 的双通道级联无异常隔离。已包入 try/catch，抑制时仅输出静态类型名，不输出值。
+- **F3–F5（INFO，记录接受）**：`model` 正则允许 URL 形状但排除 `@ ? #` 与空白，无泄漏向量；裸 `data:` 行计为 malformed 属有意策略（`malformedEventCount` 不参与任何内容/重试/finish 决策）；allowlisted int 无上限仅影响日志体积。
+
+**本轮验证**：`safe_llm_diagnostics_test.dart` 开启模式 8 PASS、默认模式 8 PASS；`llm_streaming_reliability_test.dart` 开启/默认各 71 PASS；planner + task policy + truncation + diagnostics 定向 89 PASS；`dart format`、`flutter analyze`、`git diff --check` 通过。修改 `lib/services/llm_service.dart` 后需完整全量回归（见下）。
+
+**Android 下一步实测方法（尚未执行）**
 
 在具有正式签名材料的环境，将修复分支的已提交源码构建为 ARM64 Release：
 

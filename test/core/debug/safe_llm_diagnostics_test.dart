@@ -116,5 +116,74 @@ void main() {
       expect(record.containsKey('model'), isFalse);
       expect(record.containsKey('endpointHost'), isFalse);
     });
+
+    test('should ignore an attemptSequence injected through details', () {
+      GenerationDiagnostics.instance.markSafeLlm('ATTEMPT_DONE',
+          attemptSequence: 23, details: {'attemptSequence': 999, 'attempt': 4});
+      if (!GenerationDiagnostics.safeLlmEnabled) {
+        expect(output, isEmpty);
+        return;
+      }
+      final record =
+          jsonDecode(output.single.substring('[lt-safe-llm] '.length))
+              as Map<String, dynamic>;
+      // The named parameter is authoritative; `attemptSequence` is not part of
+      // any allowlist set, so a caller cannot rewrite the sequence via details.
+      expect(record['attemptSequence'], 23);
+      expect(record['attempt'], 4);
+    });
+
+    test('should never throw on hostile values under allowlisted keys', () {
+      final hostile = <String, Object?>{
+        'contentChars': _Unprintable(),
+        'promptTokens': double.nan,
+        'elapsedMs': double.infinity,
+        'model': _Unprintable(),
+        'endpointHost': _Unprintable(),
+        'httpStatus': _Unprintable(),
+        'finishReason': _Unprintable(),
+        'task': 'not-a-task',
+      };
+      expect(
+          () => GenerationDiagnostics.instance.markSafeLlm('ATTEMPT_FAILED',
+              attemptSequence: 5, details: hostile),
+          returnsNormally);
+      if (!GenerationDiagnostics.safeLlmEnabled) {
+        expect(output, isEmpty);
+        return;
+      }
+      final record =
+          jsonDecode(output.single.substring('[lt-safe-llm] '.length))
+              as Map<String, dynamic>;
+      expect(record.keys.toSet(), {
+        'event',
+        'attemptSequence',
+        'platform',
+        'buildMode',
+        'gitSha',
+        'version',
+      });
+      expect(record['attemptSequence'], 5);
+    });
+
+    test('should reject endpoint hosts that carry userinfo, path or query', () {
+      GenerationDiagnostics.instance
+          .markSafeLlm('ENDPOINT', attemptSequence: 1, details: {
+        'endpointHost': 'user:password@example.invalid',
+        'model': 'deepseek-flash',
+      });
+      if (!GenerationDiagnostics.safeLlmEnabled) {
+        expect(output, isEmpty);
+        return;
+      }
+      final record =
+          jsonDecode(output.single.substring('[lt-safe-llm] '.length))
+              as Map<String, dynamic>;
+      expect(record.containsKey('endpointHost'), isFalse);
+      // A provider model name is the user's own configured value and stays
+      // admissible; it can never contain credentials because the character
+      // class excludes `@ ? #` and whitespace.
+      expect(record['model'], 'deepseek-flash');
+    });
   });
 }
