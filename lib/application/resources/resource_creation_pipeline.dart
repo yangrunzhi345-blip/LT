@@ -552,11 +552,15 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
   }
 
   /// Plans a blueprint for a pending planning session using the pipeline's planner.
+  ///
+  /// [timeout] is optional: when omitted the planner derives the window from the
+  /// dynamic output budget (see `BlueprintTokenBudgetPolicy`), which keeps a
+  /// lower bound of 60 s and a hard upper bound.
   Future<ResourceBlueprint> planAiSession({
     required String sessionId,
     required LlmGateway gateway,
     GenerationTaskHandle? taskHandle,
-    Duration timeout = const Duration(seconds: 60),
+    Duration? timeout,
     BlueprintIdPool? idPool,
   }) async {
     final activePlanner = plannerWithGateway(gateway);

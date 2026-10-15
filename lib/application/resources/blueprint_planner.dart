@@ -5,18 +5,26 @@ import '../../domain/resources/blueprint_content_contract_planner.dart';
 import '../../domain/resources/resource_blueprint.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../models/llm_task.dart';
+import '../../models/model_capabilities.dart';
 import '../../services/llm_service.dart';
 import '../../services/repositories/resource_tree_repository.dart';
+import '../../utils/token_estimator.dart';
 import '../llm/llm_gateway.dart';
 import 'blueprint_budget_normalizer.dart';
 import 'blueprint_parser.dart';
 import 'blueprint_prompt_builder.dart';
+import 'blueprint_token_budget.dart';
 import 'blueprint_validator.dart';
 import 'resource_blueprint_repository.dart';
 import 'resource_creation_contracts.dart';
 import 'resource_creation_pipeline.dart';
 
 /// Function signature for invoking an LLM for structured blueprint planning.
+///
+/// The injected-completer seam owns its own output sizing: it exists so unit
+/// tests can drive the planner without a transport. The production path is the
+/// [LlmGateway], which receives the dynamic output budget computed by
+/// [BlueprintTokenBudgetPolicy].
 typedef BlueprintRawCompleter = Future<String> Function({
   required String systemPrompt,
   required String instruction,
@@ -34,44 +42,68 @@ final class BlueprintPlanner {
     required IResourceBlueprintRepository blueprintRepository,
     BlueprintRawCompleter? completer,
     LlmGateway? gateway,
+    ModelCapabilities Function()? capabilitiesResolver,
   })  : _pipeline = pipeline,
         _blueprintRepository = blueprintRepository,
-        _completer = completer ?? _createGatewayCompleter(gateway);
+        _completer = completer,
+        _gateway = completer == null ? gateway : null,
+        _capabilitiesResolver = capabilitiesResolver ??
+            _capabilitiesFromGateway(completer == null ? gateway : null) {
+    if (completer == null && gateway == null) {
+      throw ArgumentError('BlueprintPlanner 需要提供 completer 或 LlmGateway');
+    }
+  }
 
   final ResourceCreationPipeline _pipeline;
   final IResourceBlueprintRepository _blueprintRepository;
-  final BlueprintRawCompleter _completer;
 
-  static BlueprintRawCompleter _createGatewayCompleter(LlmGateway? gateway) {
-    if (gateway == null) {
-      throw ArgumentError('BlueprintPlanner 需要提供 completer 或 LlmGateway');
+  /// Test seam. When non-null the planner delegates completion to it and does
+  /// not compute a token budget (the seam, not the transport, sizes output).
+  final BlueprintRawCompleter? _completer;
+
+  /// Production boundary. Its model capabilities drive the dynamic budget.
+  final LlmGateway? _gateway;
+
+  final ModelCapabilities Function()? _capabilitiesResolver;
+
+  /// Historical planning window, kept as the floor (see the policy's timeout
+  /// coordination constants).
+  static const Duration defaultPlanningTimeout = Duration(seconds: 60);
+
+  /// At most one bounded full replan after a truncated response. A second
+  /// attempt is only allowed when it can actually grant more output than the
+  /// first, and never more than the model's own ceiling.
+  static const int maxPlanningAttempts = 2;
+
+  static ModelCapabilities Function()? _capabilitiesFromGateway(
+    LlmGateway? gateway,
+  ) {
+    if (gateway is ModelCapabilityAwareGateway) {
+      final aware = gateway as ModelCapabilityAwareGateway;
+      return () => aware.activeModelCapabilities;
     }
-    return ({
-      required String systemPrompt,
-      required String instruction,
-      required LlmTask task,
-      GenerationTaskHandle? taskHandle,
-    }) {
-      return gateway.rawCompletion(
-        systemPrompt: systemPrompt,
-        instruction: instruction,
-        task: task,
-        taskHandle: taskHandle,
-      );
-    };
+    return null;
   }
+
+  /// The active model's capabilities, or the conservative registry default when
+  /// the gateway cannot report them (a custom endpoint or a test double). An
+  /// unidentified model never inherits another provider's ceiling.
+  ModelCapabilities _capabilities() =>
+      _capabilitiesResolver?.call() ?? ModelCapabilityRegistry.resolve('');
 
   /// Plans a new [ResourceBlueprint] for a pending creation session.
   Future<ResourceBlueprint> plan({
     required String sessionId,
     GenerationTaskHandle? taskHandle,
-    Duration timeout = const Duration(seconds: 60),
+    Duration? timeout,
     BlueprintIdPool? idPool,
   }) async {
     final planWatch = Stopwatch()..start();
     GenerationDiagnostics.instance
       ..runtimeHeartbeat('plan.begin')
-      ..mark('PLAN[$sessionId] BEGIN', {'timeoutMs': timeout.inMilliseconds});
+      ..mark('PLAN[$sessionId] BEGIN', {
+        'timeoutMs': timeout?.inMilliseconds,
+      });
     _checkCancellation(taskHandle);
 
     final session = await _pipeline.findSession(sessionId);
@@ -107,15 +139,27 @@ final class BlueprintPlanner {
 
     _checkCancellation(taskHandle);
 
+    final budget = _computeBudget(
+      resourceType: session.resourceType,
+      targetCharacters: targetCharacters,
+      referenceCharacters: session.referenceSource.body.length,
+      systemPrompt: systemPrompt,
+      instruction: userInstruction,
+      sessionId: sessionId,
+    );
+
+    _checkCancellation(taskHandle);
+
     GenerationDiagnostics.instance
       ..runtimeHeartbeat('plan.llmStart')
       ..mark('PLAN[$sessionId] LLM_REQUEST_START');
-    final rawOutput = await _invokeWithTimeout(
+    final rawOutput = await _requestPlan(
       systemPrompt: systemPrompt,
       instruction: userInstruction,
       taskHandle: taskHandle,
       timeout: timeout,
       sessionId: sessionId,
+      budget: budget,
     );
     GenerationDiagnostics.instance
       ..runtimeHeartbeat('plan.llmReturned')
@@ -187,7 +231,7 @@ final class BlueprintPlanner {
     required String sessionId,
     required String userFeedback,
     GenerationTaskHandle? taskHandle,
-    Duration timeout = const Duration(seconds: 60),
+    Duration? timeout,
     BlueprintIdPool? idPool,
   }) async {
     _checkCancellation(taskHandle);
@@ -231,11 +275,24 @@ final class BlueprintPlanner {
 
     _checkCancellation(taskHandle);
 
-    final rawOutput = await _invokeWithTimeout(
+    final budget = _computeBudget(
+      resourceType: session.resourceType,
+      targetCharacters: targetCharacters,
+      referenceCharacters: session.referenceSource.body.length,
+      systemPrompt: systemPrompt,
+      instruction: userInstruction,
+      sessionId: sessionId,
+    );
+
+    _checkCancellation(taskHandle);
+
+    final rawOutput = await _requestPlan(
       systemPrompt: systemPrompt,
       instruction: userInstruction,
       taskHandle: taskHandle,
       timeout: timeout,
+      sessionId: sessionId,
+      budget: budget,
     );
 
     _checkCancellation(taskHandle);
@@ -275,7 +332,7 @@ final class BlueprintPlanner {
     required String blueprintId,
     String? nameOverride,
     ResourceId? explicitResourceId,
-  }) async {
+  }) {
     return _blueprintRepository.confirmBlueprint(
       blueprintId: blueprintId,
       nameOverride: nameOverride,
@@ -292,12 +349,132 @@ final class BlueprintPlanner {
   Future<List<ResourceBlueprint>> getBlueprintHistory(String sessionId) =>
       _blueprintRepository.listBlueprints(sessionId);
 
+  /// Computes the dynamic output budget, or null on the injected-completer seam.
+  ///
+  /// Throws [BlueprintBudgetInfeasibleException] when the active model cannot
+  /// physically emit a complete plan for the target, so an impossible plan is
+  /// reported explicitly instead of silently producing a truncated Blueprint.
+  BlueprintTokenBudget? _computeBudget({
+    required ResourceType resourceType,
+    required int targetCharacters,
+    required int referenceCharacters,
+    required String systemPrompt,
+    required String instruction,
+    required String sessionId,
+  }) {
+    if (_gateway == null) return null;
+    final capabilities = _capabilities();
+    final estimatedInputTokens = TokenEstimator(systemPrompt).tokens +
+        TokenEstimator(instruction).tokens;
+    final budget = BlueprintTokenBudgetPolicy.compute(
+      resourceType: resourceType,
+      targetCharacters: targetCharacters,
+      referenceCharacters: referenceCharacters,
+      estimatedInputTokens: estimatedInputTokens,
+      modelMaximumOutputTokens: capabilities.maximumOutputTokens,
+      modelContextWindow: capabilities.contextWindow,
+    );
+    GenerationDiagnostics.instance.mark('PLAN[$sessionId] BUDGET', {
+      'model': capabilities.modelId,
+      'targetCharacters': targetCharacters,
+      'estimatedSections': budget.estimatedSections,
+      'estimatedParts': budget.estimatedParts,
+      'estimatedOutputTokens': budget.estimatedOutputTokens,
+      'safetyReserveTokens': budget.safetyReserveTokens,
+      'requestedOutputTokens': budget.requestedOutputTokens,
+      'allowedOutputTokens': budget.allowedOutputTokens,
+      'modelMaximumOutputTokens': budget.modelMaximumOutputTokens,
+      'modelContextWindow': budget.modelContextWindow,
+      'estimatedInputTokens': budget.estimatedInputTokens,
+      'remainingContextTokens': budget.remainingContextTokens,
+      'boundReason': budget.boundReason,
+      'feasible': budget.feasible,
+    });
+    if (!budget.feasible) {
+      GenerationDiagnostics.instance.counter('plan.budgetInfeasible');
+      throw BlueprintBudgetInfeasibleException(
+        '当前模型无法为 $targetCharacters 字的目标生成完整 Blueprint：预计需要 '
+        '${budget.requestedOutputTokens} 输出 Token（约 ${budget.estimatedSections} Section / '
+        '${budget.estimatedParts} Part），而模型最大输出为 '
+        '${budget.modelMaximumOutputTokens}、剩余可用上下文为 '
+        '${budget.remainingContextTokens}（受限原因：${budget.boundReason}）。',
+      );
+    }
+    return budget;
+  }
+
+  /// Runs the planning request, retrying at most once with a larger budget when
+  /// the response was truncated by `finish_reason=length`.
+  ///
+  /// A truncated response is never salvaged; the retry re-requests the whole
+  /// plan with more output tokens, and only when a larger grant is actually
+  /// possible (never for a context-bound or already-ceilinged request).
+  Future<String> _requestPlan({
+    required String systemPrompt,
+    required String instruction,
+    required GenerationTaskHandle? taskHandle,
+    required Duration? timeout,
+    required String sessionId,
+    required BlueprintTokenBudget? budget,
+  }) async {
+    var maxOutputTokens = budget?.allowedOutputTokens;
+    final maxAttempts = budget == null ? 1 : maxPlanningAttempts;
+
+    for (var attempt = 1;; attempt++) {
+      final effectiveTimeout = timeout ??
+          (maxOutputTokens == null
+              ? defaultPlanningTimeout
+              : BlueprintTokenBudgetPolicy.recommendedTimeoutForTokens(
+                  maxOutputTokens,
+                ));
+      try {
+        return await _invokeWithTimeout(
+          systemPrompt: systemPrompt,
+          instruction: instruction,
+          taskHandle: taskHandle,
+          timeout: effectiveTimeout,
+          maximumOutputTokens: maxOutputTokens,
+          sessionId: sessionId,
+          attempt: attempt,
+        );
+      } on LLMResponseIncompleteException catch (error) {
+        final truncated = error.result.finishReason.isTruncated;
+        GenerationDiagnostics.instance.mark('PLAN[$sessionId] INCOMPLETE', {
+          'attempt': attempt,
+          'finishReason': error.result.finishReason.stableValue,
+          'truncated': truncated,
+          'completionTokens': error.result.completionTokens,
+          'promptTokens': error.result.promptTokens,
+          'maxTokens': maxOutputTokens,
+        });
+        if (budget == null || !truncated || attempt >= maxAttempts) rethrow;
+        _checkCancellation(taskHandle);
+        final next = BlueprintTokenBudgetPolicy.nextTruncationRetryBudget(
+          budget,
+          observedCompletionTokens: error.result.completionTokens,
+        );
+        if (next == null || next <= (maxOutputTokens ?? 0)) rethrow;
+        GenerationDiagnostics.instance
+          ..counter('plan.truncationRetries')
+          ..mark('PLAN[$sessionId] TRUNCATION_RETRY', {
+            'attempt': attempt,
+            'previousMaxTokens': maxOutputTokens,
+            'nextMaxTokens': next,
+            'modelMaximumOutputTokens': budget.modelMaximumOutputTokens,
+          });
+        maxOutputTokens = next;
+      }
+    }
+  }
+
   Future<String> _invokeWithTimeout({
     required String systemPrompt,
     required String instruction,
     required GenerationTaskHandle? taskHandle,
     required Duration timeout,
+    required int? maximumOutputTokens,
     String sessionId = '',
+    int attempt = 1,
   }) async {
     final completer = Completer<String>();
     late final GenerationCancellationRegistration? reg;
@@ -319,6 +496,8 @@ final class BlueprintPlanner {
         ..mark('PLAN[$sessionId] TIMEOUT', {
           'timeoutMs': timeout.inMilliseconds,
           'abortingRequest': ownsHandle,
+          'attempt': attempt,
+          'maxTokens': maximumOutputTokens,
         });
       if (ownsHandle) unawaited(ownedHandle.cancel());
       completer.completeError(
@@ -333,11 +512,11 @@ final class BlueprintPlanner {
     });
 
     try {
-      final responseFuture = _completer(
+      final responseFuture = _dispatch(
         systemPrompt: systemPrompt,
         instruction: instruction,
-        task: LlmTask.resourceBlueprintPlanning,
         taskHandle: ownedHandle,
+        maximumOutputTokens: maximumOutputTokens,
       );
 
       responseFuture.then((res) {
@@ -355,6 +534,30 @@ final class BlueprintPlanner {
       timer.cancel();
       reg?.dispose();
     }
+  }
+
+  Future<String> _dispatch({
+    required String systemPrompt,
+    required String instruction,
+    required GenerationTaskHandle taskHandle,
+    required int? maximumOutputTokens,
+  }) {
+    final completer = _completer;
+    if (completer != null) {
+      return completer(
+        systemPrompt: systemPrompt,
+        instruction: instruction,
+        task: LlmTask.resourceBlueprintPlanning,
+        taskHandle: taskHandle,
+      );
+    }
+    return _gateway!.rawCompletion(
+      systemPrompt: systemPrompt,
+      instruction: instruction,
+      task: LlmTask.resourceBlueprintPlanning,
+      taskHandle: taskHandle,
+      maximumOutputTokens: maximumOutputTokens!,
+    );
   }
 
   void _checkCancellation(GenerationTaskHandle? taskHandle) {

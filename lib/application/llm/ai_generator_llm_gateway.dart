@@ -10,7 +10,10 @@ import 'llm_gateway.dart';
 
 /// 将现有 AI 生成服务适配到应用层 Gateway。
 class AiGeneratorLlmGateway
-    implements LlmGateway, PartGenerationStreamingGateway {
+    implements
+        LlmGateway,
+        PartGenerationStreamingGateway,
+        ModelCapabilityAwareGateway {
   final AiGeneratorService Function() _generatorResolver;
   final bool Function()? _isConfiguredResolver;
   final LLMService Function()? _llmResolver;
@@ -24,6 +27,18 @@ class AiGeneratorLlmGateway
 
   @override
   bool get isConfigured => _isConfiguredResolver?.call() ?? true;
+
+  /// The active model's physical limits.
+  ///
+  /// The LLM service resolves the configured model id through the capability
+  /// registry; an unresolvable id stays on the conservative fallback, so a
+  /// custom endpoint never silently inherits a provider ceiling.
+  @override
+  ModelCapabilities get activeModelCapabilities {
+    final resolver = _llmResolver;
+    if (resolver == null) return ModelCapabilityRegistry.resolve('');
+    return resolver().capabilities;
+  }
 
   AiGeneratorService get _generator => _generatorResolver();
 

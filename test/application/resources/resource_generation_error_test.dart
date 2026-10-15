@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:lt_dialogue/application/resources/blueprint_token_budget.dart';
 import 'package:lt_dialogue/application/resources/part_generation_validator.dart';
 import 'package:lt_dialogue/application/resources/resource_generation_error.dart';
 import 'package:lt_dialogue/core/localization/app_error_localizer.dart';
@@ -48,6 +49,15 @@ void main() {
           AppErrorCode.resourcePersistenceFailed);
       expect(resourceGenerationErrorFromCode('secret-history-response').code,
           AppErrorCode.unknown);
+    });
+
+    test('should classify an impossible Blueprint budget as budget-infeasible',
+        () {
+      final error = resourceGenerationError(
+        const BlueprintBudgetInfeasibleException('目标无法在模型能力内完成'),
+      );
+      expect(error.code, AppErrorCode.resourceGenerationBudgetInfeasible);
+      expect(error.parameters, isEmpty);
     });
 
     test('should classify provider-incomplete and transport failures exactly',

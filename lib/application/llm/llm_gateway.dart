@@ -1,6 +1,7 @@
 import '../../services/llm_service.dart';
 import '../../models/generation_mode.dart';
 import '../../models/llm_task.dart';
+import '../../models/model_capabilities.dart';
 import '../../models/scene_batch_candidate.dart';
 
 /// 应用层唯一的 AI 生成边界。
@@ -132,6 +133,19 @@ abstract interface class LlmGateway {
     String worldview = '',
     List<Map<String, dynamic>> associatedCharacters = const [],
   });
+}
+
+/// Optional capability for gateways that can report the physical limits of the
+/// model they will call.
+///
+/// Callers that must size an output budget from real model capability (for
+/// example the Blueprint planner) query this instead of assuming a fixed
+/// constant. Gateways that do not implement it are treated as "model unknown":
+/// the caller then falls back to the conservative registry default rather than
+/// inheriting any specific provider's ceiling.
+abstract interface class ModelCapabilityAwareGateway {
+  /// Capabilities of the model the next request will target.
+  ModelCapabilities get activeModelCapabilities;
 }
 
 /// Optional streaming capability for incremental resource generation.

@@ -28,10 +28,17 @@ final class BlueprintIdPool {
     required this.allowedPartIds,
   });
 
+  /// Structural ceilings of one plan. They bound the ID pool and, because the
+  /// validator rejects any Section/Part outside the pool, the maximum shape of
+  /// an accepted Blueprint. Exposed so output-budget estimates can reuse the
+  /// same authority instead of re-declaring the numbers.
+  static const int defaultMaxSections = 12;
+  static const int defaultMaxParts = 36;
+
   /// Creates a default pool with sequential slot IDs (e.g. sec_1..sec_N, part_1..part_M).
   factory BlueprintIdPool.createDefault({
-    int maxSections = 12,
-    int maxParts = 36,
+    int maxSections = defaultMaxSections,
+    int maxParts = defaultMaxParts,
   }) {
     final sections = List<String>.generate(
       maxSections,

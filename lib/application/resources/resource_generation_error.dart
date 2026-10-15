@@ -10,6 +10,7 @@ import '../../domain/resources/generation_budget_allocation.dart';
 import '../../services/api_error.dart';
 import '../../services/llm_service.dart';
 import '../../services/repositories/resource_tree_repository.dart';
+import 'blueprint_token_budget.dart';
 import 'generation_patch_parser.dart';
 import 'part_generation_parser.dart';
 import 'part_generation_validator.dart';
@@ -43,6 +44,12 @@ AppDomainError resourceGenerationError(
     case LLMResponseIncompleteException() || ReasoningOnlyResponseException():
       return const AppDomainError(
           code: AppErrorCode.resourceProviderIncomplete);
+    case BlueprintBudgetInfeasibleException():
+      // The plan is provably impossible under the active model's verified
+      // limits; this is the same "budget infeasible" disposition as a Part that
+      // can never fit, so it reuses that stable, localized code.
+      return const AppDomainError(
+          code: AppErrorCode.resourceGenerationBudgetInfeasible);
     case PartGenerationParseException() || GenerationPatchParseException():
       return const AppDomainError(code: AppErrorCode.resourceParseFailed);
     case PartGenerationBudgetInfeasibleException value:

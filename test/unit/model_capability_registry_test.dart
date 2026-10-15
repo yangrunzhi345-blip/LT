@@ -8,7 +8,7 @@ void main() {
       const caps = ModelCapabilityRegistry.deepSeekFlash;
       expect(caps.modelId, 'deepseek-flash');
       expect(caps.contextWindow, 1000000);
-      expect(caps.maximumOutputTokens, 384000);
+      expect(caps.maximumOutputTokens, 393216);
       expect(caps.supportsThinking, isTrue);
       expect(caps.supportsReasoningEffort, isTrue);
       expect(caps.supportsVision, isTrue);
@@ -103,7 +103,7 @@ void main() {
       expect(context.providerId, 'deepseek');
       expect(context.modelId, 'deepseek-flash');
       expect(context.maximumContextTokens, 1000000);
-      expect(context.maximumOutputTokens, 384000);
+      expect(context.maximumOutputTokens, 393216);
       expect(context.supportsPromptCaching, isTrue);
       expect(context.supportsStructuredOutput, isTrue);
       expect(context.supportsToolCalling, isTrue);

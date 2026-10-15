@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:lt_dialogue/application/llm/ai_generator_llm_gateway.dart';
 import 'package:lt_dialogue/application/resources/blueprint_parser.dart';
 import 'package:lt_dialogue/application/resources/blueprint_planner.dart';
+import 'package:lt_dialogue/application/resources/blueprint_token_budget.dart';
 import 'package:lt_dialogue/application/resources/blueprint_validator.dart';
 import 'package:lt_dialogue/application/resources/resource_blueprint_repository.dart';
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
@@ -16,6 +17,7 @@ import 'package:lt_dialogue/domain/resources/resource_blueprint.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
+import 'package:lt_dialogue/models/model_capabilities.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/ai_generator_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
@@ -844,7 +846,12 @@ void main() {
   });
 
   group('BlueprintPlanner production transport and SQLite boundary', () {
-    BlueprintPlanner plannerForWire(String wire) {
+    BlueprintPlanner plannerForWires(
+      List<String> wires, {
+      List<Map<String, dynamic>>? capturedRequests,
+      ModelCapabilities Function()? capabilitiesResolver,
+    }) {
+      var index = 0;
       final llm = LLMService(
         const LLMConfig(
           provider: LLMProvider.deepseek,
@@ -853,10 +860,10 @@ void main() {
           model: 'deepseek-flash',
         ),
         clientFactory: () => MockClient((request) async {
-          final body = jsonDecode(request.body) as Map<String, dynamic>;
-          expect(body['max_tokens'], 4096);
-          expect(body['thinking'], {'type': 'disabled'});
-          expect(body['response_format'], {'type': 'json_object'});
+          capturedRequests
+              ?.add(jsonDecode(request.body) as Map<String, dynamic>);
+          final wire = wires[index < wires.length ? index : wires.length - 1];
+          index++;
           return http.Response(wire, 200,
               headers: {'content-type': 'text/event-stream; charset=utf-8'});
         }),
@@ -868,8 +875,15 @@ void main() {
           () => AiGeneratorService(llm),
           llmResolver: () => llm,
         ),
+        capabilitiesResolver: capabilitiesResolver,
       );
     }
+
+    BlueprintPlanner plannerForWire(
+      String wire, {
+      List<Map<String, dynamic>>? capturedRequests,
+    }) =>
+        plannerForWires([wire], capturedRequests: capturedRequests);
 
     String wireFor({
       required String content,
@@ -893,7 +907,11 @@ void main() {
       test('should persist and reopen a complete plan for target $target',
           () async {
         final session = await setupSession(targetCharacters: target);
-        final planner = plannerForWire(wireFor(content: buildMockJson()));
+        final requests = <Map<String, dynamic>>[];
+        final planner = plannerForWire(
+          wireFor(content: buildMockJson()),
+          capturedRequests: requests,
+        );
         final blueprint = await planner.plan(sessionId: session.sessionId);
         final result =
             await planner.confirm(blueprintId: blueprint.blueprintId);
@@ -903,6 +921,13 @@ void main() {
             await blueprintRepo.findGenerationTasks(blueprint.blueprintId);
         expect(tasks, hasLength(2));
         expect(tasks.every((task) => task.status == 'pending'), isTrue);
+
+        // The wire carried a real, model-bounded budget rather than the old
+        // fixed 4096.
+        expect(requests, hasLength(1));
+        final maxTokens = requests.single['max_tokens'] as int;
+        expect(maxTokens, greaterThan(0));
+        expect(maxTokens, lessThanOrEqualTo(393216));
 
         // Closing the test database and reopening from the same temporary
         // directory exercises durable planning/confirmation, not body generation
@@ -917,6 +942,186 @@ void main() {
             hasLength(2));
       });
     }
+
+    test('dynamic max_tokens grows monotonically with the generation target',
+        () async {
+      final smallSession = await setupSession(targetCharacters: 10000);
+      final largeSession = await setupSession(targetCharacters: 50000);
+      final smallRequests = <Map<String, dynamic>>[];
+      final largeRequests = <Map<String, dynamic>>[];
+
+      await plannerForWire(
+        wireFor(content: buildMockJson()),
+        capturedRequests: smallRequests,
+      ).plan(sessionId: smallSession.sessionId);
+      await plannerForWire(
+        wireFor(content: buildMockJson()),
+        capturedRequests: largeRequests,
+      ).plan(sessionId: largeSession.sessionId);
+
+      final small = smallRequests.single['max_tokens'] as int;
+      final large = largeRequests.single['max_tokens'] as int;
+      expect(small, isNot(4096));
+      expect(large, greaterThan(small));
+      expect(large, greaterThan(16384));
+      expect(large, lessThanOrEqualTo(393216));
+    });
+
+    test('both initial plan and replan send the dynamic budget, never 4096',
+        () async {
+      final session = await setupSession(targetCharacters: 50000);
+      final requests = <Map<String, dynamic>>[];
+      final planner = plannerForWires(
+        [
+          wireFor(content: buildMockJson(name: 'rev1')),
+          wireFor(content: buildMockJson(name: 'rev2')),
+        ],
+        capturedRequests: requests,
+      );
+
+      await planner.plan(sessionId: session.sessionId);
+      await planner.replan(
+        sessionId: session.sessionId,
+        userFeedback: '请更细化结构',
+      );
+
+      expect(requests, hasLength(2));
+      for (final body in requests) {
+        final maxTokens = body['max_tokens'] as int;
+        expect(maxTokens, greaterThan(16384));
+        expect(maxTokens, lessThanOrEqualTo(393216));
+      }
+    });
+
+    test('request shape keeps V4.1 non-thinking protocol and JSON mode',
+        () async {
+      final session = await setupSession(targetCharacters: 50000);
+      final requests = <Map<String, dynamic>>[];
+      await plannerForWire(
+        wireFor(content: buildMockJson()),
+        capturedRequests: requests,
+      ).plan(sessionId: session.sessionId);
+
+      final body = requests.single;
+      expect(body['max_tokens'], isA<int>());
+      expect(body['max_tokens'] as int, greaterThan(16384));
+      expect(body['max_tokens'] as int, lessThanOrEqualTo(393216));
+      expect(body['thinking'], {'type': 'disabled'});
+      expect(body['response_format'], {'type': 'json_object'});
+      expect(body['temperature'], 0.7);
+      // V4.1 non-thinking fixes top_p server-side and ignores penalty knobs.
+      expect(body.containsKey('top_p'), isFalse);
+      expect(body['stream'], isTrue);
+    });
+
+    test(
+        'a length-truncated plan is retried once with a larger grant and then saved',
+        () async {
+      final session = await setupSession(targetCharacters: 50000);
+      final requests = <Map<String, dynamic>>[];
+      final planner = plannerForWires(
+        [
+          wireFor(content: buildMockJson(), finish: 'length'),
+          wireFor(content: buildMockJson()),
+        ],
+        capturedRequests: requests,
+      );
+
+      final blueprint = await planner.plan(sessionId: session.sessionId);
+      expect(blueprint.status, BlueprintStatus.draft);
+      expect(requests, hasLength(2));
+      final first = requests[0]['max_tokens'] as int;
+      final second = requests[1]['max_tokens'] as int;
+      expect(second, greaterThan(first));
+      expect(second, lessThanOrEqualTo(393216));
+    });
+
+    test(
+        'a persistently truncated plan is never salvaged and retries are bounded',
+        () async {
+      final session = await setupSession(targetCharacters: 50000);
+      final requests = <Map<String, dynamic>>[];
+      final planner = plannerForWires(
+        [wireFor(content: buildMockJson(), finish: 'length')],
+        capturedRequests: requests,
+      );
+
+      await expectLater(
+        planner.plan(sessionId: session.sessionId),
+        throwsA(isA<LLMResponseIncompleteException>()),
+      );
+      // Initial attempt + exactly one bounded retry, never an unbounded loop.
+      expect(requests, hasLength(BlueprintPlanner.maxPlanningAttempts));
+      expect(
+          await blueprintRepo.findLatestBlueprint(session.sessionId), isNull);
+      final db = await DatabaseService.database;
+      expect(_count(await db.rawQuery('SELECT COUNT(*) FROM resources')), 0);
+      expect(
+          _count(await db.rawQuery('SELECT COUNT(*) FROM resource_parts')), 0);
+    });
+
+    test('a failed replan leaves the previous revision untouched', () async {
+      final session = await setupSession(targetCharacters: 50000);
+      final requests = <Map<String, dynamic>>[];
+      final planner = plannerForWires(
+        [
+          wireFor(content: buildMockJson(name: '保留下来的规划')),
+          wireFor(content: buildMockJson(name: '不该出现'), finish: 'length'),
+        ],
+        capturedRequests: requests,
+      );
+
+      final first = await planner.plan(sessionId: session.sessionId);
+      expect(first.revision, 1);
+
+      await expectLater(
+        planner.replan(sessionId: session.sessionId, userFeedback: '重做'),
+        throwsA(isA<LLMResponseIncompleteException>()),
+      );
+
+      final history = await planner.getBlueprintHistory(session.sessionId);
+      expect(history, hasLength(1));
+      expect(history.single.revision, 1);
+      expect(history.single.suggestedName, '保留下来的规划');
+      expect(history.single.status, BlueprintStatus.draft);
+    });
+
+    test(
+        'an impossible budget fails clearly before any request and saves nothing',
+        () async {
+      final session = await setupSession(targetCharacters: 50000);
+      final requests = <Map<String, dynamic>>[];
+      final planner = plannerForWires(
+        [wireFor(content: buildMockJson())],
+        capturedRequests: requests,
+        capabilitiesResolver: () => const ModelCapabilities(
+          modelId: 'fixture-tiny',
+          contextWindow: 4096,
+          maximumOutputTokens: 256,
+          supportsThinking: false,
+          supportsReasoningEffort: false,
+          supportsVision: false,
+          supportsJsonOutput: true,
+          supportsToolCalls: false,
+          supportsResponsesApi: false,
+          supportsFIM: false,
+          supportsPromptCaching: false,
+          supportsFilesApi: false,
+          thinkingWireStyle: ThinkingWireStyle.none,
+        ),
+      );
+
+      await expectLater(
+        planner.plan(sessionId: session.sessionId),
+        throwsA(isA<BlueprintBudgetInfeasibleException>()),
+      );
+      // No HTTP request was attempted and no partial Blueprint was persisted.
+      expect(requests, isEmpty);
+      expect(
+          await blueprintRepo.findLatestBlueprint(session.sessionId), isNull);
+      expect((await pipeline.findSession(session.sessionId))?.awaitsPlanning,
+          isTrue);
+    });
 
     test('should accept complete stop without DONE through the planner',
         () async {

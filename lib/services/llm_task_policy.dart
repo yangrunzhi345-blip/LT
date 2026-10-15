@@ -102,6 +102,10 @@ class LlmTaskPolicyTable {
       thinking: ThinkingPolicy.followUserSetting,
       reasoningEffort: 'medium',
       preferJsonOutput: true,
+      // Defensive fallback only. `BlueprintPlanner` always supplies a dynamic,
+      // model-bounded `max_tokens` (see `BlueprintTokenBudgetPolicy`); this
+      // value applies solely to a caller that omits one, so a plan is never
+      // silently pinned to a fixed 4096-token ceiling.
       maxTokens: 4096,
       temperature: 0.7,
     ),

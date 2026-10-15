@@ -416,6 +416,13 @@ class LLMService with _SseGateTrace {
   late final ModelCapabilities _capabilities =
       ModelCapabilityRegistry.resolve(config.model);
 
+  /// The active model's physical capabilities.
+  ///
+  /// Exposed so application callers (for example the Blueprint planner sizing a
+  /// dynamic output budget) can read the real limits of the selected model
+  /// instead of assuming a fixed constant.
+  ModelCapabilities get capabilities => _capabilities;
+
   /// 设置页在保存前使用的临时连接测试入口。界面层不直接管理 HTTP
   /// 客户端或端点拼接，全部委托给 LLM 通信模块。
   static Future<bool> testConfiguration(LLMConfig config) =>

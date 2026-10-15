@@ -135,10 +135,15 @@ class ModelCapabilityRegistry {
   ModelCapabilityRegistry._();
 
   /// DeepSeek V4.1 Flash — the current recommended model.
+  ///
+  /// `maximumOutputTokens` is the documented `max_tokens` ceiling:
+  /// "取值范围为 1 到 384K（393216）" (DeepSeek Chat Completions API). 384K is
+  /// 384 * 1024 = 393216, not the decimal 384000 the catalogue previously
+  /// carried. `contextWindow` is the documented 1M context length.
   static const ModelCapabilities deepSeekFlash = ModelCapabilities(
     modelId: 'deepseek-flash',
     contextWindow: 1000000,
-    maximumOutputTokens: 384000,
+    maximumOutputTokens: 393216,
     supportsThinking: true,
     supportsReasoningEffort: true,
     supportsVision: true,
