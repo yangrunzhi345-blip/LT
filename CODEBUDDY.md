@@ -2,6 +2,12 @@
 
 本文件是 LT 项目中 CodeBuddy CLI 的专属规则与上下文文件，仅存放 CodeBuddy 专属工作流、工具约束与上下文说明。跨 Agent 通用规范以根目录 [AGENTS.md](AGENTS.md) 为最高权威；两者冲突时以 `AGENTS.md` 为准。不得在本文件中复制 `AGENTS.md` 的通用规则。
 
+## 通用规范导入（必读）
+
+CodeBuddy CLI 的项目级记忆在存在 `CODEBUDDY.md` 时会优先加载本文件，并不再自动加载 `AGENTS.md`。因此本文件必须导入 `AGENTS.md`，否则跨 Agent 通用规范将静默失效：
+
+@AGENTS.md
+
 ## 开始任务前
 
 - 必须同时阅读 `AGENTS.md` 与本文件。
