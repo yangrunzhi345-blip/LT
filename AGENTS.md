@@ -69,7 +69,7 @@ Full-Cycle Review Protocol：A) 重新读取正式验收规格；B) 将 Git diff
 
 已有未提交修改属于用户或其他工作流。不得默认删除、覆盖或恢复它们；未经明确授权不得执行 `git reset --hard`、`git checkout -- .`、`git restore .`、`git clean -fd` 或 `git clean -fdx`。
 
-若与任务冲突，先识别并尽量兼容，只修改必要部分，最终说明冲突。未经明确要求不得强推、重写共享历史、删除未知分支或标签。一个逻辑任务必须保持清晰可追溯的提交边界；单阶段或小任务优先一个清晰 commit。对用户明确授权的 `multi-phase logical task`，允许按 Phase 或稳定 architecture milestone 分 commit，不得要求将全部 Phase 塞进一个巨大 commit，也不得为每个小文件单独提交。优先使用 Conventional Commits（如 `feat:`、`fix:`、`refactor:`、`test:`、`docs:`、`chore:`）。Commit 不等于 push：未经用户明确授权不得 push；用户明确说“不要提交”时不得 commit，若只说“不要 push GitHub”仍可创建本地 commit。
+若与任务冲突，先识别并尽量兼容，只修改必要部分，最终说明冲突。未经明确要求不得强推、重写共享历史、删除未知分支或标签。一个逻辑任务必须保持清晰可追溯的提交边界；单阶段或小任务优先一个清晰 commit。对用户明确授权的 `multi-phase logical task`，允许按 Phase 或稳定 architecture milestone 分 commit，不得要求将全部 Phase 塞进一个巨大 commit，也不得为每个小文件单独提交。优先使用 Conventional Commits（如 `feat:`、`fix:`、`refactor:`、`test:`、`docs:`、`chore:`）。禁止向 GitHub 提交（push）：默认不得执行 `git push`、创建或更新远端分支或发起 PR，除非用户在本次任务中明确命令；本地 commit 不受此限制，任务验证完成后在任务范围内创建本地 commit 符合规范。Commit 不等于 push：用户明确说“不要提交”时不得 commit，若只说“不要 push GitHub”或“不要推送”仍可创建本地 commit。确需 push 时，先确认目标仓库、目标分支与范围，授权仅对本次指定范围有效。
 
 提交前执行 `git status --short`、`git diff`、`git diff --check`，确认没有意外修改、临时调试代码、敏感信息、无关格式化或误删文件。
 
