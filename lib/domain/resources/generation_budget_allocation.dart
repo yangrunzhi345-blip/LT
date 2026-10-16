@@ -56,8 +56,8 @@ final class PartBudgetRequirement {
   /// small confirmed contract floor) lets earlier Parts consume the shared
   /// ceiling down to the point where a later Part can no longer be written at
   /// its own planned size — the Part is then dispatched with a soft target and
-  /// an acceptance limit below its plan, and any natural body is rejected. The
-  /// planned need is what makes the reservation meaningful.
+  /// an acceptance limit below its plan, and a naturally sized body is
+  /// rejected. The planned need is what makes the reservation meaningful.
   int get additionalPlanned {
     final missing = plannedLength - savedLength;
     return missing > 0 ? missing : 0;
@@ -127,11 +127,14 @@ final class PartGenerationBudgetAllocation {
   /// unfinished required Part (`F_i`).
   ///
   /// The reservation is each later required Part's *planned* need
-  /// ([PartBudgetRequirement.additionalPlanned]), so earlier Parts can never
-  /// consume a later Part's planned capacity. That is what keeps
-  /// [dispatchableMaximum] at or above the current Part's own plan for any plan
-  /// that fits the ceiling, so a Part is never asked for (or judged against)
-  /// less than its own planned size.
+  /// ([PartBudgetRequirement.additionalPlanned]), so earlier Parts cannot
+  /// consume a later Part's planned capacity. Combined with `savedOther` this
+  /// equals `Σ over other unfinished required Parts of max(saved, planned)`.
+  ///
+  /// This is what keeps [dispatchableMaximum] at or above the current Part's
+  /// own plan whenever the precondition documented on [compute] holds — most
+  /// importantly for a freshly confirmed plan whose Parts have not spent the
+  /// ceiling yet. It is not an unconditional guarantee (see [compute]).
   final int futureReserve;
 
   /// `D_i = min(K, max(0, remaining - futureReserve))`: the largest body this
@@ -189,13 +192,32 @@ final class PartGenerationBudgetAllocation {
   /// Parts that are not yet `completed`; the current Part is filtered out
   /// internally so callers may pass the whole unfinished set.
   ///
-  /// Guarantee (for any plan fitting the ceiling, when every earlier Part
-  /// respected its own [dispatchableMaximum]): `dispatchableMaximum` is never
-  /// below the current Part's `plannedLength`, because the future reserve
-  /// already holds each later required Part's outstanding planned body. A Part
-  /// is therefore never asked for, or judged against, a bound smaller than its
-  /// own planned size, and the cumulative committed total can never exceed the
-  /// ceiling.
+  /// Sufficient condition for `dispatchableMaximum >= plannedLength` (the
+  /// property that lets a Part be written at its planned size), with
+  /// `minimumCharacters <= plannedLength <= transportCap` on every Part:
+  ///
+  /// ```text
+  /// completed bodies
+  ///   + Σ over unfinished required Parts of max(savedLength, plannedLength)
+  ///   + other saved bodies (optional unfinished Parts and Parts outside the
+  ///     blueprint)
+  /// <= ceiling
+  /// ```
+  ///
+  /// Under that condition — which a freshly confirmed, not-yet-consumed plan
+  /// satisfies by construction — the reserve holds each unfinished required
+  /// Part's planned capacity, so a Part is never asked for, or judged against,
+  /// a bound smaller than its own planned size, and the cumulative committed
+  /// total stays within the ceiling.
+  ///
+  /// The condition is a precondition, not an unconditional guarantee:
+  ///
+  /// - Reopening a `completed` Part whose saved body is shorter than its plan
+  ///   turns it back into an unfinished required Part, so its full plan must be
+  ///   found again next to the bodies the other Parts already committed. If
+  ///   that no longer fits, neither is its original planned length restored.
+  /// - A historical run that already spent capacity keeps its spent capacity:
+  ///   changing the reservation basis never invents budget back.
   static PartGenerationBudgetAllocation compute({
     required PartBudgetRequirement current,
     required int savedOther,

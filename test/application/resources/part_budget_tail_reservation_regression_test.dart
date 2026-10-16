@@ -19,6 +19,12 @@ import 'package:lt_dialogue/services/llm_service.dart';
 import '../../helpers/phase10_fixture.dart';
 import '../../helpers/r01_streaming_fixture.dart';
 
+typedef TailRun = ({
+  ResourceId id,
+  ResourceBlueprint blueprint,
+  PartGenerationTaskRepositoryImpl tasks,
+});
+
 /// Regression for the tail-squeeze that made worldview / character / NPC Part
 /// generation fail intermittently while the resource still had budget left.
 ///
@@ -42,12 +48,7 @@ void main() {
   const planPerPart = target ~/ partCount; // 2000
   const ceiling = 24000;
 
-  Future<
-      ({
-        ResourceId id,
-        ResourceBlueprint blueprint,
-        PartGenerationTaskRepositoryImpl tasks
-      })> createRun(ResourceType type) async {
+  Future<TailRun> createRun(ResourceType type) async {
     final pipeline = ResourceCreationPipeline(
         getDb: () async => fixture.db,
         treeRepository: fixture.treeRepository,
@@ -205,42 +206,146 @@ void main() {
         'PLAN_EXACT total=${contents.values.fold<int>(0, (s, v) => s + v.content.length)}');
   });
 
-  test(
-      'a Part larger than the remaining ceiling is still refused and preserves prior text',
-      () async {
-    // Guards the fix did not simply drop the ceiling: fill the run to one code
-    // unit short of C, then confirm the tail Part cannot commit.
-    final stack = await createRun(ResourceType.npc);
-    final tasks = await stack.tasks.findReadyTasks(stack.id.value);
-    // 9 Parts of 2667 = 24003 > C, so use 24000 - 1: eight Parts of 3000 and
-    // one of 0, leaving the last Part exactly 1 unit of headroom.
-    for (var i = 0; i < 8; i++) {
-      await fixture.db.update('resource_parts', {'content': '原' * 3000},
-          where: 'id = ?', whereArgs: [tasks[i].partId]);
+  /// Fills every Part except [tail] with a `completed` body so their combined
+  /// length is exactly [totalCharacters]; the tail then has exactly
+  /// `C - totalCharacters` headroom and no other unfinished required Part, so
+  /// its future reserve is 0.
+  Future<void> prefillSiblings(
+    List<ResourceGenerationTask> tasks,
+    ResourceGenerationTask tail,
+    int totalCharacters,
+  ) async {
+    final siblings = tasks.where((t) => t.taskId != tail.taskId).toList();
+    expect(siblings, isNotEmpty);
+    final base = totalCharacters ~/ siblings.length;
+    final extra = totalCharacters - base * siblings.length;
+    for (var i = 0; i < siblings.length; i++) {
+      final length = i == siblings.length - 1 ? base + extra : base;
+      await fixture.db.update('resource_parts', {'content': '原' * length},
+          where: 'id = ?', whereArgs: [siblings[i].partId]);
       await fixture.db.update(
           'resource_generation_tasks', {'status': 'completed'},
-          where: 'task_id = ?', whereArgs: [tasks[i].taskId]);
+          where: 'task_id = ?', whereArgs: [siblings[i].taskId]);
     }
-    final tail = tasks.last;
+  }
+
+  /// Starts a lease on [tail] and tries to commit [bodyLength] characters;
+  /// returns the thrown error, or null when the commit was accepted.
+  Future<Object?> attemptCommit(
+    TailRun stack,
+    ResourceGenerationTask tail,
+    int bodyLength,
+  ) async {
     final attempt =
         await stack.tasks.startAttempt(taskId: tail.taskId, generationId: 'g');
-    await expectLater(
-        stack.tasks.commitPartContent(
-            response: PartGenerationResponse(
-                protocolVersion: 1,
-                generationId: 'g',
-                resourceId: stack.id,
-                sectionId: SectionId(tail.sectionId),
-                partId: PartId(tail.partId),
-                attemptId: attempt.attemptId,
-                content: '文' * planPerPart),
-            taskId: tail.taskId,
-            attemptId: attempt.attemptId,
-            expectedSourceToken: attempt.sourceToken),
-        throwsA(isA<PartGenerationValidationException>()));
+    try {
+      await stack.tasks.commitPartContent(
+          response: PartGenerationResponse(
+              protocolVersion: 1,
+              generationId: 'g',
+              resourceId: stack.id,
+              sectionId: SectionId(tail.sectionId),
+              partId: PartId(tail.partId),
+              attemptId: attempt.attemptId,
+              content: '文' * bodyLength),
+          taskId: tail.taskId,
+          attemptId: attempt.attemptId,
+          expectedSourceToken: attempt.sourceToken);
+      return null;
+    } catch (error) {
+      return error;
+    }
+  }
+
+  Future<int> savedTotal() async {
+    final parts = await fixture.db.query('resource_parts',
+        columns: ['content'], where: 'deleted_at IS NULL');
+    return parts.fold<int>(
+        0, (sum, row) => sum + (row['content']?.toString().length ?? 0));
+  }
+
+  test(
+      'a candidate one unit over the elastic ceiling is refused by the commit transaction',
+      () async {
+    // Construct the exact C - 1 state: savedTotal = 23999, remaining = 1,
+    // futureReserve = 0 (every other Part is completed).
+    final stack = await createRun(ResourceType.npc);
+    final tasks = await stack.tasks.findReadyTasks(stack.id.value);
+    final tail = tasks.last;
+    await prefillSiblings(tasks, tail, ceiling - 1);
+    expect(await savedTotal(), ceiling - 1);
+
+    final allocation = await stack.tasks.budgetAllocation(
+        resourceId: stack.id.value,
+        blueprintId: stack.blueprint.blueprintId,
+        partId: tail.partId);
+    expect(allocation!.remaining, 1);
+    expect(allocation.futureReserve, 0);
+    expect(allocation.dispatchableMaximum, 1);
+
+    final error = await attemptCommit(stack, tail, planPerPart);
+
+    // The refusal must come from the cumulative budget guard, not from the
+    // Part's own length contract or the single-Part transport cap. This plan
+    // carries no content contract and the body is under K, so the only possible
+    // rejection is `generation_budget`.
+    expect(error, isA<PartGenerationValidationException>());
+    final validation = error! as PartGenerationValidationException;
+    expect(validation.field, 'generation_budget');
+    expect(validation.actual, '${ceiling - 1 + planPerPart}');
+    expect(validation.expected, contains('$ceiling'));
+
+    // Nothing was written and the task did not advance past its lease.
+    expect(await savedTotal(), ceiling - 1);
     expect(
         (await stack.tasks.getPartsContent([tail.partId]))[tail.partId]!
             .content,
         isEmpty);
+    expect(
+        (await stack.tasks.findTask(tail.taskId))!.status, isNot('completed'));
+    expect(
+        await fixture.revisionRepository
+            .readHead(stack.id, ResourceRevisionKind.latestHead),
+        isNull);
+  });
+
+  test(
+      'a candidate beyond a fully spent ceiling is refused and prior text is preserved',
+      () async {
+    // savedTotal = C exactly → remaining = 0, futureReserve = 0.
+    final stack = await createRun(ResourceType.npc);
+    final tasks = await stack.tasks.findReadyTasks(stack.id.value);
+    final tail = tasks.last;
+    await prefillSiblings(tasks, tail, ceiling);
+    expect(await savedTotal(), ceiling);
+
+    final allocation = await stack.tasks.budgetAllocation(
+        resourceId: stack.id.value,
+        blueprintId: stack.blueprint.blueprintId,
+        partId: tail.partId);
+    expect(allocation!.remaining, 0);
+    expect(allocation.futureReserve, 0);
+
+    final before =
+        await stack.tasks.getPartsContent(tasks.map((t) => t.partId).toList());
+
+    final error = await attemptCommit(stack, tail, planPerPart);
+    expect(error, isA<PartGenerationValidationException>());
+    expect((error! as PartGenerationValidationException).field,
+        'generation_budget');
+
+    // Every already-saved body is untouched.
+    final after =
+        await stack.tasks.getPartsContent(tasks.map((t) => t.partId).toList());
+    for (final id in before.keys) {
+      expect(after[id]!.content, before[id]!.content);
+    }
+    expect(await savedTotal(), ceiling);
+    expect(
+        (await stack.tasks.findTask(tail.taskId))!.status, isNot('completed'));
+    expect(
+        await fixture.revisionRepository
+            .readHead(stack.id, ResourceRevisionKind.latestHead),
+        isNull);
   });
 }

@@ -65,11 +65,28 @@ q_i = min(plannedLength_i, D_i)                          // 不变（= plannedLe
 - 新增 `PartBudgetRequirement.additionalPlanned`（= `max(0, plannedLength - savedLength)`）。
 - `compute` 的 reserve 求和改用 `additionalPlanned`；其余公式、不可行分类、`recommendedTarget`、提交复核与调度闸门均不变。
 
-不变式（对任何满足 `plannedTotal ≤ C` 的计划，且每个早段遵守自身 `dispatchableMaximum`）：
+不变式（**前置条件**，非无条件保证）。设 `minimumCharacters ≤ plannedLength ≤ K` 对每个 Part 成立，则当
 
-- `dispatchableMaximum ≥ plannedLength_i`：任何必填 Part 都能被写到自己的计划长度，不再被要求或校验为低于计划的上限。
-- 累计提交总量 `≤ C`：不会突破弹性上限，也不会侵蚀后续必填 Part 的规划容量。
+```text
+已完成正文
+  + Σ 未完成必填 Part 的 max(已保存长度, 规划长度)
+  + 其他已保存正文（未完成的可选 Part、蓝图之外的 Part）
+  ≤ C
+```
+
+时：
+
+- `dispatchableMaximum ≥ plannedLength_i`：该 Part 能被写到自己的规划长度，不会被要求或被校验为低于计划的上限。
+- 累计提交总量 `≤ C`：不会突破弹性上限。
 - 早段仍可使用弹性余量（`D_i` 可到 `min(K, C - S_other - F_i)`），但只能在“不把任何后续必填 Part 压到计划以下”的前提下使用。
+
+上述条件对**新建、尚未消耗容量的合规计划**由构造满足，因此新计划可以持续保护未完成 Part 的规划容量。
+
+边界（不得外推）：
+
+- **重新打开一个已 `completed` 且正文短于规划长度的 Part**：它会重新变成未完成必填 Part，其完整规划长度必须与其它 Part 已提交的正文一起重新落入 C。若放不下，**不保证**恢复其原规划长度。
+- **旧任务**：已经消耗的容量不会被本修复“找回来”。修复只改变之后派发时的预留基数，不会凭空恢复预算。
+- 因此“每个 Part 永远不会被要求低于计划的上限”只在上述前置条件成立时成立，不适用于已超支的历史/重开场景。
 
 统一性：C 已按资源类型由 `GenerationBudgetPolicy.cumulativeCeiling`（T、E、A）给出，世界观（A=60000）、角色卡 / NPC（A=24000）共用同一分配公式，因此修复对三者同时生效。
 
@@ -100,7 +117,7 @@ q_i = min(plannedLength_i, D_i)                          // 不变（= plannedLe
 
 回归断言：
 
-- 每个被派发 Part 的 `acceptedMaximum ≥ plannedLength`，`targetBudget ≥ plannedLength`（不再有 1590 / 10 这类被压扁的目标）。
+- 每个被派发 Part 的 `acceptedMaximum ≥ plannedLength`，`targetBudget ≥ plannedLength`（新建、未消耗容量的计划；不再有 1590 / 10 这类被压扁的目标）。
 - 每个提交 Part 的正文字数 `≥ plannedLength`；总量 `≤ C`。
 - 全部 Part `completed`，无 `failed`。
 - 守卫用例：把资源填到距 C 仅 1 个字符时，尾段提交仍被拒绝且不写入正文。
@@ -127,3 +144,81 @@ q_i = min(plannedLength_i, D_i)                          // 不变（= plannedLe
 - 并发 > 1：本修复未新增 lease reservation；DI 生产并发为 1。并发 >1 时提交事务仍以同一 `futureReserve` 复核，后到候选可能被拒（与修复前一致，属于既有边界）。
 - 未执行真实 Provider / 真机验证；真实模型的遵循率与费用不在本任务结论内。
 - `PartGenerationPromptBuilder` 与 `PartGenerationValidator` 本次未修改：修复后 `targetBudget` 不再低于计划、`acceptedMaximum ≥ targetBudget`，二者的契约一致，无需改动即消费统一分配结果。
+
+## 八、独立审查整改记录（756070c 复审 CHANGES REQUESTED / FIX BEFORE MERGE）
+
+范围：仅处理 C1 / C2 / I1，未重新设计预算系统、未扩大修复范围、未改变生产分配算法。
+
+### C1 — 修正容量保证的前置条件（仅文档与注释）
+
+- 位置：`generation_budget_allocation.dart` 的 `compute` 前置条件段落（原表述 “Guarantee … never below … for any plan fitting the ceiling” 过强）、`futureReserve` 字段注释、`additionalPlanned` 注释，以及本文件第「四」节。
+- 准确前提（已写入代码注释）：对每个 Part 满足 `minimumCharacters ≤ plannedLength ≤ transportCap`，且
+
+```text
+已完成正文
+  + Σ 未完成必填 Part 的 max(已保存长度, 规划长度)
+  + 其他已保存正文（未完成的可选 Part、蓝图之外的 Part）
+  ≤ C
+```
+
+- 明确写入的三条边界：
+  1. 新建、尚未消耗容量的合规计划由构造满足该条件，可持续保护未完成 Part 的规划容量；
+  2. 重新打开已 `completed` 且正文短于规划长度的 Part，不保证恢复其原规划长度；
+  3. 旧任务已消耗的容量不会被“找回来”，修复不会凭空恢复预算。
+- 未修改任何生产算法表达式（`F_i`、`D_i`、`q_i` 与不可行分类保持不变）。
+
+### C2 — C−1 边界测试
+
+- 旧用例（原 “a Part larger than the remaining ceiling is still refused”）实际构造的是 `savedTotal = C`（`remaining = 0`），其注释却声称“留 1 个单位”，并未构造 C−1；这是审查指出的缺陷。
+- 新增用例 `a candidate one unit over the elastic ceiling is refused by the commit transaction`，显式构造并断言：
+
+  - `savedTotal = C − 1 = 23999`；
+  - `allocation.remaining = 1`、`allocation.futureReserve = 0`、`allocation.dispatchableMaximum = 1`（其它 9 个 Part 全部 `completed`）；
+  - 超额候选（2000 字，< K=3000）被**同一 SQLite 提交事务**拒绝，且异常 `field = 'generation_budget'`、`actual = 25999`、`expected` 含 `24000`。该计划无内容契约且正文 < K，因此拒绝只可能来自累计预算守卫，排除了内容契约长度拒绝与单段传输上限的干扰；
+  - 拒绝后：`savedTotal` 仍为 23999、尾段正文为空、任务未 `completed`、无 revision head。
+
+- 修正原用例并保留为独立用例 `a candidate beyond a fully spent ceiling is refused and prior text is preserved`（`savedTotal = C`，`remaining = 0`，`futureReserve = 0`），断言每个已保存正文逐字不变、`savedTotal` 不变、任务未 `completed`、无 revision head。
+- 未删除任何测试，未降低断言强度（新增断言更严格）。
+
+### I1 — 既有性能用例 `test/unit/semantic_retrieval_performance_test.dart` 不稳定
+
+被测断言：`semantic_retrieval_performance_test.dart:149` `expect(uiSyncBlockingUs / 1000, lessThan(16.7))`。
+
+**实测证据（本机 4 核，同一提交，未改任何被测代码）**
+
+| 条件 | load average（4 核） | 实测 UI 同步阻塞 | 结果 |
+|---|---|---|---|
+| 隔离连续 5 次 | ~2.1 | 6.18 / 4.95 / 4.76 / 4.61 / 4.39 ms | 5/5 PASS |
+| 6 个 CPU 占用进程（超订 4 核） | ~7.9 | **17.60** / 8.96 / 3.55 ms | 1 FAIL / 2 PASS |
+| 整改提交全量 `--concurrency=2`（本次） | 并发 2 个测试 isolate | 11.33 ms | 本轮 PASS（余量仅 ~5 ms） |
+
+同一阈值 16.7 ms 下，隔离 ~4.4–6.2 ms、全量并发 11.33 ms、超订负载 17.60 ms（FAIL）。独立审查记录的基线 17.167 ms（FAIL）与全量 22.869 ms（FAIL）落在同一分布区间内，属同一现象。
+
+**判定**
+
+- 失败与 **CPU 竞争 / 并发** 强相关，且**非确定性**：同一二进制在隔离、低负载下稳定 4.4–6.2 ms；在超订负载下同一次批次内出现 17.60（FAIL）与 3.55（PASS）并存的分布。
+- 与**测试计时方式**有关：断言测量的是 `SemanticWorldRetriever.computeTopKScoresInIsolate` 中 `Isolate.run(...)` 的**同步阶段墙钟**，即闭包捕获 2000×768 `Float32List`（约 6.14 MB）深拷贝 + isolate 启动消息序列化的成本，并非检索算法复杂度，也不是“每帧成本”。它随 payload 线性、随 JIT 预热与内存/调度压力抖动（隔离批次首轮 6.18 ms 明显高于后续 ~4.4 ms）。
+- 阈值 16.7 ms 直接借用 60fps 帧预算，但被测对象是一次性 isolate 派发成本；`flutter test --concurrency=2` 又与另一测试 isolate 争用同一 4 核。
+- 结论：属**独立的既有测试设计缺陷（环境敏感绝对墙钟阈值）**，与本分支的预算修复无因果关系（本分支未触碰语义检索路径）。
+
+**单独修复方案（建议另立 ticket，不在本分支实施）**
+
+1. 产品侧优先：`computeTopKScoresInIsolate` 改用 `TransferableTypedData` 传递候选向量，把 O(payload) 拷贝变为 O(1) 转移，既降低真实 UI 阻塞，也使该指标稳定。
+2. 测试侧：把绝对 16.7 ms 改为**相对判据**（例如同一调用在极小候选集与目标候选集下的同步阻塞之差，或相对本进程已测得的单次派发基线的倍数），或改为“预热 N 次后取中位数”，并写明环境前提。
+3. 结构性：把 wall-clock 微基准移出默认 `flutter test` 套件（`benchmark/` 目录或按 tag 排除），套件内保留功能断言（结果非空、同步阶段不随候选数线性增长）。
+4. 不建议、也未实施：直接提高阈值、删除测试、skip 或降低性能标准。
+
+**本次处理**：未修改该用例、其阈值或其被测代码；仅记录证据与独立修复建议，避免扩大本分支范围。
+
+### 整改后的验证记录
+
+| 项目 | 命令 | 结果 |
+|---|---|---|
+| FORMAT | `dart format`（变更文件） | 已格式化 |
+| ANALYZE | `flutter analyze --no-pub` | `No issues found!` |
+| RED（预算回归） | 临时把 `reserve` 基数换回 `additionalMinimum` 后运行 `part_budget_tail_reservation_regression_test.dart` | `worldview` / `character` / `npc` 三个用例 FAIL（`run must not die in the tail`），C / C−1 两个边界用例仍 PASS（与 reserve 基数无关，符合预期） |
+| GREEN（预算回归 + 分配单元） | 恢复 `additionalPlanned` 后运行两个文件 | 22/22 PASS |
+| FULL | `flutter test --no-pub --concurrency=2` | **`All tests passed!` 4195 passed / 7 skipped / 0 failed**，15m36s，退出码 0，日志 `/tmp/lt-gen-remediation-full.log`（含性能用例 11.33 ms PASS） |
+| DIFF-CHECK | `git diff --check` | 通过 |
+
+未新增 skip；未降低任何断言；未提高任何上限。
