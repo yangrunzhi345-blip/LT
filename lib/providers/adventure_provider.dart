@@ -707,7 +707,23 @@ class AdventureProvider extends ChangeNotifier {
         return false;
       }
     }
+    if (id != null) {
+      // Register any runtime entity a **newly added** definition needs *before*
+      // the config is persisted, so the very next turn's settlement can write
+      // its overlay without reopening the adventure (the repository rejects a
+      // non-character proposal whose entity row is missing). Seeding is
+      // idempotent and uses `ConflictAlgorithm.ignore`, so an existing overlay,
+      // history and other branches are never touched.
+      await _seedRuntimeEntities(id, updatedConfig, branchId: _currentBranchId);
+    }
     await updateAdventureConfig(updatedConfig);
+    if (id != null) {
+      _runtimeEntities = await _adventureRepo.getRuntimeEntities(
+        id,
+        _currentBranchId,
+      );
+      notifyListeners();
+    }
     return true;
   }
 

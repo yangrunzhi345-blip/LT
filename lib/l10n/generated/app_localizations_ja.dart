@@ -5913,6 +5913,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get trackedStateStatusTitle => '検知状態';
 
   @override
+  String get trackedStateScopeLabel => '適用範囲';
+
+  @override
+  String get trackedStateScopeInherit => 'この実体（既定）';
+
+  @override
+  String get trackedStateScopeWorld => '世界（グローバル）';
+
+  @override
+  String get trackedStateScopeCharacters => 'すべてのキャラクター（一般ルール）';
+
+  @override
+  String get trackedStateScopeNpcs => 'すべての NPC（一般ルール）';
+
+  @override
+  String get trackedStateScopeHint =>
+      '世界ルールはグローバル状態です。「すべてのキャラクター」は各キャラクターに個別に値を保持させます。適用範囲は明示的に選択し、名前から自動推測しません。';
+
+  @override
   String get trackedStateNoDefinitionsHint =>
       '検知項目は物語に関連するときだけ更新されます。根拠がない項目に既定値は作られません。';
 

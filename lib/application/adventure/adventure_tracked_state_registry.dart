@@ -59,6 +59,42 @@ final class AdventureTrackedStateRegistry {
     return characterId.isNotEmpty ? characterId : 'protagonist';
   }
 
+  /// Stable ids of every roster character, in a stable order.
+  ///
+  /// Mirrors `AdventureProvider._seedRuntimeEntities` exactly so a
+  /// worldview's `characters`-scoped general rule binds to the same character
+  /// ids the runtime layer seeds — a mismatch would make the settlement drop
+  /// the change for a missing entity row.
+  static List<String> rosterCharacterIds(AdventureConfig config) {
+    final ids = <String>[];
+    final seen = <String>{};
+    void add(String id) {
+      final clean = id.trim();
+      if (clean.isEmpty || !seen.add(clean)) return;
+      ids.add(clean);
+    }
+
+    if (config.selectedCharacters.isNotEmpty) {
+      for (final selected in config.selectedCharacters) {
+        add(AdventureCharacterIdentity.effectiveId(selected));
+      }
+      for (final supporting in config.supportingCharacters) {
+        final id = supporting.id.trim();
+        if (id.isEmpty) continue;
+        final covered = config.selectedCharacters.any((selected) =>
+            AdventureCharacterIdentity.candidateIds(selected).contains(id));
+        if (!covered) add(id);
+      }
+    } else {
+      add(protagonistEntityId(config));
+      for (final supporting in config.supportingCharacters) {
+        add(supporting.id);
+      }
+    }
+    if (ids.isEmpty) add('protagonist');
+    return List.unmodifiable(ids);
+  }
+
   /// Display names for every roster entity, keyed by **stable id**.
   ///
   /// Covers the protagonist, every selected character, the supporting fallback,

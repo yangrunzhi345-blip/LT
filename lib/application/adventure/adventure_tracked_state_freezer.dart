@@ -100,8 +100,17 @@ final class AdventureTrackedStateFreezer {
           _fromNpc(npc.npcJson, entityId: id, diagnostics: diagnostics));
     }
 
-    result
-        .addAll(_fromWorld(config.worldviewSnapshot, diagnostics: diagnostics));
+    result.addAll(_fromWorld(
+      config.worldviewSnapshot,
+      rosterCharacterIds: AdventureTrackedStateRegistry.rosterCharacterIds(
+        config,
+      ),
+      npcIds: [
+        for (final npc in config.npcSnapshots)
+          if (npc.assetId.trim().isNotEmpty) npc.assetId.trim(),
+      ],
+      diagnostics: diagnostics,
+    ));
 
     return _dedupe(result);
   }
@@ -209,8 +218,19 @@ final class AdventureTrackedStateFreezer {
     );
   }
 
+  /// Binds a worldview's monitoring definitions to the runtime entities they
+  /// apply to.
+  ///
+  /// Scope is declared explicitly on the definition and is never inferred from
+  /// the monitor's name:
+  /// * `inherit` / `world` → the single world entity (backward compatible with
+  ///   every definition authored before scope existed).
+  /// * `characters` → every roster character, each keeping an independent value.
+  /// * `npcs` → every NPC snapshot.
   List<AdventureTrackedStateDefinition> _fromWorld(
     Map<String, dynamic>? snapshot, {
+    required List<String> rosterCharacterIds,
+    required List<String> npcIds,
     List<String>? diagnostics,
   }) {
     if (snapshot == null) return const [];
@@ -219,11 +239,35 @@ final class AdventureTrackedStateFreezer {
       raw is Map ? Map<String, dynamic>.from(raw) : null,
     );
     if (details.trackedStateDefinitions.isEmpty) return const [];
-    return _bind(
-      RuntimeEntityType.world,
-      AdventureRuntimeEntityIds.world,
-      details.trackedStateDefinitions,
-    );
+    final result = <AdventureTrackedStateDefinition>[];
+    for (final definition in details.trackedStateDefinitions) {
+      switch (definition.scope) {
+        case TrackedStateScope.characters:
+          for (final id in rosterCharacterIds) {
+            result.add(AdventureTrackedStateDefinition(
+              entityType: RuntimeEntityType.character,
+              entityId: id,
+              definition: definition,
+            ));
+          }
+        case TrackedStateScope.npcs:
+          for (final id in npcIds) {
+            result.add(AdventureTrackedStateDefinition(
+              entityType: RuntimeEntityType.npc,
+              entityId: id,
+              definition: definition,
+            ));
+          }
+        case TrackedStateScope.inherit:
+        case TrackedStateScope.world:
+          result.add(AdventureTrackedStateDefinition(
+            entityType: RuntimeEntityType.world,
+            entityId: AdventureRuntimeEntityIds.world,
+            definition: definition,
+          ));
+      }
+    }
+    return result;
   }
 
   List<AdventureTrackedStateDefinition> _bind(

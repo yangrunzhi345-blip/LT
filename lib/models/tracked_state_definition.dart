@@ -3,6 +3,34 @@ import 'package:equatable/equatable.dart';
 import 'custom_attribute_item.dart';
 import 'typed_runtime_state.dart';
 
+/// Where a [TrackedStateDefinition] applies.
+///
+/// A worldview can author three kinds of rules, and they are **not** inferred
+/// from the definition's name:
+/// * [world] — world-global state stored on the single `world` entity.
+/// * [characters] — a *general* rule applied to every roster character at
+///   freeze time; each character keeps its own independent value.
+/// * [npcs] — a general rule applied to every NPC snapshot.
+///
+/// [inherit] is the owner-decided default kept for backward compatibility: a
+/// character/NPC card binds to its own entity, a worldview definition stays
+/// world-global. It is never surfaced to the model or stored as a runtime path.
+enum TrackedStateScope {
+  inherit,
+  world,
+  characters,
+  npcs;
+
+  static TrackedStateScope fromString(Object? raw) {
+    final name = raw?.toString().trim() ?? '';
+    if (name.isEmpty) return TrackedStateScope.inherit;
+    for (final value in TrackedStateScope.values) {
+      if (value.name == name) return value;
+    }
+    return TrackedStateScope.inherit;
+  }
+}
+
 /// A user- or AI-authored **monitoring definition**: what an entity wants the
 /// narrative to keep track of.
 ///
@@ -42,6 +70,11 @@ final class TrackedStateDefinition with Equatable {
   final Set<String> enumValues;
   final String? icon;
 
+  /// Applicability of this definition ([TrackedStateScope]). Only a worldview
+  /// may declare [TrackedStateScope.characters] / [TrackedStateScope.npcs];
+  /// character and NPC cards always bind to their own entity.
+  final TrackedStateScope scope;
+
   const TrackedStateDefinition({
     required this.id,
     required this.name,
@@ -52,6 +85,7 @@ final class TrackedStateDefinition with Equatable {
     this.maximum,
     this.enumValues = const {},
     this.icon,
+    this.scope = TrackedStateScope.inherit,
   });
 
   bool get isNumeric =>
@@ -77,6 +111,7 @@ final class TrackedStateDefinition with Equatable {
         maximum,
         enumValues,
         icon,
+        scope,
       ];
 
   TrackedStateDefinition copyWith({
@@ -89,6 +124,7 @@ final class TrackedStateDefinition with Equatable {
     num? maximum,
     Set<String>? enumValues,
     String? icon,
+    TrackedStateScope? scope,
   }) =>
       TrackedStateDefinition(
         id: id ?? this.id,
@@ -100,6 +136,7 @@ final class TrackedStateDefinition with Equatable {
         maximum: maximum ?? this.maximum,
         enumValues: enumValues ?? this.enumValues,
         icon: icon ?? this.icon,
+        scope: scope ?? this.scope,
       );
 
   Map<String, dynamic> toJson() => {
@@ -112,6 +149,9 @@ final class TrackedStateDefinition with Equatable {
         if (maximum != null) 'maximum': maximum,
         if (enumValues.isNotEmpty) 'enum_values': enumValues.toList(),
         if (icon != null && icon!.trim().isNotEmpty) 'icon': icon!.trim(),
+        // Only serialized once explicitly chosen, so legacy payloads and
+        // frozen snapshots keep their exact previous shape.
+        if (scope != TrackedStateScope.inherit) 'scope': scope.name,
       };
 
   factory TrackedStateDefinition.fromJson(Map<String, dynamic> json) {
@@ -141,6 +181,7 @@ final class TrackedStateDefinition with Equatable {
       maximum: _asNum(json['maximum'] ?? json['max']),
       enumValues: enumValues,
       icon: (json['icon'])?.toString(),
+      scope: TrackedStateScope.fromString(json['scope']),
     );
   }
 

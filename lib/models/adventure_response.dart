@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'custom_attribute_item.dart';
 import 'custom_status_change.dart';
 import 'custom_status_evaluation.dart';
+import 'tracked_state_evaluation.dart';
 
 /// The four shapes a model response can take.  Keeping them explicit lets the
 /// engine, widgets and tests agree on what may be shown as narrative.
@@ -81,6 +82,12 @@ class AdventureResponse with Equatable {
   /// 但模型一项都没评估，二者语义不同，不能合并。
   final List<CustomStatusEvaluation>? customStatusEvaluations;
 
+  /// `tracked_evaluations` 解析结果（统一追踪系统的强制评估协议）。
+  ///
+  /// `null` 表示本轮负载没有出现该字段；显式空数组表示协议出现但模型一项都
+  /// 没评估。二者语义不同，不能合并。
+  final List<TrackedStateEvaluation>? trackedEvaluations;
+
   /// 解析阶段产生的诊断（非法项、超限等）。此前被直接丢弃，现在随响应带出，
   /// 由引擎汇总进 `statusDiagnostics` 以便测试与排查。
   final List<String> parseDiagnostics;
@@ -100,6 +107,7 @@ class AdventureResponse with Equatable {
     this.customStatus = const [],
     this.customStatusChanges = const [],
     this.customStatusEvaluations,
+    this.trackedEvaluations,
     this.parseDiagnostics = const [],
     this.patch = const AdventureStatePatch(),
   });
@@ -124,6 +132,10 @@ class AdventureResponse with Equatable {
           diagnostics: parseDiagnostics),
       customStatusEvaluations: json.containsKey('custom_status_evaluations')
           ? CustomStatusEvaluation.parse(json['custom_status_evaluations'],
+              diagnostics: parseDiagnostics)
+          : null,
+      trackedEvaluations: json.containsKey('tracked_evaluations')
+          ? TrackedStateEvaluation.parse(json['tracked_evaluations'],
               diagnostics: parseDiagnostics)
           : null,
       parseDiagnostics: List.unmodifiable(parseDiagnostics),
@@ -174,6 +186,7 @@ class AdventureResponse with Equatable {
     'custom_attributes',
     'custom_status_changes',
     'custom_status_evaluations',
+    'tracked_evaluations',
     'narrative',
     'scene_candidates',
     'runtime_state_changes',
@@ -183,7 +196,7 @@ class AdventureResponse with Equatable {
   static final RegExp _payloadKeyPattern = RegExp(
       r'"(scene|options|hp|max_hp|maxHp|energy|max_energy|maxEnergy|gold|'
       r'inventory|custom_status|custom_attributes|custom_status_changes|'
-      r'custom_status_evaluations|'
+      r'custom_status_evaluations|tracked_evaluations|'
       r'narrative|scene_candidates|runtime_state_changes|scene_state_changes)"\s*:');
 
   /// Protocol-level classification of a model response.
@@ -767,6 +780,7 @@ class AdventureResponse with Equatable {
         customStatus,
         customStatusChanges,
         customStatusEvaluations,
+        trackedEvaluations,
         parseDiagnostics,
       ];
 }

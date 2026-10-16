@@ -5831,6 +5831,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get trackedStateStatusTitle => '检测状态';
 
   @override
+  String get trackedStateScopeLabel => '适用范围';
+
+  @override
+  String get trackedStateScopeInherit => '本实体（默认）';
+
+  @override
+  String get trackedStateScopeWorld => '世界（全局）';
+
+  @override
+  String get trackedStateScopeCharacters => '所有角色（通用规则）';
+
+  @override
+  String get trackedStateScopeNpcs => '所有 NPC（通用规则）';
+
+  @override
+  String get trackedStateScopeHint =>
+      '世界规则属于全局状态；「所有角色」会把该规则绑定到每个角色，各自独立存储数值。适用范围需显式选择，系统不会根据名称自动猜测。';
+
+  @override
   String get trackedStateNoDefinitionsHint =>
       '检测项目只在剧情相关时更新；没有剧情依据的项目不会生成默认状态。';
 
@@ -12082,6 +12101,25 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get trackedStateStatusTitle => '检测状态';
 
   @override
+  String get trackedStateScopeLabel => '适用范围';
+
+  @override
+  String get trackedStateScopeInherit => '本实体（默认）';
+
+  @override
+  String get trackedStateScopeWorld => '世界（全局）';
+
+  @override
+  String get trackedStateScopeCharacters => '所有角色（通用规则）';
+
+  @override
+  String get trackedStateScopeNpcs => '所有 NPC（通用规则）';
+
+  @override
+  String get trackedStateScopeHint =>
+      '世界规则属于全局状态；「所有角色」会把该规则绑定到每个角色，各自独立存储数值。适用范围需显式选择，系统不会根据名称自动猜测。';
+
+  @override
   String get trackedStateNoDefinitionsHint =>
       '检测项目只在剧情相关时更新；没有剧情依据的项目不会生成默认状态。';
 
@@ -18331,6 +18369,25 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get trackedStateStatusTitle => '檢測狀態';
+
+  @override
+  String get trackedStateScopeLabel => '適用範圍';
+
+  @override
+  String get trackedStateScopeInherit => '本實體（預設）';
+
+  @override
+  String get trackedStateScopeWorld => '世界（全域）';
+
+  @override
+  String get trackedStateScopeCharacters => '所有角色（通用規則）';
+
+  @override
+  String get trackedStateScopeNpcs => '所有 NPC（通用規則）';
+
+  @override
+  String get trackedStateScopeHint =>
+      '世界規則屬於全域狀態；「所有角色」會把該規則綁定到每個角色，各自獨立儲存數值。適用範圍需明確選擇，系統不會依名稱自動猜測。';
 
   @override
   String get trackedStateNoDefinitionsHint =>

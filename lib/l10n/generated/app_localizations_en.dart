@@ -6220,6 +6220,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackedStateStatusTitle => 'Monitored status';
 
   @override
+  String get trackedStateScopeLabel => 'Applies to';
+
+  @override
+  String get trackedStateScopeInherit => 'Its own entity (default)';
+
+  @override
+  String get trackedStateScopeWorld => 'World (global)';
+
+  @override
+  String get trackedStateScopeCharacters => 'Every character (general rule)';
+
+  @override
+  String get trackedStateScopeNpcs => 'Every NPC (general rule)';
+
+  @override
+  String get trackedStateScopeHint =>
+      'World rules are global state. \"Every character\" binds the rule to each character separately — each keeps its own value. Scope is chosen explicitly; it is never guessed from the field name.';
+
+  @override
   String get trackedStateNoDefinitionsHint =>
       'Monitored fields update only when the story touches them. Without narrative evidence, no default value is created.';
 

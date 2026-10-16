@@ -325,6 +325,7 @@ class _WorldviewEditPageState extends State<_WorldviewEditPage> {
                 const SizedBox(height: 16),
                 TrackedStateDefinitionEditorSection(
                   initialItems: trackedStateDefinitions,
+                  showScopeSelector: true,
                   onChanged: (items) {
                     setState(() => trackedStateDefinitions = items);
                     _markDirty();

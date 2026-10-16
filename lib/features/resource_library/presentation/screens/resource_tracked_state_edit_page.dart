@@ -168,6 +168,7 @@ final class _ResourceTrackedStateEditPageState
             key: ValueKey(
                 'tracked-state-editor-${widget.ownerType.name}-${widget.resourceId}'),
             initialItems: _definitions,
+            showScopeSelector: widget.ownerType == ResourceType.worldview,
             onChanged: (items) => _definitions = items,
           ),
         ],

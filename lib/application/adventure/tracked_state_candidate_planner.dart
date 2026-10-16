@@ -1,5 +1,6 @@
 import '../../models/adventure_runtime_state.dart';
 import '../../models/adventure_tracked_state.dart';
+import '../../models/custom_attribute_item.dart';
 import '../../models/tracked_state_definition.dart';
 import 'adventure_tracked_state_registry.dart';
 
@@ -26,6 +27,15 @@ final class TrackedStateCandidate {
   String get entityId => binding.entityId;
   String get definitionId => binding.definitionId;
   bool get isTriggered => currentValue != null;
+
+  /// True for a `不可忽略项` (critical) monitor, which must receive an explicit
+  /// evaluation every turn instead of being silently skipped by the sparse
+  /// protocol.
+  bool get isCritical =>
+      binding.definition.importance == CustomAttributeImportance.critical;
+
+  /// Stable identity triple used to match evaluations back to candidates.
+  String get monitorKey => '${entityType.name}:$entityId:$definitionId';
 
   /// The prompt line for this candidate.
   ///
@@ -57,6 +67,10 @@ final class TrackedStateCandidate {
       buffer.write(', 允许值=${definition.enumValues.join('/')}');
     }
     buffer.write(', 重要程度=${definition.importance.label}');
+    if (isCritical) {
+      buffer.write(', 必须评估=true（本轮必须在 tracked_evaluations 中给出'
+          'changed/unchanged/undetermined 的明确判定）');
+    }
     if (!isTriggered) {
       buffer.write('（尚未触发：首次有依据时必须用 operation=set 初始化，'
           '禁止填入整齐的默认值）');

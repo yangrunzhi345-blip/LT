@@ -5939,6 +5939,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get trackedStateStatusTitle => '감지 상태';
 
   @override
+  String get trackedStateScopeLabel => '적용 범위';
+
+  @override
+  String get trackedStateScopeInherit => '이 엔티티(기본)';
+
+  @override
+  String get trackedStateScopeWorld => '세계(전역)';
+
+  @override
+  String get trackedStateScopeCharacters => '모든 캐릭터(일반 규칙)';
+
+  @override
+  String get trackedStateScopeNpcs => '모든 NPC(일반 규칙)';
+
+  @override
+  String get trackedStateScopeHint =>
+      '세계 규칙은 전역 상태입니다. 모든 캐릭터는 각 캐릭터에 독립적으로 값을 저장합니다. 범위는 명시적으로 선택하며 이름으로 자동 추측하지 않습니다.';
+
+  @override
   String get trackedStateNoDefinitionsHint =>
       '감지 항목은 이야기와 관련될 때만 갱신됩니다. 근거가 없는 항목에는 기본값이 생성되지 않습니다.';
 

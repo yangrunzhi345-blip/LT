@@ -21,6 +21,7 @@ import '../models/scene_dialogue_effects.dart';
 import '../models/scene_state.dart';
 import '../models/supporting_character.dart';
 import '../models/turn_settlement.dart';
+import '../models/tracked_state_evaluation.dart';
 import '../models/typed_runtime_state.dart';
 import '../models/worldview_details.dart';
 import '../application/adventure/adventure_tracked_state_registry.dart';
@@ -674,6 +675,13 @@ class ChatEngine {
     _settlementStreamingContent = '';
     _notifyAll();
 
+    // Planned once per turn so the same candidate set drives the settlement
+    // request *and* the mandatory-evaluation completeness check.
+    final candidates = _settlementCandidates(
+      userInput: userInput,
+      finalNarrative: finalNarrative,
+    );
+
     for (var attempt = 1; attempt <= _maxSettlementAttempts; attempt++) {
       if (!_isRequestCurrent(
           requestId, requestGeneration, adventureId, branchId)) {
@@ -687,10 +695,7 @@ class ChatEngine {
             finalNarrative: finalNarrative,
             scene: _host.gameState.currentScene,
             runtimeRevision: expectedRuntimeRevision,
-            candidates: _settlementCandidates(
-              userInput: userInput,
-              finalNarrative: finalNarrative,
-            ),
+            candidates: candidates,
             runtimeFacts: _settlementRuntimeFacts(),
             relationships: _promptBuilder.lastRelationships,
           ),
@@ -736,8 +741,25 @@ class ChatEngine {
           // attempt — everything else is accepted as-is and falls back.
           continue;
         }
+        // P1: a `不可忽略项` must never be silently skipped by the sparse
+        // protocol. One bounded follow-up recovers omitted evaluations; a
+        // still-missing one degrades with a diagnostic instead of blocking.
+        final completed = await _completeCriticalEvaluations(
+          settled: settled,
+          candidates: candidates,
+          finalNarrative: finalNarrative,
+          userInput: userInput,
+          requestId: requestId,
+          requestGeneration: requestGeneration,
+          adventureId: adventureId,
+          branchId: branchId,
+        );
+        if (!_isRequestCurrent(
+            requestId, requestGeneration, adventureId, branchId)) {
+          return _SettlementOutcome(status: 'stale', attempts: attempt);
+        }
         return _SettlementOutcome(
-          settlement: settled,
+          settlement: completed,
           status: 'applied',
           attempts: attempt,
           diagnostics: diagnostics,
@@ -759,6 +781,156 @@ class ChatEngine {
         status: 'failed_json', attempts: _maxSettlementAttempts);
   }
 
+  /// Hard output budget for the bounded critical-evaluation follow-up.
+  static const int _criticalEvaluationMaxTokens = 512;
+
+  /// Ensures every critical (`不可忽略项`) candidate carries an explicit
+  /// evaluation, issuing **at most one** focused follow-up request.
+  ///
+  /// Returns the settlement augmented with the recovered evaluations (and the
+  /// proposals they imply). It never loops: a monitor the follow-up still does
+  /// not cover is recorded as `unevaluated` and the turn continues — a failed
+  /// evaluation must not block the adventure. Diagnostics are folded into the
+  /// settlement's `parseDiagnostics`, which reach `statusDiagnostics`.
+  Future<TurnSettlement> _completeCriticalEvaluations({
+    required TurnSettlement settled,
+    required List<TrackedStateCandidate> candidates,
+    required String finalNarrative,
+    required String userInput,
+    required String requestId,
+    required int requestGeneration,
+    required int? adventureId,
+    required int branchId,
+  }) async {
+    final critical =
+        candidates.where((candidate) => candidate.isCritical).toList();
+    if (critical.isEmpty) {
+      return settled;
+    }
+    final diagnostics = <String>[];
+    final evaluated = _evaluatedMonitorKeys(settled);
+    final missing = <TrackedStateCandidate>[
+      for (final candidate in critical)
+        if (!evaluated.contains(candidate.monitorKey)) candidate,
+    ];
+    for (final candidate in critical) {
+      if (!missing.contains(candidate)) {
+        diagnostics
+            .add('critical_evaluation:evaluated:${candidate.monitorKey}');
+      }
+    }
+
+    var recovered = const <TrackedStateEvaluation>[];
+    var recoveredChanges = const <RuntimeStateChangeProposal>[];
+    if (missing.isNotEmpty) {
+      diagnostics.add('critical_evaluation:topup:${missing.length}');
+      try {
+        final execution = await _executeAdventureContext(
+          messages: TurnSettlementPromptBuilder.buildCriticalEvaluationMessages(
+            userInput: userInput,
+            finalNarrative: finalNarrative,
+            scene: _host.gameState.currentScene,
+            candidates: missing,
+          ),
+          taskType: ContextTaskType.adventureTurnSettlement,
+          intent: userInput,
+          maximumOutputTokens: math.min(
+            _criticalEvaluationMaxTokens,
+            _host.modelContextCapability.maximumOutputTokens,
+          ),
+          requestId: '$requestId:critical-eval',
+          taskHandle: _activeTaskHandle,
+          onChunk: (_) {},
+        );
+        if (!_isRequestCurrent(
+            requestId, requestGeneration, adventureId, branchId)) {
+          return _withCriticalDiagnostics(settled, diagnostics);
+        }
+        final topUp =
+            TurnSettlement.parse(execution.content, diagnostics: diagnostics);
+        if (topUp != null) {
+          recovered = topUp.trackedEvaluations ?? const [];
+          recoveredChanges = topUp.runtimeChanges;
+        }
+      } catch (_) {
+        // A failed follow-up never blocks the turn; it degrades to a
+        // diagnostic.
+        diagnostics.add('critical_evaluation:topup_failed');
+      }
+    }
+
+    final mergedEvaluations = <TrackedStateEvaluation>[
+      ...?settled.trackedEvaluations,
+      ...recovered,
+    ];
+    // `changed` evaluations become the same validated proposals the sparse
+    // path produces; `unchanged` / `undetermined` never write.
+    final evaluationChanges = <RuntimeStateChangeProposal>[];
+    for (final evaluation in mergedEvaluations) {
+      switch (evaluation.status) {
+        case TrackedEvaluationStatus.changed:
+          final proposal = evaluation.toProposal();
+          if (proposal == null) {
+            diagnostics
+                .add('critical_evaluation:invalid_change:${evaluation.key}');
+          } else {
+            evaluationChanges.add(proposal);
+          }
+        case TrackedEvaluationStatus.unchanged:
+          diagnostics.add('critical_evaluation:unchanged:${evaluation.key}');
+        case TrackedEvaluationStatus.undetermined:
+          diagnostics.add('critical_evaluation:undetermined:${evaluation.key}');
+      }
+    }
+    final merged = settled.copyWith(
+      trackedEvaluations: List.unmodifiable(mergedEvaluations),
+      runtimeChanges: List.unmodifiable([
+        ...settled.runtimeChanges,
+        ...recoveredChanges,
+        ...evaluationChanges,
+      ]),
+    );
+    final resolved = _evaluatedMonitorKeys(merged);
+    for (final candidate in missing) {
+      diagnostics.add(
+        resolved.contains(candidate.monitorKey)
+            ? 'critical_evaluation:resolved:${candidate.monitorKey}'
+            : 'critical_evaluation:unevaluated:${candidate.monitorKey}',
+      );
+    }
+    return _withCriticalDiagnostics(merged, diagnostics);
+  }
+
+  TurnSettlement _withCriticalDiagnostics(
+    TurnSettlement settlement,
+    List<String> diagnostics,
+  ) =>
+      diagnostics.isEmpty
+          ? settlement
+          : settlement.copyWith(
+              parseDiagnostics: List.unmodifiable([
+                ...settlement.parseDiagnostics,
+                ...diagnostics,
+              ]),
+            );
+
+  /// Monitor keys (`entityType:entityId:definitionId`) the settlement either
+  /// explicitly evaluated or changed outright.
+  Set<String> _evaluatedMonitorKeys(TurnSettlement settlement) {
+    final keys = <String>{};
+    for (final evaluation
+        in settlement.trackedEvaluations ?? const <TrackedStateEvaluation>[]) {
+      keys.add(evaluation.key);
+    }
+    for (final change in settlement.runtimeChanges) {
+      final definitionId =
+          RuntimeStateChangeProposal.customAttributeIdFromPath(change.path);
+      if (definitionId == null) continue;
+      keys.add('${change.entityType.name}:${change.entityId}:$definitionId');
+    }
+    return keys;
+  }
+
   /// Candidate monitoring definitions for this turn's settlement request.
   ///
   /// Reads the frozen [AdventureTrackedStateRegistry] — never a protagonist-first
@@ -771,7 +943,9 @@ class ChatEngine {
     required String finalNarrative,
   }) {
     final config = _host.adventureConfig;
-    if (config == null) return const [];
+    if (config == null) {
+      return const [];
+    }
     final registry = AdventureTrackedStateRegistry.fromConfig(config);
     if (registry.isEmpty) {
       _pendingCandidateDiagnostics = const [];

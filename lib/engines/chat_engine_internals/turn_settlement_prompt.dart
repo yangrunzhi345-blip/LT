@@ -53,6 +53,14 @@ final class TurnSettlementPromptBuilder {
 - 文本/枚举/布尔项目：只能 operation=set。
 - 候选清单里「当前值=无」的项目，首次必须用 operation=set 初始化，不要把 increment 用在尚未存在的值上。
 
+强制评估（不可忽略项，tracked_evaluations）：
+- 候选清单里标有「必须评估=true」的项目，每一项都必须在 tracked_evaluations 中给出一条明确判定，不得省略。
+- 每条格式：{"entity_type":..,"entity_id":..,"monitor_id":..,"status":"changed|unchanged|undetermined","operation":..,"value":..,"reason":"一句话"}。
+- status=changed 时必须给出 operation 与 value（数值可用 set 或 increment，文本/枚举/布尔只能 set），程序按 runtime_state_changes 的同一套校验落地。
+- status=unchanged 表示「本轮已检查、数值保持不变」；status=undetermined 表示「本轮正文不足以判断」。二者都不得改动数值，只需给出 reason。
+- 严禁把 unchanged/undetermined 写成 changed 来制造变化；严禁为「完成评估」而凭空扣减生命值或添加状态事件。
+- 没有标「必须评估」的项目继续使用稀疏协议：只在真正变化时输出 runtime_state_changes，未变化一律不输出。
+
 变化幅度（候选给出范围且用户未定义幅度时）：轻微影响取范围的 1%~5%；明显影响 5%~15%；
 重大剧情事件可更大，但必须在 reason 中写明剧情依据，且不得超出候选范围。
 
@@ -81,6 +89,51 @@ final class TurnSettlementPromptBuilder {
           runtimeFacts: runtimeFacts,
           relationships: relationships,
         )
+      },
+    ];
+  }
+
+  /// Compact, **bounded** follow-up request used only when the main settlement
+  /// omitted a mandatory (`不可忽略项`) evaluation.
+  ///
+  /// It reuses the same narrative and the exact missing candidates, asks for
+  /// `tracked_evaluations` only, and is issued at most once per turn by the
+  /// engine — it can never loop or block the adventure.
+  static const String criticalEvaluationSystemPrompt = '''
+你是本轮强制检测评估器，不是小说作者。
+
+只读「本轮已完成的正文」，对下列每个「不可忽略项」给出一条明确判定，输出一个 JSON 对象。
+
+硬性禁止：
+- 禁止续写、改写或总结正文。
+- 禁止新建、重命名或删除检测项目；只能使用清单中的 entity_id 与 monitor_id。
+- 禁止为「完成评估」而制造变化：正文没有依据时用 unchanged（已检查、保持不变）或 undetermined（正文不足以判断）。
+- 禁止输出 Markdown、代码块或 JSON 之外的文字。
+
+判定规则：
+- status=changed 必须给出 operation 与 value（数值可用 set 或 increment，文本/枚举/布尔只能 set），并写明 reason。
+- status=unchanged / undetermined 只给 reason，不得改动数值。
+- 数值增减必须有正文事实依据，不得凭空扣减生命值。
+
+只输出：{"tracked_evaluations":[{"entity_type":"character","entity_id":"<候选 ID>","monitor_id":"<候选 monitor_id>","status":"changed|unchanged|undetermined","operation":"set|increment","value":0,"reason":"一句话依据"}]}''';
+
+  static List<Map<String, String>> buildCriticalEvaluationMessages({
+    required String userInput,
+    required String finalNarrative,
+    required String scene,
+    required List<TrackedStateCandidate> candidates,
+  }) {
+    final list = candidates.map((candidate) => candidate.promptLine).join('\n');
+    return [
+      const {'role': 'system', 'content': criticalEvaluationSystemPrompt},
+      {
+        'role': 'user',
+        'content': '本轮玩家行动：$userInput\n'
+            '当前场景：${scene.trim().isEmpty ? '未知' : scene.trim()}\n\n'
+            '必须评估的检测项目：\n$list\n\n'
+            '以下是本轮**已经完成**的正文，只根据它判定：\n'
+            '<<<正文开始>>>\n$_trimNarrative(finalNarrative)\n<<<正文结束>>>\n\n'
+            '只输出 JSON：{"tracked_evaluations":[]}',
       },
     ];
   }
@@ -162,10 +215,11 @@ $candidateSection$relationshipSection
 允许的 path：候选清单中的 custom_attributes.<monitor_id>，关系列表声明的字段，以及 hp、mp、energy、experience、level、base_atk、base_def、base_speed、life_status（仅 alive/dead）、affinity、relationship、faction_id、former_faction_id、goal、controller_id、status。
 
 只输出这个 JSON 对象：
-{"schema_version":${TurnSettlement.schemaVersion},"options":["选项1","选项2","选项3"],"runtime_state_changes":[{"entity_type":"character","entity_id":"<候选中的 entity_id>","change_kind":"primary","operation":"increment","path":"custom_attributes.<monitor_id>","value":5,"reason":"一句话理由"}]}''';
+{"schema_version":${TurnSettlement.schemaVersion},"options":["选项1","选项2","选项3"],"runtime_state_changes":[{"entity_type":"character","entity_id":"<候选中的 entity_id>","change_kind":"primary","operation":"increment","path":"custom_attributes.<monitor_id>","value":5,"reason":"一句话理由"}],"tracked_evaluations":[{"entity_type":"character","entity_id":"<候选中的 entity_id>","monitor_id":"<必须评估项的 monitor_id>","status":"unchanged","reason":"一句话理由"}]}
+tracked_evaluations 只需覆盖标有「必须评估=true」的候选；没有这类候选时该数组可为空或省略。''';
   }
 
-  String _trimNarrative(String narrative) {
+  static String _trimNarrative(String narrative) {
     final text = narrative.trim();
     if (text.length <= maximumNarrativeChars) return text;
     return '${text.substring(0, _headChars)}\n…（中段省略）…\n'

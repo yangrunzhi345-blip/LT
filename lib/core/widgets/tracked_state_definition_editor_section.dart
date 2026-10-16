@@ -30,6 +30,11 @@ class TrackedStateDefinitionEditorSection extends StatefulWidget {
   final String? subtitle;
   final bool framed;
 
+  /// When true the editor exposes the [TrackedStateScope] selector. Only the
+  /// worldview owner can author a general rule that binds to characters/NPCs;
+  /// character and NPC editors always bind to their own entity.
+  final bool showScopeSelector;
+
   const TrackedStateDefinitionEditorSection({
     super.key,
     required this.initialItems,
@@ -37,6 +42,7 @@ class TrackedStateDefinitionEditorSection extends StatefulWidget {
     this.title,
     this.subtitle,
     this.framed = true,
+    this.showScopeSelector = false,
   });
 
   @override
@@ -53,6 +59,7 @@ class _TrackedStateDefinitionEntry {
   final TextEditingController enumCtrl;
   RuntimeStateValueKind kind;
   CustomAttributeImportance importance;
+  TrackedStateScope scope;
 
   _TrackedStateDefinitionEntry({
     required this.id,
@@ -60,6 +67,7 @@ class _TrackedStateDefinitionEntry {
     required String rule,
     required this.kind,
     required this.importance,
+    this.scope = TrackedStateScope.inherit,
     num? minimum,
     num? maximum,
     Set<String> enumValues = const {},
@@ -100,6 +108,7 @@ class _TrackedStateDefinitionEntry {
       maximum: isNumeric ? num.tryParse(maxCtrl.text.trim()) : null,
       enumValues:
           kind == RuntimeStateValueKind.enumValue ? enumValues : const {},
+      scope: scope,
     );
   }
 
@@ -131,6 +140,7 @@ class _TrackedStateDefinitionEditorSectionState
       minimum: item.minimum,
       maximum: item.maximum,
       enumValues: item.enumValues,
+      scope: item.scope,
     );
     _bindListeners(entry);
     _entries.add(entry);
@@ -196,6 +206,11 @@ class _TrackedStateDefinitionEditorSectionState
 
   void _setImportance(int index, CustomAttributeImportance importance) {
     setState(() => _entries[index].importance = importance);
+    _notifyChanged();
+  }
+
+  void _setScope(int index, TrackedStateScope scope) {
+    setState(() => _entries[index].scope = scope);
     _notifyChanged();
   }
 
@@ -274,6 +289,17 @@ class _TrackedStateDefinitionEditorSectionState
                     fontSize: 12,
                     height: 1.4,
                     color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              if (widget.showScopeSelector) ...[
+                const SizedBox(height: 4),
+                Text(
+                  l10n?.trackedStateScopeHint ?? '',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.85),
                   ),
                 ),
               ],
@@ -431,6 +457,34 @@ class _TrackedStateDefinitionEditorSectionState
             runSpacing: AppSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              if (widget.showScopeSelector)
+                SizedBox(
+                  width: 190,
+                  child: AppDropdown<TrackedStateScope>.compact(
+                    value: entry.scope,
+                    direction: AppDropdownDirection.down,
+                    options: [
+                      for (final scope in const [
+                        TrackedStateScope.inherit,
+                        TrackedStateScope.world,
+                        TrackedStateScope.characters,
+                        TrackedStateScope.npcs,
+                      ])
+                        AppDropdownOption(
+                          value: scope,
+                          label: _scopeLabel(scope, l10n),
+                        ),
+                    ],
+                    selectedBuilder: (value) => Text(
+                      _scopeLabel(value ?? entry.scope, l10n),
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onChanged: (value) {
+                      if (value != null) _setScope(index, value);
+                    },
+                  ),
+                ),
               SizedBox(
                 width: 150,
                 child: AppDropdown<CustomAttributeImportance>.compact(
@@ -525,5 +579,15 @@ class _TrackedStateDefinitionEditorSectionState
         RuntimeStateValueKind.boolean =>
           l10n?.trackedStateKindBoolean ?? 'Boolean',
         RuntimeStateValueKind.enumValue => l10n?.trackedStateKindEnum ?? 'Enum',
+      };
+
+  String _scopeLabel(TrackedStateScope scope, AppLocalizations? l10n) =>
+      switch (scope) {
+        TrackedStateScope.inherit =>
+          l10n?.trackedStateScopeInherit ?? 'Entity (default)',
+        TrackedStateScope.world => l10n?.trackedStateScopeWorld ?? 'World',
+        TrackedStateScope.characters =>
+          l10n?.trackedStateScopeCharacters ?? 'All characters',
+        TrackedStateScope.npcs => l10n?.trackedStateScopeNpcs ?? 'All NPCs',
       };
 }

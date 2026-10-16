@@ -10801,6 +10801,42 @@ abstract class AppLocalizations {
   /// **'Monitored status'**
   String get trackedStateStatusTitle;
 
+  /// No description provided for @trackedStateScopeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Applies to'**
+  String get trackedStateScopeLabel;
+
+  /// No description provided for @trackedStateScopeInherit.
+  ///
+  /// In en, this message translates to:
+  /// **'Its own entity (default)'**
+  String get trackedStateScopeInherit;
+
+  /// No description provided for @trackedStateScopeWorld.
+  ///
+  /// In en, this message translates to:
+  /// **'World (global)'**
+  String get trackedStateScopeWorld;
+
+  /// No description provided for @trackedStateScopeCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Every character (general rule)'**
+  String get trackedStateScopeCharacters;
+
+  /// No description provided for @trackedStateScopeNpcs.
+  ///
+  /// In en, this message translates to:
+  /// **'Every NPC (general rule)'**
+  String get trackedStateScopeNpcs;
+
+  /// No description provided for @trackedStateScopeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'World rules are global state. \"Every character\" binds the rule to each character separately — each keeps its own value. Scope is chosen explicitly; it is never guessed from the field name.'**
+  String get trackedStateScopeHint;
+
   /// No description provided for @trackedStateNoDefinitionsHint.
   ///
   /// In en, this message translates to:

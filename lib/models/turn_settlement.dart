@@ -2,6 +2,7 @@ import 'adventure_response.dart';
 import 'adventure_runtime_state.dart';
 import 'custom_status_change.dart';
 import 'custom_status_evaluation.dart';
+import 'tracked_state_evaluation.dart';
 
 /// One status the settlement request has to account for.
 ///
@@ -95,6 +96,11 @@ final class TurnSettlement {
 
   final List<RuntimeStateChangeProposal> runtimeChanges;
 
+  /// `tracked_evaluations`：本轮对**强制评估项**（不可忽略项）的显式判定。
+  ///
+  /// `null` 表示负载没有出现该字段；空数组表示协议出现但一项都没评估。
+  final List<TrackedStateEvaluation>? trackedEvaluations;
+
   final List<String> parseDiagnostics;
 
   const TurnSettlement({
@@ -102,8 +108,27 @@ final class TurnSettlement {
     this.customStatusEvaluations,
     this.customStatusChanges = const [],
     this.runtimeChanges = const [],
+    this.trackedEvaluations,
     this.parseDiagnostics = const [],
   });
+
+  TurnSettlement copyWith({
+    List<String>? options,
+    List<CustomStatusEvaluation>? customStatusEvaluations,
+    List<CustomStatusChange>? customStatusChanges,
+    List<RuntimeStateChangeProposal>? runtimeChanges,
+    List<TrackedStateEvaluation>? trackedEvaluations,
+    List<String>? parseDiagnostics,
+  }) =>
+      TurnSettlement(
+        options: options ?? this.options,
+        customStatusEvaluations:
+            customStatusEvaluations ?? this.customStatusEvaluations,
+        customStatusChanges: customStatusChanges ?? this.customStatusChanges,
+        runtimeChanges: runtimeChanges ?? this.runtimeChanges,
+        trackedEvaluations: trackedEvaluations ?? this.trackedEvaluations,
+        parseDiagnostics: parseDiagnostics ?? this.parseDiagnostics,
+      );
 
   bool get hasUsableOptions => options.length >= minimumUsableOptions;
 
@@ -144,6 +169,7 @@ final class TurnSettlement {
       customStatusEvaluations: response.customStatusEvaluations,
       customStatusChanges: response.customStatusChanges,
       runtimeChanges: runtimeChanges,
+      trackedEvaluations: response.trackedEvaluations,
       parseDiagnostics: List.unmodifiable(sink),
     );
   }
