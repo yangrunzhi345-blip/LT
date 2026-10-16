@@ -18,7 +18,7 @@
 | BUG-11 | 资源独立弹性覆盖在重新规划后被抹除 | CONFIRMED BUG（已修复） | — | RESOLVED | 已消除 |
 | P3-1 | `updateResource` metadata 整体替换可能丢失弹性覆盖 | CONFIRMED LATENT RISK | P3 | OPEN / MONITORED | NOT APPLICABLE |
 | P3-2 | 连续两次 re-plan 覆盖保留未覆盖 | TEST GAP（已关闭） | — | CLOSED | 不适用 |
-| P3-3 | 历史 metadata 禁用键兼容性 | UNVERIFIED | P3 | OPEN / PENDING INVESTIGATION | 未确认 |
+| P3-3 | 历史 metadata 禁用键兼容性 | NOT REPRODUCED | P3 | CLOSED | 无（未发现可达路径） |
 
 ---
 
@@ -111,18 +111,51 @@
 
 ---
 
-## P3-3 —— 历史 metadata 禁用键兼容性（OPEN / PENDING INVESTIGATION）
+## P3-3 —— 历史 metadata 禁用键兼容性（CLOSED / NOT REPRODUCED）
 
-- 分类：UNVERIFIED（潜在边界）。
-- 状态：**OPEN / PENDING INVESTIGATION**。
-- 内容：BUG-11 修复会保留既有资源的非自有 metadata 键。若历史/迁移行的
-  `resources.metadata_json` 含 `ResourceMetadataPolicy` 的禁用容器键
+- 分类：**NOT REPRODUCED**（`ResourceMetadataPolicy` 禁用容器键假设场景无法经任何生产、迁移或 legacy 路径构造）。
+- 状态：**CLOSED**（依据证据关闭；非预设关闭）。
+- 原假设：BUG-11 修复保留既有资源的非自有 metadata 键，若历史/迁移行的
+  `resources.metadata_json` 含 `ResourceMetadataPolicy` 禁用容器键
   （`lib/services/repositories/resource_metadata_policy.dart:106-111`），修复后 `confirmBlueprint`
   会在 `validate` 抛错，而修复前会静默丢弃该键。
-- 当前认知：未调查其真实影响，**不得推断或提前关闭**。仓库内所有 repository 写入均经该策略校验，
-  迁移不注入此类键。
-- 触发条件：存在含禁用容器键的历史/迁移 metadata 行并被重新规划。
-- 关闭条件：完成历史数据调查，证明此类行不存在，或有针对性的迁移/兼容处理与回归测试。
+
+### 调查证据（2026-10-16）
+
+1. **唯一写入者且强制校验**：`resources.metadata_json` 仅由 `ResourceTreeRepositoryImpl` 写入，
+   且每个入口都在写入前调用 `ResourceMetadataPolicy.validate`：
+   `createResource`（`:57`）、`createResourceTreeInTransaction`（`:101`）、
+   `updateResourceTreeInTransaction`（`:127`）、`updateResource`（`:380`）、
+   `updateGenerationElasticOverride`（`:411`）、builder `commit`（`:1821`）。
+2. **无旁路写入**：全仓库 `lib/` 内无对 `resources` 表的裸 `INSERT/UPDATE`（`grep` 无命中）；
+   `trash`/`revision` 写入各自独立表（`resource_trash`、`resource_revisions`），
+   不写入 `resources.metadata_json`。
+3. **策略与表同龄且从未变更**：`resource_metadata_policy.dart` 与其
+   `forbiddenContainerKeys`（`:41-61`）在 `6b5e503`（引入统一资源树、
+   `resources.metadata_json` 同提交）建立，此后**无任何提交修改该文件**
+   （`git log -- lib/services/repositories/resource_metadata_policy.dart` 仅 `6b5e503`）。
+   因此不存在“表已存在、禁用键集合后被扩大”的时间窗。
+4. **legacy 迁移路径安全**：迁移经 `_treeRepository.createResourceTree`
+   （`lib/application/resources/resource_migration_service.dart:248`）→
+   `createResourceTreeInTransaction`（校验）。`LegacyResourceMapper` 产出的 metadata 键
+   （`legacy_resource_mapper.dart:158-169`：`legacy_source_table`、`runtime_node_refs`、
+   `legacy_world_entries` 等）与禁用集合在 `normalizeKey` 下**无一冲突**。
+5. **同名字面量落在其它表**：`'detail_json'`、`'modules'`、`'content'`、`'part'` 等出现于
+   `worldview_presets`、`world_entries`、`messages`、`resource_parts.content` 与 legacy 库表，
+   均**不**写入 `resources.metadata_json`。
+6. **失败模式为 fail-closed**：即便假设某行被外部手段篡改出禁用键，`confirmBlueprint`
+   也会在校验处抛错（不静默丢数据）；读取路径不做该校验，不影响弹性解析正确性。
+
+### 结论
+
+未发现任何可达的生产调用路径可在 `resources.metadata_json` 中产生禁用容器键，
+故“修复后 confirm 因保留禁用键而抛错”的场景不成立。P3-3 **不构成缺陷，也无需修复**。
+
+### 重新开启条件（Re-open）
+
+出现以下任一情况时重新评估：新增或变更任何**绕过 `ResourceTreeRepositoryImpl` 校验**
+的 `resources.metadata_json` 写入路径（含 migration/import）；或 `forbiddenContainerKeys`
+在既有数据之后被扩大且存在对应历史行；或发现真实数据丢失/抛错证据。
 
 ---
 

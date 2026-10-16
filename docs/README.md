@@ -6,7 +6,7 @@
 - [Development: automatic Hot Reload / Hot Restart](./development/hot-reload.md)：开发期文件变更自动 Hot Reload / Hot Restart 工具（仅开发环境）。
 - [Next Generation State Architecture Plan](./codex/next-generation-state-architecture-plan.md)：角色/世界状态、事件、权重与时间线的国际化架构契约（设计/规划文档，非当前状态）。
 - [Error/Event Localization Migration Audit](./codex/error-event-localization-migration-audit.md)：六组 D 类错误与事件跨层债务的位置清单及迁移验收顺序（迁移尚未完成）。
-- [BUG-11 弹性覆盖持久化风险台账](./codex/bug-11-elastic-override-risk-register.md)：BUG-11 / P3-1 / P3-2 / P3-3 的状态登记（P3-1 为已确认潜在风险，仍 OPEN / MONITORED）。
+- [BUG-11 弹性覆盖持久化风险台账](./codex/bug-11-elastic-override-risk-register.md)：BUG-11 / P3-1 / P3-2 / P3-3 的状态登记（P3-1 为已确认潜在风险，仍 OPEN / MONITORED；P3-2 / P3-3 已关闭）。
 
 ## 功能子系统现状索引
 
