@@ -415,6 +415,58 @@ void main() {
         isEmpty);
   });
 
+  test(
+      'P1: an out-of-scope critical monitor is named, never silently invisible',
+      () async {
+    // Alice is on scene; Bob is an off-scene critical monitor.
+    final config = AdventureConfig(
+      name: '旅人',
+      selectedCharacters: [
+        AdventureSelectedCharacter(
+          id: 'alice',
+          characterId: 'alice',
+          characterName: '艾琳',
+          isProtagonist: true,
+        ),
+        AdventureSelectedCharacter(
+          id: 'bob',
+          characterId: 'bob',
+          characterName: '鲍勃',
+        ),
+      ],
+      trackedStateDefinitions: [
+        for (final id in ['alice', 'bob'])
+          AdventureTrackedStateDefinition(
+            entityType: RuntimeEntityType.character,
+            entityId: id,
+            definition: _monitor('hp_custom'),
+          ),
+      ],
+    );
+    final llm = _ScriptedLlm([
+      '$_narrative\n---JSON---\n{"scene":"桥","options":["a","b","c"]}',
+      _settlement(evaluations: const [
+        {
+          'entity_type': 'character',
+          'entity_id': 'alice',
+          'monitor_id': 'hp_custom',
+          'status': 'unchanged',
+          'reason': '本轮未受伤',
+        },
+      ]),
+    ]);
+    final harness = await startEngine(config: config);
+    final engine = harness.build(llm);
+    addTearDown(engine.dispose);
+    await engine.sendMessage('我们继续赶路。');
+
+    expect(llm.callCount, 2, reason: 'only the in-scope critical needs a pass');
+    expect(
+      harness.lastDiagnostics,
+      contains('critical_evaluation:out_of_scope:character:bob:hp_custom'),
+    );
+  });
+
   // ───────────────────────────────────────────────────────────────────────
   // P3 — scope
   // ───────────────────────────────────────────────────────────────────────

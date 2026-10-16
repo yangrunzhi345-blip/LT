@@ -802,12 +802,31 @@ class ChatEngine {
     required int? adventureId,
     required int branchId,
   }) async {
+    final diagnostics = <String>[];
+    // Traceability: a critical monitor this turn's scene scope excluded is
+    // reported explicitly, so an absent critical evaluation is either
+    // recovered/degraded or named here as out of scope — never silently
+    // invisible.
+    final registry =
+        AdventureTrackedStateRegistry.fromConfig(_host.adventureConfig);
+    final plannedKeys = {
+      for (final candidate in candidates) candidate.monitorKey,
+    };
+    for (final binding in registry.all) {
+      if (binding.definition.importance != CustomAttributeImportance.critical) {
+        continue;
+      }
+      final key = '${binding.entityType.name}:'
+          '${binding.entityId}:${binding.definitionId}';
+      if (!plannedKeys.contains(key)) {
+        diagnostics.add('critical_evaluation:out_of_scope:$key');
+      }
+    }
     final critical =
         candidates.where((candidate) => candidate.isCritical).toList();
     if (critical.isEmpty) {
-      return settled;
+      return _withCriticalDiagnostics(settled, diagnostics);
     }
-    final diagnostics = <String>[];
     final evaluated = _evaluatedMonitorKeys(settled);
     final missing = <TrackedStateCandidate>[
       for (final candidate in critical)
