@@ -198,9 +198,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Root focus keeps the Session, draft and reader controller',
-      (tester) async {
+  Future<void> verifyRootFocus(WidgetTester tester,
+      {int focusCycles = 1}) async {
     setViewport(tester, width: 1440, height: 900);
+    // Construct and await initialization in the same real async zone so the
+    // cached settings future never depends on an undriven fake async zone.
+    await tester.runAsync(
+        () => container.read(chatProvider).settingsProvider.loadApiKey());
     final chat = container.read(chatProvider);
     final id = await tester.runAsync(() => container
         .read(adventureRepoProvider)
@@ -224,24 +228,40 @@ void main() {
     reader.scrollController.jumpTo(200);
     await tester.pump();
     final controller = tester.widget<TextField>(input).controller;
-    await tester.tap(find.byKey(const Key('session-focus-reading')));
-    await tester.pumpAndSettle();
-    expect(find.byType(MainSidebar), findsNothing);
-    expect(find.byType(SessionInspectorPage), findsNothing);
-    expect(tester.widget<TextField>(find.byType(TextField).last).controller,
-        same(controller));
-    expect(controller!.text, '尚未发送的草稿');
-    expect(
-        tester
-            .widget<SessionMessageList>(find.byType(SessionMessageList))
-            .scrollController,
-        same(reader.scrollController));
-    expect(reader.scrollController.offset, closeTo(200, 1));
-    await tester.tap(find.byTooltip(l10n.workbenchExitFocusReading));
-    await tester.pumpAndSettle();
-    expect(find.byType(MainSidebar), findsOneWidget);
-    expect(controller.text, '尚未发送的草稿');
-    expect(reader.scrollController.offset, closeTo(200, 1));
+    for (var cycle = 0; cycle < focusCycles; cycle++) {
+      await tester.tap(find.byKey(const Key('session-focus-reading')));
+      await tester.pumpAndSettle();
+      expect(find.byType(MainSidebar), findsNothing);
+      expect(find.byType(SessionInspectorPage), findsNothing);
+      expect(tester.widget<TextField>(find.byType(TextField).last).controller,
+          same(controller));
+      expect(controller!.text, '尚未发送的草稿');
+      expect(
+          tester
+              .widget<SessionMessageList>(find.byType(SessionMessageList))
+              .scrollController,
+          same(reader.scrollController));
+      expect(reader.scrollController.offset, closeTo(200, 1));
+      await tester.tap(find.byTooltip(l10n.workbenchExitFocusReading));
+      await tester.pumpAndSettle();
+      expect(find.byType(MainSidebar), findsOneWidget);
+      expect(controller.text, '尚未发送的草稿');
+      expect(reader.scrollController.offset, closeTo(200, 1));
+      expect(tester.binding.hasScheduledFrame, isFalse);
+      expect(tester.binding.transientCallbackCount, 0);
+      expect(tester.takeException(), isNull);
+    }
     expect(tester.takeException(), isNull);
+  }
+
+  testWidgets('Root focus keeps the Session, draft and reader controller',
+      (tester) => verifyRootFocus(tester));
+
+  group('Root focus lifecycle', () {
+    for (var lifecycle = 1; lifecycle <= 3; lifecycle++) {
+      testWidgets(
+          'should retain draft and controllers through repeated focus in lifecycle $lifecycle',
+          (tester) => verifyRootFocus(tester, focusCycles: 3));
+    }
   });
 }
