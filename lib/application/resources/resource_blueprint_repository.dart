@@ -108,6 +108,23 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
   static const String sessionsTable = 'resource_creation_sessions';
   static const String resourcesTable = 'resources';
 
+  /// Metadata keys this confirm step authors and therefore always rewrites.
+  ///
+  /// Re-confirming an existing resource must not silently drop metadata the
+  /// confirm step does not own — most importantly the ADR-0003 per-resource
+  /// elastic override. These keys, by contrast, are fully owned here: a stale
+  /// conditional value (e.g. `creation_origin`) is never carried over, and a
+  /// deliberately cleared elastic override (key absent) is never resurrected.
+  static const Set<String> _confirmOwnedMetadataKeys = {
+    'creation_session_id',
+    'confirmed_blueprint_id',
+    'blueprint_revision',
+    ResourceTreeSchema.metadataAuthoringMethodKey,
+    'mode',
+    'creation_origin',
+    'matching_worldview_id',
+  };
+
   final Future<Database> Function() _getDb;
   final ResourceTreeRepositoryImpl _treeRepository;
 
@@ -396,24 +413,40 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
         ));
       }
 
+      final confirmMetadata = <String, Object?>{
+        'creation_session_id': blueprint.sessionId,
+        'confirmed_blueprint_id': blueprint.blueprintId,
+        'blueprint_revision': blueprint.revision,
+        ResourceTreeSchema.metadataAuthoringMethodKey: 'aiReference',
+        'mode': libraryMode,
+        if (creationOrigin.isNotEmpty) 'creation_origin': creationOrigin,
+        if (originEnvelope.originWorldviewId.isNotEmpty &&
+            (blueprint.resourceType == ResourceType.character ||
+                blueprint.resourceType == ResourceType.npc))
+          'matching_worldview_id': originEnvelope.originWorldviewId,
+      };
+      // Re-confirming an existing resource replaces the whole tree, so the
+      // resource row is rewritten too. The confirm step only owns the keys
+      // above; every other metadata key the resource already carries (notably
+      // the ADR-0003 per-resource elastic override) must survive. The owned
+      // keys are removed from the carried-over set first, so a conditional key
+      // that no longer applies is dropped rather than kept stale, and a
+      // deliberately cleared elastic override (key absent) is not resurrected.
+      final mergedMetadata = <String, Object?>{
+        if (existingResourceMetadata != null)
+          for (final entry in existingResourceMetadata.entries)
+            if (!_confirmOwnedMetadataKeys.contains(entry.key))
+              entry.key: entry.value,
+        ...confirmMetadata,
+      };
+
       final treeDraft = ResourceTreeDraft(
         id: allocatedResId,
         type: blueprint.resourceType,
         name: finalName,
         summary: blueprint.summary,
         status: NodeStatus.draft,
-        metadata: {
-          'creation_session_id': blueprint.sessionId,
-          'confirmed_blueprint_id': blueprint.blueprintId,
-          'blueprint_revision': blueprint.revision,
-          ResourceTreeSchema.metadataAuthoringMethodKey: 'aiReference',
-          'mode': libraryMode,
-          if (creationOrigin.isNotEmpty) 'creation_origin': creationOrigin,
-          if (originEnvelope.originWorldviewId.isNotEmpty &&
-              (blueprint.resourceType == ResourceType.character ||
-                  blueprint.resourceType == ResourceType.npc))
-            'matching_worldview_id': originEnvelope.originWorldviewId,
-        },
+        metadata: mergedMetadata,
         sections: treeSections,
       );
 
