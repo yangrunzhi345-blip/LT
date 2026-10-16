@@ -15,6 +15,11 @@ on:
         required: true
         default: true
         type: boolean
+      fast_release:
+        description: Skip formatting, analysis and tests for an explicitly authorized fast release
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -33,7 +38,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: ${{ inputs.verify_only && 'main' || inputs.tag || github.ref }}
+          ref: ${{ (inputs.verify_only || inputs.fast_release) && 'main' || inputs.tag || github.ref }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -44,19 +49,22 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # The release must not publish a tag unless the tagged commit passes the
-      # same regression gate as pull requests: build success alone only proves
-      # the app compiles.
+      # Normal releases use the PR regression gates. Only an explicit manual
+      # fast_release request skips them; signing and ABI/TTS checks always run.
       - name: Verify formatting
+        if: ${{ !inputs.fast_release }}
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Analyze
+        if: ${{ !inputs.fast_release }}
         run: flutter analyze
 
       - name: Test
+        if: ${{ !inputs.fast_release }}
         run: flutter test --reporter compact
 
       - name: Test release signing verification gate
+        if: ${{ !inputs.fast_release }}
         run: python3 -m unittest discover -s scripts -p test_android_release_signing.py
 
       - name: Read version from pubspec
@@ -146,6 +154,7 @@ jobs:
         if: ${{ !inputs.verify_only }}
         env:
           GH_TOKEN: ${{ github.token }}
+          FAST_RELEASE: ${{ inputs.fast_release }}
         run: |
           # A manually verified release may have been published while CI ran.
           # Never replace its assets or edit an existing release.
@@ -153,10 +162,15 @@ jobs:
             echo "Release $RELEASE_TAG already exists; leaving it unchanged."
             exit 0
           fi
+          notes="Android only. ARM64 only. Neural TTS available; downloadable neural models are managed in Read Aloud settings. System TTS fallback retained."
+          if [ "$FAST_RELEASE" = "true" ]; then
+            notes="$notes Fast release explicitly requested: formatting, analysis and tests skipped; release signature and ARM64/TTS packaging verified. Device playback not verified."
+          fi
           gh release create "$RELEASE_TAG" \
             release/LT-"$RELEASE_TAG"-arm64-v8a.apk \
+            --target "$GITHUB_SHA" \
             --title "LT Dialogue $RELEASE_TAG" \
-            --notes "Android only. ARM64 only. Neural TTS available; downloadable neural models are managed in Read Aloud settings. System TTS fallback retained." \
+            --notes "$notes" \
             --generate-notes
 
       - name: Remove ephemeral signing material
