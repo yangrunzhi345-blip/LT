@@ -119,6 +119,8 @@ void main() {
     );
   }
 
+  var sessionSeq = 0;
+
   Future<ResourceCreationSession> newSession(
     ResourceType type, {
     int? sessionElasticPercent,
@@ -132,7 +134,10 @@ void main() {
       resourceType: type,
       method: CreationMethod.aiReference,
       name: '既有资源',
-      idempotencyKey: 'idemp_${DateTime.now().microsecondsSinceEpoch}',
+      // A monotonic suffix keeps every call a distinct session even when two
+      // are created within the same microsecond tick (consecutive re-plans).
+      idempotencyKey:
+          'idemp_${DateTime.now().microsecondsSinceEpoch}_${sessionSeq++}',
       referenceSource: ReferenceSource.text('一份用于回归的参考正文。'),
       origin: origin,
     ));
@@ -175,6 +180,47 @@ void main() {
           reason: '重新规划不得静默抹除资源级弹性覆盖');
       // 冻结值本身仍为该资源覆盖值。
       expect(await frozenPercent(bp.blueprintId), 50);
+    });
+
+    test('连续两次重新规划后 generationElasticPercent 仍然存在', () async {
+      final seeded = await seedExistingResource(overridePercent: 50);
+
+      // 第一次重新规划。
+      final session1 = await newSession(ResourceType.character);
+      final bp1 = makeBlueprint(
+          sessionId: session1.sessionId, blueprintId: 'bp_replan_1');
+      await blueprintRepo.saveBlueprint(bp1);
+      await blueprintRepo.confirmBlueprint(
+        blueprintId: bp1.blueprintId,
+        explicitResourceId: seeded.resource.id,
+        expectedResourceUpdatedAt: seeded.token,
+      );
+      final afterFirst = await readMetadata(seeded.resource.id.value);
+      expect(afterFirst[ResourceTreeSchema.metadataGenerationElasticPercentKey],
+          50);
+      expect(await frozenPercent(bp1.blueprintId), 50);
+
+      // 第二次重新规划：不同会话、同一资源，需重新取 updated_at 令牌。
+      final token2 =
+          (await treeRepo.readNodeState(seeded.resource.id))!.updatedAt;
+      final session2 = await newSession(ResourceType.character);
+      final bp2 = makeBlueprint(
+          sessionId: session2.sessionId, blueprintId: 'bp_replan_2');
+      await blueprintRepo.saveBlueprint(bp2);
+      await blueprintRepo.confirmBlueprint(
+        blueprintId: bp2.blueprintId,
+        explicitResourceId: seeded.resource.id,
+        expectedResourceUpdatedAt: token2,
+      );
+
+      final afterSecond = await readMetadata(seeded.resource.id.value);
+      expect(
+          afterSecond[ResourceTreeSchema.metadataGenerationElasticPercentKey],
+          50,
+          reason: '第二次重新规划不得抹除第一次后保留的覆盖值');
+      expect(await frozenPercent(bp2.blueprintId), 50);
+      // confirm 自有字段刷新为第二次运行的蓝图。
+      expect(afterSecond['confirmed_blueprint_id'], bp2.blueprintId);
     });
 
     test('显式清除覆盖后重新规划不得将其复活', () async {
