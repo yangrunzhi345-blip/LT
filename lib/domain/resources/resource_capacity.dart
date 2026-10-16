@@ -22,6 +22,7 @@ final class ResourceCapacitySnapshot {
     required this.partCount,
     required this.historicalRevisionCount,
     required this.status,
+    this.effectiveAbsoluteCharacters,
     this.measuredAt,
   });
 
@@ -53,6 +54,16 @@ final class ResourceCapacitySnapshot {
 
   final CapacityStatus status;
 
+  /// The overflow boundary this measurement was classified against, when it
+  /// differs from the type's frozen absolute capacity.
+  ///
+  /// Null means "use the type's [ResourceCapacityPolicy.absoluteCharacters]" —
+  /// the ordinary case. It is set (to `max(absolute, authorizedCeiling)`) for a
+  /// resource produced by an authorized AI generation run, so the widened
+  /// elastic band is preserved and a legitimately over-old-absolute body is not
+  /// misreported as overflow.
+  final int? effectiveAbsoluteCharacters;
+
   /// When the measurement was taken; null for a freshly computed snapshot that
   /// has not been persisted yet.
   final DateTime? measuredAt;
@@ -61,9 +72,15 @@ final class ResourceCapacitySnapshot {
   /// are the same unit and never drift apart.
   int get archiveSize => archivedCharacters;
 
-  /// Active characters as a fraction of the absolute budget.
+  /// The overflow boundary in effect for this measurement: the recorded
+  /// effective boundary, or the type's frozen absolute capacity.
+  int get effectiveCeiling =>
+      effectiveAbsoluteCharacters ??
+      ResourceLimits.policyFor(type).absoluteCharacters;
+
+  /// Active characters as a fraction of the effective capacity.
   double get fillRatio {
-    final absolute = ResourceLimits.policyFor(type).absoluteCharacters;
+    final absolute = effectiveCeiling;
     if (absolute <= 0) return 0;
     return activeCharacters / absolute;
   }
@@ -79,6 +96,7 @@ final class ResourceCapacitySnapshot {
     int? partCount,
     int? historicalRevisionCount,
     CapacityStatus? status,
+    int? effectiveAbsoluteCharacters,
     DateTime? measuredAt,
   }) {
     return ResourceCapacitySnapshot(
@@ -93,6 +111,8 @@ final class ResourceCapacitySnapshot {
       historicalRevisionCount:
           historicalRevisionCount ?? this.historicalRevisionCount,
       status: status ?? this.status,
+      effectiveAbsoluteCharacters:
+          effectiveAbsoluteCharacters ?? this.effectiveAbsoluteCharacters,
       measuredAt: measuredAt ?? this.measuredAt,
     );
   }
@@ -158,6 +178,19 @@ abstract final class ResourceCapacityMath {
 
   /// Classifies a measured character count for [type] through the single
   /// capacity policy. Never accepts a negative count.
-  static CapacityStatus statusFor(ResourceType type, int characters) =>
-      ResourceLimits.policyFor(type).statusFor(characters);
+  ///
+  /// [effectiveAbsolute] widens the overflow boundary for a resource produced
+  /// by an authorized AI generation run; null keeps the type's frozen absolute.
+  static CapacityStatus statusFor(
+    ResourceType type,
+    int characters, {
+    int? effectiveAbsolute,
+  }) {
+    final policy = ResourceLimits.policyFor(type);
+    if (effectiveAbsolute == null) return policy.statusFor(characters);
+    return policy.statusForEffective(
+      characters,
+      policy.effectiveCharacters(effectiveAbsolute),
+    );
+  }
 }

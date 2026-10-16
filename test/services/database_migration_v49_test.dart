@@ -54,7 +54,7 @@ void main() {
       final db = await DatabaseService.database;
       expect(await _userVersion(db), DatabaseService.schemaVersion);
       // Pinned on purpose: a schema bump must force a conscious update here.
-      expect(DatabaseService.schemaVersion, 49);
+      expect(DatabaseService.schemaVersion, 50);
       expect(await _columns(db, 'resource_blueprints'),
           contains('elastic_percent'));
     });

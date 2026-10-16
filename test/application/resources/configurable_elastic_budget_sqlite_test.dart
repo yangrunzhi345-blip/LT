@@ -240,7 +240,7 @@ void main() {
     });
   });
 
-  group('frozen 50% widens the ceiling but never past absolute capacity', () {
+  group('frozen 50% widens the ceiling (and may exceed the old absolute)', () {
     test('C = 12000 accepts exactly C and rejects C+1', () async {
       final session = await createSession('fifty_commit',
           origin: envelope(elasticPercent: 50));
@@ -300,14 +300,26 @@ void main() {
           throwsA(isA<PartGenerationValidationException>()));
     });
 
-    test('a tiny target never crosses the absolute capacity', () async {
-      // T = 24000 with E = 50 would ask for 36000; A = 24000 must clamp.
-      final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
-        target: 24000,
-        absolute: ResourceLimits.characterAbsoluteCharacters,
-        elasticPercent: 50,
+    test('a target above the nominal no longer clips at the absolute', () {
+      // T = 24000 with E = 50 asks for 36000. Under the current breakout policy
+      // the absolute capacity A = 24000 is NOT re-applied.
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+          target: 24000,
+          elasticPercent: 50,
+        ),
+        36000,
       );
-      expect(ceiling, ResourceLimits.characterAbsoluteCharacters);
+      // A run frozen under the legacy policy keeps the historical clip.
+      expect(
+        GenerationBudgetPolicy.ceilingFor(
+          target: 24000,
+          absolute: ResourceLimits.characterAbsoluteCharacters,
+          elasticPercent: 50,
+          policyVersion: GenerationBudgetPolicy.legacyBudgetPolicyVersion,
+        ),
+        ResourceLimits.characterAbsoluteCharacters,
+      );
     });
   });
 }

@@ -176,6 +176,8 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
           'revision': blueprint.revision,
           'status': blueprint.status.storageValue,
           'target_capacity': blueprint.targetCapacity,
+          'budget_policy_version':
+              GenerationBudgetPolicy.currentBudgetPolicyVersion,
           'blueprint_json': jsonPayload,
           'resource_id': blueprint.resourceId?.value,
           'created_at': blueprint.createdAt.isEmpty ? now : blueprint.createdAt,
@@ -516,6 +518,12 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
           'status': BlueprintStatus.confirmed.storageValue,
           'resource_id': allocatedResId.value,
           'elastic_percent': frozenElasticPercent,
+          // Freeze the budget policy version with the elastic percent. A run
+          // confirmed here uses the current (breakout) formula; existing rows
+          // upgraded from an earlier schema keep their DEFAULT 1 (legacy
+          // `min(..., A)`) version, so no started run is retroactively widened.
+          'budget_policy_version':
+              GenerationBudgetPolicy.currentBudgetPolicyVersion,
           'blueprint_json': BlueprintParser.serializeToJson(confirmedBlueprint),
           'updated_at': now,
         },

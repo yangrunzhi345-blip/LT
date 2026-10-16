@@ -2,6 +2,8 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_capacity.dart';
 import '../../domain/resources/resource_contracts.dart';
+import '../../domain/resources/resource_limits.dart';
+import 'authorized_generation_budget.dart';
 
 /// Persistence boundary for measured resource capacity.
 ///
@@ -47,10 +49,18 @@ class ResourceCapacityException implements Exception {
 ///   columns on `resources`.
 final class ResourceCapacityRepositoryImpl
     implements IResourceCapacityRepository {
-  ResourceCapacityRepositoryImpl({required Future<Database> Function() getDb})
-      : _getDb = getDb;
+  ResourceCapacityRepositoryImpl({
+    required Future<Database> Function() getDb,
+    IAuthorizedGenerationBudgetReader? authorizedBudget,
+  })  : _getDb = getDb,
+        _authorizedBudget =
+            authorizedBudget ?? AuthorizedGenerationBudgetReader(getDb: getDb);
 
   final Future<Database> Function() _getDb;
+
+  /// Resolves a resource's frozen authorized AI generation ceiling so a
+  /// legitimately elastic AI body is not misreported as overflow.
+  final IAuthorizedGenerationBudgetReader _authorizedBudget;
 
   static const String resourcesTable = 'resources';
   static const String sectionsTable = 'resource_sections';
@@ -153,22 +163,34 @@ final class ResourceCapacityRepositoryImpl
     final aggregate = aggregateRows.firstOrNull ?? <String, Object?>{};
     final total = _intOrZero(aggregate['total_chars']);
     final archived = _intOrZero(aggregate['archived_chars']);
+    final active = total - archived;
+    final authorized = await _authorizedBudget.authorizedCeiling(id.value);
+    final effectiveAbsolute = _effectiveAbsoluteFor(type, authorized);
     final now = DateTime.now();
 
     return ResourceCapacitySnapshot(
       resourceId: id,
       type: type,
       totalCharacters: total,
-      activeCharacters: total - archived,
+      activeCharacters: active,
       archivedCharacters: archived,
       estimatedTokens: ResourceCapacityMath.tokensForCharacters(total),
       sectionCount: _intOrZero(sectionRows.first['section_count']),
       partCount: _intOrZero(aggregate['part_count']),
       historicalRevisionCount: _intOrZero(attemptRows.first['attempt_count']),
-      status: ResourceCapacityMath.statusFor(type, total - archived),
+      status: ResourceCapacityMath.statusFor(type, active,
+          effectiveAbsolute: effectiveAbsolute),
+      effectiveAbsoluteCharacters: effectiveAbsolute,
       measuredAt: now,
     );
   }
+
+  /// The widened overflow boundary of [type] for an authorized AI ceiling.
+  ///
+  /// A run with no authorization ([authorizedCeiling] = 0) collapses onto the
+  /// type's ordinary absolute capacity, so ordinary resources are unchanged.
+  static int _effectiveAbsoluteFor(ResourceType type, int authorizedCeiling) =>
+      ResourceLimits.policyFor(type).effectiveCharacters(authorizedCeiling);
 
   @override
   Future<List<ResourceCapacitySnapshot>> measureResources({
@@ -199,6 +221,9 @@ final class ResourceCapacityRepositoryImpl
     final aggregateByResource = _indexByResource(aggregates);
     final sectionByResource = _indexByResource(sectionCounts);
     final attemptByResource = _indexByResource(attemptCounts);
+    final authorizedByResource = await _authorizedBudget.authorizedCeilings(
+      resourceRows.map((row) => row['id']?.toString() ?? ''),
+    );
 
     final snapshots = <ResourceCapacitySnapshot>[];
     for (final row in resourceRows) {
@@ -210,12 +235,15 @@ final class ResourceCapacityRepositoryImpl
       final aggregate = aggregateByResource[resourceId];
       final total = _intOrZero(aggregate?['total_chars']);
       final archived = _intOrZero(aggregate?['archived_chars']);
+      final active = total - archived;
+      final effectiveAbsolute = _effectiveAbsoluteFor(
+          resourceType, authorizedByResource[resourceId] ?? 0);
       snapshots.add(
         ResourceCapacitySnapshot(
           resourceId: ResourceId(resourceId),
           type: resourceType,
           totalCharacters: total,
-          activeCharacters: total - archived,
+          activeCharacters: active,
           archivedCharacters: archived,
           estimatedTokens: ResourceCapacityMath.tokensForCharacters(total),
           sectionCount:
@@ -223,8 +251,9 @@ final class ResourceCapacityRepositoryImpl
           partCount: _intOrZero(aggregate?['part_count']),
           historicalRevisionCount:
               _intOrZero(attemptByResource[resourceId]?['attempt_count']),
-          status:
-              ResourceCapacityMath.statusFor(resourceType, total - archived),
+          status: ResourceCapacityMath.statusFor(resourceType, active,
+              effectiveAbsolute: effectiveAbsolute),
+          effectiveAbsoluteCharacters: effectiveAbsolute,
         ),
       );
     }
@@ -299,18 +328,22 @@ final class ResourceCapacityRepositoryImpl
 
     final type = ResourceType.fromStorageValue(row['type']?.toString());
     final total = _intOrZero(row['measured_char_count']);
+    final active = total - _intOrZero(row['archive_char_count']);
+    final authorized = await _authorizedBudget.authorizedCeiling(id.value);
+    final effectiveAbsolute = _effectiveAbsoluteFor(type, authorized);
     return ResourceCapacitySnapshot(
       resourceId: id,
       type: type,
       totalCharacters: total,
-      activeCharacters: total - _intOrZero(row['archive_char_count']),
+      activeCharacters: active,
       archivedCharacters: _intOrZero(row['archive_char_count']),
       estimatedTokens: _intOrZero(row['measured_token_estimate']),
       sectionCount: _intOrZero(row['section_count']),
       partCount: _intOrZero(row['part_count']),
       historicalRevisionCount: 0,
-      status: ResourceCapacityMath.statusFor(
-          type, total - _intOrZero(row['archive_char_count'])),
+      status: ResourceCapacityMath.statusFor(type, active,
+          effectiveAbsolute: effectiveAbsolute),
+      effectiveAbsoluteCharacters: effectiveAbsolute,
       measuredAt: DateTime.tryParse(measuredAt),
     );
   }

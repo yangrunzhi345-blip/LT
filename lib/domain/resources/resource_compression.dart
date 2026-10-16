@@ -471,17 +471,20 @@ final class CompressionTriggerDecision {
 abstract final class CompressionTriggers {
   /// Evaluates a resource-wide measurement.
   ///
-  /// Above the absolute budget the resource is in overflow; otherwise the
+  /// Above the *effective* budget the resource is in overflow; otherwise the
   /// elastic trigger fires when the resource passes
-  /// [CompressionThresholds.fillRatio] of its nominal budget. Both bands come
-  /// from the frozen capacity policy, so compression and capacity can never
-  /// disagree about where "too big" starts.
+  /// [CompressionThresholds.fillRatio] of its nominal budget. The effective
+  /// budget is the type's absolute capacity widened by an authorized AI
+  /// generation ceiling when the resource carries one, so a legitimately
+  /// elastic AI resource is not treated as overflow. Both bands come from the
+  /// frozen capacity policy, so compression and capacity can never disagree
+  /// about where "too big" starts.
   static CompressionTriggerDecision evaluateResource({
     required ResourceCapacitySnapshot capacity,
     CompressionThresholds thresholds = CompressionThresholds.defaults,
   }) {
     final policy = ResourceLimits.policyFor(capacity.type);
-    if (capacity.totalCharacters > policy.absoluteCharacters) {
+    if (capacity.totalCharacters > capacity.effectiveCeiling) {
       return CompressionTriggerDecision(
         shouldCompress: true,
         reason: CompressionTriggerReason.capacityOverflow,

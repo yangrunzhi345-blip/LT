@@ -46,6 +46,12 @@ abstract interface class ResourceStudioRuntime {
   /// global 20% behaviour without forcing every implementer to override.
   Future<int?> sessionElasticPercent(String sessionId) async => null;
 
+  /// The frozen budget policy version behind [sessionId]'s generation run, used
+  /// so the Studio budget summary applies the same ceiling formula as the
+  /// commit path (a legacy run keeps `min(..., A)`). Null default keeps fakes
+  /// on the current formula without forcing every implementer to override.
+  Future<int?> sessionBudgetPolicyVersion(String sessionId) async => null;
+
   /// The target resource's own persisted elastic override (ADR-0003): its
   /// percent (null = inherit) plus the CAS token for a later write. Null
   /// default keeps fakes honest without forcing every implementer to override.
@@ -230,6 +236,14 @@ final class StreamingResourceStudioRuntime implements ResourceStudioRuntime {
     final creationSessionId = session?.creationSessionId.trim() ?? '';
     if (creationSessionId.isEmpty) return null;
     return _pipeline.resolveSessionElasticPercent(creationSessionId);
+  }
+
+  @override
+  Future<int?> sessionBudgetPolicyVersion(String sessionId) async {
+    final session = await getSession(sessionId);
+    final creationSessionId = session?.creationSessionId.trim() ?? '';
+    if (creationSessionId.isEmpty) return null;
+    return _pipeline.resolveSessionBudgetPolicyVersion(creationSessionId);
   }
 
   @override

@@ -1714,7 +1714,7 @@ final class _GenerationBudgetSummary extends StatelessWidget {
     if (target == null || target <= 0 || type == null) {
       return const SizedBox.shrink();
     }
-    final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
+    final ceiling = GenerationBudgetPolicy.ceilingFor(
       target: target,
       absolute: ResourceLimits.policyFor(type).absoluteCharacters,
       // ADR-0003: display the same E the repository enforces — the frozen
@@ -1723,6 +1723,10 @@ final class _GenerationBudgetSummary extends StatelessWidget {
       // commit-time validation.
       elasticPercent: controller.elasticPercent ??
           GenerationBudgetPolicy.defaultElasticPercent,
+      // The frozen policy version selects the same formula the commit path
+      // uses: a legacy run keeps `min(..., A)`, a current run may exceed A.
+      policyVersion: controller.elasticPolicyVersion ??
+          GenerationBudgetPolicy.currentBudgetPolicyVersion,
     );
     final elasticPercent = controller.elasticPercent ??
         GenerationBudgetPolicy.defaultElasticPercent;

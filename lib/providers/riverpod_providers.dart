@@ -60,6 +60,7 @@ import '../application/resources/legacy_library_row_purger.dart';
 import '../application/resources/resource_owned_state_purger.dart';
 import '../application/resources/assembly_readiness_coordinator.dart';
 import '../application/resources/assembly_readiness_repository.dart';
+import '../application/resources/authorized_generation_budget.dart';
 import '../application/resources/resource_assembly_builder.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
 import '../application/resources/part_content_commit_service.dart';
@@ -323,6 +324,11 @@ final resourceCrudControllerProvider =
   return ResourceCrudController(
     repository: ref.read(libraryRepoProvider),
     creationPipeline: ref.read(resourceCreationPipelineProvider),
+    // Lets a re-edited AI-generated resource validate against its frozen
+    // authorized budget instead of the ordinary absolute capacity.
+    authorizedBudget: AuthorizedGenerationBudgetReader(
+      getDb: () => DatabaseService.database,
+    ),
     onLibraryChanged: () async {
       if (ref.exists(libraryProvider)) {
         await ref.read(libraryProvider).loadCharacterCards();

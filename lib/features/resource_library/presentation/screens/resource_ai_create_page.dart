@@ -552,8 +552,7 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
                       ),
                     ),
                     Text(
-                      l10n.resourceTargetCharactersValue(
-                          _elasticCeilingFor(_type)),
+                      l10n.resourceTargetCharactersValue(_elasticCeilingFor()),
                       key: const Key('ai-create-elastic-ceiling-value'),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
@@ -825,13 +824,11 @@ class _ResourceAiCreatePageState extends ConsumerState<ResourceAiCreatePage> {
     return settings.globalGenerationElasticPercent;
   }
 
-  /// Cumulative generation ceiling C = min(floor(T*(100+E)/100), A) shown next
-  /// to the target. Presentation of the generation-goal dimension only;
-  /// capacity classification still follows the nominal/absolute policy.
-  int _elasticCeilingFor(ResourceType type) =>
-      GenerationBudgetPolicy.cumulativeCeiling(
+  /// Cumulative generation ceiling C = floor(T*(100+E)/100) shown next to the
+  /// target. Presentation of the generation-goal dimension only; capacity
+  /// classification still follows the nominal/effective-capacity policy.
+  int _elasticCeilingFor() => GenerationBudgetPolicy.cumulativeCeiling(
         target: _targetCharacters,
-        absolute: ResourceLimits.policyFor(type).absoluteCharacters,
         elasticPercent: GenerationBudgetPolicy.normalizeElasticPercent(
             _effectiveElasticPercent()),
       );

@@ -667,6 +667,35 @@ final class ResourceCreationPipeline implements ResourceCreationSessionReader {
         : GenerationBudgetPolicy.normalizeElasticPercent(raw);
   }
 
+  /// ADR-0003 / budget policy version of a creation session's run.
+  ///
+  /// - Confirmed blueprint: the frozen `budget_policy_version` (a legacy row
+  ///   without one resolves to [GenerationBudgetPolicy.legacyBudgetPolicyVersion]),
+  ///   so the ceiling the UI displays is exactly the ceiling the commit
+  ///   enforces.
+  /// - Draft/planning blueprint: the current version, which the confirm
+  ///   transaction will freeze.
+  /// - Unknown session: null (the caller keeps its current value).
+  Future<int?> resolveSessionBudgetPolicyVersion(
+      String creationSessionId) async {
+    final db = await _getDb();
+    final rows = await db.query(
+      'resource_blueprints',
+      columns: ['status', 'budget_policy_version'],
+      where: 'session_id = ?',
+      whereArgs: [creationSessionId],
+      orderBy: 'revision DESC, created_at DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final status = rows.first['status']?.toString() ?? '';
+    if (status == BlueprintStatus.confirmed.storageValue) {
+      return (rows.first['budget_policy_version'] as num?)?.toInt() ??
+          GenerationBudgetPolicy.legacyBudgetPolicyVersion;
+    }
+    return GenerationBudgetPolicy.currentBudgetPolicyVersion;
+  }
+
   Future<ResourceCreationSession?> findByIdempotencyKey(String key) async {
     final db = await _getDb();
     final rows = await db.query(

@@ -643,6 +643,9 @@ class _ScriptedStudioRuntime implements ResourceStudioRuntime {
   Future<int?> sessionElasticPercent(String sessionId) async => null;
 
   @override
+  Future<int?> sessionBudgetPolicyVersion(String sessionId) async => null;
+
+  @override
   Future<Map<String, PartContractStatus>> blueprintPartContracts(
     ResourceId resourceId,
   ) async =>

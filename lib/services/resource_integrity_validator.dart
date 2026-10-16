@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import '../core/config/generation_limits.dart';
 import '../domain/resources/resource_limits.dart';
@@ -34,6 +35,7 @@ class ResourceIntegrityValidator {
     required String name,
     required String description,
     required WorldviewDetails details,
+    int? maxTotalCharacters,
   }) {
     final normalizedName = name.trim();
     final normalizedDescription = description.trim();
@@ -67,12 +69,18 @@ class ResourceIntegrityValidator {
       detailJson: details.toJson(),
       fallbackDescription: normalizedDescription,
     );
+    // [maxTotalCharacters] widens the ordinary maximum for a worldview produced
+    // by an authorized AI generation run; null keeps the frozen limit.
+    final maximum = maxTotalCharacters == null
+        ? GenerationLimits.detailedWorldviewMaximumCharacters
+        : math.max(maxTotalCharacters,
+            GenerationLimits.detailedWorldviewMaximumCharacters);
     if (total < GenerationLimits.detailedWorldviewMinimumCharacters ||
-        total > GenerationLimits.detailedWorldviewMaximumCharacters) {
+        total > maximum) {
       throw ResourceValidationException(
         '详细世界观总内容需为 '
         '${GenerationLimits.detailedWorldviewMinimumCharacters}–'
-        '${GenerationLimits.detailedWorldviewMaximumCharacters} 字，当前 $total 字',
+        '$maximum 字，当前 $total 字',
       );
     }
   }
@@ -80,23 +88,31 @@ class ResourceIntegrityValidator {
   static void validateCharacterCard({
     required String name,
     required String jsonData,
+    int? effectiveCeiling,
   }) =>
       _validateCard(
         name: name,
         jsonData: jsonData,
         label: '角色卡',
-        absoluteCharacters: ResourceLimits.characterAbsoluteCharacters,
+        absoluteCharacters: math.max(
+          effectiveCeiling ?? ResourceLimits.characterAbsoluteCharacters,
+          ResourceLimits.characterAbsoluteCharacters,
+        ),
       );
 
   static void validateNpcCard({
     required String name,
     required String jsonData,
+    int? effectiveCeiling,
   }) =>
       _validateCard(
         name: name,
         jsonData: jsonData,
         label: 'NPC',
-        absoluteCharacters: ResourceLimits.npcAbsoluteCharacters,
+        absoluteCharacters: math.max(
+          effectiveCeiling ?? ResourceLimits.npcAbsoluteCharacters,
+          ResourceLimits.npcAbsoluteCharacters,
+        ),
       );
 
   /// Evaluates RP richness without changing whether a legal card can be saved.

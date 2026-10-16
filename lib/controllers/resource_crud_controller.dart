@@ -4,11 +4,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../application/resource_library/edit_drafts.dart';
+import '../application/resources/authorized_generation_budget.dart';
 import '../application/resources/resource_creation_port.dart';
 import '../application/resources/resource_creation_pipeline.dart';
 import '../services/repositories/library_repository.dart';
 import '../models/conversation_character_card.dart';
 import '../domain/resources/resource_contracts.dart';
+import '../domain/resources/resource_limits.dart';
 import '../domain/errors/app_error.dart';
 import '../core/localization/app_error_localizer.dart';
 import '../models/resource_library_mode.dart';
@@ -74,6 +76,12 @@ class ResourceCrudController extends ChangeNotifier {
   /// Every save below goes through the unified creation pipeline.
   final ResourceCreationPort? _creationPort;
 
+  /// Resolves a resource's authorized AI generation ceiling so re-editing an
+  /// AI-generated resource validates against its frozen budget instead of the
+  /// ordinary absolute capacity. Null (tests, manual-only wiring) keeps the
+  /// ordinary absolute ceiling for every save.
+  final IAuthorizedGenerationBudgetReader? _authorizedBudget;
+
   bool _busy = false;
   String? _error;
 
@@ -90,16 +98,35 @@ class ResourceCrudController extends ChangeNotifier {
     required ILibraryRepository repository,
     FutureOr<void> Function()? onLibraryChanged,
     ResourceCreationPipeline? creationPipeline,
+    IAuthorizedGenerationBudgetReader? authorizedBudget,
   })  : _repository = repository,
         _onLibraryChanged = onLibraryChanged,
         _creationPort = creationPipeline == null
             ? null
-            : ResourceCreationPort(creationPipeline);
+            : ResourceCreationPort(creationPipeline),
+        _authorizedBudget = authorizedBudget;
 
   bool _disposed = false;
 
   bool get busy => _busy;
   String? get error => _error;
+
+  /// The authorized AI ceiling of [resourceId] widened by its frozen budget, or
+  /// null when the resource has no authorized AI run / no reader.
+  ///
+  /// Null means "keep the ordinary limit": the validators fall back to the
+  /// type's absolute capacity (or the frozen worldview maximum), so a save with
+  /// no authorization is never relaxed.
+  Future<int?> _authorizedWidenedCeiling(
+    String? resourceId,
+    ResourceType type,
+  ) async {
+    final reader = _authorizedBudget;
+    if (reader == null || resourceId == null || resourceId.isEmpty) return null;
+    final authorized = await reader.authorizedCeiling(resourceId);
+    if (authorized <= 0) return null;
+    return ResourceLimits.policyFor(type).effectiveCharacters(authorized);
+  }
 
   /// Runs [body] as the next serialised mutation, toggling [busy]/[error]
   /// around it. A failed earlier mutation must not stall the queue, so the
@@ -235,6 +262,8 @@ class ResourceCrudController extends ChangeNotifier {
                 detailsSource,
                 fallbackDescription: description,
               ),
+              maxTotalCharacters:
+                  await _authorizedWidenedCeiling(id, ResourceType.worldview),
             );
           }
           final creation = await _requireCreationPort().saveWorldview(
@@ -283,6 +312,8 @@ class ResourceCrudController extends ChangeNotifier {
           ResourceIntegrityValidator.validateCharacterCard(
             name: name,
             jsonData: jsonData,
+            effectiveCeiling:
+                await _authorizedWidenedCeiling(id, ResourceType.character),
           );
           final creation = await _requireCreationPort().saveCard(
             type: ResourceType.character,
@@ -408,6 +439,8 @@ class ResourceCrudController extends ChangeNotifier {
             name: draft.name,
             description: draft.description,
             details: details,
+            maxTotalCharacters: await _authorizedWidenedCeiling(
+                draft.id, ResourceType.worldview),
           );
           // Pin the generated id back onto the draft so a second save from the
           // same editor updates the resource instead of creating a duplicate.
@@ -447,6 +480,8 @@ class ResourceCrudController extends ChangeNotifier {
           ResourceIntegrityValidator.validateNpcCard(
             name: draft.name,
             jsonData: jsonData,
+            effectiveCeiling:
+                await _authorizedWidenedCeiling(draft.id, ResourceType.npc),
           );
           await _requireCreationPort().saveCard(
             type: ResourceType.npc,
@@ -478,6 +513,8 @@ class ResourceCrudController extends ChangeNotifier {
           ResourceIntegrityValidator.validateCharacterCard(
             name: draft.name,
             jsonData: jsonData,
+            effectiveCeiling: await _authorizedWidenedCeiling(
+                draft.id, ResourceType.character),
           );
           final assignedId =
               draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();

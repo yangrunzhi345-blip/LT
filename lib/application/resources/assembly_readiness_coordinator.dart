@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../domain/resources/resource_capacity.dart';
 import '../../domain/resources/resource_limits.dart';
 import '../../domain/resources/resource_compression.dart';
 import 'resource_compression_publisher.dart';
@@ -9,6 +8,7 @@ import '../../domain/resources/resource_contracts.dart';
 import '../../domain/resources/resource_revision.dart';
 import '../../domain/errors/diagnostic_envelope.dart';
 import 'assembly_readiness_repository.dart';
+import 'authorized_generation_budget.dart';
 import 'compression_coordinator.dart';
 import 'compression_worker.dart';
 import 'resource_assembly_builder.dart';
@@ -59,12 +59,15 @@ final class AssemblyReadinessCoordinator extends ChangeNotifier {
     required ResourceRevisionService revisionService,
     required ResourceAssemblyBuilder builder,
     Future<ResourceType?> Function(ResourceId resourceId)? typeResolver,
+    IAuthorizedGenerationBudgetReader? authorizedBudgetReader,
   })  : _getDb = getDb,
         _readiness = readinessRepository,
         _revisions = revisionRepository,
         _revisionService = revisionService,
         _builder = builder,
-        _typeResolver = typeResolver;
+        _typeResolver = typeResolver,
+        _authorizedBudget = authorizedBudgetReader ??
+            AuthorizedGenerationBudgetReader(getDb: getDb);
 
   final Future<Database> Function() _getDb;
   final IAssemblyReadinessRepository _readiness;
@@ -72,6 +75,11 @@ final class AssemblyReadinessCoordinator extends ChangeNotifier {
   final ResourceRevisionService _revisionService;
   final ResourceAssemblyBuilder _builder;
   final Future<ResourceType?> Function(ResourceId resourceId)? _typeResolver;
+
+  /// Resolves a resource's frozen authorized AI generation ceiling, so an
+  /// authorized elastic body is classified `elastic` (never forced to compress)
+  /// instead of `overflow` against the resource type's ordinary absolute.
+  final IAuthorizedGenerationBudgetReader _authorizedBudget;
 
   // Compression hooks are attached lazily (see [attachCompression]) instead of
   // arriving through the constructor, so the readiness chain never statically
@@ -796,12 +804,23 @@ final class AssemblyReadinessCoordinator extends ChangeNotifier {
         'FROM resource_blueprints b LEFT JOIN resource_creation_sessions s ON s.session_id = b.session_id '
         'WHERE b.resource_id = ? ORDER BY b.created_at DESC LIMIT 1',
         [resourceId.value]);
+    // Capacity is classified against the *effective* boundary: the type's
+    // absolute capacity widened by an authorized AI run's frozen ceiling. This
+    // is the single place that decides whether a body above the old absolute is
+    // a legitimate elastic result or a genuine overflow that must compress
+    // before assembly, so an authorized breakout is never forced back below A.
+    final policy = ResourceLimits.policyFor(type);
+    final authorized =
+        await _authorizedBudget.authorizedCeiling(resourceId.value);
+    final effectiveAbsolute = policy.effectiveCharacters(authorized);
+    final status = policy.statusForEffective(activeChars, effectiveAbsolute);
     debugPrint(
         '[AdventureStart][CAPACITY] resourceId=${resourceId.value} resourceType=${type.storageValue} '
         'revision=${state.revisionId.value} revisionCharacters=$activeChars liveCharacters=$liveActive '
         'activeParts=${live.where((row) => row['status'] != 'archived').length} '
         'generationTarget=${plan.firstOrNull?['target_characters']} blueprintTarget=${plan.firstOrNull?['target_capacity']} '
-        'status=${ResourceCapacityMath.statusFor(type, activeChars).name}');
-    return ResourceCapacityMath.statusFor(type, activeChars);
+        'absolute=${policy.absoluteCharacters} authorized=$authorized effectiveAbsolute=$effectiveAbsolute '
+        'status=${status.name}');
+    return status;
   }
 }

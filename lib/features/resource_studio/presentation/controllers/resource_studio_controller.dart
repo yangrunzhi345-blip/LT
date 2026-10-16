@@ -64,6 +64,10 @@ final class ResourceStudioController extends ChangeNotifier {
   /// repository's enforcement.
   int? _elasticPercent;
 
+  /// The frozen budget policy version of the loaded session's run. Null until
+  /// loaded; the budget summary then applies the current formula.
+  int? _elasticPolicyVersion;
+
   /// The target resource's own persisted elastic override (ADR-0003): null
   /// percent = inherit; [elasticOverrideUpdatedAt] is the CAS token.
   int? _elasticOverridePercent;
@@ -116,6 +120,10 @@ final class ResourceStudioController extends ChangeNotifier {
   /// The effective elastic percent (E) of the current session's run, or null
   /// when not yet resolved.
   int? get elasticPercent => _elasticPercent;
+
+  /// The frozen budget policy version of the current session's run, or null
+  /// when not yet resolved.
+  int? get elasticPolicyVersion => _elasticPolicyVersion;
 
   /// The loaded resource's own elastic override percent (null = inherit).
   int? get elasticOverridePercent => _elasticOverridePercent;
@@ -224,6 +232,9 @@ final class ResourceStudioController extends ChangeNotifier {
       final elasticPercent = session == null
           ? null
           : await _runtime.sessionElasticPercent(session.sessionId);
+      final elasticPolicyVersion = session == null
+          ? null
+          : await _runtime.sessionBudgetPolicyVersion(session.sessionId);
       final elasticOverride = resolvedResourceId == null
           ? null
           : await _runtime.readGenerationElasticOverride(resolvedResourceId);
@@ -248,6 +259,7 @@ final class ResourceStudioController extends ChangeNotifier {
       _errorPartId = null;
       _targetCharacters = target;
       _elasticPercent = elasticPercent;
+      _elasticPolicyVersion = elasticPolicyVersion;
       _elasticOverridePercent = elasticOverride?.percent;
       _elasticOverrideUpdatedAt = elasticOverride?.updatedAt;
       _partContractStatuses = contractStatuses;

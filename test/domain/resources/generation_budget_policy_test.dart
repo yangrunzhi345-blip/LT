@@ -3,76 +3,175 @@ import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
 
 void main() {
-  group('GenerationBudgetPolicy.cumulativeCeiling', () {
-    // Acceptance matrix from the elastic-budget spec: C = min(floor(T*1.20), A).
-    // A body at exactly C is accepted; one code unit above C is rejected.
-    for (final (target, ceiling) in const [
-      (1000, 1200),
-      (4000, 4800),
-      (8000, 9600),
-      (12000, 14400),
-      (16000, 19200),
-      (20000, 24000),
-    ]) {
-      test('target $target → ceiling $ceiling', () {
+  group('GenerationBudgetPolicy.cumulativeCeiling (elastic breakout)', () {
+    // C = floor(T*(100+E)/100). The absolute capacity of the resource type is
+    // never consulted here: an authorized run may exceed it.
+    test('acceptance numbers for every resource type', () {
+      // Worldview: T = 50000 at E = 0 / 20 / 50.
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 50000, elasticPercent: 0),
+        50000,
+      );
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 50000, elasticPercent: 20),
+        60000,
+      );
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 50000, elasticPercent: 50),
+        75000,
+        reason: 'worldview 50000 + 50% breaks the old 60000 absolute',
+      );
+
+      // Character card and NPC: T = 20000 at E = 0 / 20 / 50.
+      for (final target in const [20000, 20000]) {
         expect(
           GenerationBudgetPolicy.cumulativeCeiling(
-            target: target,
-            absolute: ResourceLimits.characterAbsoluteCharacters,
-          ),
-          ceiling,
+              target: target, elasticPercent: 0),
+          target,
         );
         expect(
           GenerationBudgetPolicy.cumulativeCeiling(
-            target: target,
-            absolute: ceiling - 1,
-          ),
-          ceiling - 1,
-          reason: 'the absolute capacity always caps the ceiling',
+              target: target, elasticPercent: 20),
+          24000,
         );
-      });
-    }
+        expect(
+          GenerationBudgetPolicy.cumulativeCeiling(
+              target: target, elasticPercent: 50),
+          30000,
+          reason: 'character/NPC 20000 + 50% breaks the old 24000 absolute',
+        );
+      }
+    });
 
     test('zero target stays budgetless', () {
       expect(
-        GenerationBudgetPolicy.cumulativeCeiling(
-          target: 0,
-          absolute: ResourceLimits.characterAbsoluteCharacters,
-        ),
+        GenerationBudgetPolicy.cumulativeCeiling(target: 0),
+        0,
+      );
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(target: 0, elasticPercent: 50),
         0,
       );
     });
 
-    test('negative inputs are rejected', () {
+    test('negative target is rejected', () {
       expect(
-        () =>
-            GenerationBudgetPolicy.cumulativeCeiling(target: -1, absolute: 100),
-        throwsArgumentError,
-      );
-      expect(
-        () =>
-            GenerationBudgetPolicy.cumulativeCeiling(target: 100, absolute: -1),
+        () => GenerationBudgetPolicy.cumulativeCeiling(target: -1),
         throwsArgumentError,
       );
     });
 
-    test('never widens another type independent budget', () {
-      // NPC shares the character absolute; worldview keeps its own pair. The
-      // ceiling is derived from the caller-supplied absolute only.
+    test('out-of-range percents fail closed', () {
+      for (final bad in const [-1, 51, 100]) {
+        expect(
+          () => GenerationBudgetPolicy.cumulativeCeiling(
+              target: 1000, elasticPercent: bad),
+          throwsArgumentError,
+          reason: 'E=$bad',
+        );
+      }
+    });
+
+    test('always the default 20% when omitted', () {
+      expect(GenerationBudgetPolicy.defaultElasticPercent, 20);
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(target: 8000),
+        9600,
+      );
+    });
+
+    test('pure integer floor never rounds up', () {
+      // Non-divisible targets: floor, never round-to-nearest.
       expect(
         GenerationBudgetPolicy.cumulativeCeiling(
+            target: 1234, elasticPercent: 35),
+        1665, // 1234 * 135 = 166590
+      );
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 9877, elasticPercent: 15),
+        11358, // 9877 * 115 = 1135855
+      );
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(
+            target: 9999, elasticPercent: 50),
+        14998, // 9999 * 150 = 1499850
+      );
+      expect(
+        GenerationBudgetPolicy.cumulativeCeiling(target: 1, elasticPercent: 50),
+        1,
+      );
+    });
+  });
+
+  group('GenerationBudgetPolicy.ceilingFor (version dispatch)', () {
+    test('the current version ignores the absolute capacity', () {
+      expect(
+        GenerationBudgetPolicy.ceilingFor(
+          target: 50000,
+          absolute: ResourceLimits.worldviewAbsoluteCharacters,
+          elasticPercent: 50,
+          policyVersion: GenerationBudgetPolicy.currentBudgetPolicyVersion,
+        ),
+        75000,
+      );
+      expect(
+        GenerationBudgetPolicy.ceilingFor(
           target: 20000,
-          absolute: ResourceLimits.npcAbsoluteCharacters,
+          absolute: ResourceLimits.characterAbsoluteCharacters,
+          elasticPercent: 50,
+          policyVersion: GenerationBudgetPolicy.currentBudgetPolicyVersion,
+        ),
+        30000,
+      );
+    });
+
+    test('the legacy version keeps the historical min(..., A) clip', () {
+      expect(
+        GenerationBudgetPolicy.ceilingFor(
+          target: 50000,
+          absolute: ResourceLimits.worldviewAbsoluteCharacters,
+          elasticPercent: 50,
+          policyVersion: GenerationBudgetPolicy.legacyBudgetPolicyVersion,
+        ),
+        60000,
+        reason: 'a legacy run must not be retroactively widened to 75000',
+      );
+      expect(
+        GenerationBudgetPolicy.ceilingFor(
+          target: 20000,
+          absolute: ResourceLimits.characterAbsoluteCharacters,
+          elasticPercent: 50,
+          policyVersion: GenerationBudgetPolicy.legacyBudgetPolicyVersion,
         ),
         24000,
       );
+      // Unversioned / unknown versions below current are legacy.
       expect(
-        GenerationBudgetPolicy.cumulativeCeiling(
+        GenerationBudgetPolicy.ceilingFor(
           target: 50000,
           absolute: ResourceLimits.worldviewAbsoluteCharacters,
+          elasticPercent: 50,
+          policyVersion: 0,
         ),
         60000,
       );
+    });
+
+    test('legacy and current agree whenever floor(T*(1+E)) <= A', () {
+      for (final e in const [0, 5, 20]) {
+        final current = GenerationBudgetPolicy.cumulativeCeiling(
+            target: 20000, elasticPercent: e);
+        final legacy = GenerationBudgetPolicy.legacyCumulativeCeiling(
+          target: 20000,
+          absolute: ResourceLimits.characterAbsoluteCharacters,
+          elasticPercent: e,
+        );
+        expect(current, legacy, reason: 'E=$e');
+      }
     });
   });
 
@@ -105,24 +204,13 @@ void main() {
   });
 
   group('elastic ceiling vs capacity classification', () {
-    test('a body at C stays inside the elastic band, never overflow', () {
-      for (final (target, ceiling) in const [
-        (1000, 1200),
-        (8000, 9600),
-        (20000, 24000),
-      ]) {
-        final status = ResourceLimits.character.statusFor(ceiling);
-        expect(status, isNot(CapacityStatus.overflow),
-            reason: 'target=$target');
-      }
-      // Exactly absolute is still elastic per the frozen boundary.
+    test('the ordinary absolute boundary is unchanged', () {
       expect(
         ResourceLimits.character.statusFor(
           ResourceLimits.characterAbsoluteCharacters,
         ),
         CapacityStatus.elastic,
       );
-      // The end-to-end matrix bands: 20,000 normal, 21,000 elastic.
       expect(
         ResourceLimits.character
             .statusFor(ResourceLimits.characterNominalCharacters),
@@ -130,69 +218,40 @@ void main() {
       );
       expect(ResourceLimits.character.statusFor(21000), CapacityStatus.elastic);
     });
-  });
 
-  group('configurable elastic percent (ADR-0003)', () {
-    // Integer arithmetic: C = min((T*(100+E)) ~/ 100, A). The boundary between
-    // an accepted C and a rejected C+1 must never depend on float rounding.
-    for (final e in const [0, 5, 20, 35, 50]) {
-      test('E=$e: target 8000 with unbounded absolute', () {
-        final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
-          target: 8000,
-          absolute: 1 << 31,
-          elasticPercent: e,
-        );
-        expect(ceiling, (8000 * (100 + e)) ~/ 100);
-        // Exactly C is a valid body; the policy itself never truncates.
-        expect(ceiling, greaterThanOrEqualTo(8000));
-      });
-    }
-
-    test('E=0 collapses the ceiling onto the target', () {
+    test('an authorized ceiling moves the overflow boundary', () {
+      const policy = ResourceLimits.character;
+      // C = 30000 for T = 20000 at 50%.
+      final effective = policy.effectiveCharacters(30000);
+      expect(effective, 30000);
       expect(
-        GenerationBudgetPolicy.cumulativeCeiling(
-            target: 8000, absolute: 24000, elasticPercent: 0),
-        8000,
+        policy.statusForEffective(27000, effective),
+        CapacityStatus.elastic,
+        reason: 'over the old 24000 absolute but within C, so not overflow',
       );
       expect(
-        GenerationBudgetPolicy.cumulativeCeiling(
-            target: 1, absolute: 24000, elasticPercent: 0),
-        1,
+        policy.statusForEffective(30001, effective),
+        CapacityStatus.overflow,
       );
+      // Without an authorization the boundary stays at the absolute.
+      expect(policy.effectiveCharacters(0), 24000);
+      expect(policy.statusFor(27000), CapacityStatus.overflow);
     });
 
-    test('E=50 never crosses the absolute capacity', () {
+    test('a smaller authorized ceiling never narrows the boundary', () {
+      const policy = ResourceLimits.worldview;
+      // T below nominal gives C < A; the effective boundary must stay at A.
+      expect(policy.effectiveCharacters(40000), 60000);
       expect(
-        GenerationBudgetPolicy.cumulativeCeiling(
-            target: 24000, absolute: 24000, elasticPercent: 50),
-        24000,
-      );
+          policy.statusForEffective(55000, policy.effectiveCharacters(40000)),
+          CapacityStatus.elastic);
     });
 
-    test('defaults preserve the frozen PR #5 20% behaviour', () {
-      expect(GenerationBudgetPolicy.defaultElasticPercent, 20);
+    test('a narrower effective boundary is rejected as a policy bug', () {
       expect(
-        GenerationBudgetPolicy.cumulativeCeiling(target: 8000, absolute: 24000),
-        9600,
+        () => ResourceLimits.character.statusForEffective(1000, 10000),
+        throwsArgumentError,
       );
-    });
-
-    test('out-of-range percents fail closed', () {
-      for (final bad in const [-1, 51, 100]) {
-        expect(
-          () => GenerationBudgetPolicy.cumulativeCeiling(
-              target: 1000, absolute: 24000, elasticPercent: bad),
-          throwsArgumentError,
-          reason: 'E=$bad',
-        );
-      }
-    });
-
-    test('normalizeElasticPercent clamps user input', () {
-      expect(GenerationBudgetPolicy.normalizeElasticPercent(-7), 0);
-      expect(GenerationBudgetPolicy.normalizeElasticPercent(0), 0);
-      expect(GenerationBudgetPolicy.normalizeElasticPercent(35), 35);
-      expect(GenerationBudgetPolicy.normalizeElasticPercent(99), 50);
     });
   });
 }

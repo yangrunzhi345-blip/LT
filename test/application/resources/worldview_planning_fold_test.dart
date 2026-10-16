@@ -204,7 +204,6 @@ void main() {
       expect(
         GenerationBudgetPolicy.cumulativeCeiling(
           target: 50000,
-          absolute: ResourceLimits.worldviewAbsoluteCharacters,
           elasticPercent: 20,
         ),
         60000,
@@ -239,7 +238,6 @@ void main() {
 
       final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
         target: reopened.targetCapacity,
-        absolute: ResourceLimits.worldviewAbsoluteCharacters,
         elasticPercent: GenerationBudgetPolicy.defaultElasticPercent,
       );
       expect(ceiling, 60000);

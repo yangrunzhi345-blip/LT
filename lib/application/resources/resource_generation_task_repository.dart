@@ -442,12 +442,16 @@ class PartGenerationTaskRepositoryImpl
         ));
   }
 
-  /// The cumulative acceptance ceiling C for one generation run:
-  /// `min(floor(T*(100+E)/100), A)` where T is the blueprint's persisted
-  /// target, E the blueprint's frozen elastic percent (ADR-0003; NULL legacy
-  /// rows resolve to the fixed PR #5 20%) and A the resource type's absolute
-  /// capacity. Null when the blueprint carries no budget (`target_capacity <=
-  /// 0`), preserving the budgetless behaviour of historical rows.
+  /// The cumulative acceptance ceiling C for one generation run.
+  ///
+  /// The formula is version-dispatched: a run frozen under the current policy
+  /// uses `C = floor(T*(100+E)/100)` (an authorized run may exceed A), while a
+  /// legacy run keeps the historical `min(floor(T*(100+E)/100), A)`. T is the
+  /// blueprint's persisted target, E the blueprint's frozen elastic percent
+  /// (ADR-0003; NULL legacy rows resolve to the fixed PR #5 20%) and A the
+  /// resource type's absolute capacity. Null when the blueprint carries no
+  /// budget (`target_capacity <= 0`), preserving the budgetless behaviour of
+  /// historical rows.
   ///
   /// The resource type comes from `resource_blueprints.resource_type`
   /// (NOT NULL, authoritative). An unknown storage value fails closed so a
@@ -456,25 +460,29 @@ class PartGenerationTaskRepositoryImpl
     int targetCapacity,
     String resourceType,
     int? frozenElasticPercent,
+    int? budgetPolicyVersion,
   ) {
     if (targetCapacity <= 0) return null;
-    return GenerationBudgetPolicy.cumulativeCeiling(
+    return GenerationBudgetPolicy.ceilingFor(
       target: targetCapacity,
       absolute: ResourceLimits.policyFor(
         ResourceType.fromStorageValue(resourceType),
       ).absoluteCharacters,
       elasticPercent:
           frozenElasticPercent ?? GenerationBudgetPolicy.defaultElasticPercent,
+      policyVersion: budgetPolicyVersion ??
+          GenerationBudgetPolicy.legacyBudgetPolicyVersion,
     );
   }
 
-  /// Reads the confirmed blueprint and its frozen elastic percent inside
+  /// Reads the confirmed blueprint and its frozen budget snapshot inside
   /// [txn], so the ceiling and the per-Part requirements come from one
   /// consistent snapshot.
   Future<
       ({
         ResourceBlueprint blueprint,
         int? elasticPercent,
+        int? budgetPolicyVersion,
         int targetCapacity,
       })?> _readBlueprintBudgetInTransaction(
     DatabaseExecutor txn,
@@ -507,6 +515,10 @@ class PartGenerationTaskRepositoryImpl
     return (
       blueprint: blueprint,
       elasticPercent: (row['elastic_percent'] as num?)?.toInt(),
+      // A legacy row upgraded from schema < 50 has NULL here; the caller then
+      // resolves it to the historical policy version so its budget never
+      // drifts forward when the formula changes.
+      budgetPolicyVersion: (row['budget_policy_version'] as num?)?.toInt(),
       // The NOT NULL `target_capacity` column is authoritative for the
       // ceiling; the JSON copy is only a fallback for rows that predate it.
       targetCapacity:
@@ -650,6 +662,7 @@ class PartGenerationTaskRepositoryImpl
         read.targetCapacity,
         blueprint.resourceType.storageValue,
         read.elasticPercent,
+        read.budgetPolicyVersion,
       ),
     );
   }
@@ -811,6 +824,7 @@ class PartGenerationTaskRepositoryImpl
                 read.targetCapacity,
                 read.blueprint.resourceType.storageValue,
                 read.elasticPercent,
+                read.budgetPolicyVersion,
               );
         if (fallbackCeiling != null) {
           final lengths = await _activePartLengthsInTransaction(

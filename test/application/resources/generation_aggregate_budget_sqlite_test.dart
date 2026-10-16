@@ -427,9 +427,8 @@ void main() {
         expect(tasks, hasLength(2));
         // The sibling Part carries the remainder so the candidate under test
         // still lands exactly on the matrix boundary.
-        final ceiling = GenerationBudgetPolicy.cumulativeCeiling(
-            target: target,
-            absolute: ResourceLimits.characterAbsoluteCharacters);
+        final ceiling =
+            GenerationBudgetPolicy.cumulativeCeiling(target: target);
         // The matrix only exercises the two boundary cases: exactly C accepts,
         // exactly C + 1 rejects.
         expect(total == ceiling || total == ceiling + 1, isTrue,

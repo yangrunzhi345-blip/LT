@@ -49,8 +49,11 @@ class DatabaseService {
   /// relationships; v48 persists related-character generation drafts for
   /// restart-safe Resource Studio recovery; v49 adds the nullable
   /// `resource_blueprints.elastic_percent` task-budget snapshot column
-  /// (NULL = legacy fixed 20% from PR #5).
-  static const int schemaVersion = 49;
+  /// (NULL = legacy fixed 20% from PR #5); v50 adds the
+  /// `resource_blueprints.budget_policy_version` column so a frozen run keeps
+  /// the exact ceiling formula that produced its budget (1 = historical
+  /// `min(..., A)`, 2 = elastic breakout without an absolute clip).
+  static const int schemaVersion = 50;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -981,6 +984,7 @@ class DatabaseService {
         status TEXT NOT NULL DEFAULT 'draft',
         target_capacity INTEGER NOT NULL DEFAULT 0,
         elastic_percent INTEGER,
+        budget_policy_version INTEGER NOT NULL DEFAULT 1,
         blueprint_json TEXT NOT NULL DEFAULT '{}',
         resource_id TEXT,
         created_at TEXT NOT NULL,
@@ -2586,6 +2590,15 @@ class DatabaseService {
       await safeAddColumn(
           db, 'resource_blueprints', 'elastic_percent', 'INTEGER');
       _log('  迁移 v48 → v49 完成');
+    }
+    if (oldVersion < 50 && newVersion >= 50) {
+      _log('  执行迁移: v49 → v50（生成预算策略版本列）');
+      // DEFAULT 1 = 历史 `min(floor(T*(100+E)/100), A)` 语义。升级时已有行保持
+      // 旧公式，绝不因公式变更而追溯扩大已确认任务的累计预算；新确认的任务由
+      // confirm 事务写入当前版本（2）。
+      await safeAddColumn(db, 'resource_blueprints', 'budget_policy_version',
+          'INTEGER NOT NULL DEFAULT 1');
+      _log('  迁移 v49 → v50 完成');
     }
 
     _log('migrateStepByStep 全部完成');

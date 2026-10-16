@@ -14,11 +14,17 @@ import 'resource_contracts.dart';
 ///   truncating user content; overflow only decides whether compression and a
 ///   new assembly revision are required.
 ///
-/// The character-card two-level budget is also the boundary used by card
-/// validation: `nominal` is the maximum any UI control or generation target may
-/// offer, while `absolute` is the hard acceptance ceiling. A card body above
-/// `absolute` is rejected before persistence (fail-closed) rather than being
-/// truncated — see `ResourceIntegrityValidator`.
+/// The character-card two-level budget is also the default boundary used by
+/// card validation: `nominal` is the maximum any UI control or generation
+/// target may offer, while `absolute` is the hard acceptance ceiling for
+/// ordinary writes. A body above `absolute` is rejected before persistence
+/// (fail-closed) rather than being truncated — see `ResourceIntegrityValidator`.
+///
+/// An authorized AI generation run may freeze a cumulative ceiling C above
+/// `absolute`; validation of such a resource uses the widened effective
+/// boundary `max(absolute, C)` (see [ResourceCapacityPolicy.effectiveCharacters])
+/// so a legitimately generated body is accepted, while imports and manual
+/// writes without an authorized run keep the `absolute` ceiling.
 abstract final class ResourceLimits {
   static const int worldviewNominalCharacters = 50000;
   static const int worldviewAbsoluteCharacters = 60000;
@@ -168,21 +174,39 @@ abstract final class ResourceLimits {
 /// - `target` (T): the user-selected soft generation goal. The model is asked
 ///   to aim for it; quality outranks mechanically filling it.
 /// - `cumulativeCeiling` (C): the hard cumulative acceptance boundary of one
-///   generation run, `min(floor(T*(100+E)/100), absolute)` where E is the
-///   task-frozen effective elastic percent. It only
-///   bounds what the *run* may commit; it does not re-classify capacity.
-/// - `absolute` (A): the resource type's frozen capacity ceiling. Capacity
-///   status (normal / elastic / overflow) is and remains a function of A via
-///   [ResourceCapacityPolicy.statusFor].
+///   generation run, `floor(T*(100+E)/100)` where E is the task-frozen
+///   effective elastic percent. It only bounds what the *run* may commit; it
+///   does not re-classify capacity.
+/// - `absolute` (A): the resource type's frozen capacity ceiling for ordinary
+///   content. Capacity status (normal / elastic / overflow) is computed from
+///   the *effective* ceiling via
+///   [ResourceCapacityPolicy.statusForEffective], which is `A` for ordinary
+///   resources and `max(A, C)` for a resource produced by an authorized AI
+///   generation run.
 ///
 /// A body that lands in `target < length <= C` is a normal, accepted
-/// generation whose *deviation from the goal* is presented in the UI; the
-/// resource itself is still classified by the nominal/absolute policy. C can
-/// never exceed A, so AI generation alone can never push a resource into the
-/// overflow band that requires compression before assembly.
+/// generation whose *deviation from the goal* is presented in the UI.
+///
+/// ## An authorized run may exceed A
+///
+/// An explicit, user-authorized AI generation task freezes its own budget and
+/// may legitimately commit up to C even when C > A; `A` is never re-applied to
+/// clip that authorized run. This is exactly what makes "T = 50000 worldview at
+/// 50% elasticity → C = 75000" reachable. The widening is scoped to the run:
+/// ordinary resources, imports and manual writes keep the A ceiling, and a
+/// genuine over-budget generation above C is still rejected at commit.
+///
+/// ## Budget policy versions
+///
+/// Because the ceiling formula changed, a run's budget must record *which*
+/// formula produced it. A row without a policy version predates elastic
+/// breakout and keeps the historical `min(..., A)` semantics, so upgrading the
+/// app never retroactively grants an already-frozen run more budget.
+/// [legacyBudgetPolicyVersion] is the historical formula; [currentBudgetPolicyVersion]
+/// is the breakout formula (`floor(T*(100+E)/100)`).
 abstract final class GenerationBudgetPolicy {
   /// Default expansion of the cumulative generated body above the user's
-  /// target, expressed in integer percent: `C = min(floor(T*(100+E)/100), A)`.
+  /// target, expressed in integer percent: `C = floor(T*(100+E)/100)`.
   ///
   /// 20 is the frozen PR #5 behaviour and also the value resolved for legacy
   /// rows whose stored snapshot predates configurable elasticity (NULL
@@ -194,9 +218,20 @@ abstract final class GenerationBudgetPolicy {
   /// ceiling collapses onto T and over-expansion is rejected at commit.
   static const int minimumElasticPercent = 0;
 
-  /// Highest configurable elasticity. 50% widens the acceptance ceiling but
-  /// never lifts the absolute capacity A: `min(..., A)` still applies.
+  /// Highest configurable elasticity. 50% widens the acceptance ceiling
+  /// (including above A) for an authorized AI generation run.
   static const int maximumElasticPercent = 50;
+
+  /// Historical (pre-breakout) budget policy: `min(floor(T*(100+E)/100), A)`.
+  ///
+  /// Rows frozen under this version keep their original ceiling forever, so
+  /// changing the formula never widens an already-started run's budget.
+  static const int legacyBudgetPolicyVersion = 1;
+
+  /// Current budget policy: `floor(T*(100+E)/100)`, with no absolute clip.
+  ///
+  /// New generation runs are frozen under this version.
+  static const int currentBudgetPolicyVersion = 2;
 
   /// Clamps and normalizes a user-provided percent into the legal domain.
   ///
@@ -206,26 +241,7 @@ abstract final class GenerationBudgetPolicy {
   static int normalizeElasticPercent(int raw) =>
       raw.clamp(minimumElasticPercent, maximumElasticPercent);
 
-  /// The cumulative acceptance ceiling for one generation run.
-  ///
-  /// A non-positive target means "no generation budget": the ceiling is 0 and
-  /// callers treat the run as budgetless exactly as they treated
-  /// `target_capacity <= 0` before elasticity existed.
-  ///
-  /// [elasticPercent] is the task-frozen effective percent E. The arithmetic
-  /// is pure integer (`T*(100+E) ~/ 100`), so the boundary between an accepted
-  /// `C` and a rejected `C+1` never depends on floating-point rounding.
-  static int cumulativeCeiling({
-    required int target,
-    required int absolute,
-    int elasticPercent = defaultElasticPercent,
-  }) {
-    if (target < 0) {
-      throw ArgumentError.value(target, 'target', 'must not be negative');
-    }
-    if (absolute < 0) {
-      throw ArgumentError.value(absolute, 'absolute', 'must not be negative');
-    }
+  static void _checkElasticPercent(int elasticPercent) {
     if (elasticPercent < minimumElasticPercent ||
         elasticPercent > maximumElasticPercent) {
       throw ArgumentError.value(
@@ -234,9 +250,73 @@ abstract final class GenerationBudgetPolicy {
         'must be between $minimumElasticPercent and $maximumElasticPercent',
       );
     }
+  }
+
+  static void _checkNonNegative(int value, String name) {
+    if (value < 0) {
+      throw ArgumentError.value(value, name, 'must not be negative');
+    }
+  }
+
+  /// The cumulative acceptance ceiling for one generation run under the
+  /// current (breakout) policy: `C = floor(T*(100+E)/100)`.
+  ///
+  /// A non-positive target means "no generation budget": the ceiling is 0 and
+  /// callers treat the run as budgetless exactly as they treated
+  /// `target_capacity <= 0` before elasticity existed.
+  ///
+  /// [elasticPercent] is the task-frozen effective percent E. The arithmetic
+  /// is pure integer (`T*(100+E) ~/ 100`), so the boundary between an accepted
+  /// `C` and a rejected `C+1` never depends on floating-point rounding. The
+  /// absolute capacity is deliberately NOT accepted here: an authorized run
+  /// must not have its ceiling clipped by it.
+  static int cumulativeCeiling({
+    required int target,
+    int elasticPercent = defaultElasticPercent,
+  }) {
+    _checkNonNegative(target, 'target');
+    _checkElasticPercent(elasticPercent);
+    if (target == 0) return 0;
+    return (target * (100 + elasticPercent)) ~/ 100;
+  }
+
+  /// The historical acceptance ceiling: `min(floor(T*(100+E)/100), A)`.
+  ///
+  /// Used only for runs frozen under [legacyBudgetPolicyVersion], so their
+  /// budget never drifts when the formula changes.
+  static int legacyCumulativeCeiling({
+    required int target,
+    required int absolute,
+    int elasticPercent = defaultElasticPercent,
+  }) {
+    _checkNonNegative(target, 'target');
+    _checkNonNegative(absolute, 'absolute');
+    _checkElasticPercent(elasticPercent);
     if (target == 0) return 0;
     final elastic = (target * (100 + elasticPercent)) ~/ 100;
     return elastic > absolute ? absolute : elastic;
+  }
+
+  /// Version-dispatched ceiling used by persistence-backed consumers.
+  ///
+  /// A row whose frozen [policyVersion] is at or above
+  /// [currentBudgetPolicyVersion] uses the breakout formula; anything lower
+  /// (including an unversioned legacy row) keeps the historical clip. The
+  /// `absolute` argument is therefore only consulted for legacy rows.
+  static int ceilingFor({
+    required int target,
+    required int absolute,
+    required int elasticPercent,
+    int policyVersion = currentBudgetPolicyVersion,
+  }) {
+    if (policyVersion >= currentBudgetPolicyVersion) {
+      return cumulativeCeiling(target: target, elasticPercent: elasticPercent);
+    }
+    return legacyCumulativeCeiling(
+      target: target,
+      absolute: absolute,
+      elasticPercent: elasticPercent,
+    );
   }
 
   /// Deviation of [actual] from [target] in percent, rounded to one decimal.
@@ -265,12 +345,49 @@ final class ResourceCapacityPolicy {
   final int nominalCharacters;
   final int absoluteCharacters;
 
-  /// Classifies an already measured character count.
+  /// The actual overflow boundary for a resource, widened by an authorized AI
+  /// generation budget.
+  ///
+  /// Ordinary resources (no authorized run) report [absoluteCharacters], which
+  /// preserves every pre-existing behavior. A resource produced by an
+  /// authorized AI run may carry a frozen ceiling C above A; the effective
+  /// boundary is then `max(A, C)` so the run's legitimately generated body is
+  /// not re-classified as overflow. The widening direction is one-way: this
+  /// can never narrow below A, so a smaller C (for example T below nominal)
+  /// still leaves ordinary elastic capacity intact.
+  int effectiveCharacters(int authorizedCharacters) {
+    if (authorizedCharacters < 0) {
+      throw ArgumentError.value(
+        authorizedCharacters,
+        'authorizedCharacters',
+        'must not be negative',
+      );
+    }
+    return authorizedCharacters > absoluteCharacters
+        ? authorizedCharacters
+        : absoluteCharacters;
+  }
+
+  /// Classifies an already measured character count against the type's frozen
+  /// [absoluteCharacters] boundary.
   ///
   /// Boundaries are inclusive on the lower band: exactly `nominal` is still
   /// [CapacityStatus.normal] and exactly `absolute` is still
   /// [CapacityStatus.elastic].
-  CapacityStatus statusFor(int characterCount) {
+  CapacityStatus statusFor(int characterCount) =>
+      statusForEffective(characterCount, absoluteCharacters);
+
+  /// Classifies an already measured character count against an explicit
+  /// [effectiveAbsoluteCharacters] boundary (see [effectiveCharacters]).
+  ///
+  /// The normal/elastic split still uses [nominalCharacters]; only the
+  /// elastic/overflow split moves. [effectiveAbsoluteCharacters] must not be
+  /// below [absoluteCharacters] — a narrower boundary would be a policy bug,
+  /// since elastic breakout may only ever widen capacity.
+  CapacityStatus statusForEffective(
+    int characterCount,
+    int effectiveAbsoluteCharacters,
+  ) {
     if (characterCount < 0) {
       throw ArgumentError.value(
         characterCount,
@@ -278,8 +395,17 @@ final class ResourceCapacityPolicy {
         'character count must not be negative',
       );
     }
+    if (effectiveAbsoluteCharacters < absoluteCharacters) {
+      throw ArgumentError.value(
+        effectiveAbsoluteCharacters,
+        'effectiveAbsoluteCharacters',
+        'must not be narrower than the absolute budget',
+      );
+    }
     if (characterCount <= nominalCharacters) return CapacityStatus.normal;
-    if (characterCount <= absoluteCharacters) return CapacityStatus.elastic;
+    if (characterCount <= effectiveAbsoluteCharacters) {
+      return CapacityStatus.elastic;
+    }
     return CapacityStatus.overflow;
   }
 }

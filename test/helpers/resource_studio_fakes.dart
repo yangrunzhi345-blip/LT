@@ -74,6 +74,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
   /// Effective elastic percent reported by [sessionElasticPercent].
   int? elasticPercent;
 
+  /// Budget policy version reported by [sessionBudgetPolicyVersion]. Null keeps
+  /// the Studio budget summary on the current formula.
+  int? elasticPolicyVersion;
+
   /// Per-resource override state reported by [readGenerationElasticOverride].
   int? elasticOverridePercent;
   String? elasticOverrideUpdatedAt = 'fake-override-token';
@@ -92,6 +96,10 @@ final class FakeResourceStudioRuntime implements ResourceStudioRuntime {
 
   @override
   Future<int?> sessionElasticPercent(String sessionId) async => elasticPercent;
+
+  @override
+  Future<int?> sessionBudgetPolicyVersion(String sessionId) async =>
+      elasticPolicyVersion;
 
   @override
   Future<({String? updatedAt, int? percent})> readGenerationElasticOverride(
