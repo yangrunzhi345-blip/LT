@@ -88,7 +88,7 @@ void main() {
       final allocation = compute(
         current: req('p0', planned: 400),
         savedOther: 500,
-        unfinished: [req('p1', minimum: 500)],
+        unfinished: [req('p1', minimum: 500, planned: 500)],
       );
       expect(
         allocation.infeasibility,
@@ -126,13 +126,86 @@ void main() {
       expect(allocation.dispatchableMaximum, 900);
     });
 
-    test('a Part below its minimum reserves only the missing units', () {
+    test('a Part below its plan reserves only the missing units', () {
       final allocation = compute(
         current: req('p0'),
         savedOther: 200,
         unfinished: [req('p1', saved: 200)],
       );
       expect(allocation.futureReserve, 100);
+    });
+
+    test('a later required Part reserves its planned body, not its minimum',
+        () {
+      // p1 carries a legacy floor of 10 but is planned at 1000: the reservation
+      // must hold its planned size so the current Part cannot swallow it.
+      final allocation = compute(
+        current: req('p0', minimum: 10, planned: 1000),
+        savedOther: 0,
+        unfinished: [req('p1', minimum: 10, planned: 1000)],
+        ceiling: 2500,
+      );
+      expect(allocation.futureReserve, 1000);
+      expect(allocation.dispatchableMaximum, 1500);
+      expect(allocation.recommendedTarget, 1000);
+    });
+
+    test('a later Part reserves only the planned body it has not saved yet',
+        () {
+      final allocation = compute(
+        current: req('p0', minimum: 10, planned: 1000),
+        savedOther: 400,
+        unfinished: [req('p1', minimum: 10, planned: 1000, saved: 400)],
+        ceiling: 2500,
+      );
+      expect(allocation.futureReserve, 600);
+    });
+
+    test('dispatchableMaximum never falls below the current plan when it fits',
+        () {
+      // Ten equal Parts planned at 2000 in a 20% elastic run (ceiling 24000).
+      final parts = [
+        for (var i = 0; i < 10; i++) req('p$i', minimum: 10, planned: 2000)
+      ];
+      for (final current in parts) {
+        final allocation = PartGenerationBudgetAllocation.compute(
+          current: current,
+          savedOther: 0,
+          unfinishedParts: parts,
+          ceiling: 24000,
+        );
+        expect(allocation.dispatchableMaximum, greaterThanOrEqualTo(2000),
+            reason: '${current.partId} must be able to reach its plan');
+      }
+    });
+
+    test('the tail keeps its plan even after earlier Parts expand to the cap',
+        () {
+      // Mirrors the production failure: earlier Parts consume up to the
+      // transport cap and are then `completed` (so they leave the unfinished
+      // set), yet every remaining Part must still reach its planned size and
+      // the cumulative total must never pass the ceiling.
+      const cap = ResourceLimits.maxPartCharacters;
+      final remaining = [
+        for (var i = 0; i < 10; i++) req('p$i', minimum: 10, planned: 2000)
+      ];
+      var savedOther = 0;
+      while (remaining.isNotEmpty) {
+        final current = remaining.removeAt(0);
+        final allocation = PartGenerationBudgetAllocation.compute(
+          current: current,
+          savedOther: savedOther,
+          unfinishedParts: [current, ...remaining],
+          ceiling: 24000,
+        );
+        expect(allocation.dispatchableMaximum,
+            greaterThanOrEqualTo(current.plannedLength),
+            reason: '${current.partId} must still reach its plan');
+        savedOther += allocation.dispatchableMaximum > cap
+            ? cap
+            : allocation.dispatchableMaximum;
+      }
+      expect(savedOther, lessThanOrEqualTo(24000));
     });
 
     test('recommendedTarget never exceeds the plan nor the dispatchable max',

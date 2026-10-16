@@ -230,12 +230,15 @@ void main() {
       final session = await createSession('j_pool', origin: envelope());
       final stack = await confirmAndPrepare(session);
       final tasks = await stack.tasks.findReadyTasks(stack.id.value);
-      // E inherits the default 20%: C = 9600.
-
-      // Three Parts commit 3000 each — the pool must accumulate across Parts.
+      // E inherits the default 20%: C = 9600, four Parts planned at 2000.
+      //
+      // Each Part may take its plan plus a share of the elastic headroom, but
+      // never so much that a later required Part can no longer reach its own
+      // plan. 2400 each is inside every Part's dispatchable maximum and fills
+      // C exactly across the three siblings plus the tail.
       for (final task in tasks.take(3)) {
         expect(
-            await coordinator(stack.tasks, '文' * 3000).retrySinglePart(
+            await coordinator(stack.tasks, '文' * 2400).retrySinglePart(
                 blueprintId: stack.blueprintId, partId: task.partId),
             isTrue);
       }
@@ -243,7 +246,7 @@ void main() {
       // The last Part at exactly C = 9600 is still accepted.
       await fixture.db.update('resource_parts', {'content': '旧' * 400},
           where: 'id = ?', whereArgs: [tasks[3].partId]);
-      await coordinator(stack.tasks, '文' * 600).retrySinglePart(
+      await coordinator(stack.tasks, '文' * 2400).retrySinglePart(
           blueprintId: stack.blueprintId, partId: tasks[3].partId);
 
       // Rewind and attempt C+1: rejected with no partial write.
@@ -253,7 +256,7 @@ void main() {
           {'status': 'ready', 'current_attempt_id': ''},
           where: 'task_id = ?', whereArgs: [tasks[3].taskId]);
       await expectLater(
-          coordinator(stack.tasks, '文' * 601).retrySinglePart(
+          coordinator(stack.tasks, '文' * 2401).retrySinglePart(
               blueprintId: stack.blueprintId, partId: tasks[3].partId),
           throwsA(isA<PartGenerationValidationException>()));
 
@@ -261,7 +264,7 @@ void main() {
       final contents = await stack.tasks
           .getPartsContent(tasks.map((t) => t.partId).toList());
       for (var i = 0; i < 3; i++) {
-        expect(contents[tasks[i].partId]!.content, '文' * 3000,
+        expect(contents[tasks[i].partId]!.content, '文' * 2400,
             reason: '被拒绝的提交不得破坏其他已保存正文');
       }
       expect(contents[tasks[3].partId]!.content, '旧' * 400);

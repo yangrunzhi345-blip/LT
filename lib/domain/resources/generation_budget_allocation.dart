@@ -45,6 +45,23 @@ final class PartBudgetRequirement {
     final missing = minimumCharacters - savedLength;
     return missing > 0 ? missing : 0;
   }
+
+  /// Planned body a run must still be able to write for this Part: the
+  /// outstanding part of [plannedLength] that [savedLength] does not already
+  /// cover.
+  ///
+  /// This — not [additionalMinimum] — is the reservation basis for a later
+  /// *required* Part. A Part's minimum is only the floor below which a body is
+  /// rejected; reserving just that floor (ten units for a legacy Part, or a
+  /// small confirmed contract floor) lets earlier Parts consume the shared
+  /// ceiling down to the point where a later Part can no longer be written at
+  /// its own planned size — the Part is then dispatched with a soft target and
+  /// an acceptance limit below its plan, and any natural body is rejected. The
+  /// planned need is what makes the reservation meaningful.
+  int get additionalPlanned {
+    final missing = plannedLength - savedLength;
+    return missing > 0 ? missing : 0;
+  }
 }
 
 /// Why a run may not be able to dispatch one Part without starving a later
@@ -62,7 +79,7 @@ enum BudgetInfeasibility {
   ceilingExhausted,
 
   /// The Part's own minimum is larger than the space left after reserving the
-  /// minimums of every other unfinished required Part.
+  /// planned bodies of every other unfinished required Part.
   belowMinimum,
 
   /// The plan itself is outside `[minimumCharacters, transportCap]`; this
@@ -106,8 +123,15 @@ final class PartGenerationBudgetAllocation {
   /// trusting this as capacity.
   final int remaining;
 
-  /// Capacity reserved for the minimums of every other unfinished required
-  /// Part (`F_i`).
+  /// Capacity reserved for the outstanding planned bodies of every other
+  /// unfinished required Part (`F_i`).
+  ///
+  /// The reservation is each later required Part's *planned* need
+  /// ([PartBudgetRequirement.additionalPlanned]), so earlier Parts can never
+  /// consume a later Part's planned capacity. That is what keeps
+  /// [dispatchableMaximum] at or above the current Part's own plan for any plan
+  /// that fits the ceiling, so a Part is never asked for (or judged against)
+  /// less than its own planned size.
   final int futureReserve;
 
   /// `D_i = min(K, max(0, remaining - futureReserve))`: the largest body this
@@ -153,7 +177,7 @@ final class PartGenerationBudgetAllocation {
               '当前计划超界）',
         BudgetInfeasibility.minimumTotalExceedsCeiling =>
           '剩余累计预算无法容纳全部未完成必填章节的最低内容要求'
-              '（上限 ${ceiling ?? 0}，已用 $savedOther，后续必填最低预留 $futureReserve），'
+              '（上限 ${ceiling ?? 0}，已用 $savedOther，后续必填规划预留 $futureReserve），'
               '请调整规划或压缩前段后重试',
         BudgetInfeasibility.feasible || BudgetInfeasibility.budgetless => '',
       };
@@ -164,6 +188,14 @@ final class PartGenerationBudgetAllocation {
   /// (including Parts without a generation task). [unfinishedParts] are all
   /// Parts that are not yet `completed`; the current Part is filtered out
   /// internally so callers may pass the whole unfinished set.
+  ///
+  /// Guarantee (for any plan fitting the ceiling, when every earlier Part
+  /// respected its own [dispatchableMaximum]): `dispatchableMaximum` is never
+  /// below the current Part's `plannedLength`, because the future reserve
+  /// already holds each later required Part's outstanding planned body. A Part
+  /// is therefore never asked for, or judged against, a bound smaller than its
+  /// own planned size, and the cumulative committed total can never exceed the
+  /// ceiling.
   static PartGenerationBudgetAllocation compute({
     required PartBudgetRequirement current,
     required int savedOther,
@@ -182,9 +214,16 @@ final class PartGenerationBudgetAllocation {
     final unfinished = unfinishedParts
         .where((part) => part.partId != current.partId)
         .toList(growable: false);
+    // Reserve each later required Part's outstanding *planned* body, not just
+    // its minimum. Reserving the minimum (ten units for a legacy Part, or a
+    // small contract floor) leaves the reserve effectively empty, so earlier
+    // Parts may consume the whole shared ceiling up to the transport cap; the
+    // tail Part then receives a dispatchable maximum below its own planned
+    // length, so even a body written exactly to plan is rejected and every
+    // retry recomputes the same squeezed limit.
     final reserve = unfinished
         .where((part) => part.required)
-        .fold<int>(0, (sum, part) => sum + part.additionalMinimum);
+        .fold<int>(0, (sum, part) => sum + part.additionalPlanned);
     final unfinishedRequiredCount =
         1 + unfinished.where((part) => part.required).length;
 
