@@ -93,7 +93,10 @@ final class RuntimeStateValidator {
             RuntimeStateValueKind.integer => proposal.value is int,
             RuntimeStateValueKind.number =>
               proposal.value is num && (proposal.value as num).isFinite,
-            _ => false,
+            RuntimeStateValueKind.boolean ||
+            RuntimeStateValueKind.text ||
+            RuntimeStateValueKind.enumValue =>
+              false,
           },
         RuntimeChangeOperation.remove => true,
         RuntimeChangeOperation.appendUnique => false,

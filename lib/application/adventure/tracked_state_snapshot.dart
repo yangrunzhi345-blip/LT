@@ -160,7 +160,15 @@ final class TrackedStateSnapshotBuilder {
       RuntimeChangeOperation.increment
           when before == null && change.value is num =>
         change.value,
-      _ => before,
+      // Invalid increment operand shape (e.g. text/enum). The runtime
+      // validator rejects it; preserve the previous value if a caller
+      // bypasses validation instead of falling through a wildcard.
+      RuntimeChangeOperation.increment => before,
+      // Tracked custom attributes are scalar/text/enum values; the runtime
+      // validator rejects appendUnique for them. Keep the snapshot value
+      // unchanged if a caller bypasses validation, and make that explicit
+      // rather than swallowing the operation through a wildcard.
+      RuntimeChangeOperation.appendUnique => _unsupportedAppendUnique(before),
     };
     if (result is num) {
       var clamped = result;
@@ -171,6 +179,12 @@ final class TrackedStateSnapshotBuilder {
       return clamped;
     }
     return result;
+  }
+
+  static Object? _unsupportedAppendUnique(Object? before) {
+    assert(false,
+        'appendUnique is rejected for tracked custom attributes by RuntimeStateValidator');
+    return before;
   }
 
   /// Legacy `custom_attributes` baseline value for an entity, used only for
