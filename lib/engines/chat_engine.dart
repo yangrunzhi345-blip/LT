@@ -1367,14 +1367,68 @@ class ChatEngine {
 
   // ─── 发送消息（核心方法） ───
 
+  // ─── 发送消息（核心方法） ───
+
+  /// Runs one scene turn through explicit phases.
+  ///
+  /// The try/catch/finally stays here on purpose: durability
+  /// (`turnCommitted`), cancellation and terminal UI cleanup are turn-level
+  /// invariants, not details of any single phase.
   Future<void> sendMessage(
     String content, {
     Future<String> Function(String content)? promptTransformer,
   }) async {
+    if (_interceptNonNarrativeInput(content)) return;
+
+    final context = _beginTurn(content);
+    try {
+      final userMessage = _upsertUserMessage(content);
+      _startStreamingPhase();
+
+      final snapshot = await _freezeTurnContext(context, content);
+      // A request superseded while loading context ends silently, exactly as
+      // the previous inline `return` did; finally still resets the turn.
+      if (snapshot == null) return;
+
+      final controlContext = await _buildControlContext(
+        content: content,
+        snapshot: snapshot,
+        promptTransformer: promptTransformer,
+      );
+
+      final narrative = await _runNarrativeGeneration(
+        context,
+        snapshot,
+        content,
+        controlContext,
+      );
+      final finalized = await _finalizeNarrative(context, snapshot, narrative);
+      final settlement =
+          await _runSettlementPhase(context, snapshot, finalized, content);
+
+      final plan = _buildTurnCommitPlan(
+        context,
+        snapshot,
+        finalized,
+        settlement,
+        content,
+        userMessage,
+      );
+
+      if (!await _commitTurn(context, plan)) return;
+      _runPostTurnHooks(snapshot, finalized, plan);
+    } catch (error, stackTrace) {
+      await _handleTurnFailure(error, stackTrace, context);
+    } finally {
+      _finalizeTurn(context);
+    }
+  }
+
+  /// Handles inputs that must never start an LLM turn.
+  bool _interceptNonNarrativeInput(String content) {
     if (_status != ChatStatus.idle) {
-      debugPrint('[ChatEngine] sendMessage blocked — '
-          'status=$_status');
-      return; // 防止并发调用损坏状态
+      debugPrint('[ChatEngine] sendMessage blocked — status=$_status');
+      return true;
     }
     if (_host.apiKey.isEmpty) {
       _host.messages.add(Message(
@@ -1384,33 +1438,35 @@ class ChatEngine {
         isUser: false,
       ));
       _notifyAll();
-      return;
+      return true;
     }
-
-    // v2.0: Combat interception — during combat, player input is a combat action
     final combatMgr = _host.gameEngine?.combatMgr;
     if (combatMgr != null && combatMgr.isActive) {
       _handleCombatInput(content, combatMgr);
-      return;
+      return true;
     }
-
-    // v2.1: Rest action — recover HP/MP/Energy without LLM call
     if (content.trim() == '[休息]' || content.trim().startsWith('[休息]')) {
       _handleRest();
-      return;
+      return true;
     }
+    return false;
+  }
 
-    // 立即设置 _status = ChatStatus.loading。
-    // 必须在任何 await 之前执行，否则 async 等待期间其他调用可能进入。
+  /// Claims the engine for this turn and resets every per-turn staging buffer.
+  _TurnExecutionContext _beginTurn(String content) {
     _status = ChatStatus.loading;
     final requestId =
         'scene-${DateTime.now().microsecondsSinceEpoch}-${++_generation}';
-    final requestGeneration = _generation;
-    final adventureId = _host.currentAdventureId;
-    final branchId = _host.currentBranchId;
+    final context = _TurnExecutionContext(
+      content: content,
+      requestId: requestId,
+      generation: _generation,
+      adventureId: _host.currentAdventureId,
+      branchId: _host.currentBranchId,
+    );
     _activeRequestId = requestId;
     _activeTaskHandle = GenerationTaskHandle(
-        taskId: requestId, generationEpoch: requestGeneration);
+        taskId: requestId, generationEpoch: context.generation);
     _scenePhase = SceneDialoguePhase.created;
     _cancelRequested = false;
     _clearPendingAssistantPresentation();
@@ -1418,15 +1474,15 @@ class ChatEngine {
     GenerationDiagnostics.instance.mark('[ChatTurn][START]', {
       'engine': identityHashCode(this),
       'request': requestId,
-      'generation': requestGeneration,
-      'adventure': adventureId,
-      'branch': branchId,
+      'generation': context.generation,
+      'adventure': context.adventureId,
+      'branch': context.branchId,
       'provider': _host.providerType.name,
       'model': _host.modelName,
       'dialogueLevel': _host.dialogueLevel.id,
     });
-    // 每轮从零暂存：解析阶段只写 pending，提交阶段才落地，避免上一轮 delta 被
-    // 重复结算（重试、重新生成都会重新走一次 sendMessage）。
+    // Every turn starts from empty staging: parsing only writes pending values
+    // and commit applies them once, so a retry can never re-settle an old delta.
     _pendingGameState = null;
     _pendingSceneEffects = const SceneDialogueEffects();
     _pendingCustomStatusChanges = const [];
@@ -1440,433 +1496,310 @@ class ChatEngine {
     _pendingSettlementDiagnostics = const [];
     _narrativeOptions = const [];
     _settlementStreamingContent = '';
-    // R02-A: `false` until `commitSceneDialogueTurn` returns durably. From that
-    // point on the database result is authoritative and a late cancellation may
-    // only stop side effects that have not happened yet — it must never fake a
-    // rollback of a turn the database already accepted.
-    var turnCommitted = false;
+    return context;
+  }
 
-    /// True once the committed turn has been reconciled into host memory.
-    var memoryReconciled = false;
+  /// Reuses or replaces the trailing unanswered user bubble.
+  Message _upsertUserMessage(String content) {
+    while (_host.messages.isNotEmpty && _host.messages.last.isError) {
+      _host.messages.removeLast();
+    }
 
-    /// The durable result of this turn, kept for post-commit recovery.
-    SceneDialogueCommitResult? committedResult;
-
-    /// The assistant message that was persisted by the commit.
-    Message? committedAssistantMessage;
-    var completedNarrativePrefix = '';
-
-    try {
-      // ─── 1. 原地覆盖与去重保护（处理重试、重新生成、未响应消息覆盖）───
-      // 清理尾部残留的错误卡片（若有）
-      while (_host.messages.isNotEmpty && _host.messages.last.isError) {
-        _host.messages.removeLast();
+    Message userMessage;
+    if (_host.messages.isNotEmpty && _host.messages.last.isUser) {
+      final unrespondedIndices = <int>[];
+      for (var i = _host.messages.length - 1; i >= 0; i--) {
+        if (_host.messages[i].isUser) {
+          unrespondedIndices.add(i);
+        } else {
+          break;
+        }
       }
 
-      Message userMsg;
-      // 检查末尾是否已有尚未得到 AI 回复的用户消息
-      if (_host.messages.isNotEmpty && _host.messages.last.isUser) {
-        // 收集末尾所有连续未响应的用户消息索引
-        final unrespondedIndices = <int>[];
-        for (int i = _host.messages.length - 1; i >= 0; i--) {
-          if (_host.messages[i].isUser) {
-            unrespondedIndices.add(i);
-          } else {
-            break;
-          }
+      if (_host.messages.last.content.trim() == content.trim()) {
+        // Retry / regenerate / re-tap of the same option: keep one bubble.
+        while (unrespondedIndices.length > 1) {
+          final index = unrespondedIndices.removeAt(0);
+          _host.messages.removeAt(index);
         }
-
-        // 如果末尾用户消息与当前发送内容一致（重试、重新生成、或再次点击同选项）
-        if (_host.messages.last.content.trim() == content.trim()) {
-          // 如果之前因连续重试堆积了多条重复的用户气泡，清理多余项，仅保留第一条
-          while (unrespondedIndices.length > 1) {
-            final idx = unrespondedIndices.removeAt(0);
-            _host.messages.removeAt(idx);
-          }
-          // 原地复用现有的用户消息气泡，绝不新追加重复气泡！
-          userMsg = _host.messages.last;
-        } else {
-          // 用户改发了新内容（如失败后切换了其他选项）：原地移除旧的未响应消息，替换为新消息
-          for (final idx in unrespondedIndices) {
-            _host.messages.removeAt(idx);
-          }
-          userMsg = Message(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            content: content,
-            isUser: true,
-          );
-          _host.messages.add(userMsg);
-        }
+        userMessage = _host.messages.last;
       } else {
-        userMsg = Message(
+        // The player switched input after a failure: replace the stale bubbles.
+        for (final index in unrespondedIndices) {
+          _host.messages.removeAt(index);
+        }
+        userMessage = Message(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           content: content,
           isUser: true,
         );
-        _host.messages.add(userMsg);
+        _host.messages.add(userMessage);
       }
-      _notifyAll(); // 立即通知 UI，不等 DB 操作
-
-      _status = ChatStatus.streaming;
-      _streamingContent = '';
-      _lastFailedContent = content;
-      _cancelRequested = false;
-      clearError();
-      _typewriter.cancel();
-      _streamNotifier.value = '';
-      _reasoningContent = '';
-      _reasoningStreamNotifier.value = '';
-      _isThinkingNotifier.value = false;
-
-      _status = ChatStatus.streaming;
-      _streamingContent = '';
-      _notifyAll();
-
-      final runtimeRevision = adventureId == null
-          ? 0
-          : (await _adventureRepo.getRuntimeHead(adventureId, branchId))
-              .revision;
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-      final List<RuntimeEntityState> runtimeEntities = adventureId == null
-          ? const []
-          : await _adventureRepo.getRuntimeEntities(adventureId, branchId);
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-      final List<String> runtimeArchiveFacts = adventureId == null
-          ? const []
-          : await _loadRuntimeArchiveFacts(content, adventureId, branchId);
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-      _runtimeEntities = runtimeEntities;
-      _runtimeArchiveFacts = runtimeArchiveFacts;
-      final sceneSnapshot = _freezeSceneContext(
-        content,
-        requestId,
-        runtimeRevision: runtimeRevision,
-        retrievalFacts: _runtimeArchiveFacts,
+    } else {
+      userMessage = Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: content,
+        isUser: true,
       );
-      _lastSceneSnapshot = sceneSnapshot;
+      _host.messages.add(userMessage);
+    }
+    _notifyAll();
+    return userMessage;
+  }
 
-      if (content.trim().startsWith('/search ')) {
-        try {
-          final query = content.trim().substring(8);
-          final webSearch = WebSearchService();
-          final results = await webSearch.search(query);
-          _pendingSearchResults = webSearch.formatForPrompt(results);
-        } catch (_) {
-          _pendingSearchResults = null; // 搜索失败不阻断消息发送
+  void _startStreamingPhase() {
+    _status = ChatStatus.streaming;
+    _streamingContent = '';
+    clearError();
+    _typewriter.cancel();
+    _streamNotifier.value = '';
+    _reasoningContent = '';
+    _reasoningStreamNotifier.value = '';
+    _isThinkingNotifier.value = false;
+    _notifyAll();
+  }
+
+  /// Loads branch-local context and freezes this turn's scene snapshot.
+  ///
+  /// Returns null when a newer request superseded this one while loading; that
+  /// is a silent end, not a failure.
+  Future<SceneDialogueContextSnapshot?> _freezeTurnContext(
+    _TurnExecutionContext context,
+    String content,
+  ) async {
+    final adventureId = context.adventureId;
+    final branchId = context.branchId;
+    final runtimeRevision = adventureId == null
+        ? 0
+        : (await _adventureRepo.getRuntimeHead(adventureId, branchId)).revision;
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    final runtimeEntities = adventureId == null
+        ? const <RuntimeEntityState>[]
+        : await _adventureRepo.getRuntimeEntities(adventureId, branchId);
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    final archiveFacts = adventureId == null
+        ? const <String>[]
+        : await _loadRuntimeArchiveFacts(content, adventureId, branchId);
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    _runtimeEntities = runtimeEntities;
+    _runtimeArchiveFacts = archiveFacts;
+
+    final snapshot = _freezeSceneContext(
+      content,
+      context.requestId,
+      runtimeRevision: runtimeRevision,
+      retrievalFacts: archiveFacts,
+    );
+    _lastSceneSnapshot = snapshot;
+
+    if (content.trim().startsWith('/search ')) {
+      try {
+        final query = content.trim().substring(8);
+        final webSearch = WebSearchService();
+        final results = await webSearch.search(query);
+        _pendingSearchResults = webSearch.formatForPrompt(results);
+      } catch (_) {
+        _pendingSearchResults = null; // Web search is best-effort.
+      }
+    } else {
+      _pendingSearchResults = null;
+    }
+
+    if (!context.isCurrent(this)) return null;
+    return snapshot;
+  }
+
+  Future<String> _buildControlContext({
+    required String content,
+    required SceneDialogueContextSnapshot snapshot,
+    required Future<String> Function(String content)? promptTransformer,
+  }) async {
+    var controlContext = '';
+    if (promptTransformer != null) {
+      // An optional caller hook; its failure must not abort the turn.
+      final transformed = await promptTransformer(content).catchError((_) {
+        return content;
+      });
+      if (transformed.trim().isNotEmpty &&
+          transformed.trim() != content.trim()) {
+        controlContext = transformed;
+      }
+    }
+
+    final isMultiStageNarrative = snapshot.budget.usesMultiStage;
+    final requirement = isMultiStageNarrative
+        ? snapshot.budget.aggregatePromptRequirement
+        : snapshot.budget.promptRequirement;
+    controlContext = '$controlContext\n$requirement'.trim();
+    if (isMultiStageNarrative) {
+      controlContext = '$controlContext\n'
+          '深度长篇叙事模式核心准则（最高优先级）：\n'
+          '1. 叙事节拍铁律：整轮合并回复只推进一个叙事节拍，只呈现玩家本次行动的直接即时结果、环境反馈、心理波动与对白交锋；严禁替玩家执行未声明的后续行动，严禁跨越长时间段，严禁自行收束场景或写出结局——剧情一旦需要玩家输入/选择/行动，必须立即停笔。以整轮合并正文 ${snapshot.budget.targetChineseChars} 字符为目标展开，当前幕只遵循当前幕的篇幅。长篇篇幅只能靠环境烘托、心理刻画、对白细节与瞬时信息密度充实，绝不允许用增加时间跨度、事件数量或结局来凑字数！\n'
+          '2. 仅终幕状态结算：必须逐项输出 custom_status_evaluations，为每个被追踪状态给出 changed 判定（即使没变化也要列出并注明 reason）；changed=true 时同时给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。旧字段 custom_status_changes 仍兼容但以评估协议为准；禁止无剧情依据的强行变化！整轮合并正文必须达到 ${snapshot.budget.minChineseChars} 纯汉字底线，单幕不受该底线约束。';
+    }
+    if (_underflowWarningNextRound) {
+      controlContext =
+          '$controlContext\n🔴 系统指令（硬性指标·重申）：上一轮【纯汉字正文】仅 $_underflowLastActual 字，尚未跨过 ${snapshot.budget.minChineseChars} 纯汉字底线（净缺口 $_underflowDeficit 字）！本轮必须严格跨过底线！';
+      _underflowWarningNextRound = false;
+      _decayWarningNextRound = false;
+    } else if (_decayWarningNextRound) {
+      controlContext =
+          '$controlContext\n🔴 系统检测：上轮纯叙事正文字数显著下降。本轮请充实环境、心理与对白细节，恢复当前档位要求的叙事细节密度，但不得以增加事件数量或时间跨度的方式凑字数。';
+      _decayWarningNextRound = false;
+    } else if (_consecutiveDecisionStops >= 2) {
+      // The decision marker is legal, but a streak would let a model bypass
+      // the length contract turn after turn.
+      controlContext =
+          '$controlContext\n🔴 系统提示：已连续 $_consecutiveDecisionStops 轮以 `---等待玩家---` 停笔且未达到字数底线。`---等待玩家---` 只允许在剧情确实到达需要玩家决定、回应或行动的位置时使用；若本轮剧情尚未到达决策点，必须写满 ${snapshot.budget.minChineseChars} 纯汉字底线，不得以停笔标记替代叙事篇幅。';
+    }
+    return controlContext;
+  }
+
+  /// Runs the narrative request(s) for this turn.
+  Future<_NarrativeRunResult> _runNarrativeGeneration(
+    _TurnExecutionContext context,
+    SceneDialogueContextSnapshot snapshot,
+    String content,
+    String controlContext,
+  ) async {
+    final requestId = context.requestId;
+    final requestGeneration = context.generation;
+    final adventureId = context.adventureId;
+    final branchId = context.branchId;
+
+    _scenePhase = SceneDialoguePhase.streaming;
+    var json = '';
+    var reasoningContentCombined = '';
+
+    final outputBudget = snapshot.budget;
+    final minRequiredWords = outputBudget.minChineseChars;
+    final targetWords = outputBudget.targetChineseChars;
+    final hardMaxWords = outputBudget.hardMaximum;
+    var playerStopRequested = false;
+    late List<Map<String, String>> lengthGuardBaseMessages;
+
+    if (outputBudget.usesMultiStage) {
+      // Budget-driven multi-stage generation: each stage recomputes the
+      // remaining budget, and the loop ends at the target, the hard maximum or
+      // an explicit player-decision stop.
+      const maxAllowedStages = 4;
+      GenerationDiagnostics.instance.mark('[ChatTurn][MULTI_STAGE_START]', {
+        'engine': identityHashCode(this),
+        'request': requestId,
+        'generation': requestGeneration,
+        'min': minRequiredWords,
+        'target': targetWords,
+        'max': hardMaxWords,
+      });
+      final stageNarratives = <String>[];
+      var currentContextMessages = _promptBuilder.buildMessages(
+        _host,
+        content,
+        _host.messages,
+        chatSummary,
+        _pendingSearchResults,
+        runtimeRevision: snapshot.runtimeRevision,
+        runtimeEntities: _runtimeEntities,
+        archiveRetrievalFacts: _runtimeArchiveFacts,
+        controlContext: controlContext,
+        frozenOutputBudget: snapshot.budget,
+      );
+      // buildMessages already returns an unmodifiable list and is never mutated
+      // in place below, so no second defensive copy is needed.
+      lengthGuardBaseMessages = currentContextMessages;
+
+      final trackedAttrs = _host.adventureConfig?.allTrackedCustomAttributes ??
+          _host.adventureConfig?.customAttributes ??
+          const <CustomAttributeItem>[];
+      final statusHint = trackedAttrs.isNotEmpty
+          ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}=${a.displayValue}').join('、')}）。必须逐项输出 custom_status_evaluations：为上述每一个状态各给一条评估，changed=false 的也要列出并注明 reason；changed=true 时必须给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。'
+          : '必须逐项输出 custom_status_evaluations：为每个被追踪状态各给一条评估，changed=false 的也要列出并注明 reason；changed=true 时必须给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。';
+
+      var lastStagePayload = '';
+      for (var stage = 1; stage <= maxAllowedStages; stage++) {
+        if (!_isRequestCurrent(
+            requestId, requestGeneration, adventureId, branchId)) {
+          throw const GenerationCancelledException();
         }
-      } else {
-        _pendingSearchResults = null;
-      }
 
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        return;
-      }
-      // v2.4: Per-round word count reminder + decay detection
-      var controlContext = '';
-      if (promptTransformer != null) {
-        final transformed = await promptTransformer(content).catchError((_) {
-          return content;
-        });
-        if (transformed.trim().isNotEmpty &&
-            transformed.trim() != content.trim()) {
-          controlContext = transformed;
-        }
-      }
-      // 长篇预算约束整轮合并正文；每幕的篇幅和格式由当前分幕指令决定。
-      final isMultiStageNarrative = sceneSnapshot.budget.usesMultiStage;
-      final requirement = isMultiStageNarrative
-          ? sceneSnapshot.budget.aggregatePromptRequirement
-          : sceneSnapshot.budget.promptRequirement;
-      controlContext = '$controlContext\n$requirement'.trim();
-      if (isMultiStageNarrative) {
-        controlContext = '$controlContext\n'
-            '深度长篇叙事模式核心准则（最高优先级）：\n'
-            '1. 叙事节拍铁律：整轮合并回复只推进一个叙事节拍，只呈现玩家本次行动的直接即时结果、环境反馈、心理波动与对白交锋；严禁替玩家执行未声明的后续行动，严禁跨越长时间段，严禁自行收束场景或写出结局——剧情一旦需要玩家输入/选择/行动，必须立即停笔。以整轮合并正文 ${sceneSnapshot.budget.targetChineseChars} 字符为目标展开，当前幕只遵循当前幕的篇幅。长篇篇幅只能靠环境烘托、心理刻画、对白细节与瞬时信息密度充实，绝不允许用增加时间跨度、事件数量或结局来凑字数！\n'
-            '2. 仅终幕状态结算：必须逐项输出 custom_status_evaluations，为每个被追踪状态给出 changed 判定（即使没变化也要列出并注明 reason）；changed=true 时同时给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。旧字段 custom_status_changes 仍兼容但以评估协议为准；禁止无剧情依据的强行变化！整轮合并正文必须达到 ${sceneSnapshot.budget.minChineseChars} 纯汉字底线，单幕不受该底线约束。';
-      }
-      if (_underflowWarningNextRound) {
-        controlContext =
-            '$controlContext\n🔴 系统指令（硬性指标·重申）：上一轮【纯汉字正文】仅 $_underflowLastActual 字，尚未跨过 ${sceneSnapshot.budget.minChineseChars} 纯汉字底线（净缺口 $_underflowDeficit 字）！本轮必须严格跨过底线！';
-        _underflowWarningNextRound = false;
-        _decayWarningNextRound = false;
-      } else if (_decayWarningNextRound) {
-        controlContext =
-            '$controlContext\n🔴 系统检测：上轮纯叙事正文字数显著下降。本轮请充实环境、心理与对白细节，恢复当前档位要求的叙事细节密度，但不得以增加事件数量或时间跨度的方式凑字数。';
-        _decayWarningNextRound = false;
-      } else if (_consecutiveDecisionStops >= 2) {
-        // The decision-point marker is a legitimate stop, but a streak of
-        // short marker turns means the length contract is being bypassed.
-        controlContext =
-            '$controlContext\n🔴 系统提示：已连续 $_consecutiveDecisionStops 轮以 `---等待玩家---` 停笔且未达到字数底线。`---等待玩家---` 只允许在剧情确实到达需要玩家决定、回应或行动的位置时使用；若本轮剧情尚未到达决策点，必须写满 ${sceneSnapshot.budget.minChineseChars} 纯汉字底线，不得以停笔标记替代叙事篇幅。';
-      }
-
-      _scenePhase = SceneDialoguePhase.streaming;
-      String json;
-      String reasoningContentCombined = '';
-
-      final outputBudget = sceneSnapshot.budget;
-      final minRequiredWords = outputBudget.minChineseChars;
-      final targetWords = outputBudget.targetChineseChars;
-      final hardMaxWords = outputBudget.hardMaximum;
-      final useMultiStage = outputBudget.usesMultiStage;
-      List<Map<String, String>> lengthGuardBaseMessages;
-      // Set when the narrative ends at an explicit player decision point
-      // (`---等待玩家---`). Shared by both generation branches so the length
-      // guard, the verdict and the next-round warnings all agree.
-      var playerStopRequested = false;
-
-      if (useMultiStage) {
-        // Budget-driven multi-stage generation. There is no fixed act count:
-        // every stage recomputes its remaining budget and the loop concludes as
-        // soon as the target is reached or the hard maximum leaves no headroom.
-        const maxAllowedStages = 4; // safety ceiling only
-        GenerationDiagnostics.instance.mark('[ChatTurn][MULTI_STAGE_START]', {
+        final currentChars = countChinese(stageNarratives.join('\n\n'));
+        final plan = SceneDialogueOutputBudget.planStage(
+          stage: stage,
+          currentChars: currentChars,
+          targetChars: targetWords,
+          hardMaximum: hardMaxWords,
+          maxStages: maxAllowedStages,
+        );
+        final stageCharTarget = plan.charTarget;
+        final stageOutputTokens = SceneDialogueOutputBudget.requestOutputTokens(
+          narrativeTokens:
+              SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
+          params: _paramsForContextTask(ContextTaskType.adventureResponse),
+          capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
+        );
+        GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_PLAN]', {
           'engine': identityHashCode(this),
           'request': requestId,
           'generation': requestGeneration,
-          'min': minRequiredWords,
-          'target': targetWords,
-          'max': hardMaxWords,
+          'stage': stage,
+          'charsBefore': currentChars,
+          'stageCharTarget': stageCharTarget,
+          'maxTokens': stageOutputTokens,
         });
-        final stageNarratives = <String>[];
-        var currentContextMessages = _promptBuilder.buildMessages(
-          _host,
-          content,
-          _host.messages,
-          chatSummary,
-          _pendingSearchResults,
-          runtimeRevision: sceneSnapshot.runtimeRevision,
-          runtimeEntities: _runtimeEntities,
-          archiveRetrievalFacts: _runtimeArchiveFacts,
-          controlContext: controlContext,
-          frozenOutputBudget: sceneSnapshot.budget,
+        final isFinal = plan.isFinal;
+
+        final stageInstruction = _buildStageInstruction(
+          stage: stage,
+          stageCharTarget: stageCharTarget,
+          isFinal: isFinal,
+          currentChars: currentChars,
+          minRequiredWords: minRequiredWords,
+          targetWords: targetWords,
+          hardMaxWords: hardMaxWords,
+          statusHint: statusHint,
         );
-        lengthGuardBaseMessages = List.unmodifiable(currentContextMessages);
 
-        // 构建当前监测状态的简要参考，直接注入最终阶段指令，确保 AI 真实动态结算
-        final trackedAttrs =
-            _host.adventureConfig?.allTrackedCustomAttributes ??
-                _host.adventureConfig?.customAttributes ??
-                const [];
-        final statusHint = trackedAttrs.isNotEmpty
-            ? '当前监测状态参考（${trackedAttrs.map((a) => '${a.characterName != null && a.characterName!.isNotEmpty ? "[${a.characterName}] " : ""}${a.name}=${a.displayValue}').join('、')}）。必须逐项输出 custom_status_evaluations：为上述每一个状态各给一条评估，changed=false 的也要列出并注明 reason；changed=true 时必须给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。'
-            : '必须逐项输出 custom_status_evaluations：为每个被追踪状态各给一条评估，changed=false 的也要列出并注明 reason；changed=true 时必须给出 operation 与 value（数值用 set 或 delta，文本/阶段用 set）。';
-
-        String lastStagePayload = '';
-        // Set when any stage ends with the explicit player-decision marker.
-        // A stopped turn skips the length supplement and is never counted as
-        // an underflow: reaching the player's decision point is a complete
-        // narrative beat, not a short one.
-        for (int stage = 1; stage <= maxAllowedStages; stage++) {
-          if (!_isRequestCurrent(
-              requestId, requestGeneration, adventureId, branchId)) {
-            throw const GenerationCancelledException();
+        if (stage > 1) {
+          currentContextMessages =
+              List<Map<String, String>>.from(currentContextMessages)
+                ..add({'role': 'assistant', 'content': stageNarratives.last})
+                ..add({'role': 'user', 'content': stageInstruction});
+          _streamingContent = '${stageNarratives.join('\n\n')}\n\n';
+          _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
+          if (_reasoningContent.isNotEmpty) {
+            _reasoningContent += '\n\n---\n[第 $stage 幕思考]\n';
+            _reasoningStreamNotifier.value = _reasoningContent;
           }
-
-          final currentChars = countChinese(stageNarratives.join('\n\n'));
-          final plan = SceneDialogueOutputBudget.planStage(
-            stage: stage,
-            currentChars: currentChars,
-            targetChars: targetWords,
-            hardMaximum: hardMaxWords,
-            maxStages: maxAllowedStages,
-          );
-          final stageCharTarget = plan.charTarget;
-          final stageOutputTokens =
-              SceneDialogueOutputBudget.requestOutputTokens(
-            narrativeTokens:
-                SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
-            params: _paramsForContextTask(ContextTaskType.adventureResponse),
-            capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
-          );
-          GenerationDiagnostics.instance.mark('[ChatTurn][STAGE_PLAN]', {
-            'engine': identityHashCode(this),
-            'request': requestId,
-            'generation': requestGeneration,
-            'stage': stage,
-            'charsBefore': currentChars,
-            'stageCharTarget': stageCharTarget,
-            'maxTokens': stageOutputTokens,
-          });
-          final isFinal = plan.isFinal;
-
-          final stageInstruction = _buildStageInstruction(
-            stage: stage,
-            stageCharTarget: stageCharTarget,
-            isFinal: isFinal,
-            currentChars: currentChars,
-            minRequiredWords: minRequiredWords,
-            targetWords: targetWords,
-            hardMaxWords: hardMaxWords,
-            statusHint: statusHint,
-          );
-
-          if (stage > 1) {
-            currentContextMessages =
-                List<Map<String, String>>.from(currentContextMessages)
-                  ..add({'role': 'assistant', 'content': stageNarratives.last})
-                  ..add({'role': 'user', 'content': stageInstruction});
-            _streamingContent = '${stageNarratives.join('\n\n')}\n\n';
-            _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
-            if (_reasoningContent.isNotEmpty) {
-              _reasoningContent += '\n\n---\n[第 $stage 幕思考]\n';
-              _reasoningStreamNotifier.value = _reasoningContent;
-            }
-          } else {
-            final lastUserMsg = currentContextMessages.last;
-            currentContextMessages =
-                List<Map<String, String>>.from(currentContextMessages)
-                  ..[currentContextMessages.length - 1] = {
-                    'role': 'user',
-                    'content': '$stageInstruction\n\n${lastUserMsg['content']}',
-                  };
-          }
-
-          final stageExecution = await _executeAdventureNarrativeStage(
-            messages: currentContextMessages,
-            turnRequestId: requestId,
-            requestGeneration: requestGeneration,
-            adventureId: adventureId,
-            branchId: branchId,
-            stage: stage,
-            isFinalStage: isFinal,
-            narrativeTokens:
-                SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
-            intent: content,
-            maximumOutputTokens: stageOutputTokens,
-            allowPartial: true,
-            requestId: '$requestId:stage$stage',
-            taskHandle: _activeTaskHandle,
-            onChunk: (chunk) {
-              if (!_isRequestCurrent(
-                  requestId, requestGeneration, adventureId, branchId)) {
-                return;
-              }
-              if (_isThinkingNotifier.value) {
-                _isThinkingNotifier.value = false;
-              }
-              _streamingContent += chunk;
-              _typewriter.feed(
-                  _streamingContent, _streamNotifier, notifyParent);
-            },
-            onReasoningChunk: (reasoningChunk) {
-              if (!_isRequestCurrent(
-                  requestId, requestGeneration, adventureId, branchId)) {
-                return;
-              }
-              if (!_isThinkingNotifier.value) {
-                _isThinkingNotifier.value = true;
-              }
-              _reasoningContent += reasoningChunk;
-              _reasoningStreamNotifier.value = _reasoningContent;
-              notifyParent();
-            },
-          );
-
-          if (!_isRequestCurrent(
-              requestId, requestGeneration, adventureId, branchId)) {
-            throw const GenerationCancelledException();
-          }
-
-          final rc = stageExecution.reasoningContent;
-          if (rc != null && rc.isNotEmpty) {
-            reasoningContentCombined = reasoningContentCombined.isEmpty
-                ? rc
-                : '$reasoningContentCombined\n\n[第 $stage 幕思考]\n$rc';
-          }
-
-          final stageRaw = stageExecution.content;
-          // 统一使用 AdventureResponse 的结构解析，避免 indexOf('---JSON---')
-          // 被 `--- JSON ---` / `---\nJSON---` 等变体绕过而把 JSON 泄漏进正文。
-          final stageParsed = AdventureResponse.parse(stageRaw);
-          final stageStopped = stageParsed.stoppedAtDecision;
-          final stageNarrative = stageParsed.narrative.join('\n\n').trim();
-          if (stageNarrative.isEmpty && stageStopped) {
-            // Marker + payload (no prose) is a protocol deviation, but the
-            // payload still carries a usable settlement: degrade like the
-            // payload-only path instead of destroying the whole turn.
-            if (stageParsed.payload == null) {
-              throw const FormatException(
-                  'Player-decision stop without narrative');
-            }
-            lastStagePayload = jsonEncode(stageParsed.payload!);
-            playerStopRequested = true;
-            debugPrint(
-                '[ChatEngine] 第 $stage 幕仅有停笔标记与结算数据，按 payload-only 停笔处理');
-            break;
-          }
-          if (stageNarrative.isEmpty && !isFinal) {
-            throw const FormatException('Non-final stage has no narrative');
-          }
-          stageNarratives.add(stageNarrative);
-          completedNarrativePrefix = stageNarratives.join('\n\n');
-          if (stageParsed.payload != null) {
-            lastStagePayload = jsonEncode(stageParsed.payload);
-          }
-          if (stageStopped) {
-            // The scene reached a player decision point: this stage is the
-            // final one regardless of the remaining budget, and no
-            // supplement may push the narrative past the decision.
-            playerStopRequested = true;
-            debugPrint(
-                '[ChatEngine] 第 $stage 幕在玩家决策点停笔（${AdventureResponse.playerStopMarker}），本轮提前结束');
-            break;
-          }
-
-          final totalWordsSoFar = countChinese(stageNarratives.join('\n\n'));
-          if (isFinal) {
-            debugPrint(
-                '[ChatEngine] 第 $stage 幕结幕: 累计 $totalWordsSoFar 纯汉字 (范围 $minRequiredWords~$hardMaxWords, 目标 $targetWords, 硬余量 ${hardMaxWords - totalWordsSoFar})');
-            break;
-          }
-          debugPrint(
-              '[ChatEngine] 第 $stage 幕完成: 累计 $totalWordsSoFar 纯汉字 (剩余目标 ${targetWords - totalWordsSoFar}, 剩余上限 ${hardMaxWords - totalWordsSoFar})，继续下一幕');
+        } else {
+          final lastUserMsg = currentContextMessages.last;
+          currentContextMessages =
+              List<Map<String, String>>.from(currentContextMessages)
+                ..[currentContextMessages.length - 1] = {
+                  'role': 'user',
+                  'content': '$stageInstruction\n\n${lastUserMsg['content']}',
+                };
         }
 
-        json = '${stageNarratives.join('\n\n')}'
-            '${lastStagePayload.isNotEmpty ? '\n${AdventureResponse.jsonSeparator}\n$lastStagePayload' : ''}';
-      } else {
-        final apiMessages = _promptBuilder.buildMessages(
-          _host,
-          content,
-          _host.messages,
-          chatSummary,
-          _pendingSearchResults,
-          runtimeRevision: sceneSnapshot.runtimeRevision,
-          runtimeEntities: _runtimeEntities,
-          archiveRetrievalFacts: _runtimeArchiveFacts,
-          controlContext: controlContext,
-          frozenOutputBudget: sceneSnapshot.budget,
-        );
-        lengthGuardBaseMessages = List.unmodifiable(apiMessages);
-        final execution = await _executeAdventureNarrativeStage(
-          messages: apiMessages,
+        final stageExecution = await _executeAdventureNarrativeStage(
+          messages: currentContextMessages,
           turnRequestId: requestId,
           requestGeneration: requestGeneration,
           adventureId: adventureId,
           branchId: branchId,
-          stage: 1,
-          isFinalStage: true,
-          narrativeTokens: sceneSnapshot.budget
-              .outputTokensFor(_host.completionParams.maxTokens),
+          stage: stage,
+          isFinalStage: isFinal,
+          narrativeTokens:
+              SceneDialogueOutputBudget.stageOutputTokens(stageCharTarget),
           intent: content,
-          maximumOutputTokens: SceneDialogueOutputBudget.requestOutputTokens(
-            narrativeTokens: sceneSnapshot.budget
-                .outputTokensFor(_host.completionParams.maxTokens),
-            params: _paramsForContextTask(ContextTaskType.adventureResponse),
-            capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
-          ),
-          requestId: requestId,
+          maximumOutputTokens: stageOutputTokens,
+          allowPartial: true,
+          requestId: '$requestId:stage$stage',
           taskHandle: _activeTaskHandle,
           onChunk: (chunk) {
             if (!_isRequestCurrent(
@@ -1892,703 +1825,816 @@ class ChatEngine {
             notifyParent();
           },
         );
-        json = execution.content;
-        playerStopRequested = AdventureResponse.parse(json).stoppedAtDecision;
-        reasoningContentCombined = execution.reasoningContent ?? '';
+
+        if (!_isRequestCurrent(
+            requestId, requestGeneration, adventureId, branchId)) {
+          throw const GenerationCancelledException();
+        }
+
+        final rc = stageExecution.reasoningContent;
+        if (rc != null && rc.isNotEmpty) {
+          reasoningContentCombined = reasoningContentCombined.isEmpty
+              ? rc
+              : '$reasoningContentCombined\n\n[第 $stage 幕思考]\n$rc';
+        }
+
+        final stageRaw = stageExecution.content;
+        // Parse structurally so separator variants cannot leak JSON into prose.
+        final stageParsed = AdventureResponse.parse(stageRaw);
+        final stageStopped = stageParsed.stoppedAtDecision;
+        final stageNarrative = stageParsed.narrative.join('\n\n').trim();
+        if (stageNarrative.isEmpty && stageStopped) {
+          // Marker + payload (no prose) is a protocol deviation, but the
+          // payload still carries a usable settlement.
+          if (stageParsed.payload == null) {
+            throw const FormatException(
+                'Player-decision stop without narrative');
+          }
+          lastStagePayload = jsonEncode(stageParsed.payload!);
+          playerStopRequested = true;
+          debugPrint('[ChatEngine] 第 $stage 幕仅有停笔标记与结算数据，按 payload-only 停笔处理');
+          break;
+        }
+        if (stageNarrative.isEmpty && !isFinal) {
+          throw const FormatException('Non-final stage has no narrative');
+        }
+        stageNarratives.add(stageNarrative);
+        context.completedNarrativePrefix = stageNarratives.join('\n\n');
+        if (stageParsed.payload != null) {
+          lastStagePayload = jsonEncode(stageParsed.payload);
+        }
+        if (stageStopped) {
+          playerStopRequested = true;
+          debugPrint(
+              '[ChatEngine] 第 $stage 幕在玩家决策点停笔（${AdventureResponse.playerStopMarker}），本轮提前结束');
+          break;
+        }
+
+        final totalWordsSoFar = countChinese(stageNarratives.join('\n\n'));
+        if (isFinal) {
+          debugPrint(
+              '[ChatEngine] 第 $stage 幕结幕: 累计 $totalWordsSoFar 纯汉字 (范围 $minRequiredWords~$hardMaxWords, 目标 $targetWords, 硬余量 ${hardMaxWords - totalWordsSoFar})');
+          break;
+        }
+        debugPrint(
+            '[ChatEngine] 第 $stage 幕完成: 累计 $totalWordsSoFar 纯汉字 (剩余目标 ${targetWords - totalWordsSoFar}, 剩余上限 ${hardMaxWords - totalWordsSoFar})，继续下一幕');
       }
 
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-      // Protocol normalization: rewrite the raw model output into the canonical
-      // `narrative + ---JSON--- + payload` form (or payload-only).  A payload
-      // can never remain embedded in the narrative, which is what previously
-      // leaked `{"scene":...}` into the visible body.
-      json = AdventureResponse.canonicalize(json);
-      // A bare stop marker with no prose is a protocol failure: refuse it so
-      // the failure path runs instead of committing an empty assistant
-      // bubble, matching the multi-stage path. Deliberately scoped to the
-      // marker-only case: an ordinary empty/truncated response keeps its
-      // existing length-guard recovery (an in-turn supplement request) rather
-      // than turning a recoverable response into a hard error.
-      if (playerStopRequested && json.trim().isEmpty) {
-        throw const FormatException('Player-decision stop without narrative');
-      }
-      GenerationDiagnostics.instance.mark('[ChatTurn][LENGTH_START]',
-          {'request': requestId, 'contentChars': json.length});
-      final lengthGuardResult = await _ensureNarrativeLength(
-        rawResponse: json,
-        baseMessages: lengthGuardBaseMessages,
-        snapshot: sceneSnapshot,
-        requestId: requestId,
+      json = '${stageNarratives.join('\n\n')}'
+          '${lastStagePayload.isNotEmpty ? '\n${AdventureResponse.jsonSeparator}\n$lastStagePayload' : ''}';
+    } else {
+      final apiMessages = _promptBuilder.buildMessages(
+        _host,
+        content,
+        _host.messages,
+        chatSummary,
+        _pendingSearchResults,
+        runtimeRevision: snapshot.runtimeRevision,
+        runtimeEntities: _runtimeEntities,
+        archiveRetrievalFacts: _runtimeArchiveFacts,
+        controlContext: controlContext,
+        frozenOutputBudget: snapshot.budget,
+      );
+      lengthGuardBaseMessages = apiMessages;
+      final execution = await _executeAdventureNarrativeStage(
+        messages: apiMessages,
+        turnRequestId: requestId,
         requestGeneration: requestGeneration,
         adventureId: adventureId,
         branchId: branchId,
-        playerStopRequested: playerStopRequested,
-      );
-      // Re-canonicalize after the optional supplement: a continuation that only
-      // returned settlement JSON must not be merged into the narrative.
-      json = AdventureResponse.canonicalize(lengthGuardResult.content);
-      // The final, canonical narrative every downstream consumer reads:
-      // settlement input, scene authorization basis and the committed message
-      // all see the same text (supplements merged, overflow converged, the
-      // player-decision marker stripped).
-      final finalNarrative = _finalNarrativeOf(json);
-      // Replace the transient streamed concatenation with the canonical
-      // narrative-plus-single-payload ordering before the bubble drains.
-      _streamingContent = json;
-      _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-      // The model may be committed while the visual typewriter catches up.
-      // The settlement (and with it the frozen presentation) only starts once
-      // the player has actually seen the final narrative, so the frozen bubble
-      // replaces an identical screen — never a partially typed one.
-      await _typewriter.onStreamEnd(_streamNotifier, notifyParent);
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-
-      // ─── A. 叙事解析（P3-02: Isolate 后台解析）───
-      // 只暂存兼容数据：正文 payload 不再是本轮状态结算的权威。
-      _scenePhase = SceneDialoguePhase.parsing;
-      await _applyNarrativeResponse(json);
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-
-      // ─── B. Turn Settlement：本轮 options 与状态的生产权威 ───
-      // 严格在整轮正文（含所有补写与收敛）彻底完成之后才发起，且每轮只发起一次。
-      GenerationDiagnostics.instance
-          .mark('[ChatTurn][SETTLEMENT_START]', {'request': requestId});
-      final settlementOutcome = await _runTurnSettlement(
-        finalNarrative: finalNarrative,
-        userInput: content,
+        stage: 1,
+        isFinalStage: true,
+        narrativeTokens:
+            snapshot.budget.outputTokensFor(_host.completionParams.maxTokens),
+        intent: content,
+        maximumOutputTokens: SceneDialogueOutputBudget.requestOutputTokens(
+          narrativeTokens:
+              snapshot.budget.outputTokensFor(_host.completionParams.maxTokens),
+          params: _paramsForContextTask(ContextTaskType.adventureResponse),
+          capabilities: ModelCapabilityRegistry.resolve(_host.modelName),
+        ),
         requestId: requestId,
-        requestGeneration: requestGeneration,
-        adventureId: adventureId,
-        branchId: branchId,
-        expectedRuntimeRevision: sceneSnapshot.runtimeRevision,
+        taskHandle: _activeTaskHandle,
+        onChunk: (chunk) {
+          if (!_isRequestCurrent(
+              requestId, requestGeneration, adventureId, branchId)) {
+            return;
+          }
+          if (_isThinkingNotifier.value) {
+            _isThinkingNotifier.value = false;
+          }
+          _streamingContent += chunk;
+          _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
+        },
+        onReasoningChunk: (reasoningChunk) {
+          if (!_isRequestCurrent(
+              requestId, requestGeneration, adventureId, branchId)) {
+            return;
+          }
+          if (!_isThinkingNotifier.value) {
+            _isThinkingNotifier.value = true;
+          }
+          _reasoningContent += reasoningChunk;
+          _reasoningStreamNotifier.value = _reasoningContent;
+          notifyParent();
+        },
       );
-      if (!_isRequestCurrent(
-          requestId, requestGeneration, adventureId, branchId)) {
+      json = execution.content;
+      playerStopRequested = AdventureResponse.parse(json).stoppedAtDecision;
+      reasoningContentCombined = execution.reasoningContent ?? '';
+    }
+
+    return _NarrativeRunResult(
+      json: json,
+      reasoning: reasoningContentCombined,
+      playerStopRequested: playerStopRequested,
+      lengthGuardBaseMessages: lengthGuardBaseMessages,
+    );
+  }
+
+  /// Canonicalizes the narrative, enforces its length contract and makes the
+  /// final narrative visible before settlement starts.
+  Future<_FinalizedNarrative> _finalizeNarrative(
+    _TurnExecutionContext context,
+    SceneDialogueContextSnapshot snapshot,
+    _NarrativeRunResult run,
+  ) async {
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    // Rewrite into the canonical narrative + single payload shape so embedded
+    // JSON can never remain in the visible prose.
+    var json = AdventureResponse.canonicalize(run.json);
+    if (run.playerStopRequested && json.trim().isEmpty) {
+      throw const FormatException('Player-decision stop without narrative');
+    }
+    GenerationDiagnostics.instance.mark('[ChatTurn][LENGTH_START]',
+        {'request': context.requestId, 'contentChars': json.length});
+    final lengthGuard = await _ensureNarrativeLength(
+      rawResponse: json,
+      baseMessages: run.lengthGuardBaseMessages,
+      snapshot: snapshot,
+      requestId: context.requestId,
+      requestGeneration: context.generation,
+      adventureId: context.adventureId,
+      branchId: context.branchId,
+      playerStopRequested: run.playerStopRequested,
+    );
+    json = AdventureResponse.canonicalize(lengthGuard.content);
+    final finalNarrative = _finalNarrativeOf(json);
+
+    _streamingContent = json;
+    _typewriter.feed(_streamingContent, _streamNotifier, notifyParent);
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    // Settlement may only start after the player has seen the final narrative;
+    // the frozen bubble then replaces an identical screen.
+    await _typewriter.onStreamEnd(_streamNotifier, notifyParent);
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+
+    _scenePhase = SceneDialoguePhase.parsing;
+    await _applyNarrativeResponse(json);
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    return _FinalizedNarrative(
+      json: json,
+      finalNarrative: finalNarrative,
+      reasoning: run.reasoning,
+      lengthGuard: lengthGuard,
+    );
+  }
+
+  /// Runs the single post-narrative settlement request and resolves options.
+  Future<_SettlementPhaseResult> _runSettlementPhase(
+    _TurnExecutionContext context,
+    SceneDialogueContextSnapshot snapshot,
+    _FinalizedNarrative finalized,
+    String content,
+  ) async {
+    GenerationDiagnostics.instance
+        .mark('[ChatTurn][SETTLEMENT_START]', {'request': context.requestId});
+    final settlementOutcome = await _runTurnSettlement(
+      finalNarrative: finalized.finalNarrative,
+      userInput: content,
+      requestId: context.requestId,
+      requestGeneration: context.generation,
+      adventureId: context.adventureId,
+      branchId: context.branchId,
+      expectedRuntimeRevision: snapshot.runtimeRevision,
+    );
+    if (!context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    _scenePhase = SceneDialoguePhase.parsing;
+    GenerationDiagnostics.instance.mark('[ChatTurn][SETTLEMENT_DONE]', {
+      'request': context.requestId,
+      'status': settlementOutcome.status,
+      'attempts': settlementOutcome.attempts
+    });
+    final settlement = settlementOutcome.settlement;
+    if (settlement != null) {
+      _applySettlement(settlement);
+    } else {
+      _applySettlementFailure(settlementOutcome.status);
+    }
+
+    final settlementOptions = settlement?.options ?? const <String>[];
+    final optionsFromSettlement =
+        settlementOptions.length >= TurnSettlement.minimumUsableOptions;
+    if (optionsFromSettlement) {
+      _parsedOptions = List<String>.from(settlementOptions);
+    } else {
+      _parsedOptions = _resolveTurnOptions(settlementOptions.isNotEmpty
+          ? settlementOptions
+          : (_narrativeOptions.isEmpty ? null : _narrativeOptions));
+    }
+    // A successful settlement closes the options question; repair is reserved
+    // for turns where neither settlement nor narrative supplied usable options.
+    final hasUsableOptionSource = optionsFromSettlement ||
+        _narrativeOptions.length >= TurnSettlement.minimumUsableOptions;
+    final needsOptionRepair =
+        !settlementOutcome.applied && !hasUsableOptionSource;
+    if (!needsOptionRepair) {
+      _lastValidOptions = List<String>.from(_parsedOptions);
+    }
+
+    final aiContent = _rewriteAssistantPresentationPayload(finalized.json,
+        options:
+            needsOptionRepair || optionsFromSettlement ? _parsedOptions : null);
+
+    var aiMessage = Message(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: aiContent,
+      reasoningContent: finalized.reasoning,
+      isUser: false,
+    );
+    _streamingContent = '';
+    _isRepairingOptions = needsOptionRepair;
+    _streamNotifier.value = '';
+    _reasoningContent = '';
+    _reasoningStreamNotifier.value = '';
+    _isThinkingNotifier.value = false;
+
+    final responseMap = _sceneResponseMap(finalized.json);
+    final candidates = SceneSettingCandidate.parse(
+        responseMap?['scene_candidates'], context.requestId);
+    _lastSceneCandidates = List.unmodifiable(candidates);
+    final marker = finalized.json.indexOf('---JSON---');
+    final continuity = const SceneConsistencyValidator().validate(
+      snapshot: snapshot,
+      narrative:
+          marker < 0 ? finalized.json : finalized.json.substring(0, marker),
+      payload: responseMap,
+      userInput: content,
+      invitedCharacterIds:
+          (_promptBuilder.lastIntent?.invitedCharacterIds ?? const <String>[])
+              .toSet(),
+    );
+
+    if (_isRepairingOptions) {
+      _scenePhase = SceneDialoguePhase.repairing;
+      await _repairMissingOptions(finalized.json, content,
+          requestId: context.requestId,
+          generation: context.generation,
+          adventureId: context.adventureId,
+          branchId: context.branchId);
+      if (!context.isCurrent(this)) {
         throw const GenerationCancelledException();
       }
-      _scenePhase = SceneDialoguePhase.parsing;
-      GenerationDiagnostics.instance.mark('[ChatTurn][SETTLEMENT_DONE]', {
-        'request': requestId,
-        'status': settlementOutcome.status,
-        'attempts': settlementOutcome.attempts
+      aiMessage = aiMessage.copyWith(
+          content: _rewriteAssistantPresentationPayload(finalized.json,
+              options: _parsedOptions));
+      _isRepairingOptions = false;
+    }
+
+    // Anti-decay and underflow tracking for the next turn's control context.
+    final separatorIndex = finalized.json.indexOf('---JSON---');
+    final narrative = separatorIndex >= 0
+        ? finalized.json.substring(0, separatorIndex)
+        : finalized.json;
+    final currentWordCount = countChinese(narrative);
+    if (_lastAiWordCount > 0 &&
+        currentWordCount > 0 &&
+        !finalized.lengthGuard.stoppedAtDecision) {
+      final drop = (_lastAiWordCount - currentWordCount) / _lastAiWordCount;
+      if (drop > 0.25) {
+        _decayWarningNextRound = true;
+        debugPrint(
+            '[AntiDecay] 字数衰减: $_lastAiWordCount→$currentWordCount (${(drop * 100).round()}%)，下轮强化提醒');
+      }
+    }
+    if (!finalized.lengthGuard.passed(snapshot.budget.minChineseChars)) {
+      _underflowWarningNextRound = true;
+      _underflowDeficit = snapshot.budget.minChineseChars - currentWordCount;
+      _underflowLastActual = currentWordCount;
+      debugPrint(
+          '[LengthGuard] final=$currentWordCount required=${snapshot.budget.minChineseChars} failed; next-round fallback deficit=$_underflowDeficit');
+    } else {
+      _underflowWarningNextRound = false;
+    }
+    _lastAiWordCount = currentWordCount;
+
+    return _SettlementPhaseResult(
+      outcome: settlementOutcome,
+      optionsFromSettlement: optionsFromSettlement,
+      assistantMessage: aiMessage,
+      candidates: candidates,
+      continuity: continuity,
+      narrativeChineseChars: currentWordCount,
+    );
+  }
+
+  /// Projects all accepted state into one atomic commit request.
+  _TurnCommitPlan _buildTurnCommitPlan(
+    _TurnExecutionContext context,
+    SceneDialogueContextSnapshot snapshot,
+    _FinalizedNarrative finalized,
+    _SettlementPhaseResult settlementPhase,
+    String content,
+    Message userMessage,
+  ) {
+    final requestId = context.requestId;
+    final adventureId = context.adventureId;
+    final branchId = context.branchId;
+    final json = finalized.json;
+
+    // Options are already visible, so release the turn for interaction before
+    // the (potentially slow) SQLite transaction.
+    _scenePhase = SceneDialoguePhase.committing;
+    final statusProjection = _projectPendingCustomStatus();
+    final settledConfig = statusProjection.config;
+    final statusDiagnostics = statusProjection.diagnostics;
+
+    var effects = _pendingSceneEffects;
+    final affinityMgr = _host.gameEngine?.affinityMgr;
+    final affinityConfig = settledConfig ?? _host.adventureConfig;
+    if (affinityConfig != null && affinityMgr != null) {
+      // Excluded characters must not gain affinity from keyword analysis.
+      final excludedNames = _excludedEntities(_promptBuilder.lastIntent).names;
+      final analyzable = excludedNames.isEmpty
+          ? affinityConfig.supportingCharacters
+          : affinityConfig.supportingCharacters
+              .where((npc) => !excludedNames.contains(npc.name))
+              .toList(growable: false);
+      effects = effects.withAffinityChanges(
+          affinityMgr.analyzeKeywords(content, analyzable));
+    }
+    final state = effects.applyState(_pendingGameState ?? _host.gameState);
+
+    final runtimeDiagnostics = <String>[
+      ..._pendingSettlementDiagnostics,
+      ..._pendingCandidateDiagnostics,
+    ];
+    final runtimeChanges = _pendingRuntimeChanges;
+    final customStatusRuntimeChanges = settledConfig == null
+        ? const <RuntimeStateChangeProposal>[]
+        : _customStatusRuntimeChanges(
+            current: _host.adventureConfig!,
+            projected: settledConfig,
+          );
+    final customStatusPaths = {
+      for (final change in customStatusRuntimeChanges)
+        '${change.entityType.name}:${change.entityId}:${change.path}',
+    };
+    final allRuntimeChanges = <RuntimeStateChangeProposal>[
+      ...customStatusRuntimeChanges,
+      ...runtimeChanges.where(
+        (change) => !customStatusPaths.contains(
+          '${change.entityType.name}:${change.entityId}:${change.path}',
+        ),
+      ),
+    ];
+    // Duplicate paths are de-duplicated here so the validator can keep
+    // rejecting true conflicts without aborting an otherwise valid turn.
+    final dedupedRuntimeChanges = _dedupeRuntimeChanges(allRuntimeChanges,
+        diagnostics: runtimeDiagnostics);
+
+    final statusSnapshot = _buildTrackedStatusSnapshot(dedupedRuntimeChanges);
+    final settledContent = _rewriteAssistantPresentationPayload(json,
+        options: _parsedOptions,
+        config: settledConfig,
+        statusSnapshot: statusSnapshot);
+    final assistantMessage =
+        settlementPhase.assistantMessage.copyWith(content: settledContent);
+    GenerationDiagnostics.instance.mark('[AssistantMessageCommit][PREPARED]', {
+      'messageId': assistantMessage.id,
+      'customStatus': statusSnapshot?.length ?? 0,
+    });
+    _stagePendingAssistantTail(settledContent);
+    _notifyAll();
+    final projectedSceneState = _promptBuilder.lastSceneState;
+
+    final runtimeDraft = dedupedRuntimeChanges.isEmpty
+        ? null
+        : RuntimeStateCommitDraft(
+            expectedRevision: snapshot.runtimeRevision,
+            changes: List.unmodifiable(dedupedRuntimeChanges),
+            summary: 'Turn settlement runtime changes',
+            contextSnapshotId: snapshot.id,
+            sourceMessageId: assistantMessage.id,
+          );
+    final sceneStateDiagnostics = <String>[];
+    final parsedSceneStateProposal = SceneStateChangeProposal.parse(
+      _sceneResponseMap(json)?['scene_state_changes'],
+      diagnostics: sceneStateDiagnostics,
+    );
+    final sceneIntent = _promptBuilder.lastIntent;
+    final sceneAuthorization = const SceneEntryAuthorizer().authorize(
+      proposal: parsedSceneStateProposal,
+      authorization:
+          _sceneEntryAuthorization(sceneIntent, finalized.finalNarrative),
+      currentLocation: _currentSceneLocation(),
+      currentTime: _host.sceneState.time,
+    );
+    sceneStateDiagnostics.addAll(sceneAuthorization.diagnostics);
+    final sceneStateProposal = sceneAuthorization.proposal;
+    if (sceneStateProposal == null && parsedSceneStateProposal != null) {
+      sceneStateDiagnostics.add('scene_state_changes:fully_unauthorized');
+    }
+    final committedSceneState = projectedSceneState?.copyWith(
+      location: state.currentScene.isEmpty
+          ? projectedSceneState.location
+          : state.currentScene,
+      // A per-turn exclusion is prompt semantics, not a presence change.
+      presentCharacterIds: _restoredPresentCharacterIds(
+        projectedSceneState,
+        _promptBuilder.lastIntent,
+        sceneStateProposal?.charactersLeave ?? const [],
+      ),
+    );
+
+    final lengthMinimum = snapshot.budget.minChineseChars;
+    final lengthHardMaximum = snapshot.budget.hardMaximum;
+    final lengthFinalVerdict =
+        finalized.lengthGuard.verdict(lengthMinimum, lengthHardMaximum);
+    GenerationDiagnostics.instance.mark('[ChatTurn][LENGTH_DONE]', {
+      'request': requestId,
+      'finalChars': finalized.lengthGuard.finalChineseChars,
+      'verdict': lengthFinalVerdict.diagnosticToken
+    });
+    final lengthFinalPassed =
+        lengthFinalVerdict == NarrativeLengthVerdict.withinRange ||
+            lengthFinalVerdict == NarrativeLengthVerdict.decisionStop;
+    if (lengthFinalVerdict == NarrativeLengthVerdict.decisionStop) {
+      _consecutiveDecisionStops++;
+    } else {
+      _consecutiveDecisionStops = 0;
+    }
+
+    final inMemoryResult = SceneDialogueCommitResult(
+      applied: true,
+      gameState: state,
+      effects: effects,
+      sceneState: committedSceneState,
+      statusDiagnostics: statusDiagnostics,
+    );
+    final commit = adventureId == null
+        ? null
+        : SceneDialogueCommit(
+            requestId: requestId,
+            adventureId: adventureId,
+            branchId: branchId,
+            userMessage: userMessage,
+            assistantMessage: assistantMessage,
+            gameState: state,
+            sceneState: committedSceneState,
+            contextSnapshotId: snapshot.id,
+            diagnostics: {
+              'budget_tokens': snapshot.budget.recommendedTokens,
+              if (_promptBuilder.lastContextTrace case final trace?)
+                'context_trace': trace.toDiagnostics(),
+              'retrieval_degraded': snapshot.diagnostics.isNotEmpty,
+              'continuity': settlementPhase.continuity.isConsistent
+                  ? 'passed'
+                  : 'warning',
+              if (!settlementPhase.continuity.isConsistent)
+                'warnings': settlementPhase.continuity.warnings,
+              'length_guard_triggered':
+                  finalized.lengthGuard.supplementAttempted,
+              'length_initial_chinese_chars':
+                  finalized.lengthGuard.initialChineseChars,
+              'length_required_chinese_chars': lengthMinimum,
+              'length_target_chinese_chars': snapshot.budget.targetChineseChars,
+              'length_hard_maximum_chinese_chars': lengthHardMaximum,
+              'length_supplement_chinese_chars':
+                  finalized.lengthGuard.supplementChineseChars,
+              'length_final_chinese_chars':
+                  finalized.lengthGuard.finalChineseChars,
+              'length_supplement_succeeded':
+                  finalized.lengthGuard.supplementSucceeded,
+              if (finalized.lengthGuard.supplementAttempted)
+                'length_supplement_thinking': false,
+              'length_final_passed': lengthFinalPassed,
+              'length_final_verdict': lengthFinalVerdict.diagnosticToken,
+              'length_overflow_detected':
+                  finalized.lengthGuard.overflowDetected,
+              'length_stopped_at_decision':
+                  finalized.lengthGuard.stoppedAtDecision,
+              'consecutive_decision_stops': _consecutiveDecisionStops,
+              'turn_settlement_status': settlementPhase.outcome.status,
+              'turn_settlement_attempts': settlementPhase.outcome.attempts,
+              'turn_settlement_options_applied':
+                  settlementPhase.optionsFromSettlement,
+              'turn_settlement_response_chars':
+                  _settlementStreamingContent.length,
+              if (runtimeDiagnostics.isNotEmpty)
+                'ignored_runtime_state_changes': runtimeDiagnostics,
+              if (sceneStateDiagnostics.isNotEmpty)
+                'ignored_scene_state_changes': sceneStateDiagnostics,
+            },
+            candidates: settlementPhase.candidates,
+            effects: effects,
+            runtimeStateDraft: runtimeDraft,
+            sceneStateProposal: sceneStateProposal,
+            statusDiagnostics: statusDiagnostics,
+          );
+
+    return _TurnCommitPlan(
+      commit: commit,
+      inMemoryResult: inMemoryResult,
+      assistantMessage: assistantMessage,
+      settledConfig: settledConfig,
+      statusSnapshot: statusSnapshot,
+      lengthVerdict: lengthFinalVerdict,
+      lengthPassed: lengthFinalPassed,
+      narrativeChineseChars: settlementPhase.narrativeChineseChars,
+      runtimeRevision: snapshot.runtimeRevision,
+    );
+  }
+
+  /// Commits the turn once, then reconciles host memory from the durable result.
+  ///
+  /// Returns false when a newer workspace owns the UI; the outer sendMessage
+  /// then ends silently (turn-level finally still runs).
+  Future<bool> _commitTurn(
+    _TurnExecutionContext context,
+    _TurnCommitPlan plan,
+  ) async {
+    var result = plan.inMemoryResult;
+    final adventureId = context.adventureId;
+    if (adventureId != null) {
+      // Last cancellation gate before the irreversible INSERT transaction.
+      if (!context.isCurrent(this)) {
+        throw const GenerationCancelledException();
+      }
+      GenerationDiagnostics.instance.mark('[ChatTurn][COMMIT_START]', {
+        'request': context.requestId,
+        'runtimeRevision': plan.runtimeRevision,
       });
-      final settlement = settlementOutcome.settlement;
-      if (settlement != null) {
-        _applySettlement(settlement);
-      } else {
-        _applySettlementFailure(settlementOutcome.status);
-      }
+      result = await _adventureRepo.commitSceneDialogueTurn(plan.commit!);
+      context.turnCommitted = true;
+      GenerationDiagnostics.instance.mark('[AssistantMessageCommit][DONE]', {
+        'messageId': plan.assistantMessage.id,
+        'customStatus': plan.statusSnapshot?.length ?? 0,
+      });
+      GenerationDiagnostics.instance.mark('[ChatTurn][COMMIT_DONE]', {
+        'request': context.requestId,
+        'runtimeRevisionBefore': plan.runtimeRevision,
+      });
+      context.committedResult = result;
+      context.committedAssistantMessage = plan.assistantMessage;
+    }
+    // Only an uncommitted turn may be abandoned by cancellation.
+    if (!context.turnCommitted && !context.isCurrent(this)) {
+      throw const GenerationCancelledException();
+    }
+    if (!context.owns(this)) {
+      GenerationDiagnostics.instance.mark('[ChatTurn][STALE_COMMIT]', {
+        'request': context.requestId,
+        'committed': context.turnCommitted,
+        'failureClass': ChatFailureClass.stale.name,
+      });
+      return false;
+    }
 
-      final settlementOptions = settlement?.options ?? const <String>[];
-      final optionsFromSettlement =
-          settlementOptions.length >= TurnSettlement.minimumUsableOptions;
-      if (optionsFromSettlement) {
-        _parsedOptions = List<String>.from(settlementOptions);
-      } else {
-        // Settlement options (possibly empty) first, then the narrative
-        // payload's options, then the last valid set, then the scene fallback.
-        _parsedOptions = _resolveTurnOptions(settlementOptions.isNotEmpty
-            ? settlementOptions
-            : (_narrativeOptions.isEmpty ? null : _narrativeOptions));
-      }
-      // §12: a successful settlement closes the options question. Repairing
-      // afterwards would put a third request (`adventureOptionRepair`) behind
-      // the narrative and the settlement, and its output is options only — so
-      // it is reserved for a turn where neither the settlement nor the
-      // narrative payload actually supplied a usable option set. (The scene
-      // fallback always yields three generic options; that is a last resort,
-      // not a reason to skip the repair request.)
-      final hasUsableOptionSource = optionsFromSettlement ||
-          _narrativeOptions.length >= TurnSettlement.minimumUsableOptions;
-      final needsOptionRepair =
-          !settlementOutcome.applied && !hasUsableOptionSource;
-      if (!needsOptionRepair) {
-        _lastValidOptions = List<String>.from(_parsedOptions);
-      }
+    // DB is the single authority after commit; memory is rebuilt from it.
+    _clearPendingCustomStatus(plan.settledConfig);
+    await _host.applySceneDialogueCommitResult(result);
+    if (!context.owns(this)) return false;
 
-      final aiContent = _rewriteAssistantPresentationPayload(json,
-          options: needsOptionRepair || optionsFromSettlement
-              ? _parsedOptions
-              : null);
+    for (var i = _host.messages.length - 1; i > 0; i--) {
+      if (_host.messages[i].isUser &&
+          _host.messages[i - 1].isUser &&
+          _host.messages[i].content.trim() ==
+              _host.messages[i - 1].content.trim()) {
+        _host.messages.removeAt(i);
+      }
+    }
+    _host.messages.add(plan.assistantMessage);
+    _host.messages.addAll(result.additionalMessages);
+    // Release the pending bubble in the same synchronous block as the commit
+    // so the swap is invisible to the player.
+    _clearPendingAssistantPresentation();
+    context.memoryReconciled = true;
+    if (result.applied && result.effects.startsCombat) {
+      final enemies = CombatManager.enemiesFromJson(result.effects.enemies);
+      if (enemies.isNotEmpty) {
+        _host.gameEngine?.combatMgr.enter(enemies, result.gameState);
+      }
+    }
+    _status = ChatStatus.idle;
+    _scenePhase = SceneDialoguePhase.completed;
+    _notifyAll();
+    return true;
+  }
 
-      var aiMsg = Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: aiContent,
-        reasoningContent: reasoningContentCombined,
-        isUser: false,
+  void _runPostTurnHooks(
+    SceneDialogueContextSnapshot snapshot,
+    _FinalizedNarrative finalized,
+    _TurnCommitPlan plan,
+  ) {
+    _logTurnResponseMonitor(snapshot, finalized, plan);
+    // Trigger an automatic backup every ten messages.
+    AutoBackupService.onMessageSent();
+    final tts = _host.tts;
+    // Auto read only what the player sees: settlement payload and hidden
+    // reasoning are never spoken.
+    final visibleNarrative =
+        AdventureResponse.streamingDisplayText(finalized.json).trim();
+    if (tts != null && tts.autoRead && visibleNarrative.isNotEmpty) {
+      tts.speak(
+        visibleNarrative,
+        sourceId: 'chat:${plan.assistantMessage.id}',
+        speakerContext: buildAdventureSpeakerContext(_host.adventureConfig),
       );
-      _streamingContent = '';
-      _isRepairingOptions = needsOptionRepair;
+    }
+    _host.advanceSelectedCharacterIfAutoEnabled();
+    _maybeSummarize();
+  }
 
-      // 在 ListView 重建（StreamingBubble 已移除）后再清空 streamNotifier
+  void _logTurnResponseMonitor(
+    SceneDialogueContextSnapshot snapshot,
+    _FinalizedNarrative finalized,
+    _TurnCommitPlan plan,
+  ) {
+    final budgetMin = snapshot.budget.minChineseChars;
+    final budgetTarget = snapshot.budget.targetChineseChars;
+    final budgetHardMax = snapshot.budget.hardMaximum;
+    final parsed = AdventureResponse.parse(finalized.json);
+    final payloadJson =
+        parsed.payload != null ? jsonEncode(parsed.payload) : '';
+    final jsonLen = payloadJson.length;
+    final totalLen = finalized.json.length;
+    final jsonRatio = totalLen > 0 ? (jsonLen / totalLen * 100) : 0.0;
+    final lengthRatio =
+        budgetMin > 0 ? (plan.narrativeChineseChars / budgetMin) : 0.0;
+    final estimateTokens = (totalLen / 1.5).round();
+    final roundNum = _host.messages.where((m) => m.isUser).length;
+    final isFinalOverflow =
+        plan.lengthVerdict == NarrativeLengthVerdict.overflow;
+    final wasConverged =
+        finalized.lengthGuard.overflowDetected && !isFinalOverflow;
+    debugPrint('');
+    debugPrint('╔══════════════════════════════════════════╗');
+    debugPrint('║  📊 AI 响应监控  —  第 $roundNum 轮');
+    debugPrint('╠══════════════════════════════════════════╣');
+    debugPrint('║  字数范围:  $budgetMin / $budgetTarget / $budgetHardMax');
+    debugPrint('║  实际:      ${plan.narrativeChineseChars}');
+    debugPrint('║  倍率:      ${lengthRatio.toStringAsFixed(2)}x');
+    debugPrint('║  JSON:      $jsonLen');
+    debugPrint('║  JSON占比:  ${jsonRatio.toStringAsFixed(1)}%');
+    debugPrint('║  估算tokens: $estimateTokens');
+    debugPrint('║  达标:      ${plan.lengthPassed ? '✅ 是' : '❌ 否'}');
+    if (isFinalOverflow) {
+      debugPrint('║  ⚠️  OVERFLOW: 最终正文仍超过硬上限 $budgetHardMax 字');
+    } else if (wasConverged) {
+      debugPrint('║  ⚠️  原始响应超出硬上限：'
+          '${finalized.lengthGuard.initialChineseChars} → '
+          '${finalized.lengthGuard.finalChineseChars}，已自动收敛');
+    }
+    debugPrint('╚══════════════════════════════════════════╝');
+    debugPrint('');
+  }
+
+  /// Turns every failure into either a durable-result reconciliation or one
+  /// user-visible error category; it never rolls back a committed turn.
+  Future<void> _handleTurnFailure(
+    Object error,
+    StackTrace stackTrace,
+    _TurnExecutionContext context,
+  ) async {
+    if (!context.owns(this)) return;
+    final failureClass = ChatFailureClass.classify(error);
+    GenerationDiagnostics.instance.mark('[ChatTurn][FAILED]', {
+      'engine': identityHashCode(this),
+      'request': context.requestId,
+      'generation': context.generation,
+      'phase': _scenePhase.name,
+      'runtimeType': error.runtimeType.toString(),
+      'failureClass': failureClass.name,
+      'stackTrace': stackTrace,
+      'contentChars': _streamingContent.length,
+      'reasoningChars': _reasoningContent.length,
+    });
+    _typewriter.cancel();
+    _streamingContent = '';
+    _clearPendingAssistantPresentation();
+    _streamNotifier.value = '';
+    if (!_cancelRequested &&
+        context.isCurrent(this) &&
+        (context.completedNarrativePrefix.isNotEmpty ||
+            _reasoningContent.isNotEmpty)) {
+      _pendingAssistantContent = context.completedNarrativePrefix;
+      _pendingAssistantPhase = PendingAssistantPhase.failed;
+    } else {
+      _reasoningContent = '';
+      _reasoningStreamNotifier.value = '';
+    }
+    _isThinkingNotifier.value = false;
+
+    // Release the turn immediately so the player can retry.
+    _status = ChatStatus.idle;
+
+    if (context.turnCommitted) {
+      // A durable turn can only fail in post-commit side effects; the database
+      // result wins and memory is repaired best-effort from it.
+      debugPrint('[ChatEngine] post-commit side effect failed after durable '
+          'turn; committed state preserved: ${error.runtimeType}');
+      if (!context.memoryReconciled && context.committedResult != null) {
+        try {
+          final durableResult = context.committedResult!;
+          await _host.applySceneDialogueCommitResult(durableResult);
+          final committedAi = context.committedAssistantMessage;
+          if (committedAi != null &&
+              !_host.messages.any((m) => m.id == committedAi.id)) {
+            _host.messages.add(committedAi);
+            _host.messages.addAll(durableResult.additionalMessages);
+          }
+          context.memoryReconciled = true;
+        } catch (reconcileError) {
+          debugPrint('[ChatEngine] committed turn memory reconciliation '
+              'failed, DB remains authoritative: ${reconcileError.runtimeType}');
+        }
+      }
+      _cancelRequested = false;
+      _scenePhase = SceneDialoguePhase.completed;
+      _notifyAll();
+    } else if (failureClass == ChatFailureClass.cancelled ||
+        _cancelRequested ||
+        !context.isCurrent(this)) {
+      // User cancellation: no error card, remove the unanswered user bubble.
+      _cancelRequested = false;
+      _scenePhase = SceneDialoguePhase.cancelled;
+      final messages = _host.messages;
+      if (messages.isNotEmpty && messages.last.isUser) {
+        messages.removeLast();
+      }
+      _notifyAll();
+    } else {
+      _scenePhase = SceneDialoguePhase.failed;
+      _lastErrorType = failureClass.presentationType;
+      _lastErrorDetail = failureClass.name;
+      _host.messages.add(Message(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        // ErrorCard owns localized copy from errorType.
+        content: '',
+        isUser: false,
+        errorType: _lastErrorType,
+      ));
+    }
+  }
+
+  /// Terminal cleanup that must run for success, failure and cancellation.
+  void _finalizeTurn(_TurnExecutionContext context) {
+    if (_disposed || _activeRequestId != context.requestId) return;
+    if (!context.owns(this)) {
+      // The engine still owns transient buffers but lost the workspace.
+      _scenePhase = SceneDialoguePhase.cancelled;
+      _clearPendingAssistantPresentation();
+      _streamingContent = '';
       _streamNotifier.value = '';
       _reasoningContent = '';
       _reasoningStreamNotifier.value = '';
       _isThinkingNotifier.value = false;
-
-      final responseMap = _sceneResponseMap(json);
-      final candidates = SceneSettingCandidate.parse(
-          responseMap?['scene_candidates'], requestId);
-      _lastSceneCandidates = List.unmodifiable(candidates);
-      final marker = json.indexOf('---JSON---');
-      final continuity = const SceneConsistencyValidator().validate(
-        snapshot: sceneSnapshot,
-        narrative: marker < 0 ? json : json.substring(0, marker),
-        payload: responseMap,
-        userInput: content,
-        invitedCharacterIds:
-            (_promptBuilder.lastIntent?.invitedCharacterIds ?? const <String>[])
-                .toSet(),
-      );
-
-      if (_isRepairingOptions) {
-        _scenePhase = SceneDialoguePhase.repairing;
-        await _repairMissingOptions(json, content,
-            requestId: requestId,
-            generation: requestGeneration,
-            adventureId: adventureId,
-            branchId: branchId);
-        if (!_isRequestCurrent(
-            requestId, requestGeneration, adventureId, branchId)) {
-          throw const GenerationCancelledException();
-        }
-        aiMsg = aiMsg.copyWith(
-            content: _rewriteAssistantPresentationPayload(json,
-                options: _parsedOptions));
-        _isRepairingOptions = false;
-      }
-
-      // v2.4: 抗衰减与未达标补强 — 追踪本轮字数，检测衰减趋势与未达标缺口
-      final adSepIdx = json.indexOf('---JSON---');
-      final adNarrative = adSepIdx >= 0 ? json.substring(0, adSepIdx) : json;
-      final currentWordCount = countChinese(adNarrative);
-      if (_lastAiWordCount > 0 &&
-          currentWordCount > 0 &&
-          !lengthGuardResult.stoppedAtDecision) {
-        final drop = (_lastAiWordCount - currentWordCount) / _lastAiWordCount;
-        if (drop > 0.25) {
-          _decayWarningNextRound = true;
-          debugPrint(
-              '[AntiDecay] 字数衰减: $_lastAiWordCount→$currentWordCount (${(drop * 100).round()}%)，下轮强化提醒');
-        }
-      }
-      if (!lengthGuardResult.passed(sceneSnapshot.budget.minChineseChars)) {
-        _underflowWarningNextRound = true;
-        _underflowDeficit =
-            sceneSnapshot.budget.minChineseChars - currentWordCount;
-        _underflowLastActual = currentWordCount;
-        debugPrint(
-            '[LengthGuard] final=$currentWordCount required=${sceneSnapshot.budget.minChineseChars} failed; next-round fallback deficit=$_underflowDeficit');
-      } else {
-        _underflowWarningNextRound = false;
-      }
-      _lastAiWordCount = currentWordCount;
-
-      // ─── 关键修复：在 DB 持久化前保持 idle，消除 "死区" ───
-      // 问题：选项芯片已显示，但 _status 仍为 loading/streaming
-      // 导致用户点击选项时被并发守卫静默拦截，消息无法发送
-      // Android sqflite 原生调用慢（100ms+），DB 持久化期间用户已可交互
-      _scenePhase = SceneDialoguePhase.committing;
-      // 纯函数投影：主响应状态结算后的 config（尚未写入 host）与状态诊断。
-      final statusProjection = _projectPendingCustomStatus();
-      final settledConfig = statusProjection.config;
-      final statusDiagnostics = statusProjection.diagnostics;
-
-      var effects = _pendingSceneEffects;
-      final affinityMgr = _host.gameEngine?.affinityMgr;
-      final affinityConfig = settledConfig ?? _host.adventureConfig;
-      if (affinityConfig != null && affinityMgr != null) {
-        // A player-excluded character must not gain affinity from keyword
-        // analysis either — the exclusion covers every state channel.
-        final excludedNames =
-            _excludedEntities(_promptBuilder.lastIntent).names;
-        final analyzable = excludedNames.isEmpty
-            ? affinityConfig.supportingCharacters
-            : affinityConfig.supportingCharacters
-                .where((npc) => !excludedNames.contains(npc.name))
-                .toList(growable: false);
-        effects = effects.withAffinityChanges(
-            affinityMgr.analyzeKeywords(content, analyzable));
-      }
-      // 本轮 pending 一定由解析阶段写入，不再回退到 host，避免沿用上一轮的残值。
-      final state = effects.applyState(_pendingGameState ?? _host.gameState);
-
-      // ─── 本轮运行期变更（先于正文快照，快照必须反映最终接受值） ───
-      // The runtime draft now comes from the settlement request. The narrative
-      // payload is only consulted as a labelled legacy fallback, and any
-      // settlement-side note travels with the parse diagnostics.
-      final runtimeDiagnostics = <String>[
-        ..._pendingSettlementDiagnostics,
-        ..._pendingCandidateDiagnostics,
-      ];
-      final runtimeChanges = _pendingRuntimeChanges;
-      final customStatusRuntimeChanges = settledConfig == null
-          ? const <RuntimeStateChangeProposal>[]
-          : _customStatusRuntimeChanges(
-              current: _host.adventureConfig!,
-              projected: settledConfig,
-            );
-      final customStatusPaths = {
-        for (final change in customStatusRuntimeChanges)
-          '${change.entityType.name}:${change.entityId}:${change.path}',
-      };
-      final allRuntimeChanges = <RuntimeStateChangeProposal>[
-        ...customStatusRuntimeChanges,
-        ...runtimeChanges.where(
-          (change) => !customStatusPaths.contains(
-            '${change.entityType.name}:${change.entityId}:${change.path}',
-          ),
-        ),
-      ];
-      // `RuntimeStateValidator` rejects conflicting duplicate paths by throwing,
-      // which would abort an otherwise valid turn. De-duplicating here keeps
-      // the atomic commit intact and turns the defect into a diagnostic.
-      final dedupedRuntimeChanges = _dedupeRuntimeChanges(allRuntimeChanges,
-          diagnostics: runtimeDiagnostics);
-
-      // 消息里的 custom_status 快照必须反映本轮结算结果（UI 直接读它渲染监测状态）。
-      // 快照来自统一检测权威：AdventureConfig.trackedStateDefinitions →
-      // AdventureTrackedStateRegistry → RuntimeEntityState.overlay，并叠加本轮
-      // 被接受的运行期变更，因此与即将持久化的 overlay 完全一致；定义存在但尚无
-      // 运行期值的项目以「尚未触发」出现，绝不伪造 0。
-      // 同一个字符串同时作为 pending presentation 的结构化尾部：settled 阶段
-      // 玩家看到的内容与提交后的 Message 语义完全一致。
-      final statusSnapshot = _buildTrackedStatusSnapshot(dedupedRuntimeChanges);
-      final settledContent = _rewriteAssistantPresentationPayload(json,
-          options: _parsedOptions,
-          config: settledConfig,
-          statusSnapshot: statusSnapshot);
-      aiMsg = aiMsg.copyWith(content: settledContent);
-      GenerationDiagnostics.instance
-          .mark('[AssistantMessageCommit][PREPARED]', {
-        'messageId': aiMsg.id,
-        'customStatus': statusSnapshot?.length ?? 0,
-      });
-      _stagePendingAssistantTail(settledContent);
-      _notifyAll();
-      final projectedSceneState = _promptBuilder.lastSceneState;
-
-      final runtimeDraft = dedupedRuntimeChanges.isEmpty
-          ? null
-          : RuntimeStateCommitDraft(
-              expectedRevision: sceneSnapshot.runtimeRevision,
-              changes: List.unmodifiable(dedupedRuntimeChanges),
-              summary: 'Turn settlement runtime changes',
-              contextSnapshotId: sceneSnapshot.id,
-              sourceMessageId: aiMsg.id,
-            );
-      final sceneStateDiagnostics = <String>[];
-      final parsedSceneStateProposal = SceneStateChangeProposal.parse(
-        _sceneResponseMap(json)?['scene_state_changes'],
-        diagnostics: sceneStateDiagnostics,
-      );
-      // P2/P4: a model-proposed presence, location or time change only lands
-      // when the player authorized it (invitation / dismissal / exclusion /
-      // explicit jump) or when this turn's own final narrative depicts it.
-      // Rejected deltas become diagnostics, never silent drops.
-      final sceneIntent = _promptBuilder.lastIntent;
-      final sceneAuthorization = const SceneEntryAuthorizer().authorize(
-        proposal: parsedSceneStateProposal,
-        authorization: _sceneEntryAuthorization(sceneIntent, finalNarrative),
-        currentLocation: _currentSceneLocation(),
-        currentTime: _host.sceneState.time,
-      );
-      sceneStateDiagnostics.addAll(sceneAuthorization.diagnostics);
-      final sceneStateProposal = sceneAuthorization.proposal;
-      if (sceneStateProposal == null && parsedSceneStateProposal != null) {
-        sceneStateDiagnostics.add('scene_state_changes:fully_unauthorized');
-      }
-      final committedSceneState = projectedSceneState?.copyWith(
-        location: state.currentScene.isEmpty
-            ? projectedSceneState.location
-            : state.currentScene,
-        // A per-turn exclusion is prompt semantics, not a presence change:
-        // restore any excluded id that was already present so the first
-        // durable commit of an adventure cannot silently drop a character
-        // the player only asked to sit out this turn. An exclusion that also
-        // authorized the character to leave is honoured, not restored.
-        presentCharacterIds: _restoredPresentCharacterIds(
-          projectedSceneState,
-          _promptBuilder.lastIntent,
-          sceneStateProposal?.charactersLeave ?? const [],
-        ),
-      );
-      // 本轮最终字数判定的唯一来源，提交诊断与下方的响应监控共用同一份结果。
-      // `overflowDetected` 只是「原始响应曾超限并已被收敛」的历史事件，绝不代表
-      // 最终仍然超限；最终是否达标只由 finalVerdict 决定。
-      final lengthMinimum = sceneSnapshot.budget.minChineseChars;
-      final lengthHardMaximum = sceneSnapshot.budget.hardMaximum;
-      final lengthFinalVerdict =
-          lengthGuardResult.verdict(lengthMinimum, lengthHardMaximum);
-      GenerationDiagnostics.instance.mark('[ChatTurn][LENGTH_DONE]', {
-        'request': requestId,
-        'finalChars': lengthGuardResult.finalChineseChars,
-        'verdict': lengthFinalVerdict.diagnosticToken
-      });
-      final lengthFinalPassed =
-          lengthFinalVerdict == NarrativeLengthVerdict.withinRange ||
-              lengthFinalVerdict == NarrativeLengthVerdict.decisionStop;
-      // Track decision-point stop streaks so a model cannot use the marker to
-      // silently bypass the word minimum turn after turn.
-      if (lengthFinalVerdict == NarrativeLengthVerdict.decisionStop) {
-        _consecutiveDecisionStops++;
-      } else {
-        _consecutiveDecisionStops = 0;
-      }
-
-      SceneDialogueCommitResult result = SceneDialogueCommitResult(
-        applied: true,
-        gameState: state,
-        effects: effects,
-        sceneState: committedSceneState,
-        statusDiagnostics: statusDiagnostics,
-      );
-      if (adventureId != null) {
-        // R02-A: the last cancellation gate before the irreversible commit.
-        // Everything above this line is still revertible in memory; the INSERT
-        // transaction below is not. A request that is cancelled, superseded or
-        // detached from its adventure/branch here is refused entry, so a
-        // cancelled turn never reaches the database.
-        if (!_isRequestCurrent(
-            requestId, requestGeneration, adventureId, branchId)) {
-          throw const GenerationCancelledException();
-        }
-        GenerationDiagnostics.instance.mark('[ChatTurn][COMMIT_START]', {
-          'request': requestId,
-          'runtimeRevision': sceneSnapshot.runtimeRevision
-        });
-        result =
-            await _adventureRepo.commitSceneDialogueTurn(SceneDialogueCommit(
-          requestId: requestId,
-          adventureId: adventureId,
-          branchId: branchId,
-          userMessage: userMsg,
-          assistantMessage: aiMsg,
-          gameState: state,
-          sceneState: committedSceneState,
-          contextSnapshotId: sceneSnapshot.id,
-          diagnostics: {
-            'budget_tokens': sceneSnapshot.budget.recommendedTokens,
-            if (_promptBuilder.lastContextTrace case final trace?)
-              'context_trace': trace.toDiagnostics(),
-            'retrieval_degraded': sceneSnapshot.diagnostics.isNotEmpty,
-            'continuity': continuity.isConsistent ? 'passed' : 'warning',
-            if (!continuity.isConsistent) 'warnings': continuity.warnings,
-            'length_guard_triggered': lengthGuardResult.supplementAttempted,
-            'length_initial_chinese_chars':
-                lengthGuardResult.initialChineseChars,
-            'length_required_chinese_chars': lengthMinimum,
-            'length_target_chinese_chars':
-                sceneSnapshot.budget.targetChineseChars,
-            'length_hard_maximum_chinese_chars': lengthHardMaximum,
-            'length_supplement_chinese_chars':
-                lengthGuardResult.supplementChineseChars,
-            'length_final_chinese_chars': lengthGuardResult.finalChineseChars,
-            'length_supplement_succeeded':
-                lengthGuardResult.supplementSucceeded,
-            if (lengthGuardResult.supplementAttempted)
-              'length_supplement_thinking': false,
-            'length_final_passed': lengthFinalPassed,
-            // within_range / underflow / overflow，与响应监控控制台输出同源。
-            'length_final_verdict': lengthFinalVerdict.diagnosticToken,
-            // 历史事件：原始响应曾超过硬上限并被自动收敛（不代表最终失败）。
-            'length_overflow_detected': lengthGuardResult.overflowDetected,
-            // 本轮在玩家决策点合法停笔（未达字数下限但不是失败）。
-            'length_stopped_at_decision': lengthGuardResult.stoppedAtDecision,
-            // 连续以决策点停笔的轮数（>=2 时下轮会收到防滥用提醒）。
-            'consecutive_decision_stops': _consecutiveDecisionStops,
-            // Turn settlement is a separate, post-narrative request. Its
-            // character count is reported for latency triage only — it is never
-            // part of the narrative word count.
-            'turn_settlement_status': settlementOutcome.status,
-            'turn_settlement_attempts': settlementOutcome.attempts,
-            'turn_settlement_options_applied': optionsFromSettlement,
-            'turn_settlement_response_chars':
-                _settlementStreamingContent.length,
-            if (runtimeDiagnostics.isNotEmpty)
-              'ignored_runtime_state_changes': runtimeDiagnostics,
-            if (sceneStateDiagnostics.isNotEmpty)
-              'ignored_scene_state_changes': sceneStateDiagnostics,
-          },
-          candidates: candidates,
-          effects: effects,
-          runtimeStateDraft: runtimeDraft,
-          sceneStateProposal: sceneStateProposal,
-          statusDiagnostics: statusDiagnostics,
-        ));
-        // The transaction returned: this turn is now an irreversible fact.
-        turnCommitted = true;
-        GenerationDiagnostics.instance.mark('[AssistantMessageCommit][DONE]', {
-          'messageId': aiMsg.id,
-          'customStatus': statusSnapshot?.length ?? 0,
-        });
-        GenerationDiagnostics.instance.mark('[ChatTurn][COMMIT_DONE]', {
-          'request': requestId,
-          'runtimeRevisionBefore': sceneSnapshot.runtimeRevision
-        });
-        committedResult = result;
-        committedAssistantMessage = aiMsg;
-      }
-      // R02-A: only a turn that has NOT been durably committed may be abandoned
-      // for a cancellation. Once `turnCommitted` is set the database result wins
-      // and the memory/UI state below is reconciled from it — never rolled back.
-      if (!turnCommitted &&
-          !_isRequestCurrent(
-              requestId, requestGeneration, adventureId, branchId)) {
-        throw const GenerationCancelledException();
-      }
-      // A late Stop in the same workspace must reconcile the durable result.
-      // A different adventure/branch or newer request owns a different UI.
-      if (!_ownsRequestContext(requestId, adventureId, branchId)) {
-        GenerationDiagnostics.instance.mark('[ChatTurn][STALE_COMMIT]', {
-          'request': requestId,
-          'committed': turnCommitted,
-          'failureClass': ChatFailureClass.stale.name,
-        });
-        return;
-      }
-      // 原子提交：主响应的状态结算只在此处落地一次。提交成功后 DB 结果是唯一权威，
-      // 内存只从该结果重建；迟到取消只能停止尚未发生的后置副作用，不得伪回滚。
-      _clearPendingCustomStatus(settledConfig);
-      await _host.applySceneDialogueCommitResult(result);
-      if (!_ownsRequestContext(requestId, adventureId, branchId)) return;
-      // 提交完成前，检查并清理可能残留的连续重复用户气泡
-      for (int i = _host.messages.length - 1; i > 0; i--) {
-        if (_host.messages[i].isUser &&
-            _host.messages[i - 1].isUser &&
-            _host.messages[i].content.trim() ==
-                _host.messages[i - 1].content.trim()) {
-          _host.messages.removeAt(i);
-        }
-      }
-      _host.messages.add(aiMsg);
-      _host.messages.addAll(result.additionalMessages);
-      // 无闪烁替换：committed message 已进入数据源，同一同步块内释放 pending，
-      // 下一帧 pending bubble 与 AiBubble 的切换对玩家不可见。
-      _clearPendingAssistantPresentation();
-      // R02-A: memory now matches the durable turn; a later cancellation can no
-      // longer require any repair here.
-      memoryReconciled = true;
-      if (result.applied && result.effects.startsCombat) {
-        final enemies = CombatManager.enemiesFromJson(result.effects.enemies);
-        if (enemies.isNotEmpty) {
-          _host.gameEngine?.combatMgr.enter(enemies, result.gameState);
-        }
-      }
-      _status = ChatStatus.idle;
-      _scenePhase = SceneDialoguePhase.completed;
-      _notifyAll();
-
-      // ─── 响应监控日志 ───
-      final budgetMin = lengthMinimum;
-      final budgetTarget = sceneSnapshot.budget.targetChineseChars;
-      final budgetHardMax = lengthHardMaximum;
-      final monitorParsed = AdventureResponse.parse(json);
-      final payloadJson = monitorParsed.payload != null
-          ? jsonEncode(monitorParsed.payload)
-          : '';
-      final jsonLen = payloadJson.length;
-      final totalLen = json.length;
-      final jsonRatio = totalLen > 0 ? (jsonLen / totalLen * 100) : 0.0;
-      final lengthRatio = budgetMin > 0 ? (currentWordCount / budgetMin) : 0.0;
-      final estimateTokens = (totalLen / 1.5).round();
-      final roundNum = _host.messages.where((m) => m.isUser).length;
-      // 达标只看最终 verdict：曾经 overflow 但已收敛不是失败。
-      final isPassed = lengthFinalPassed;
-      final isFinalOverflow =
-          lengthFinalVerdict == NarrativeLengthVerdict.overflow;
-      final wasConverged =
-          lengthGuardResult.overflowDetected && !isFinalOverflow;
-      debugPrint('');
-      debugPrint('╔══════════════════════════════════════════╗');
-      debugPrint('║  📊 AI 响应监控  —  第 $roundNum 轮');
-      debugPrint('╠══════════════════════════════════════════╣');
-      debugPrint('║  字数范围:  $budgetMin / $budgetTarget / $budgetHardMax');
-      debugPrint('║  实际:      $currentWordCount');
-      debugPrint('║  倍率:      ${lengthRatio.toStringAsFixed(2)}x');
-      debugPrint('║  JSON:      $jsonLen');
-      debugPrint('║  JSON占比:  ${jsonRatio.toStringAsFixed(1)}%');
-      debugPrint('║  估算tokens: $estimateTokens');
-      debugPrint('║  达标:      ${isPassed ? '✅ 是' : '❌ 否'}');
-      if (isFinalOverflow) {
-        debugPrint('║  ⚠️  OVERFLOW: 最终正文仍超过硬上限 $budgetHardMax 字');
-      } else if (wasConverged) {
-        debugPrint('║  ⚠️  原始响应超出硬上限：'
-            '${lengthGuardResult.initialChineseChars} → '
-            '${lengthGuardResult.finalChineseChars}，已自动收敛');
-      }
-      debugPrint('╚══════════════════════════════════════════╝');
-      debugPrint('');
-
-      // 每 10 条消息触发一次自动备份
-      AutoBackupService.onMessageSent();
-      final tts = _host.tts;
-      // 自动朗读只朗读“用户当前看到的正文”：双段协议的 ---JSON--- 结算数据
-      // 与隐藏的思维链都不允许被念出来。
-      final visibleNarrative =
-          AdventureResponse.streamingDisplayText(json).trim();
-      if (tts != null && tts.autoRead && visibleNarrative.isNotEmpty) {
-        // Speaker-aware auto read: the current Adventure roster supplies the
-        // stable speaker ids so dialogue can use per-character voices. Without
-        // a roster the planner keeps everything as narration (system voice).
-        tts.speak(
-          visibleNarrative,
-          sourceId: 'chat:${aiMsg.id}',
-          speakerContext: buildAdventureSpeakerContext(_host.adventureConfig),
-        );
-      }
-      _host.advanceSelectedCharacterIfAutoEnabled();
-      _maybeSummarize();
-    } catch (e, st) {
-      if (!_ownsRequestContext(requestId, adventureId, branchId)) return;
-      final failureClass = ChatFailureClass.classify(e);
-      GenerationDiagnostics.instance.mark('[ChatTurn][FAILED]', {
-        'engine': identityHashCode(this),
-        'request': requestId,
-        'generation': requestGeneration,
-        'phase': _scenePhase.name,
-        'runtimeType': e.runtimeType.toString(),
-        'failureClass': failureClass.name,
-        'stackTrace': st,
-        'contentChars': _streamingContent.length,
-        'reasoningChars': _reasoningContent.length,
-      });
-      _typewriter.cancel();
-      _streamingContent = '';
-      _clearPendingAssistantPresentation();
-      _streamNotifier.value = '';
-      if (!_cancelRequested &&
-          _isRequestCurrent(
-              requestId, requestGeneration, adventureId, branchId) &&
-          (completedNarrativePrefix.isNotEmpty ||
-              _reasoningContent.isNotEmpty)) {
-        _pendingAssistantContent = completedNarrativePrefix;
-        _pendingAssistantPhase = PendingAssistantPhase.failed;
-      } else {
-        _reasoningContent = '';
-        _reasoningStreamNotifier.value = '';
-      }
-      _isThinkingNotifier.value = false;
-
-      // 立即重置 status，确保用户可重试
-      _status = ChatStatus.idle;
-
-      // R02-A: a committed turn is authoritative. Once the database accepted it,
-      // a cancellation — however late — must NOT delete the user message, restore
-      // the old game state or surface an error as if the turn never happened.
-      // Only memory reconciliation may still be completed here.
-      if (turnCommitted) {
-        // The turn is durable; the exception below can only concern post-commit
-        // side effects. It is logged rather than allowed to masquerade as a
-        // failed turn, because the database truth must not be reverted.
-        debugPrint('[ChatEngine] post-commit side effect failed after durable '
-            'turn; committed state preserved: ${e.runtimeType}');
-        if (!memoryReconciled && committedResult != null) {
-          // Best-effort repair of the in-memory projection. The durable turn is
-          // already safe; a failure here is logged and will be re-read on the
-          // next load rather than hidden.
-          try {
-            final durableResult = committedResult;
-            await _host.applySceneDialogueCommitResult(durableResult);
-            final committedAi = committedAssistantMessage;
-            if (committedAi != null &&
-                !_host.messages.any((m) => m.id == committedAi.id)) {
-              _host.messages.add(committedAi);
-              _host.messages.addAll(durableResult.additionalMessages);
-            }
-            memoryReconciled = true;
-          } catch (reconcileError) {
-            debugPrint('[ChatEngine] committed turn memory reconciliation '
-                'failed, DB remains authoritative: ${reconcileError.runtimeType}');
-          }
-        }
-        _cancelRequested = false;
-        _scenePhase = SceneDialoguePhase.completed;
-        _notifyAll();
-      } else if (failureClass == ChatFailureClass.cancelled ||
-          _cancelRequested ||
-          !_isRequestCurrent(
-              requestId, requestGeneration, adventureId, branchId)) {
-        // 用户主动取消 — 不添加错误消息，静默清理
-        _cancelRequested = false;
-        _scenePhase = SceneDialoguePhase.cancelled;
-        // 移除用户刚发送的消息（因为 AI 没有回复）
-        final msgs = _host.messages;
-        if (msgs.isNotEmpty && msgs.last.isUser) {
-          msgs.removeLast();
-        }
-        _notifyAll(); // 通知 UI 消息已移除
-      } else {
-        _scenePhase = SceneDialoguePhase.failed;
-        _lastErrorType = failureClass.presentationType;
-        _lastErrorDetail = failureClass.name;
-
-        _host.messages.add(Message(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          // ErrorCard owns localized copy from errorType. Keep diagnostics in
-          // the controller log only; never persist technical exception text.
-          content: '',
-          isUser: false,
-          errorType: _lastErrorType,
-        ));
-      }
-    } finally {
-      if (!_disposed && _activeRequestId == requestId) {
-        if (!_ownsRequestContext(requestId, adventureId, branchId)) {
-          // The old turn still owns this engine's transient buffers, but has
-          // lost its workspace. Clear them without applying any host data.
-          _scenePhase = SceneDialoguePhase.cancelled;
-          _clearPendingAssistantPresentation();
-          _streamingContent = '';
-          _streamNotifier.value = '';
-          _reasoningContent = '';
-          _reasoningStreamNotifier.value = '';
-          _isThinkingNotifier.value = false;
-        }
-        // 安全网：确保 _status 在任何路径下都被重置
-        //（try/catch 中已提前设置，此处不重复 notifyParent 只在未通知时补发）
-        if (_status != ChatStatus.idle) {
-          _status = ChatStatus.idle;
-        }
-        if (hasPendingAssistant &&
-            _pendingAssistantPhase != PendingAssistantPhase.failed) {
-          _clearPendingAssistantPresentation();
-        }
-        if (_activeRequestId == requestId) {
-          _activeRequestId = null;
-          _activeTaskHandle = null;
-          // R02-A: a cancellation that arrived after the irreversible commit must
-          // not leak into the next request. The turn finished normally, so the
-          // transient cancel flag is cleared here as well as on the rollback path.
-          if (turnCommitted) {
-            _cancelRequested = false;
-          }
-        }
-        GenerationDiagnostics.instance.mark('[ChatTurn][END]', {
-          'engine': identityHashCode(this),
-          'request': requestId,
-          'generation': requestGeneration,
-          'phase': _scenePhase.name,
-          'committed': turnCommitted,
-          'status': _status.name,
-          'scheduler': GenerationRequestScheduler.shared.debugSnapshot(),
-        });
-        _notifyAll();
-      }
     }
+    if (_status != ChatStatus.idle) {
+      _status = ChatStatus.idle;
+    }
+    if (hasPendingAssistant &&
+        _pendingAssistantPhase != PendingAssistantPhase.failed) {
+      _clearPendingAssistantPresentation();
+    }
+    _activeRequestId = null;
+    _activeTaskHandle = null;
+    // A cancellation after the irreversible commit must not leak into the
+    // next turn.
+    if (context.turnCommitted) {
+      _cancelRequested = false;
+    }
+    GenerationDiagnostics.instance.mark('[ChatTurn][END]', {
+      'engine': identityHashCode(this),
+      'request': context.requestId,
+      'generation': context.generation,
+      'phase': _scenePhase.name,
+      'committed': context.turnCommitted,
+      'status': _status.name,
+      'scheduler': GenerationRequestScheduler.shared.debugSnapshot(),
+    });
+    _notifyAll();
   }
 
   /// 辅助任务：只为已经生成成功的正文补齐行动选项。
@@ -4112,4 +4158,115 @@ $recent
     _reasoningStreamNotifier.dispose();
     _isThinkingNotifier.dispose();
   }
+}
+
+/// Identity and durability flags for one scene turn.
+///
+/// Mutable fields exist only for the two facts that must survive every phase:
+/// whether the database accepted the turn, and whether memory was re-synced
+/// from that durable result. All other stage data travels in typed results.
+final class _TurnExecutionContext {
+  _TurnExecutionContext({
+    required this.content,
+    required this.requestId,
+    required this.generation,
+    required this.adventureId,
+    required this.branchId,
+  });
+
+  final String content;
+  final String requestId;
+  final int generation;
+  final int? adventureId;
+  final int branchId;
+
+  /// True only after `commitSceneDialogueTurn` returned durably.
+  bool turnCommitted = false;
+
+  /// True once the committed result was applied back into host memory.
+  bool memoryReconciled = false;
+
+  SceneDialogueCommitResult? committedResult;
+  Message? committedAssistantMessage;
+
+  /// Multi-stage prose completed so far; used by the failure path to keep a
+  /// partially generated narrative visible.
+  String completedNarrativePrefix = '';
+
+  bool isCurrent(ChatEngine engine) =>
+      engine._isRequestCurrent(requestId, generation, adventureId, branchId);
+
+  bool owns(ChatEngine engine) =>
+      engine._ownsRequestContext(requestId, adventureId, branchId);
+}
+
+final class _NarrativeRunResult {
+  const _NarrativeRunResult({
+    required this.json,
+    required this.reasoning,
+    required this.playerStopRequested,
+    required this.lengthGuardBaseMessages,
+  });
+
+  final String json;
+  final String reasoning;
+  final bool playerStopRequested;
+  final List<Map<String, String>> lengthGuardBaseMessages;
+}
+
+final class _FinalizedNarrative {
+  const _FinalizedNarrative({
+    required this.json,
+    required this.finalNarrative,
+    required this.reasoning,
+    required this.lengthGuard,
+  });
+
+  final String json;
+  final String finalNarrative;
+  final String reasoning;
+  final NarrativeLengthGuardResult lengthGuard;
+}
+
+final class _SettlementPhaseResult {
+  const _SettlementPhaseResult({
+    required this.outcome,
+    required this.optionsFromSettlement,
+    required this.assistantMessage,
+    required this.candidates,
+    required this.continuity,
+    required this.narrativeChineseChars,
+  });
+
+  final _SettlementOutcome outcome;
+  final bool optionsFromSettlement;
+  final Message assistantMessage;
+  final List<SceneSettingCandidate> candidates;
+  final SceneConsistencyResult continuity;
+  final int narrativeChineseChars;
+}
+
+final class _TurnCommitPlan {
+  const _TurnCommitPlan({
+    required this.commit,
+    required this.inMemoryResult,
+    required this.assistantMessage,
+    required this.settledConfig,
+    required this.statusSnapshot,
+    required this.lengthVerdict,
+    required this.lengthPassed,
+    required this.narrativeChineseChars,
+    required this.runtimeRevision,
+  });
+
+  /// Null when the turn has no persisted adventure (in-memory preview).
+  final SceneDialogueCommit? commit;
+  final SceneDialogueCommitResult inMemoryResult;
+  final Message assistantMessage;
+  final AdventureConfig? settledConfig;
+  final List<Map<String, dynamic>>? statusSnapshot;
+  final NarrativeLengthVerdict lengthVerdict;
+  final bool lengthPassed;
+  final int narrativeChineseChars;
+  final int runtimeRevision;
 }
