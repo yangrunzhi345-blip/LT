@@ -1,12 +1,10 @@
-/// 预设冒险数据 — 从 landing_screen 提取为独立模块
+import 'adventure_config.dart';
+import 'supporting_character.dart';
+
+/// A saved adventure preset used by the preset-scenes workbench.
 ///
-/// 添加新预设：向 `all` 列表追加 `_PresetData` 条目即可。
-/// 未来可改为从 JSON 文件或远程 API 加载。
-library preset_adventures;
-
-import '../models/adventure_config.dart';
-import '../models/supporting_character.dart';
-
+/// The model lives in `models/` so presentation can consume it without
+/// depending on the `data/` layer. Catalog loading is an application concern.
 class PresetAdventureData {
   final String title;
   final String difficulty;
@@ -24,7 +22,7 @@ class PresetAdventureData {
   ///
   /// When present it carries characters, relationships, custom attributes,
   /// NPC snapshots and opening branches that the legacy flat fields cannot
-  /// represent.  Legacy presets leave it null.
+  /// represent. Legacy presets leave it null.
   final AdventureConfig? restoredConfig;
 
   PresetAdventureData({
@@ -58,6 +56,3 @@ class PresetAdventureData {
             List<SupportingCharacter>.from(supportingCharacters),
       );
 }
-
-/// 全部预设冒险列表（纯净版 — 无内置预设）
-final presetAdventures = <PresetAdventureData>[];

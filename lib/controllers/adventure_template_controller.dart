@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../application/adventure/adventure_template_use_case.dart';
-import '../data/preset_adventures.dart';
+import '../models/preset_adventure.dart';
 import '../models/adventure_config.dart';
 import '../models/supporting_character.dart';
 import '../services/database_service.dart';

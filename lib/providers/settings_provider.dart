@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/app_config.dart';
+import '../core/localization/app_error_localizer.dart';
 import '../core/theme/app_colors.dart';
 import '../domain/resources/resource_limits.dart';
 import '../models/completion_params.dart';
@@ -171,7 +172,17 @@ class SettingsProvider extends ChangeNotifier {
   LLMService get llmService => getOrCreateLlm();
 
   /// 使用当前已解析的服务商、模型、端点和密钥测试连接。
-  Future<bool> testCurrentLlmConnection() => getOrCreateLlm().testConnection();
+  /// Tests the active configuration and surfaces a presentation-safe failure.
+  ///
+  /// Transport details are mapped once here so widgets never import the
+  /// service-layer ApiError type.
+  Future<bool> testCurrentLlmConnection() async {
+    try {
+      return await getOrCreateLlm().testConnection();
+    } catch (error, stackTrace) {
+      throw asAppDomainError(error, stackTrace);
+    }
+  }
 
   LLMService getOrCreateLlm() {
     final newKey =

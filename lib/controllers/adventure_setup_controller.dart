@@ -129,6 +129,33 @@ class AdventureSetupController extends ChangeNotifier {
     ));
   }
 
+  /// Builds a snapshot from raw detail JSON.
+  ///
+  /// The wizard's fallback path may hold a detail payload that never reached
+  /// the setup list; snapshot construction stays here so presentation never
+  /// imports the service layer.
+  Map<String, dynamic> buildWorldviewSnapshotFromDetails({
+    required String id,
+    required String name,
+    required String description,
+    required String detailJson,
+  }) {
+    Map<String, dynamic>? detail;
+    if (detailJson.isNotEmpty && detailJson != '{}') {
+      try {
+        final decoded = jsonDecode(detailJson);
+        if (decoded is Map<String, dynamic>) detail = decoded;
+      } catch (_) {}
+    }
+    return WorldviewSnapshotService.snapshot(WorldviewPreset(
+      id: id,
+      name: name,
+      description: description,
+      details:
+          WorldviewDetails.fromJson(detail, fallbackDescription: description),
+    ));
+  }
+
   /// 加载初始数据。
   ///
   /// worldview、character、NPC 三类资源彼此独立加载：任一类型失败只记录该类

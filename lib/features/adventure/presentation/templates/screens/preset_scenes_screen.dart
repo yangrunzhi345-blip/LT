@@ -12,7 +12,7 @@ import '../../../../../core/theme/app_radius.dart';
 import '../../../../../core/theme/app_spacing.dart';
 import '../../../../../core/widgets/app_action_menu.dart';
 import '../../../../../core/widgets/app_confirm_dialog.dart';
-import '../../../../../data/preset_adventures.dart';
+import '../../../../../models/preset_adventure.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';

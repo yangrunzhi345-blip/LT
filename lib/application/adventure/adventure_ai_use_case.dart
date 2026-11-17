@@ -1,4 +1,4 @@
-import '../../data/preset_adventures.dart';
+import '../../models/preset_adventure.dart';
 import '../../models/llm_task.dart';
 import '../../models/supporting_character.dart';
 import '../../utils/ai_adventure_utils.dart';

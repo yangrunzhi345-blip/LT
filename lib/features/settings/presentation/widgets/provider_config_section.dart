@@ -10,7 +10,6 @@ import '../../../../core/widgets/app_text_field.dart';
 import '../../../../models/llm_provider.dart';
 import '../../../../models/model_capabilities.dart';
 import '../../../../providers/riverpod_providers.dart';
-import '../../../../services/api_error.dart';
 import '../../../../domain/errors/app_error.dart';
 import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -95,8 +94,8 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
       if (!mounted) return;
       final displayError = localizeAppError(
         l10n,
-        e is ApiError
-            ? e.toDomainError()
+        e is AppDomainError
+            ? e
             : const AppDomainError(code: AppErrorCode.unknown),
       );
       setState(() {

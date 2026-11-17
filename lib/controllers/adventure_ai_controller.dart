@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../application/adventure/adventure_ai_use_case.dart';
 import '../application/llm/llm_gateway.dart';
-import '../data/preset_adventures.dart';
+import '../models/preset_adventure.dart';
 import '../services/api_error.dart';
 import '../domain/errors/app_error.dart';
 
