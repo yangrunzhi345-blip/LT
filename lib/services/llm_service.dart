@@ -649,6 +649,10 @@ class LLMService with _SseGateTrace {
     GenerationTaskHandle? taskHandle,
     required _LLMAttemptTrace trace,
   }) async {
+    // No shipped provider selects this path: both `deepseek` and `custom`
+    // use the OpenAI-compatible protocol. The Anthropic adapter is a retained
+    // fallback protocol implementation, reachable only through the
+    // @visibleForTesting override and covered by the streaming C6 test.
     final useAnthropicMessagesApi = anthropicMessagesApiOverride ??
         config.provider.usesAnthropicMessagesApi;
     return useAnthropicMessagesApi
@@ -694,6 +698,8 @@ class LLMService with _SseGateTrace {
   Map<String, String> _buildHeaders({required bool includeJson}) {
     final headers = <String, String>{};
     if (includeJson) headers['Content-Type'] = 'application/json';
+    // See _doSendMessageStreamDetailed: this is the retained Anthropic
+    // adapter's header shape, not a production-provider branch.
     if (config.provider.usesAnthropicMessagesApi) {
       headers['x-api-key'] = config.apiKey;
       headers['anthropic-version'] = '2023-06-01';
@@ -1120,6 +1126,10 @@ class LLMService with _SseGateTrace {
     }
   }
 
+  /// Retained Anthropic Messages fallback adapter.
+  ///
+  /// Not selected by any production [LLMProvider]; exercises the same failure
+  /// and cancellation contracts through the test-only seam.
   Future<LLMStreamResult> _doSendAnthropicStreamDetailed(
     List<LlmMessage> messages,
     void Function(String chunk) onChunk,

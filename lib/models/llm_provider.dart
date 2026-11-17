@@ -18,12 +18,6 @@ enum LLMProvider {
     LLMProvider.deepseek,
   ];
 
-  static const List<LLMProvider> domesticProviders = [
-    LLMProvider.deepseek,
-  ];
-
-  static const List<LLMProvider> overseasProviders = <LLMProvider>[];
-
   String get displayName => switch (this) {
         LLMProvider.deepseek => 'DeepSeek 官方 API',
         LLMProvider.custom => '自定义 (OpenAI 兼容)',
@@ -55,8 +49,14 @@ enum LLMProvider {
         LLMProvider.custom => [],
       };
 
-  bool get usesOpenAICompat => true;
-
+  /// Anthropic Messages is a retained fallback adapter, not a production
+  /// provider capability.
+  ///
+  /// Every currently shipped provider speaks the OpenAI-compatible protocol.
+  /// This returns false so production always takes that path; the adapter is
+  /// enabled only through LLMService's @visibleForTesting
+  /// `forceAnthropicMessagesApi` seam, guarded by the C6 test in
+  /// `test/services/llm_streaming_reliability_test.dart`.
   bool get usesAnthropicMessagesApi => false;
 
   String get chatCompletionsPath => '/chat/completions';
