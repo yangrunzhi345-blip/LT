@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:sqflite/sqflite.dart';
 import '../../models/world_embedding.dart';
 import 'world_embedding_repository.dart';
@@ -127,8 +128,11 @@ class WorldEmbeddingRepositoryImpl implements IWorldEmbeddingRepository {
           _memoryCache[_cacheKey(emb.entryId, emb.modelId, emb.contentHash)] =
               emb;
           results[emb.entryId] = emb;
-        } catch (_) {
-          // Isolate malformed row safely
+        } catch (error) {
+          // Keep the malformed row isolated, but record which row was skipped.
+          debugPrint('[WorldEmbeddingRepository] skipped malformed row: '
+              'entry=${row['entry_id']} model=${row['model_id']} '
+              'type=${error.runtimeType}');
         }
       }
     }
@@ -154,8 +158,11 @@ class WorldEmbeddingRepositoryImpl implements IWorldEmbeddingRepository {
         _memoryCache[_cacheKey(emb.entryId, emb.modelId, emb.contentHash)] =
             emb;
         results.add(emb);
-      } catch (_) {
-        // Isolate malformed row
+      } catch (error) {
+        // Keep the malformed row isolated, but record which row was skipped.
+        debugPrint('[WorldEmbeddingRepository] skipped malformed row: '
+            'entry=${row['entry_id']} model=${row['model_id']} '
+            'type=${error.runtimeType}');
       }
     }
     return results;

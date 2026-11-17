@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/resources/resource_blueprint.dart';
@@ -335,8 +337,10 @@ class ResourceBlueprintRepositoryImpl implements IResourceBlueprintRepository {
           if (parsed is Map<String, dynamic>) {
             existingResourceMetadata = parsed;
           }
-        } catch (_) {
+        } catch (error) {
           existingResourceMetadata = null;
+          debugPrint('[ResourceBlueprintRepository] malformed metadata_json '
+              'for resource ${allocatedResId.value}: ${error.runtimeType}');
         }
 
         final existingSessionId =

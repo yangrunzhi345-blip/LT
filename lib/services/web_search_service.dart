@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 
 class WebSearchService {
@@ -50,7 +52,9 @@ class WebSearchService {
       }
 
       return results.where((r) => r.snippet.isNotEmpty).toList();
-    } catch (_) {
+    } catch (error) {
+      // Search is best-effort; keep the empty result but record the failure.
+      debugPrint('[WebSearchService] search failed: ${error.runtimeType}');
       return [];
     } finally {
       _isSearching = false;

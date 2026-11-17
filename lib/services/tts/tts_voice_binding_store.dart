@@ -94,8 +94,10 @@ Map<String, Object?>? _decodeMap(String raw) {
           if (entry.key is String) entry.key as String: entry.value,
       };
     }
-  } catch (_) {
-    // Malformed value: fall back to defaults.
+  } catch (error) {
+    // Malformed value: keep the defaults, but record the failure category.
+    debugPrint('[TtsVoiceBindingStore] malformed binding value: '
+        '${error.runtimeType}');
   }
   return null;
 }

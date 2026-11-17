@@ -531,7 +531,11 @@ class TtsModelManager extends ChangeNotifier
     if (!await file.exists()) return null;
     try {
       return TtsInstalledManifest.fromJsonString(await file.readAsString());
-    } catch (_) {
+    } catch (error) {
+      // A corrupt manifest is treated as not-installed, but the model id and
+      // failure type are recorded.
+      debugPrint('[TtsModelManager] malformed manifest for ${model.modelId}: '
+          '${error.runtimeType}');
       return null;
     }
   }

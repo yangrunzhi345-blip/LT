@@ -121,7 +121,9 @@ class AutoBackupService {
         await checkDb.close();
         final status = result.first.values.first.toString();
         if (status != 'ok') return false;
-      } catch (_) {
+      } catch (error) {
+        debugPrint('[AutoBackup] backup integrity check failed: '
+            '${error.runtimeType}');
         return false;
       }
 

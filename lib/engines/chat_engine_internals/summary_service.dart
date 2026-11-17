@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show VoidCallback;
+import 'package:flutter/foundation.dart' show VoidCallback, debugPrint;
 import '../../models/message.dart';
 import '../../models/game_state.dart';
 import '../../models/completion_params.dart';
@@ -128,8 +128,10 @@ class SummaryService {
 
         await onGenerate(toSummarize, summarizeEnd, capturedAdventureId,
             capturedBranchId, generation, boundaryMessageId);
-      } catch (_) {
-        // 摘要是后台维护任务；失败不得形成未处理的异步异常。
+      } catch (error) {
+        // 摘要是后台维护任务；失败不得形成未处理的异步异常，但要留痕。
+        debugPrint('[SummaryService] background summary failed: '
+            '${error.runtimeType}');
       } finally {
         _summaryInFlight = false;
       }
@@ -233,7 +235,9 @@ class SummaryService {
           onNotify();
           return;
         }
-      } catch (_) {
+      } catch (error) {
+        debugPrint('[SummaryService] summary attempt ${attempt + 1} failed: '
+            '${error.runtimeType}');
         if (attempt < 2) {
           await Future.delayed(Duration(seconds: 3 * (attempt + 1)));
         }
@@ -244,6 +248,9 @@ class SummaryService {
   Future<void> cleanupOldSummaries(int adventureId) async {
     try {
       await _adventureRepo.cleanupOldSummaries(adventureId);
-    } catch (_) {}
+    } catch (error) {
+      debugPrint('[SummaryService] summary cleanup failed: '
+          '${error.runtimeType}');
+    }
   }
 }

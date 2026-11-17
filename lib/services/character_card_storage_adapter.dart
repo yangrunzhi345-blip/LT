@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show debugPrint;
+
 /// Preserves the original character-card envelope while exposing one logical
 /// payload for both top-level cards and SillyTavern `data` wrapped cards.
 class CharacterCardStorageAdapter {
@@ -18,7 +20,13 @@ class CharacterCardStorageAdapter {
     try {
       final decoded = value is String ? jsonDecode(value) : value;
       if (decoded is Map) root = Map<String, dynamic>.from(decoded);
-    } catch (_) {}
+    } catch (error) {
+      // Keep the empty-map fallback for callers, but make a corrupt stored
+      // card observable. The value itself may contain story text; only its
+      // type is logged.
+      debugPrint('[CharacterCardStorageAdapter] decode failed: '
+          '${error.runtimeType} valueType=${value.runtimeType}');
+    }
     final wrapped = root['data'] is Map;
     return CharacterCardStorageAdapter._(
       original: root,

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'api_error.dart';
 import '../models/completion_params.dart';
 import '../models/generation_mode.dart';
@@ -2135,7 +2135,12 @@ $userPrompt
               })
           .where((npc) => (npc['name'] ?? '').isNotEmpty)
           .toList();
-    } catch (_) {}
+    } catch (error) {
+      // Keep the empty-list fallback; the response body may contain user
+      // story text, so log only the failure type and size.
+      debugPrint('[AiGeneratorService] NPC response parse failed: '
+          '${error.runtimeType} chars=${response.length}');
+    }
     return [];
   }
 

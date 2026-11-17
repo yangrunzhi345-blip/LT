@@ -161,8 +161,11 @@ mixin _AdventureDiagnosticsStore on _AdventureRepositoryBase {
           if (beforeRaw is String && beforeRaw.isNotEmpty) {
             try {
               before = jsonDecode(beforeRaw);
-            } catch (_) {
+            } catch (error) {
               before = beforeRaw;
+              exportWarnings
+                  .add('Commit $commitId $entityType:$entityId: malformed '
+                      'before_json (${error.runtimeType})');
             }
           }
 
@@ -171,8 +174,11 @@ mixin _AdventureDiagnosticsStore on _AdventureRepositoryBase {
           if (afterRaw is String && afterRaw.isNotEmpty) {
             try {
               after = jsonDecode(afterRaw);
-            } catch (_) {
+            } catch (error) {
               after = afterRaw;
+              exportWarnings
+                  .add('Commit $commitId $entityType:$entityId: malformed '
+                      'after_json (${error.runtimeType})');
             }
           }
 

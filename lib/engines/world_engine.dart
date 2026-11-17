@@ -213,7 +213,11 @@ class WorldEngine {
           'worldview_presets', contentHash)) {
         return;
       }
-    } catch (_) {/* DB unavailable — skip dedup */}
+    } catch (error) {
+      // Dedup stays best-effort; a missing/locked DB must not block saving.
+      debugPrint('[WorldEngine] content dedup unavailable: '
+          '${error.runtimeType} hash=${contentHash.length >= 8 ? contentHash.substring(0, 8) : contentHash}');
+    }
     await _requireCreationPort().saveWorldview(
       id: preset.id,
       name: name,
@@ -325,7 +329,12 @@ class WorldEngine {
           }
         }
         await prefs.remove('worldview_presets');
-      } catch (_) {}
+      } catch (error) {
+        // The legacy prefs blob is dropped only after a parse; a failure here
+        // means no preset was migrated, so make it observable.
+        debugPrint('[WorldEngine] worldview preset migration failed: '
+            '${error.runtimeType}');
+      }
     }
   }
 }

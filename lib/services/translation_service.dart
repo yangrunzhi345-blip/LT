@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show debugPrint;
+
 import '../models/completion_params.dart';
 import '../models/llm_task.dart';
 import '../models/model_capabilities.dart';
@@ -57,7 +59,10 @@ class TranslationService {
         ),
       );
       return result.isEmpty ? text : result;
-    } catch (_) {
+    } catch (error) {
+      // Preserve the original-text fallback; surface the failure category.
+      debugPrint('[TranslationService] translation failed: '
+          '${error.runtimeType}');
       return text;
     } finally {
       _isTranslating = false;
