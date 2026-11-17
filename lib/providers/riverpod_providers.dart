@@ -40,6 +40,7 @@ import '../services/ai_generator_service.dart';
 import '../application/adventure/adventure_setup_use_case.dart';
 import '../application/adventure/adventure_ai_use_case.dart';
 import '../application/adventure/adventure_template_use_case.dart';
+import '../features/adventure/application/use_cases/start_adventure_from_wizard.dart';
 import '../controllers/adventure_setup_controller.dart';
 import '../controllers/adventure_ai_controller.dart';
 import '../controllers/adventure_template_controller.dart';
@@ -357,6 +358,17 @@ final adventureSetupControllerProvider =
     ChangeNotifierProvider<AdventureSetupController>((ref) {
   return AdventureSetupController(
     useCase: AdventureSetupUseCase(ref.read(libraryRepoProvider)),
+  );
+});
+
+/// Adventure Wizard 的启动编排：持久化世界观/角色、重建快照、
+/// 装配配置并通过 readiness gate。Screen 只负责输入、反馈与导航。
+final startAdventureFromWizardUseCaseProvider =
+    Provider<StartAdventureFromWizardUseCase>((ref) {
+  return StartAdventureFromWizardUseCase(
+    crud: ref.read(resourceCrudControllerProvider),
+    setup: ref.read(adventureSetupControllerProvider),
+    gate: ref.read(adventureReadinessGateProvider),
   );
 });
 

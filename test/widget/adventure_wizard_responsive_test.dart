@@ -9,6 +9,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart';
+import 'package:lt_dialogue/features/adventure/presentation/wizard/widgets/character_step/character_relationship_panel.dart';
+import 'package:lt_dialogue/features/adventure/presentation/wizard/widgets/character_step/character_roster_panel.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
 
@@ -134,5 +136,68 @@ void main() {
         tester.widget<ConstrainedBox>(constrainedBoxFinder.first);
     expect(constrainedBox.constraints.maxWidth, equals(1040));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'populated character step survives compact viewports and keeps the roster usable',
+      (tester) async {
+    await repo.saveCharacterCard(
+      id: 'char_resp_2',
+      name: '贝拉',
+      jsonData: jsonEncode({
+        'data': {
+          'name': '贝拉',
+          'gender': '女',
+          'age': '22',
+          'profession': '骑士',
+        },
+      }),
+      source: '测试',
+      now: DateTime.now().toIso8601String(),
+    );
+
+    const viewports = [
+      Size(320, 568),
+      Size(360, 640),
+      Size(390, 844),
+      Size(412, 915),
+      Size(768, 1024),
+    ];
+
+    for (final viewport in viewports) {
+      await pumpWizardAt(tester, viewport);
+
+      final stepper = tester.widget<Stepper>(find.byType(Stepper));
+      stepper.onStepTapped!(1);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'empty roster must not overflow at $viewport',
+      );
+
+      for (final name in ['艾丽娅', '贝拉']) {
+        final chip = find.textContaining(name).first;
+        await tester.ensureVisible(chip);
+        await tester.pump();
+        await tester.tap(chip);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'adding $name must not overflow at $viewport',
+        );
+      }
+
+      expect(find.byType(WizardCharacterRosterPanel), findsOneWidget);
+      // Two characters also render the bond editor, the densest block of the
+      // step, so this covers both panels at the minimum width.
+      expect(find.byType(WizardCharacterRelationshipPanel), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'roster at $viewport');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
   });
 }

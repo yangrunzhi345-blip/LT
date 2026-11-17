@@ -164,7 +164,7 @@ extension _WizardNpcPreviewSteps on _AdventureWizardScreenState {
                       c.narrativeRole == AdventureCharacterRole.custom &&
                               c.customRoleName.trim().isNotEmpty
                           ? c.customRoleName.trim()
-                          : _localizedAdventureRole(c.narrativeRole, l10n);
+                          : localizedAdventureRole(c.narrativeRole, l10n);
                   return '${c.name} [$role${c.profession.isNotEmpty ? " · ${c.profession}" : ""}]';
                 }).join('、'),
               ),
@@ -203,7 +203,7 @@ extension _WizardNpcPreviewSteps on _AdventureWizardScreenState {
                       r.relationType == AdventureRelationType.custom &&
                               r.customRelationName.trim().isNotEmpty
                           ? r.customRelationName.trim()
-                          : _localizedAdventureRelation(r.relationType, l10n);
+                          : localizedAdventureRelation(r.relationType, l10n);
                   return '$n1 ⇄ $n2: $relation$desc';
                 }).join('；'),
               ),
