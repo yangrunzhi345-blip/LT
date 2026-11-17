@@ -73,7 +73,8 @@
 > ≤600 行），`scene.dart` 拆为 `scene_turn_commit` / `scene_state_presence`。
 > 三个跨组共用的场景写入 helper 上移至 `_AdventureRepositoryBase`。
 > 现在所有子域文件 ≤565 行；`IAdventureRepository` 接口、SQL、事务边界与
-> 幂等键均未改动。定向测试 83 passed，`flutter analyze --no-pub` 无问题。
+> 幂等键均未改动。定向测试 83 passed，`flutter analyze --no-pub` 无问题，
+> 全量 `flutter test` 4236 passed / 7 skipped。
 
 ### 未完成内容（历史记录）
 
