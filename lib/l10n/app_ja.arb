@@ -3550,6 +3550,15 @@
     }
   },
   "eventRestCompleted": "休息が完了しました。",
+  "eventRestRecovered": "ずいぶん楽になった。物語を続けますか？",
+  "eventLevelUpRecovery": "レベルアップ！現在 Lv.{level}。HP/MP 全回復 | 全能力 +1 | スキルポイント +2",
+  "@eventLevelUpRecovery": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "eventItemAdded": "{item} を獲得しました。",
   "@eventItemAdded": {
     "placeholders": {

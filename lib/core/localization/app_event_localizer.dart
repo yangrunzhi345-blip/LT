@@ -32,5 +32,11 @@ String localizeAppEvent(AppLocalizations l10n, AppEvent event) {
       return l10n.eventSkillLearned(p['skill']?.toString() ?? '');
     case AppEventCode.skillFailed:
       return l10n.eventSkillFailed;
+    case AppEventCode.apiKeyNotConfigured:
+      return l10n.apiKeyNotConfiguredPrompt;
+    case AppEventCode.restRecovered:
+      return l10n.eventRestRecovered;
+    case AppEventCode.levelUpRecovery:
+      return l10n.eventLevelUpRecovery((p['level'] as num?)?.toInt() ?? 0);
   }
 }

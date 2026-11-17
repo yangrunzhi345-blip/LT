@@ -1379,7 +1379,8 @@ class ChatEngine {
     if (_host.apiKey.isEmpty) {
       _host.messages.add(Message(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: '⚠️ 请先配置 API 密钥',
+        content: AppEventCodec.encode(
+            const AppEvent(code: AppEventCode.apiKeyNotConfigured)),
         isUser: false,
       ));
       _notifyAll();
@@ -3669,7 +3670,8 @@ $recent
     ));
     _host.messages.add(Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: '（你感觉精神好多了。要继续剧情吗？）',
+      content: AppEventCodec.encode(
+          const AppEvent(code: AppEventCode.restRecovered)),
       isUser: false,
     ));
     _notifyAll();

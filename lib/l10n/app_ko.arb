@@ -3550,6 +3550,15 @@
     }
   },
   "eventRestCompleted": "휴식이 완료되었습니다.",
+  "eventRestRecovered": "기분이 훨씬 좋아졌다. 이야기를 계속할까?",
+  "eventLevelUpRecovery": "레벨 업! 현재 Lv.{level}. HP/MP 완전 회복 | 모든 능력치 +1 | 스킬 포인트 +2",
+  "@eventLevelUpRecovery": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "eventItemAdded": "{item}을(를) 획득했습니다.",
   "@eventItemAdded": {
     "placeholders": {

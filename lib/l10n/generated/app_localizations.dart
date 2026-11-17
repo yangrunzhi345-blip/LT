@@ -9300,6 +9300,18 @@ abstract class AppLocalizations {
   /// **'Rest completed.'**
   String get eventRestCompleted;
 
+  /// No description provided for @eventRestRecovered.
+  ///
+  /// In en, this message translates to:
+  /// **'You feel much better. Continue the story?'**
+  String get eventRestRecovered;
+
+  /// No description provided for @eventLevelUpRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Level up! You are now Lv.{level}. HP/MP fully restored | All stats +1 | +2 skill points'**
+  String eventLevelUpRecovery(int level);
+
   /// No description provided for @eventItemAdded.
   ///
   /// In en, this message translates to:

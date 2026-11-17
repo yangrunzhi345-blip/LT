@@ -5039,6 +5039,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get eventRestCompleted => '休息完成。';
 
   @override
+  String get eventRestRecovered => '你感觉精神好多了。要继续剧情吗？';
+
+  @override
+  String eventLevelUpRecovery(int level) {
+    return '升级！现在是 Lv.$level。HP/MP 完全恢复 | 全属性 +1 | 获得 2 技能点';
+  }
+
+  @override
   String eventItemAdded(String item) {
     return '获得 $item。';
   }
@@ -11309,6 +11317,14 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get eventRestCompleted => '休息完成。';
 
   @override
+  String get eventRestRecovered => '你感觉精神好多了。要继续剧情吗？';
+
+  @override
+  String eventLevelUpRecovery(int level) {
+    return '升级！现在是 Lv.$level。HP/MP 完全恢复 | 全属性 +1 | 获得 2 技能点';
+  }
+
+  @override
   String eventItemAdded(String item) {
     return '获得 $item。';
   }
@@ -17577,6 +17593,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get eventRestCompleted => '休息完成。';
+
+  @override
+  String get eventRestRecovered => '你感覺精神好多了。要繼續劇情嗎？';
+
+  @override
+  String eventLevelUpRecovery(int level) {
+    return '升級！現在是 Lv.$level。HP/MP 完全恢復 | 全屬性 +1 | 獲得 2 技能點';
+  }
 
   @override
   String eventItemAdded(String item) {

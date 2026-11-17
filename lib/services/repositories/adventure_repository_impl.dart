@@ -6,6 +6,8 @@ import '../../application/resources/resource_trash_service.dart';
 import '../../application/adventure/adventure_character_identity.dart';
 import '../../application/adventure/adventure_tracked_state_registry.dart';
 import '../../core/utils/json_value_reader.dart';
+import '../../domain/events/app_event.dart';
+import '../../domain/events/app_event_codec.dart';
 import '../../models/adventure_config.dart';
 import '../../models/adventure_response.dart';
 import '../../models/adventure_runtime_state.dart';
@@ -1492,8 +1494,10 @@ class AdventureRepositoryImpl implements IAdventureRepository {
         );
         additionalMessages.add(Message(
           id: '${commit.requestId}-level-${levelOrdinal++}',
-          content: '🌟 升级！现在是 Lv.$nextLevel\n'
-              'HP/MP 完全恢复 | 全属性 +1 | 获得 2 技能点',
+          content: AppEventCodec.encode(AppEvent(
+            code: AppEventCode.levelUpRecovery,
+            payload: {'level': nextLevel},
+          )),
           isUser: false,
         ));
       }

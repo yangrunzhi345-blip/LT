@@ -3474,6 +3474,15 @@
     }
   },
   "eventRestCompleted": "Rest completed.",
+  "eventRestRecovered": "You feel much better. Continue the story?",
+  "eventLevelUpRecovery": "Level up! You are now Lv.{level}. HP/MP fully restored | All stats +1 | +2 skill points",
+  "@eventLevelUpRecovery": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "eventItemAdded": "Added {item}.",
   "@eventItemAdded": {
     "placeholders": {

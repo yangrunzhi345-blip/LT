@@ -5141,6 +5141,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get eventRestCompleted => '휴식이 완료되었습니다.';
 
   @override
+  String get eventRestRecovered => '기분이 훨씬 좋아졌다. 이야기를 계속할까?';
+
+  @override
+  String eventLevelUpRecovery(int level) {
+    return '레벨 업! 현재 Lv.$level. HP/MP 완전 회복 | 모든 능력치 +1 | 스킬 포인트 +2';
+  }
+
+  @override
   String eventItemAdded(String item) {
     return '$item을(를) 획득했습니다.';
   }

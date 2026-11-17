@@ -5405,6 +5405,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventRestCompleted => 'Rest completed.';
 
   @override
+  String get eventRestRecovered => 'You feel much better. Continue the story?';
+
+  @override
+  String eventLevelUpRecovery(int level) {
+    return 'Level up! You are now Lv.$level. HP/MP fully restored | All stats +1 | +2 skill points';
+  }
+
+  @override
   String eventItemAdded(String item) {
     return 'Added $item.';
   }

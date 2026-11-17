@@ -5115,6 +5115,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get eventRestCompleted => '休息が完了しました。';
 
   @override
+  String get eventRestRecovered => 'ずいぶん楽になった。物語を続けますか？';
+
+  @override
+  String eventLevelUpRecovery(int level) {
+    return 'レベルアップ！現在 Lv.$level。HP/MP 全回復 | 全能力 +1 | スキルポイント +2';
+  }
+
+  @override
   String eventItemAdded(String item) {
     return '$item を獲得しました。';
   }

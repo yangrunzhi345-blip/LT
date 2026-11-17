@@ -3550,6 +3550,15 @@
     }
   },
   "eventRestCompleted": "休息完成。",
+  "eventRestRecovered": "你感觉精神好多了。要继续剧情吗？",
+  "eventLevelUpRecovery": "升级！现在是 Lv.{level}。HP/MP 完全恢复 | 全属性 +1 | 获得 2 技能点",
+  "@eventLevelUpRecovery": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "eventItemAdded": "获得 {item}。",
   "@eventItemAdded": {
     "placeholders": {

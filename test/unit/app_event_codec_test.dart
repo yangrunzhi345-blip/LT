@@ -18,6 +18,32 @@ void main() {
     expect(AppEventCodec.decode('legacy text'), isNull);
   });
 
+  test('engine notices render through l10n, not hardcoded copy', () {
+    final zh = lookupAppLocalizations(const Locale('zh'));
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(
+      localizeAppEvent(
+        zh,
+        const AppEvent(code: AppEventCode.apiKeyNotConfigured),
+      ),
+      zh.apiKeyNotConfiguredPrompt,
+    );
+    expect(
+      localizeAppEvent(zh, const AppEvent(code: AppEventCode.restRecovered)),
+      zh.eventRestRecovered,
+    );
+    expect(
+      localizeAppEvent(
+        en,
+        const AppEvent(
+          code: AppEventCode.levelUpRecovery,
+          payload: {'level': 3},
+        ),
+      ),
+      contains('3'),
+    );
+  });
+
   test('same event renders in the active locale', () {
     const event = AppEvent(
       code: AppEventCode.combatVictory,

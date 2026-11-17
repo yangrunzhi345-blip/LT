@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:lt_dialogue/domain/events/app_event.dart';
+import 'package:lt_dialogue/domain/events/app_event_codec.dart';
 import 'package:lt_dialogue/models/app_section.dart';
 import 'package:lt_dialogue/models/character_card.dart';
 import 'package:lt_dialogue/models/llm_provider.dart';
@@ -161,10 +163,17 @@ void main() {
       await chat.sendMessage('');
       expect(chat.messages.length, equals(msgCountBefore));
 
-      // With unconfigured API key, sendMessage blocks and displays warning message
+      // With unconfigured API key, sendMessage blocks with a locale-neutral
+      // event; the presentation layer owns the localized copy.
       await chat.sendMessage('你好');
       expect(
-          chat.messages.any((m) => m.content.contains('请先配置 API 密钥')), isTrue);
+        chat.messages.any(
+          (m) =>
+              AppEventCodec.decode(m.content)?.code ==
+              AppEventCode.apiKeyNotConfigured,
+        ),
+        isTrue,
+      );
     });
 
     test('ChatProvider defaults sidebar to expanded and toggles correctly',
