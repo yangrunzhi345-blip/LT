@@ -3,6 +3,7 @@
 - 生成时间：2026-11-18T00:23:29+08:00
 - 基线：`main @ e1b0e91`
 - 状态：阶段 1–5 已完成；以下为**非阻塞的后续可完成项**，按独立工作包拆分。
+- 更新（2026-11-18）：第 1 项 UI 瘦身已完成（`090bc54`、`6b9ed45`），第 6 项的全量测试基线已记录；第 2–7 项仍待处理。
 
 > 本文件只描述剩余工作、实施路径与验收标准，不代表当前代码存在功能缺陷。
 > 所有包均要求保持现有测试绿灯；行为变化必须先更新规格与回归测试。
@@ -11,7 +12,16 @@
 
 ## 1. UI 进一步瘦身：Wizard 与 Runtime Hub
 
-### 未完成内容
+> **状态：已完成（2026-11-18）。** 提交 `090bc54`、`6b9ed45`。
+>
+> - `adventure_wizard_screen.dart` 2091 → 782 行；角色步骤 1080 → 134 行。
+> - 角色步骤面板拆为 6 个显式 props Widget（header、AI 助手、资料库选择、阵容、羁绊、保存选项），位于 `wizard/widgets/character_step/`。
+> - 启动编排迁入 `features/adventure/application/use_cases/start_adventure_from_wizard.dart`，返回 `WizardStartReady` / `WizardStartBlocked` / `WizardStartNeedsStaleConfirmation`；`_handleStart` 只保留输入校验、对话框、反馈与导航。
+> - Runtime Hub 1037 → 591 行，Dashboard / Entities / Timeline / Turn History 迁入 `state/runtime_hub_views.dart`。
+> - 新增填充阵容的响应式回归测试（320/360/390/412/768），并修复其暴露的 4 处既有 320 px 溢出。
+> - 验证：`flutter analyze --no-pub` 无问题；全量 `flutter test` 4236 passed / 7 skipped。
+
+### 未完成内容（历史记录）
 
 - `lib/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart` 仍约 2091 行，负责状态、加载、保存/启动编排与 `build`。
 - `adventure_wizard_character_step.dart` 仍约 1080 行，是当前最大的单一 UI 面板。
