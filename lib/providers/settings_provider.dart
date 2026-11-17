@@ -32,6 +32,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _disposed = false;
   int _loadGeneration = 0;
   Future<void>? _loadFuture;
+  Future<void>? _pendingLegacyKeyMigration;
 
   String _apiKey = '';
   String _apiBaseUrl = AppConfig.apiBaseUrl;
@@ -263,6 +264,33 @@ class SettingsProvider extends ChangeNotifier {
     return future;
   }
 
+  /// Waits for the background legacy-key rewrite started by [loadApiKey].
+  ///
+  /// Production never waits for this migration; it is exposed so tests can
+  /// assert the rewritten record without timing sleeps.
+  @visibleForTesting
+  Future<void> debugAwaitLegacyKeyMigration() async {
+    final pending = _pendingLegacyKeyMigration;
+    if (pending != null) await pending;
+  }
+
+  /// Rewrites one legacy single-key record with the v2 dual-key format.
+  ///
+  /// The current value is re-read first: if another writer already replaced
+  /// the record, the migration is a no-op rather than overwriting newer data.
+  Future<void> _rewriteLegacyApiKey(
+    String provider,
+    String legacyCiphertext,
+    String plaintext,
+  ) async {
+    final current = await _settingsRepo.getEncryptedApiKeys();
+    if (current[provider] != legacyCiphertext) return;
+    await _settingsRepo.setEncryptedApiKey(
+      provider,
+      KeyVault.encrypt(plaintext),
+    );
+  }
+
   Future<void> _loadApiKey(int generation) async {
     final prefs = await SharedPreferences.getInstance();
     await _migrateEncryptedKeys(prefs);
@@ -270,12 +298,28 @@ class SettingsProvider extends ChangeNotifier {
     final settings = await _settingsRepo.getAllSettings();
     final providerKeys = <String, String>{};
     final encryptedKeys = await _settingsRepo.getEncryptedApiKeys();
+    final legacyMigrations = <Future<void>>[];
     for (final p in LLMProvider.values) {
-      try {
-        final encrypted = encryptedKeys[p.name] ?? '';
-        final decrypted = encrypted.isEmpty ? '' : KeyVault.decrypt(encrypted);
-        if (decrypted.isNotEmpty) providerKeys[p.name] = decrypted;
-      } catch (_) {}
+      final encrypted = encryptedKeys[p.name] ?? '';
+      if (encrypted.isEmpty) continue;
+      final opened = KeyVault.open(encrypted);
+      if (opened == null) continue;
+      providerKeys[p.name] = opened.plaintext;
+      if (opened.usedLegacyFormat) {
+        legacyMigrations.add(
+          _rewriteLegacyApiKey(p.name, encrypted, opened.plaintext),
+        );
+      }
+    }
+    if (legacyMigrations.isNotEmpty) {
+      final migration = Future.wait(legacyMigrations).then<void>((_) {});
+      _pendingLegacyKeyMigration = migration;
+      unawaited(migration.catchError((Object error) {
+        // The key is already usable in memory; a failed rewrite only leaves the
+        // legacy record in place for the next run.
+        debugPrint('[SettingsProvider] legacy API key re-encryption failed: '
+            '${error.runtimeType}');
+      }));
     }
 
     final storedProvider =
