@@ -26,8 +26,12 @@ import '../scene_state_proposal_validator.dart';
 import 'adventure_repository.dart';
 
 part 'adventure_repository_impl.runtime.dart';
+part 'adventure_repository_impl.runtime_head_entity.dart';
+part 'adventure_repository_impl.runtime_history.dart';
+part 'adventure_repository_impl.runtime_checkpoint.dart';
 part 'adventure_repository_impl.runtime_mutation.dart';
-part 'adventure_repository_impl.scene.dart';
+part 'adventure_repository_impl.scene_turn_commit.dart';
+part 'adventure_repository_impl.scene_state_presence.dart';
 part 'adventure_repository_impl.archive.dart';
 part 'adventure_repository_impl.diagnostics.dart';
 
@@ -91,6 +95,78 @@ abstract class _AdventureRepositoryBase implements IAdventureRepository {
 
   @override
   Future<SceneState?> getSceneState(int adventureId, int branchId);
+
+  Future<SceneState> _sceneStateInTransaction(
+    Transaction txn,
+    int adventureId,
+    int branchId,
+  ) async {
+    final rows = await txn.query(
+      'scene_runtime_state',
+      columns: const ['state_json'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
+    final encoded = rows.firstOrNull?['state_json'] as String?;
+    return encoded == null
+        ? const SceneState()
+        : (SceneState.tryDecode(encoded) ?? const SceneState());
+  }
+
+  Future<void> _writeSceneState(
+    Transaction txn,
+    int adventureId,
+    int branchId,
+    SceneState state,
+    int revision,
+  ) async {
+    await txn.insert(
+      'scene_runtime_state',
+      {
+        'adventure_id': adventureId,
+        'branch_id': branchId,
+        'state_json': state.encode(),
+        'schema_version': SceneState.schemaVersion,
+        'revision': revision,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> _writeScenePresenceProjection(
+    Transaction txn,
+    int adventureId,
+    int branchId,
+    List<String> participantIds, {
+    String? actorId,
+  }) async {
+    final old = await txn.query(
+      'scene_presence',
+      columns: const ['actor_id'],
+      where: 'adventure_id = ? AND branch_id = ?',
+      whereArgs: [adventureId, branchId],
+      limit: 1,
+    );
+    final participants = participantIds.toSet();
+    final selectedActor = actorId ?? old.firstOrNull?['actor_id'] as String?;
+    final projectedActor =
+        selectedActor != null && participants.contains(selectedActor)
+            ? selectedActor
+            : 'protagonist';
+    await txn.insert(
+      'scene_presence',
+      {
+        'adventure_id': adventureId,
+        'branch_id': branchId,
+        'actor_id': projectedActor,
+        'participant_ids_json': jsonEncode(participantIds),
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
 }
 
 // Markers share the existing trash lifecycle, but never share resource ids.
@@ -186,9 +262,13 @@ Map<String, Object?> _decodeMap(Object? raw) {
 
 class AdventureRepositoryImpl extends _AdventureRepositoryBase
     with
+        _AdventureRuntimeHeadEntityStore,
         _AdventureRuntimeStore,
+        _AdventureRuntimeHistoryStore,
+        _AdventureRuntimeCheckpointStore,
         _AdventureRuntimeMutationStore,
-        _AdventureSceneTurnStore,
+        _AdventureSceneTurnCommitStore,
+        _AdventureScenePresenceStore,
         _AdventureArchiveStore,
         _AdventureDiagnosticsStore
     implements IAdventureRepository {

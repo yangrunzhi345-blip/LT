@@ -68,7 +68,14 @@
 
 ## 2. Adventure Repository 进一步拆分
 
-### 未完成内容
+> **状态：已完成（2026-11-18）。** `runtime.dart` 拆为 `runtime_head_entity` /
+> `runtime_history` / `runtime_checkpoint`（Checkpoint 独立成文件以满足单文件
+> ≤600 行），`scene.dart` 拆为 `scene_turn_commit` / `scene_state_presence`。
+> 三个跨组共用的场景写入 helper 上移至 `_AdventureRepositoryBase`。
+> 现在所有子域文件 ≤565 行；`IAdventureRepository` 接口、SQL、事务边界与
+> 幂等键均未改动。定向测试 83 passed，`flutter analyze --no-pub` 无问题。
+
+### 未完成内容（历史记录）
 
 当前已拆为：
 
