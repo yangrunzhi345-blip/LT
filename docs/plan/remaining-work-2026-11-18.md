@@ -3,7 +3,7 @@
 - 生成时间：2026-11-18T00:23:29+08:00
 - 基线：`main @ e1b0e91`
 - 状态：阶段 1–5 已完成；以下为**非阻塞的后续可完成项**，按独立工作包拆分。
-- 更新（2026-11-18）：第 1 项 UI 瘦身已完成（`090bc54`、`6b9ed45`），第 6 项的全量测试基线已记录；第 2–7 项仍待处理。
+- 更新（2026-11-18）：第 1 项 UI 瘦身、第 2 项 Repository 拆分、第 3 项平台凭证库、第 4 项 Anthropic 正式支持已完成；第 5 项按设计不改，第 6 项仅剩真机验收，第 7 项未授权 push。
 
 > 本文件只描述剩余工作、实施路径与验收标准，不代表当前代码存在功能缺陷。
 > 所有包均要求保持现有测试绿灯；行为变化必须先更新规格与回归测试。
@@ -118,7 +118,18 @@
 
 ## 3. KeyVault 升级为平台凭证库
 
-### 未完成内容
+> **状态：已完成（2026-11-18）。** 用户已确认接受安全模型变化与回退策略。
+>
+> - 新增 `SecureKeyStore` 抽象与三个实现：`FlutterSecureKeyStore`（平台凭证库）、
+>   `EncryptedDatabaseKeyStore`（KeyVault 回退 / 迁移源）、`MigratingSecureKeyStore`（主从编排）。
+> - `SettingsProvider` 全部 Key 读写改经 `MigratingSecureKeyStore`；平台写入成功才删除数据库密文，
+>   失败则保留密文并可继续使用；同一 Provider 的读/迁移/写/删串行化，且对停滞的平台调用有 2s 有界等待。
+> - 诊断只记录操作名与异常类型，不含明文、密文或 Token；新增测试确保这一点。
+> - 文档：`docs/design/api-key-storage.md`。
+> - 测试：`test/unit/secure_key_store_test.dart`（10 例，含并发迁移/保存、不可用回退、日志脱敏）。
+> - 全量 `flutter test` 4252 passed / 7 skipped，`flutter analyze` 无问题。
+
+### 未完成内容（历史记录）
 
 - 当前 `KeyVault` 是**应用层混淆加密**：PBKDF2 密码与 pepper 编译在应用中，不是 OS Keychain/Keystore，也不是设备绑定。
 - 已完成 v2 双密钥与旧格式后台迁移，但安全模型仍是「读取数据库 + 逆向应用可恢复」。
@@ -161,7 +172,20 @@
 
 ## 4. Anthropic 备用适配器去留
 
-### 未完成内容
+> **状态：已完成（2026-11-18），采用方案 B。** 用户已确认产品范围。
+>
+> - `LLMProvider` 新增 `anthropic`：默认 base URL `https://api.anthropic.com`、
+>   `chatCompletionsPath` 为 `/v1/messages`、`modelsPath` 为 `/v1/models`，
+>   并纳入 `cloudProviders` 与设置页 Provider 选择。
+> - `ModelCapabilityRegistry` 新增 `claude-sonnet-4-5` 能力条目与 Anthropic 模型列表；
+>   设置页与模型选择页使用下拉，DeepSeek 的 picker 列表保持原样。
+> - Anthropic 分支补上 `message_start` 的 input token 解析；请求/响应协议复用既有
+>   stream、取消与错误映射实现。
+> - 契约测试：`test/services/anthropic_messages_contract_test.dart`（路径、headers、
+>   system prompt、SSE 增量与用量、401/429/500 映射、取消）。
+> - 全量 `flutter test` 4252 passed / 7 skipped，`flutter analyze` 无问题。
+
+### 未完成内容（历史记录）
 
 - `usesAnthropicMessagesApi` 生产恒为 false。
 - `_doSendAnthropicStreamDetailed` / `_extractAnthropicSystemPrompt` 约 370 行，仅由 `@visibleForTesting` seam 与 C6 测试覆盖。
@@ -192,6 +216,9 @@
 
 ## 5. 审计中「建议保留」的静默路径
 
+> **状态：按计划保持现状（2026-11-18）。** 未新增逐点 `debugPrint`，现有降级返回值与
+> 安全语义不变；新增的 `SecureKeyStore` 诊断只记录操作名与异常类型。
+
 ### 未完成内容
 
 以下路径当前按设计静默降级，未改为日志/诊断：
@@ -216,6 +243,12 @@
 ---
 
 ## 6. 全量回归与真机验收
+
+> **状态：部分完成（2026-11-18）。**
+>
+> - 全量 `flutter test --no-pub` 与 `flutter analyze --no-pub` 已在每次改动后执行并通过。
+> - 当前环境只有 Linux 桌面设备（`flutter devices` 未发现 Android 设备或模拟器），
+>   因此 Android 真机走读与 release 签名/ARM64 APK 校验仍待在有设备的环境执行。
 
 ### 未完成内容
 
@@ -248,6 +281,8 @@
 ---
 
 ## 7. 远端同步与发布
+
+> **状态：未授权（2026-11-18）。** 用户本次确认仅本地提交，未 push、未创建 PR。
 
 ### 未完成内容
 
