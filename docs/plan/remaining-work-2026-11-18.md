@@ -244,11 +244,31 @@
 
 ## 6. 全量回归与真机验收
 
-> **状态：部分完成（2026-11-18）。**
+> **状态：真机验收已执行（2026-11-18）。**
 >
-> - 全量 `flutter test --no-pub` 与 `flutter analyze --no-pub` 已在每次改动后执行并通过。
-> - 当前环境只有 Linux 桌面设备（`flutter devices` 未发现 Android 设备或模拟器），
->   因此 Android 真机走读与 release 签名/ARM64 APK 校验仍待在有设备的环境执行。
+> - 全量 `flutter test --no-pub`（4253 passed / 7 skipped）与 `flutter analyze --no-pub` 通过。
+> - 设备：vivo V2361A / Android 16 (API 36) / arm64，USB 调试；debug 包 1.3.02-debug。
+>
+> 已通过项：
+> - 首次启动语言确认 → 直接进入「模型提供商与 API 配置」；Anthropic Claude 可选，
+>   模型 `claude-sonnet-4-5`、Base URL 只读 `https://api.anthropic.com`；安全提示为新文案。
+> - 装配流水线与 5 步向导：世界设定、角色阵容（含 Aria 加入并设为主角）、序章、装配总览。
+> - 冒险创建 + 两轮流式回合：`ATTEMPT_START → STAGE_DONE → SETTLEMENT_DONE`，
+>   第二轮 `COMMIT_DONE committed=true`，正文与回合摘要正常渲染。
+> - Runtime State Hub：当前状态、检测状态空态、回合历史（第 1/2 轮）、历史与时间线。
+> - 资料库：角色 Aria 显示「已准备完成 · 可用于冒险」，时间格式本地化。
+> - 朗读：系统语音可用；增强语音为「需手动下载模型」，已安装 0 个模型（回退路径可见）。
+> - Release：`app-release.apk` 55.0 MB，仅 arm64-v8a，含 sherpa/onnx 原生库；
+>   v2/v3 签名验证通过，证书 SHA-256 与 `android/release-certificate.sha256` 匹配。
+>
+> 真机发现（本次未修复）：
+> - **MAJOR（安全）**：填入 API Key 后，系统输入法联想栏把该密钥作为学习词展示。
+>   建议 `AppTextField` 的密码模式关闭 `autocorrect`/`enableSuggestions` 并使用
+>   `visiblePassword`，并提示用户清理输入法词库。
+> - MINOR：首页存档时间显示原始 ISO/UTC（`2026-11-18T11:57:32.098354Z`），资料库为本地化格式。
+> - MINOR：Runtime Hub 时间线空态复用了「回收站是空的」文案。
+>
+> 仍未覆盖：神经 TTS 实际模型下载（体积大、依赖网络）、Studio AI 生成（会消耗用户额度）。
 
 ### 未完成内容
 
