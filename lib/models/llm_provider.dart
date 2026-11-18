@@ -6,37 +6,46 @@ import 'model_capabilities.dart';
 /// `lib/services/llm_service.dart` re-export 本文件保持旧 import 兼容。
 /// LLM 提供商枚举与静态目录。
 ///
-/// 专精适配 DeepSeek 官方 API 与自定义兼容接口。具体模型 id、能力与
-/// 兼容 alias 统一由 [ModelCapabilityRegistry] 描述，避免在 enum 里散落
-/// 字符串判断。
+/// 内置 DeepSeek 与 Anthropic Messages 官方 API，以及 OpenAI 兼容自定义
+/// 接口。具体模型 id、能力与兼容 alias 统一由 [ModelCapabilityRegistry]
+/// 描述，避免在 enum 里散落字符串判断。
 enum LLMProvider {
   deepseek,
+  anthropic,
   custom;
 
-  /// 云端提供商（仅包含官方支持的 DeepSeek）
+  /// 云端提供商（官方支持的内置服务商）
   static const List<LLMProvider> cloudProviders = [
     LLMProvider.deepseek,
+    LLMProvider.anthropic,
   ];
 
   String get displayName => switch (this) {
         LLMProvider.deepseek => 'DeepSeek 官方 API',
+        LLMProvider.anthropic => 'Anthropic Claude',
         LLMProvider.custom => '自定义 (OpenAI 兼容)',
       };
 
   String get defaultBaseUrl => switch (this) {
         LLMProvider.deepseek => 'https://api.deepseek.com',
+        LLMProvider.anthropic => 'https://api.anthropic.com',
         LLMProvider.custom => '',
       };
 
   String get defaultModel => switch (this) {
         LLMProvider.deepseek => ModelCapabilityRegistry.deepSeekFlash.modelId,
+        LLMProvider.anthropic => ModelCapabilityRegistry.claudeSonnet.modelId,
         LLMProvider.custom => '',
       };
 
   /// 可供用户新选择的在服模型列表（不含 legacy/隐藏模型）。
   /// - deepseek-flash: DeepSeek V4.1 Flash，最新推荐 · 多模态 · 支持深度思考
+  /// - claude-sonnet: Anthropic Messages API，多模态 · 长上下文
   List<String> get availableModels => switch (this) {
-        LLMProvider.deepseek => ModelCapabilityRegistry.pickerModels()
+        LLMProvider.deepseek => ModelCapabilityRegistry.deepSeekPickerModels
+            .map((caps) => caps.modelId)
+            .toList(growable: false),
+        LLMProvider.anthropic => ModelCapabilityRegistry.anthropicModels
             .map((caps) => caps.modelId)
             .toList(growable: false),
         LLMProvider.custom => [],
@@ -45,21 +54,26 @@ enum LLMProvider {
   /// 全部内置模型 id，包含隐藏的 legacy 模型（如 deepseek-v4-pro）。
   /// 用于保留用户已保存的选择，而不是静默重置为默认模型。
   List<String> get knownModels => switch (this) {
-        LLMProvider.deepseek => ModelCapabilityRegistry.knownModelIds(),
+        LLMProvider.deepseek => ModelCapabilityRegistry.deepSeekKnownModelIds,
+        LLMProvider.anthropic => ModelCapabilityRegistry.anthropicModels
+            .map((caps) => caps.modelId)
+            .toList(growable: false),
         LLMProvider.custom => [],
       };
 
-  /// Anthropic Messages is a retained fallback adapter, not a production
-  /// provider capability.
+  /// Whether this provider speaks the Anthropic Messages protocol.
   ///
-  /// Every currently shipped provider speaks the OpenAI-compatible protocol.
-  /// This returns false so production always takes that path; the adapter is
-  /// enabled only through LLMService's @visibleForTesting
-  /// `forceAnthropicMessagesApi` seam, guarded by the C6 test in
-  /// `test/services/llm_streaming_reliability_test.dart`.
-  bool get usesAnthropicMessagesApi => false;
+  /// Only the built-in Anthropic provider does; DeepSeek and custom endpoints
+  /// stay on the OpenAI-compatible chat completions protocol.
+  bool get usesAnthropicMessagesApi => this == LLMProvider.anthropic;
 
-  String get chatCompletionsPath => '/chat/completions';
+  /// Path appended to the provider base URL for streaming requests.
+  ///
+  /// Anthropic has its own Messages endpoint; every other provider uses the
+  /// OpenAI-compatible chat completions route.
+  String get chatCompletionsPath =>
+      this == LLMProvider.anthropic ? '/v1/messages' : '/chat/completions';
 
-  String get modelsPath => '/models';
+  String get modelsPath =>
+      this == LLMProvider.anthropic ? '/v1/models' : '/models';
 }

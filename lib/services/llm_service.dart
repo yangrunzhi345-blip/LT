@@ -1244,6 +1244,21 @@ class LLMService with _SseGateTrace {
         if (decoded is! Map<String, dynamic>) {
           throw const _MalformedProviderEvent();
         }
+        if (eventName == 'message_start') {
+          // Anthropic reports the input token count on message_start; the
+          // later message_delta only carries output tokens.
+          final message = decoded['message'];
+          final usage = message is Map ? message['usage'] : null;
+          return (
+            contentDelta: null,
+            finishReason: null,
+            inputTokens: usage is Map
+                ? int.tryParse(usage['input_tokens']?.toString() ?? '')
+                : null,
+            outputTokens: null,
+            completed: false,
+          );
+        }
         if (eventName == 'content_block_delta') {
           final delta = decoded['delta'];
           if (delta is! Map<String, dynamic>) {

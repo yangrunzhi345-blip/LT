@@ -187,6 +187,47 @@ class ModelCapabilityRegistry {
     pickerSubtitleKind: ModelPickerSubtitleKind.legacy,
   );
 
+  /// Anthropic Claude — the officially supported Messages API provider.
+  ///
+  /// Limits follow the documented Messages API (200K context, 64K max_tokens).
+  /// Thinking is not emitted by the adapter yet, so the capability stays off and
+  /// `CompletionParams` keeps the plain sampling path.
+  ///
+  /// Not offered in the DeepSeek picker ([pickerModels]); the Anthropic picker
+  /// reads [anthropicModels] instead.
+  static const ModelCapabilities claudeSonnet = ModelCapabilities(
+    modelId: 'claude-sonnet-4-5',
+    contextWindow: 200000,
+    maximumOutputTokens: 64000,
+    supportsThinking: false,
+    supportsReasoningEffort: false,
+    supportsVision: true,
+    supportsJsonOutput: false,
+    supportsToolCalls: true,
+    supportsResponsesApi: false,
+    supportsFIM: false,
+    supportsPromptCaching: true,
+    supportsFilesApi: false,
+    thinkingWireStyle: ThinkingWireStyle.none,
+    tokenizerType: 'anthropic',
+    reasoningTokenPolicy: ReasoningTokenPolicy.unknown,
+    capabilitySource: ModelCapabilitySource.builtIn,
+    selectableInPicker: false,
+    pickerSubtitleKind: ModelPickerSubtitleKind.none,
+  );
+
+  /// 新用户可选择的 DeepSeek 模型。
+  static const List<ModelCapabilities> deepSeekPickerModels = [deepSeekFlash];
+
+  /// DeepSeek 已保存过的全部模型 id（含隐藏 legacy 模型）。
+  static const List<String> deepSeekKnownModelIds = [
+    'deepseek-flash',
+    'deepseek-v4-pro',
+  ];
+
+  /// Anthropic 可选择的模型。
+  static const List<ModelCapabilities> anthropicModels = [claudeSonnet];
+
   /// Conservative fallback for unknown/custom models: no thinking protocol and
   /// no advanced capabilities until proven otherwise.
   static const ModelCapabilities _conservative = ModelCapabilities(
@@ -217,6 +258,7 @@ class ModelCapabilityRegistry {
   static const Map<String, ModelCapabilities> _byId = {
     'deepseek-flash': deepSeekFlash,
     'deepseek-v4-pro': deepSeekV4Pro,
+    'claude-sonnet-4-5': claudeSonnet,
   };
 
   /// Resolves any stored/wire model id to its capabilities.

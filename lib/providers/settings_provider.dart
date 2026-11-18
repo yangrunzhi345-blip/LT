@@ -614,6 +614,12 @@ class SettingsProvider extends ChangeNotifier {
       }
       return canonical;
     }
+    if (provider == LLMProvider.anthropic) {
+      // Anthropic ships new Claude ids faster than this build can list them;
+      // keep any explicit non-empty choice instead of silently resetting it.
+      final trimmed = rawModel.trim();
+      return trimmed.isEmpty ? provider.defaultModel : trimmed;
+    }
     return rawModel;
   }
 

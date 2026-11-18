@@ -34,6 +34,7 @@ void showApiSettings(BuildContext context) {
 /// 提供商品牌色
 Color providerBrandColor(LLMProvider p) => switch (p) {
       LLMProvider.deepseek => const Color(0xFF3C5DFF), // DeepSeek Blue
+      LLMProvider.anthropic => const Color(0xFFD97757), // Anthropic Clay
       LLMProvider.custom => AppColors.primary,
     };
 
@@ -75,6 +76,7 @@ Widget _brandFallbackIcon(LLMProvider p, double size) {
       child: Text(
         switch (p) {
           LLMProvider.deepseek => 'D',
+          LLMProvider.anthropic => 'A',
           LLMProvider.custom => 'C',
         },
         style: TextStyle(

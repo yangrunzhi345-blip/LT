@@ -319,7 +319,11 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                   return ChoiceChip(
                     label: Text(p.displayName),
                     avatar: AppSvgIcon(
-                      p == LLMProvider.deepseek ? 'bolt' : 'tune',
+                      switch (p) {
+                        LLMProvider.deepseek => 'bolt',
+                        LLMProvider.anthropic => 'mind',
+                        LLMProvider.custom => 'tune',
+                      },
                       size: 18,
                     ),
                     selected: p == selectedProvider,
@@ -338,8 +342,9 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
               ),
               const SizedBox(height: AppSpacing.md),
 
-              // 模型选择
-              if (selectedProvider == LLMProvider.deepseek) ...[
+              // 模型选择：任何提供内置模型列表的服务商（DeepSeek / Anthropic）
+              // 都用下拉；只有自定义端点需要手填模型名。
+              if (selectedProvider.availableModels.isNotEmpty) ...[
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -349,14 +354,16 @@ class _ProviderConfigSectionState extends ConsumerState<ProviderConfigSection> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.deepSeekFlashModelSubtitle,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color:
-                            colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    if (selectedProvider == LLMProvider.deepseek) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        l10n.deepSeekFlashModelSubtitle,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.7),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xs + 2),
