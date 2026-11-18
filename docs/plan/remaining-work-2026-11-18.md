@@ -123,7 +123,7 @@
 > - 新增 `SecureKeyStore` 抽象与三个实现：`FlutterSecureKeyStore`（平台凭证库）、
 >   `EncryptedDatabaseKeyStore`（KeyVault 回退 / 迁移源）、`MigratingSecureKeyStore`（主从编排）。
 > - `SettingsProvider` 全部 Key 读写改经 `MigratingSecureKeyStore`；平台写入成功才删除数据库密文，
->   失败则保留密文并可继续使用；同一 Provider 的读/迁移/写/删串行化，且对停滞的平台调用有 2s 有界等待。
+>   失败则保留密文并可继续使用；迁移写入前会复查平台值，期间落地的更新保存优先，不会被旧密文覆盖。
 > - 诊断只记录操作名与异常类型，不含明文、密文或 Token；新增测试确保这一点。
 > - 文档：`docs/design/api-key-storage.md`。
 > - 测试：`test/unit/secure_key_store_test.dart`（10 例，含并发迁移/保存、不可用回退、日志脱敏）。
