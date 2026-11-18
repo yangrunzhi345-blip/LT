@@ -1622,7 +1622,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get apiEndpointLabel => 'APIエンドポイント (Base URL)';
 
   @override
-  String get apiSecurityNotice => 'APIキーはローカルSQLiteに暗号化保存され、中間サーバーを経由しません';
+  String get apiSecurityNotice =>
+      'APIキーはOSの資格情報ストアに保存され（利用できない場合はローカル暗号化ストレージにフォールバック）、中間サーバーを経由しません';
 
   @override
   String get promptSettingsTitle => 'プロンプトと推論の編成';

@@ -3161,7 +3161,7 @@ abstract class AppLocalizations {
   /// No description provided for @apiSecurityNotice.
   ///
   /// In en, this message translates to:
-  /// **'Key is encrypted and stored locally in SQLite; never relayed via intermediate servers'**
+  /// **'Key is stored in the OS credential store (encrypted local storage as a fallback); never relayed via intermediate servers'**
   String get apiSecurityNotice;
 
   /// No description provided for @promptSettingsTitle.

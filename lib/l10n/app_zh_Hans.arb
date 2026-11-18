@@ -766,7 +766,7 @@
   "customModelNameLabel": "自定义模型名称",
   "customModelNameHint": "如 gpt-4o, llama-3.3-70b, qwen-max",
   "apiEndpointLabel": "API 服务端点 (Base URL)",
-  "apiSecurityNotice": "密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存",
+  "apiSecurityNotice": "密钥存储在系统凭证库；不可用时回退为本地加密存储。永远不会经由中间服务器转存",
   "promptSettingsTitle": "提示词与推演编排",
   "importPresets": "导入预设",
   "exportPresets": "导出预设",

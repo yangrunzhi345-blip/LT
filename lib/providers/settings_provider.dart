@@ -18,7 +18,7 @@ import '../services/read_aloud/read_aloud_settings_store.dart';
 import '../services/tts/tts_voice_binding_store.dart';
 import '../services/tts_service.dart';
 import '../services/translation_service.dart';
-import '../services/key_vault.dart';
+import '../services/secure_key_store.dart';
 import '../services/repositories/settings_repository.dart';
 import '../application/narrative/context_weighting.dart';
 import '../services/context_weight_profile_store.dart';
@@ -28,7 +28,15 @@ import '../services/context_weight_profile_store.dart';
 class SettingsProvider extends ChangeNotifier {
   final ISettingsRepository _settingsRepo;
   final FlutterSecureStorage _secureStorage;
+  final SecureKeyStore _keyStore;
   final Stream<List<ConnectivityResult>> _connectivityStream;
+
+  /// True when [_connectivityStream] comes from the platform plugin.
+  ///
+  /// Widget tests and desktop builds without the plugin have no connectivity
+  /// implementation; probing first keeps the EventChannel from reporting a
+  /// platform error after the owning frame/test has moved on.
+  final bool _probeConnectivity;
   bool _disposed = false;
   int _loadGeneration = 0;
   Future<void>? _loadFuture;
@@ -223,13 +231,20 @@ class SettingsProvider extends ChangeNotifier {
   SettingsProvider({
     required ISettingsRepository settingsRepo,
     FlutterSecureStorage secureStorage = const FlutterSecureStorage(),
+    SecureKeyStore? secureKeyStore,
     Stream<List<ConnectivityResult>>? connectivityStream,
     ReadAloudController? readAloud,
     TtsVoiceBindingStore? ttsVoiceBindings,
   })  : _settingsRepo = settingsRepo,
         _secureStorage = secureStorage,
+        _keyStore = secureKeyStore ??
+            MigratingSecureKeyStore(
+              primary: FlutterSecureKeyStore(secureStorage),
+              fallback: EncryptedDatabaseKeyStore(settingsRepo),
+            ),
         _connectivityStream =
             connectivityStream ?? Connectivity().onConnectivityChanged,
+        _probeConnectivity = connectivityStream == null,
         _injectedReadAloud = readAloud,
         _ttsVoiceBindings = ttsVoiceBindings;
 
@@ -274,52 +289,16 @@ class SettingsProvider extends ChangeNotifier {
     if (pending != null) await pending;
   }
 
-  /// Rewrites one legacy single-key record with the v2 dual-key format.
-  ///
-  /// The current value is re-read first: if another writer already replaced
-  /// the record, the migration is a no-op rather than overwriting newer data.
-  Future<void> _rewriteLegacyApiKey(
-    String provider,
-    String legacyCiphertext,
-    String plaintext,
-  ) async {
-    final current = await _settingsRepo.getEncryptedApiKeys();
-    if (current[provider] != legacyCiphertext) return;
-    await _settingsRepo.setEncryptedApiKey(
-      provider,
-      KeyVault.encrypt(plaintext),
-    );
-  }
-
   Future<void> _loadApiKey(int generation) async {
     final prefs = await SharedPreferences.getInstance();
     await _migrateEncryptedKeys(prefs);
     await _migrateConfigToSettings(prefs);
     final settings = await _settingsRepo.getAllSettings();
     final providerKeys = <String, String>{};
-    final encryptedKeys = await _settingsRepo.getEncryptedApiKeys();
-    final legacyMigrations = <Future<void>>[];
     for (final p in LLMProvider.values) {
-      final encrypted = encryptedKeys[p.name] ?? '';
-      if (encrypted.isEmpty) continue;
-      final opened = KeyVault.open(encrypted);
-      if (opened == null) continue;
-      providerKeys[p.name] = opened.plaintext;
-      if (opened.usedLegacyFormat) {
-        legacyMigrations.add(
-          _rewriteLegacyApiKey(p.name, encrypted, opened.plaintext),
-        );
-      }
-    }
-    if (legacyMigrations.isNotEmpty) {
-      final migration = Future.wait(legacyMigrations).then<void>((_) {});
-      _pendingLegacyKeyMigration = migration;
-      unawaited(migration.catchError((Object error) {
-        // The key is already usable in memory; a failed rewrite only leaves the
-        // legacy record in place for the next run.
-        debugPrint('[SettingsProvider] legacy API key re-encryption failed: '
-            '${error.runtimeType}');
-      }));
+      final value = await _keyStore.read(p.name);
+      if (value == null || value.isEmpty) continue;
+      providerKeys[p.name] = value;
     }
 
     final storedProvider =
@@ -515,7 +494,9 @@ class SettingsProvider extends ChangeNotifier {
       // 神经语音绑定同样复用本次已加载的 settings，不额外读库。
       _ttsVoiceBindings?.restore(parseTtsVoicePreferences(settings));
     }
-    await _initConnectivity();
+    // Connectivity is optional telemetry; never let a stalled platform
+    // channel delay key loading or block the caller's future.
+    unawaited(_initConnectivity());
     if (!_disposed && generation == _loadGeneration) notifyListeners();
   }
 
@@ -578,6 +559,10 @@ class SettingsProvider extends ChangeNotifier {
         }
       }
     }
+    // Startup init runs unawaited; a provider disposed while the migration
+    // was still reading must not write into a database the owner already
+    // closed.
+    if (_disposed) return;
     await _settingsRepo.setSettings({...pending, '_config_migrated': '1'});
   }
 
@@ -585,19 +570,34 @@ class SettingsProvider extends ChangeNotifier {
     try {
       await _connectivitySub?.cancel();
       if (_disposed) return;
-      _connectivitySub =
-          _connectivityStream.listen((List<ConnectivityResult> results) {
-        final online = results.isNotEmpty &&
-            !results.every((r) => r == ConnectivityResult.none);
-        if (_isOnline != online) {
-          _isOnline = online;
-          // 防御：连接状态可能在任何时机变更，延迟到帧后避免 build 期间 notify
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            notifyListeners();
-          });
-        }
-      });
-    } catch (_) {}
+      if (_probeConnectivity) {
+        // Connectivity is optional telemetry. Probe with a plain method call
+        // first: without a platform implementation the EventChannel reports
+        // MissingPluginException asynchronously, which would land on whatever
+        // frame or test happens to be running by then.
+        await Connectivity().checkConnectivity();
+      }
+      _connectivitySub = _connectivityStream.listen(
+        (List<ConnectivityResult> results) {
+          final online = results.isNotEmpty &&
+              !results.every((r) => r == ConnectivityResult.none);
+          if (_isOnline != online) {
+            _isOnline = online;
+            // 防御：连接状态可能在任何时机变更，延迟到帧后避免 build 期间 notify
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              notifyListeners();
+            });
+          }
+        },
+        onError: (Object error) {
+          debugPrint('[SettingsProvider] connectivity unavailable: '
+              '${error.runtimeType}');
+        },
+      );
+    } catch (error) {
+      debugPrint('[SettingsProvider] connectivity unavailable: '
+          '${error.runtimeType}');
+    }
   }
 
   /// Normalizes a stored model id for a provider.
@@ -607,12 +607,14 @@ class SettingsProvider extends ChangeNotifier {
   /// (e.g. deepseek-v4-pro) are preserved, and genuinely unknown ids fall back
   /// to the provider default. Custom-provider ids are user input and untouched.
   String _resolveBuiltInModel(LLMProvider provider, String rawModel) {
-    if (provider != LLMProvider.deepseek) return rawModel;
-    final canonical = ModelCapabilityRegistry.canonicalizeAlias(rawModel);
-    if (!ModelCapabilityRegistry.isKnownBuiltIn(canonical)) {
-      return provider.defaultModel;
+    if (provider == LLMProvider.deepseek) {
+      final canonical = ModelCapabilityRegistry.canonicalizeAlias(rawModel);
+      if (!ModelCapabilityRegistry.isKnownBuiltIn(canonical)) {
+        return provider.defaultModel;
+      }
+      return canonical;
     }
-    return canonical;
+    return rawModel;
   }
 
   /// Canonicalizes, de-duplicates and caps the recent-models list.
@@ -642,9 +644,9 @@ class SettingsProvider extends ChangeNotifier {
     final normalized = key.trim();
     final providerName = _providerType.name;
     if (normalized.isNotEmpty) {
-      await _saveEncryptedKey(providerName, normalized);
+      await _keyStore.write(providerName, normalized);
     } else {
-      await _settingsRepo.deleteEncryptedApiKey(providerName);
+      await _keyStore.delete(providerName);
     }
     if (_disposed || providerName != _providerType.name) return;
     _apiKey = normalized;
@@ -657,11 +659,9 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 加密并存储 API Key 到 api_keys 表
-  Future<void> _saveEncryptedKey(String providerName, String plainKey) async {
-    final encrypted = KeyVault.encrypt(plainKey);
-    await _settingsRepo.setEncryptedApiKey(providerName, encrypted);
-  }
+  /// Persists an API key through the platform-first credential store.
+  Future<void> _saveEncryptedKey(String providerName, String plainKey) =>
+      _keyStore.write(providerName, plainKey);
 
   Future<void> setApiBaseUrl(String url) async {
     final trimmed = url.trim();

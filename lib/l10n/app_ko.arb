@@ -766,7 +766,7 @@
   "customModelNameLabel": "사용자 지정 모델 이름",
   "customModelNameHint": "예: gpt-4o, llama-3.3-70b, qwen-max",
   "apiEndpointLabel": "API 엔드포인트 (Base URL)",
-  "apiSecurityNotice": "키는 로컬 SQLite 데이터베이스에 암호화되어 저장되며 중계 서버를 거치지 않습니다",
+  "apiSecurityNotice": "키는 OS 자격 증명 저장소에 저장되고(사용할 수 없으면 로컬 암호화 저장소로 대체), 중계 서버를 거치지 않습니다",
   "promptSettingsTitle": "프롬프트 및 추론 편성",
   "importPresets": "프리셋 가져오기",
   "exportPresets": "프리셋 내보내기",

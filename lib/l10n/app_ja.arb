@@ -766,7 +766,7 @@
   "customModelNameLabel": "カスタムモデル名",
   "customModelNameHint": "例：gpt-4o, llama-3.3-70b, qwen-max",
   "apiEndpointLabel": "APIエンドポイント (Base URL)",
-  "apiSecurityNotice": "APIキーはローカルSQLiteに暗号化保存され、中間サーバーを経由しません",
+  "apiSecurityNotice": "APIキーはOSの資格情報ストアに保存され（利用できない場合はローカル暗号化ストレージにフォールバック）、中間サーバーを経由しません",
   "promptSettingsTitle": "プロンプトと推論の編成",
   "importPresets": "プリセットをインポート",
   "exportPresets": "プリセットをエクスポート",

@@ -1692,7 +1692,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apiSecurityNotice =>
-      'Key is encrypted and stored locally in SQLite; never relayed via intermediate servers';
+      'Key is stored in the OS credential store (encrypted local storage as a fallback); never relayed via intermediate servers';
 
   @override
   String get promptSettingsTitle => 'Prompts & Deduction Planning';

@@ -690,7 +690,7 @@
   "customModelNameLabel": "Custom Model Name",
   "customModelNameHint": "e.g. gpt-4o, llama-3.3-70b, qwen-max",
   "apiEndpointLabel": "API Endpoint (Base URL)",
-  "apiSecurityNotice": "Key is encrypted and stored locally in SQLite; never relayed via intermediate servers",
+  "apiSecurityNotice": "Key is stored in the OS credential store (encrypted local storage as a fallback); never relayed via intermediate servers",
   "promptSettingsTitle": "Prompts & Deduction Planning",
   "importPresets": "Import Presets",
   "exportPresets": "Export Presets",

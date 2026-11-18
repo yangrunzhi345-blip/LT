@@ -1612,7 +1612,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get apiEndpointLabel => 'API 服务端点 (Base URL)';
 
   @override
-  String get apiSecurityNotice => '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存';
+  String get apiSecurityNotice => '密钥存储在系统凭证库；不可用时回退为本地加密存储。永远不会经由中间服务器转存';
 
   @override
   String get promptSettingsTitle => '提示词与推演编排';
@@ -7890,7 +7890,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get apiEndpointLabel => 'API 服务端点 (Base URL)';
 
   @override
-  String get apiSecurityNotice => '密钥加密存储于本地设备 SQLite 数据库，永远不会经由中间服务器转存';
+  String get apiSecurityNotice => '密钥存储在系统凭证库；不可用时回退为本地加密存储。永远不会经由中间服务器转存';
 
   @override
   String get promptSettingsTitle => '提示词与推演编排';
@@ -14168,7 +14168,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get apiEndpointLabel => 'API 服務端點 (Base URL)';
 
   @override
-  String get apiSecurityNotice => '金鑰加密儲存於本機裝置 SQLite 資料庫，絕不經由中繼伺服器轉存';
+  String get apiSecurityNotice => '金鑰儲存於系統憑證庫；無法使用時回退為本機加密儲存。絕不經由中繼伺服器轉存';
 
   @override
   String get promptSettingsTitle => '提示詞與推演編排';

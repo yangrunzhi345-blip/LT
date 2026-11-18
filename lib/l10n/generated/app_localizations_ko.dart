@@ -1635,7 +1635,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get apiSecurityNotice =>
-      '키는 로컬 SQLite 데이터베이스에 암호화되어 저장되며 중계 서버를 거치지 않습니다';
+      '키는 OS 자격 증명 저장소에 저장되고(사용할 수 없으면 로컬 암호화 저장소로 대체), 중계 서버를 거치지 않습니다';
 
   @override
   String get promptSettingsTitle => '프롬프트 및 추론 편성';
