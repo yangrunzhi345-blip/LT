@@ -38,7 +38,15 @@ http.StreamedResponse _sse(StreamController<List<int>> controller,
 void _line(StreamController<List<int>> controller, String line) =>
     controller.add(utf8.encode('$line\n'));
 
-LLMService _service(_FakeClient client) {
+LLMService _service(
+  _FakeClient client, {
+  LLMStreamTimeoutPolicy timeoutPolicy = const LLMStreamTimeoutPolicy(
+    connect: Duration(seconds: 5),
+    firstEvent: Duration(seconds: 5),
+    idle: Duration(seconds: 5),
+    overall: Duration(seconds: 30),
+  ),
+}) {
   return LLMService(
     const LLMConfig(
       provider: LLMProvider.anthropic,
@@ -46,12 +54,7 @@ LLMService _service(_FakeClient client) {
       baseUrl: 'https://api.anthropic.com',
       model: 'claude-sonnet-4-5',
     ),
-    timeoutPolicy: const LLMStreamTimeoutPolicy(
-      connect: Duration(seconds: 5),
-      firstEvent: Duration(seconds: 5),
-      idle: Duration(seconds: 5),
-      overall: Duration(seconds: 30),
-    ),
+    timeoutPolicy: timeoutPolicy,
     clientFactory: () => client,
     retryDelay: (_) async {},
   );
@@ -170,6 +173,35 @@ void main() {
       );
     });
   }
+
+  test('a stalled connect hits the shared connect timeout', () async {
+    final client = _FakeClient(
+      (request) => Completer<http.StreamedResponse>().future,
+    );
+    final service = _service(
+      client,
+      timeoutPolicy: const LLMStreamTimeoutPolicy(
+        connect: Duration(milliseconds: 30),
+        firstEvent: Duration(seconds: 5),
+        idle: Duration(seconds: 5),
+        overall: Duration(seconds: 5),
+      ),
+    );
+
+    await expectLater(
+      service.sendMessageStreamDetailedTyped(
+        [LlmMessage.user('hi')],
+        (_) {},
+        () {},
+      ),
+      throwsA(isA<LLMStreamTimeoutException>().having(
+        (e) => e.phase,
+        'phase',
+        LLMStreamTimeoutPhase.connect,
+      )),
+    );
+    expect(client.closed, isTrue);
+  });
 
   test('cancellation aborts the request with GenerationCancelledException',
       () async {
