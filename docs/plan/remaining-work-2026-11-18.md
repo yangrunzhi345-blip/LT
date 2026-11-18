@@ -127,7 +127,7 @@
 > - 诊断只记录操作名与异常类型，不含明文、密文或 Token；新增测试确保这一点。
 > - 文档：`docs/design/api-key-storage.md`。
 > - 测试：`test/unit/secure_key_store_test.dart`（10 例，含并发迁移/保存、不可用回退、日志脱敏）。
-> - 全量 `flutter test` 4252 passed / 7 skipped，`flutter analyze` 无问题。
+> - 全量 `flutter test` 4253 passed / 7 skipped，`flutter analyze` 无问题。
 
 ### 未完成内容（历史记录）
 
@@ -183,7 +183,7 @@
 >   stream、取消与错误映射实现。
 > - 契约测试：`test/services/anthropic_messages_contract_test.dart`（路径、headers、
 >   system prompt、SSE 增量与用量、401/429/500 映射、取消）。
-> - 全量 `flutter test` 4252 passed / 7 skipped，`flutter analyze` 无问题。
+> - 全量 `flutter test` 4253 passed / 7 skipped，`flutter analyze` 无问题。
 
 ### 未完成内容（历史记录）
 
