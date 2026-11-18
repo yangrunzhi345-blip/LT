@@ -49,8 +49,6 @@ void main() {
     await provider.loadApiKey();
     expect(provider.apiKey, key);
 
-    await provider.debugAwaitLegacyKeyMigration();
-
     final stored = (await settingsRepo.getEncryptedApiKeys())['deepseek']!;
     expect(stored, isNot(legacyCiphertext));
     final opened = KeyVault.open(stored);

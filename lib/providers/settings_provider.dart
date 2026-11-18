@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sqflite/sqflite.dart' show DatabaseException;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/app_config.dart';
@@ -40,7 +41,6 @@ class SettingsProvider extends ChangeNotifier {
   bool _disposed = false;
   int _loadGeneration = 0;
   Future<void>? _loadFuture;
-  Future<void>? _pendingLegacyKeyMigration;
 
   String _apiKey = '';
   String _apiBaseUrl = AppConfig.apiBaseUrl;
@@ -279,17 +279,20 @@ class SettingsProvider extends ChangeNotifier {
     return future;
   }
 
-  /// Waits for the background legacy-key rewrite started by [loadApiKey].
-  ///
-  /// Production never waits for this migration; it is exposed so tests can
-  /// assert the rewritten record without timing sleeps.
-  @visibleForTesting
-  Future<void> debugAwaitLegacyKeyMigration() async {
-    final pending = _pendingLegacyKeyMigration;
-    if (pending != null) await pending;
+  Future<void> _loadApiKey(int generation) async {
+    try {
+      await _loadApiKeyInternal(generation);
+    } on DatabaseException catch (error) {
+      // The provider is being disposed (or the owning process is shutting
+      // down) while the unawaited startup load is still running. Nothing is
+      // lost: the next launch repeats the idempotent migrations.
+      if (!error.isDatabaseClosedError()) rethrow;
+      debugPrint('[SettingsProvider] API key load deferred: '
+          'database closed during shutdown');
+    }
   }
 
-  Future<void> _loadApiKey(int generation) async {
+  Future<void> _loadApiKeyInternal(int generation) async {
     final prefs = await SharedPreferences.getInstance();
     await _migrateEncryptedKeys(prefs);
     await _migrateConfigToSettings(prefs);
