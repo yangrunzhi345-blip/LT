@@ -100,11 +100,14 @@ void main() {
       // The caller's config is never mutated.
       expect(jsonEncode(config.toJson()), inputBefore);
 
-      // The protagonist card is authoritative: the stale card and the
-      // Wizard-entered fields are replaced by the card document.
-      expect(frozen.characterCard, isNull);
+      // The protagonist card is authoritative for identity and the structured
+      // card model. B2 keeps the model instead of nulling it, and a Wizard value
+      // is only replaced when the card actually supplies that field.
+      expect(frozen.characterCard, isNotNull);
+      expect(frozen.characterCard!.name, 'name_A');
+      expect(frozen.characterCard!.description, 'background_A');
       expect(frozen.name, 'name_A');
-      expect(frozen.personality, isEmpty);
+      expect(frozen.personality, 'personality_B');
       expect(frozen.gender, 'gender_B');
       expect(frozen.protagonistClass, 'profession_B');
 

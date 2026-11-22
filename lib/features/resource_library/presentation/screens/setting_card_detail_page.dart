@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../application/setting_cards/setting_card_reference_input.dart';
 import '../../../../application/setting_cards/setting_card_service.dart';
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -11,6 +12,7 @@ import '../../../../domain/setting_cards/setting_card.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../widgets/setting_card_reference_editor.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -130,8 +132,8 @@ final class _SettingCardDetailPageState
   Future<void> _generate() async {
     final card = _card;
     if (card == null || _generating) return;
-    final instruction = await _askInstruction();
-    if (instruction == null || !mounted) return;
+    final request = await _askInstruction();
+    if (request == null || !mounted) return;
     setState(() {
       _generating = true;
       _progressLabel = '';
@@ -139,7 +141,8 @@ final class _SettingCardDetailPageState
     try {
       final updated = await ref.read(settingCardServiceProvider).generate(
             id: card.id,
-            instruction: instruction,
+            instruction: request.instruction,
+            reference: request.reference,
             onProgress: (stage, total, name) {
               if (!mounted) return;
               setState(() => _progressLabel = name);
@@ -166,32 +169,56 @@ final class _SettingCardDetailPageState
     }
   }
 
-  Future<String?> _askInstruction() async {
+  Future<({String instruction, SettingCardReferenceInput? reference})?>
+      _askInstruction() async {
     final controller = TextEditingController(text: _card?.summary ?? '');
     final l10n = _l10n(context);
-    final result = await showDialog<String>(
+    var mode = SettingCardReferenceMode.paste;
+    SettingCardReferenceInput? reference;
+    final result = await showDialog<
+        ({String instruction, SettingCardReferenceInput? reference})>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.settingCardGenerateAction),
-        content: AppTextField(
-          key: const Key('setting-card-generate-instruction'),
-          controller: controller,
-          label: l10n.settingCardGenerateHint,
-          maxLines: 4,
-          minLines: 3,
-          autofocus: true,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setLocal) => AlertDialog(
+          title: Text(l10n.settingCardGenerateAction),
+          // scrollable keeps the dialog usable at 320px and when the soft
+          // keyboard shrinks the available height; the editor adds a second
+          // field group below the instruction.
+          scrollable: true,
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              AppTextField(
+                key: const Key('setting-card-generate-instruction'),
+                controller: controller,
+                label: l10n.settingCardGenerateHint,
+                maxLines: 4,
+                minLines: 3,
+                autofocus: true,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SettingCardReferenceEditor(
+                mode: mode,
+                onModeChanged: (value) => setLocal(() => mode = value),
+                onChanged: (value) => reference = value,
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancelAction),
+            ),
+            FilledButton(
+              key: const Key('setting-card-generate-confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(
+                (instruction: controller.text.trim(), reference: reference),
+              ),
+              child: Text(l10n.settingCardGenerateAction),
+            ),
+          ],
         ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cancelAction),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: Text(l10n.settingCardGenerateAction),
-          ),
-        ],
       ),
     );
     controller.dispose();

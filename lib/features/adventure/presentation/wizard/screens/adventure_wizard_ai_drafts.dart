@@ -1,5 +1,12 @@
 part of 'adventure_wizard_screen.dart';
 
+/// Soft length target for one detailed generation pass.
+///
+/// The prompt asks the model for roughly this many characters. Nothing
+/// validates or trims the result afterwards, so a shorter or longer answer is
+/// still saved as-is.
+const int _aiDetailedTargetCharacters = 12000;
+
 extension _WizardAiDrafts on _AdventureWizardScreenState {
   /// AI 自动编写世界观设定（支持简约模式与详细模式4段多轮连续生成）
   Future<void> _generateWorldviewWithAi() async {
@@ -16,12 +23,19 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
         : _aiWorldviewPromptCtrl.text.trim();
     try {
       final service = ref.read(settingCardServiceProvider);
+      // A worldview has no parent card, so it never carries an origin id.
       final card = await service.createFromType(
         type: ResourceType.worldview.storageValue,
         name: '冒险世界观',
         mode: ResourceLibraryMode.adventure.storageValue,
+        originWorldviewId: '',
       );
-      await service.generate(id: card.id, instruction: source);
+      await service.generate(
+        id: card.id,
+        instruction: source,
+        targetTotalCharacters:
+            _aiWorldviewDetailed ? _aiDetailedTargetCharacters : null,
+      );
       if (mounted) await _loadData();
     } catch (e) {
       if (!mounted) return;
@@ -45,27 +59,40 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
     var source = _aiCharacterPromptCtrl.text.trim();
     if (source.isEmpty) source = '请规划一个适合当前冒险的角色';
 
-    final relatedNames = _aiAssociatedCharacterIds
-        .map(_getAssociatedCharacterShortName)
-        .where((name) => name.trim().isNotEmpty)
-        .toList();
-    if (relatedNames.isNotEmpty) {
-      final relation = _aiRelationType == '自定义'
-          ? (_aiCustomRelationCtrl.text.trim().isEmpty
-              ? '伙伴'
-              : _aiCustomRelationCtrl.text.trim())
-          : _aiRelationType;
-      source += '。请与已有角色「${relatedNames.join('、')}」建立【$relation】羁绊。';
-    }
+    final relation = _aiRelationType == '自定义'
+        ? (_aiCustomRelationCtrl.text.trim().isEmpty
+            ? '伙伴'
+            : _aiCustomRelationCtrl.text.trim())
+        : _aiRelationType;
+    final associatedCharacters = _buildAssociatedCharacterContext(relation);
 
     try {
       final service = ref.read(settingCardServiceProvider);
+      final activeWorldviewId = _getOrCreateActiveWorldviewId();
       final card = await service.createFromType(
         type: ResourceType.character.storageValue,
         name: '冒险角色',
         mode: ResourceLibraryMode.adventure.storageValue,
+        originWorldviewId: activeWorldviewId,
       );
-      await service.generate(id: card.id, instruction: source);
+      // Prefer the persisted worldview body: it still carries the structured
+      // detail modules that the single description field does not expose.
+      // Unsaved or not-yet-mirrored worldviews fall back to the editor text.
+      var worldviewBody = _worldviewDescCtrl.text.trim();
+      final worldviewCard = await service.find(activeWorldviewId);
+      if (worldviewCard != null &&
+          !worldviewCard.isDeleted &&
+          worldviewCard.content.trim().isNotEmpty) {
+        worldviewBody = worldviewCard.content;
+      }
+      await service.generate(
+        id: card.id,
+        instruction: source,
+        worldview: worldviewBody,
+        associatedCharacters: associatedCharacters,
+        targetTotalCharacters:
+            _aiCharacterDetailed ? _aiDetailedTargetCharacters : null,
+      );
       if (mounted) await _loadData();
     } catch (e) {
       if (!mounted) return;
@@ -83,6 +110,35 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
     final card = _characterCardEntries.where((e) => e.id == id).firstOrNull;
     if (card != null) return card.name;
     return id;
+  }
+
+  /// 将关联角色 id 转为结构化生成上下文。
+  ///
+  /// roster 里的角色是会话内的当前值，优先使用；尚未加入队伍但已从资料库选中
+  /// 的角色回退到角色卡数据。relation 是用户为*新*角色选择的羁绊，会复制到
+  /// 每个关联项，裁剪由 service 的 budgeter 负责。
+  List<Map<String, String>> _buildAssociatedCharacterContext(String relation) {
+    final context = <Map<String, String>>[];
+    for (final id in _aiAssociatedCharacterIds) {
+      final character = _characters.where((c) => c.id == id).firstOrNull;
+      if (character != null) {
+        context.add(<String, String>{
+          'name': character.name,
+          'profession': character.profession,
+          'personality': character.personality,
+          'background': character.background,
+          'relation': relation,
+        });
+        continue;
+      }
+      final card = _characterCardEntries.where((e) => e.id == id).firstOrNull;
+      if (card == null) continue;
+      context.add(<String, String>{
+        ...card.toAssociatedMap(),
+        'relation': relation,
+      });
+    }
+    return context;
   }
 
   /// 构建关联已有角色下拉选项（优先队伍成员，其次资料库中尚未加入队伍的角色）

@@ -3107,5 +3107,28 @@
         "type": "int"
       }
     }
+  },
+  "settingCardReferenceTitle": "参考材料",
+  "settingCardReferencePaste": "粘贴",
+  "settingCardReferenceFile": "文件",
+  "settingCardReferenceExisting": "已有卡",
+  "settingCardReferencePasteHint": "粘贴参考材料，例如小说片段或设定笔记",
+  "settingCardReferenceFileName": "文件名",
+  "settingCardReferenceFileContent": "文件内容",
+  "settingCardReferenceFileHint": "将文件内容粘贴到这里",
+  "settingCardReferenceSelectCard": "选择设定卡",
+  "settingCardReferenceOverLimit": "超过 8000 字，生成时按相关度截取",
+  "settingCardReferenceEmpty": "暂无可用设定卡",
+  "settingCardReferenceLoadFailed": "设定卡列表加载失败",
+  "settingCardReferenceCount": "已输入 {count} / {max} 字",
+  "@settingCardReferenceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
   }
 }

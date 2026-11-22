@@ -121,6 +121,11 @@ final class SettingCard {
   final String originWorldviewId;
 
   /// Small runtime metadata only: provenance, source, tags. Never body text.
+  ///
+  /// One deliberate exception: generation stores the raw model payload here
+  /// (`structured_payload` for characters/NPCs, `detail_json` for worldviews)
+  /// so a frozen adventure can rebuild typed fields that the rendered document
+  /// would otherwise flatten into prose.
   final Map<String, Object?> metadata;
 
   /// Raw id of the legacy table row this card was migrated from.

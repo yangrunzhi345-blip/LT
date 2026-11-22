@@ -158,7 +158,12 @@ void main() {
       );
       expect(frozen.worldviewSnapshot!['snapshot_kind'], 'setting_card');
       expect(frozen.worldviewSnapshot!['source_id'], 'g_wv1');
-      expect(frozen.worldviewSnapshot!.containsKey('content_hash'), isFalse);
+      // B3 freezes through WorldviewSnapshotService, which stamps a content
+      // hash so world entries stay bound to the snapshot that produced them.
+      expect(
+        frozen.worldviewSnapshot!['content_hash']?.toString(),
+        isNotEmpty,
+      );
     });
 
     test('character cards fill the selected character and protagonist name',

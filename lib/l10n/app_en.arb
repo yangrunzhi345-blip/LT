@@ -3107,5 +3107,28 @@
         "type": "int"
       }
     }
+  },
+  "settingCardReferenceTitle": "Reference material",
+  "settingCardReferencePaste": "Paste",
+  "settingCardReferenceFile": "File",
+  "settingCardReferenceExisting": "Existing",
+  "settingCardReferencePasteHint": "Paste reference material such as a story excerpt or setting notes",
+  "settingCardReferenceFileName": "File name",
+  "settingCardReferenceFileContent": "File content",
+  "settingCardReferenceFileHint": "Paste the file contents here",
+  "settingCardReferenceSelectCard": "Select a setting card",
+  "settingCardReferenceOverLimit": "Over 8000 characters; generation keeps the most relevant excerpt",
+  "settingCardReferenceEmpty": "No setting cards available",
+  "settingCardReferenceLoadFailed": "Could not load setting cards",
+  "settingCardReferenceCount": "{count} / {max} characters entered",
+  "@settingCardReferenceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
   }
 }

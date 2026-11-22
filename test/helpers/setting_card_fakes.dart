@@ -75,6 +75,10 @@ final class FakeSettingCardGateway implements LlmGateway {
   int worldviewCalls = 0;
   int characterCalls = 0;
   final List<String> sources = <String>[];
+  final List<String> worldviews = <String>[];
+  final List<List<Map<String, String>>> associatedCharacterArgs =
+      <List<Map<String, String>>>[];
+  final List<int?> targetCharacterArgs = <int?>[];
 
   @override
   bool get isConfigured => configured;
@@ -88,6 +92,7 @@ final class FakeSettingCardGateway implements LlmGateway {
   }) async {
     worldviewCalls++;
     sources.add(source);
+    targetCharacterArgs.add(targetTotalCharacters);
     onProgress?.call(const WorldviewGenerationProgress(
       completedQuestions: 1,
       totalQuestions: 2,
@@ -110,6 +115,9 @@ final class FakeSettingCardGateway implements LlmGateway {
   }) async {
     characterCalls++;
     sources.add(source);
+    worldviews.add(worldview);
+    associatedCharacterArgs.add(associatedCharacters);
+    targetCharacterArgs.add(targetTotalCharacters);
     onProgress?.call(1, 2, '生成中');
     final failure = error;
     if (failure != null) throw failure;

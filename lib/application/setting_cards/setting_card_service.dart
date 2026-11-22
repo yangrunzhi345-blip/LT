@@ -3,6 +3,9 @@ import 'dart:convert';
 import '../../domain/setting_cards/setting_card.dart';
 import '../../domain/setting_cards/setting_card_repository.dart';
 import '../llm/llm_gateway.dart';
+import 'setting_card_context_budgeter.dart';
+import 'setting_card_markdown_parser.dart';
+import 'setting_card_reference_input.dart';
 
 /// Raised when a card cannot be generated.
 class SettingCardGenerationException implements Exception {
@@ -49,6 +52,10 @@ final class SettingCardService {
     return 'sc_$stamp';
   }
 
+  static const SettingCardContextBudgeter _budgeter =
+      SettingCardContextBudgeter();
+  static const SettingCardMarkdownParser _parser = SettingCardMarkdownParser();
+
   final SettingCardRepository _repository;
   final LlmGateway? _gateway;
   final String Function() _clock;
@@ -85,6 +92,7 @@ final class SettingCardService {
     String summary = '',
     String mode = '',
     String content = '',
+    String originWorldviewId = '',
   }) =>
       create(
         kind: SettingCardKind.fromStorageValue(type),
@@ -92,6 +100,7 @@ final class SettingCardService {
         summary: summary,
         mode: mode,
         content: content,
+        originWorldviewId: originWorldviewId,
       );
 
   Future<SettingCard> create({
@@ -100,6 +109,7 @@ final class SettingCardService {
     String summary = '',
     String mode = '',
     String content = '',
+    String originWorldviewId = '',
   }) async {
     final now = _clock();
     final card = SettingCard(
@@ -109,6 +119,7 @@ final class SettingCardService {
       summary: summary,
       content: content,
       mode: mode,
+      originWorldviewId: originWorldviewId,
       createdAt: now,
       updatedAt: now,
     );
@@ -143,9 +154,18 @@ final class SettingCardService {
   ///
   /// [instruction] is the user's free-form description; an empty instruction
   /// tells the model to expand the card's current content instead.
+  ///
+  /// Context is deliberately bounded before it reaches the gateway: the
+  /// gateway has one `source` channel, so oversized reference material and
+  /// worldviews are reduced to the most relevant passages instead of being
+  /// dropped or flooding the prompt.
   Future<SettingCard> generate({
     required String id,
     required String instruction,
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    int? targetTotalCharacters,
+    SettingCardReferenceInput? reference,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
   }) async {
@@ -157,10 +177,45 @@ final class SettingCardService {
     if (card == null) {
       throw SettingCardGenerationException('设定卡不存在: $id');
     }
-    final source =
+    var source =
         instruction.trim().isEmpty ? card.content.trim() : instruction.trim();
     if (source.isEmpty) {
       throw const SettingCardGenerationException('请先填写生成要求');
+    }
+
+    final String worldviewContext;
+    final List<Map<String, String>> linkedCharacters;
+    try {
+      final referenceText = await _resolveReference(reference);
+      if (referenceText.isNotEmpty) {
+        final bounded = _budgeter.selectReference(
+          source: source,
+          reference: referenceText,
+        );
+        if (bounded.isNotEmpty) {
+          source = '$source\n\n【参考材料（用户提供，可用于创作）】\n$bounded';
+        }
+      }
+
+      if (card.kind == SettingCardKind.worldview) {
+        worldviewContext = '';
+        linkedCharacters = const <Map<String, String>>[];
+      } else {
+        final rawWorldview = worldview.trim().isNotEmpty
+            ? worldview
+            : await _loadOriginWorldview(card);
+        worldviewContext = rawWorldview.isEmpty
+            ? ''
+            : _budgeter.selectWorldview(
+                source: source,
+                worldview: _budgetableWorldview(rawWorldview),
+              );
+        linkedCharacters =
+            _budgeter.summarizeAssociatedCharacters(associatedCharacters);
+      }
+    } catch (error) {
+      if (error is SettingCardGenerationException) rethrow;
+      throw SettingCardGenerationException('读取生成上下文失败', cause: error);
     }
 
     final Map<String, Object?> generated;
@@ -168,6 +223,7 @@ final class SettingCardService {
       generated = switch (card.kind) {
         SettingCardKind.worldview => await gateway.generateDetailedWorldview(
             source,
+            targetTotalCharacters: targetTotalCharacters,
             onProgress: onProgress == null
                 ? null
                 : (progress) {
@@ -185,10 +241,14 @@ final class SettingCardService {
         SettingCardKind.npc =>
           await gateway.generateDetailedResourceCharacter(
             source: source,
+            worldview: worldviewContext,
+            associatedCharacters: linkedCharacters,
+            targetTotalCharacters: targetTotalCharacters,
             onProgress: onProgress,
           ),
       };
     } catch (error) {
+      if (error is SettingCardGenerationException) rethrow;
       throw SettingCardGenerationException('生成失败', cause: error);
     }
 
@@ -206,10 +266,100 @@ final class SettingCardService {
           ? generatedSummary
           : card.summary,
       content: content,
+      metadata: _metadataWithPayload(card, generated),
       updatedAt: _clock(),
     );
     await _repository.save(updated);
     return updated;
+  }
+
+  /// Resolves a user-selected reference into prompt text.
+  ///
+  /// An `existingCard` reference is re-read from the repository at generation
+  /// time so a stale UI snapshot cannot freeze an older body into the new card.
+  Future<String> _resolveReference(SettingCardReferenceInput? reference) async {
+    if (reference == null) return '';
+    switch (reference.mode) {
+      case SettingCardReferenceMode.paste:
+        return reference.text.trim();
+      case SettingCardReferenceMode.file:
+        final body = reference.text.trim();
+        if (body.isEmpty) return '';
+        final label = reference.label.trim();
+        return label.isEmpty ? body : '文件：$label\n$body';
+      case SettingCardReferenceMode.existingCard:
+        final sourceId = reference.sourceCardId.trim();
+        if (sourceId.isEmpty) {
+          throw const SettingCardGenerationException('引用设定卡时缺少卡片 id');
+        }
+        final target = await _repository.findById(sourceId) ??
+            await _repository.findLegacyId(sourceId);
+        if (target == null || target.isDeleted) {
+          throw SettingCardGenerationException('引用的设定卡不存在: $sourceId');
+        }
+        final body = target.content.trim();
+        final name = target.name.trim();
+        return name.isEmpty ? body : '设定卡：$name\n$body';
+    }
+  }
+
+  /// Loads the card's origin worldview when the caller did not pass one.
+  ///
+  /// Missing or deleted origin cards degrade to "no worldview context" rather
+  /// than failing generation: the card may have been migrated without its
+  /// worldview row, and the user can still generate a standalone character.
+  Future<String> _loadOriginWorldview(SettingCard card) async {
+    final originId = card.originWorldviewId.trim();
+    if (originId.isEmpty) return '';
+    final origin = await _repository.findById(originId) ??
+        await _repository.findLegacyId(originId);
+    if (origin == null || origin.isDeleted) return '';
+    if (origin.kind != SettingCardKind.worldview) return '';
+    return origin.content;
+  }
+
+  /// Converts a markdown card body into the structured detail JSON the
+  /// budgeter scores module by module.
+  ///
+  /// A body without module sections (plain prose) stays as-is and falls back
+  /// to the budgeter's linear truncation.
+  String _budgetableWorldview(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || trimmed.startsWith('{')) return trimmed;
+    final detail = _parser.parseWorldviewDetailFromContent(trimmed);
+    return detail == null ? trimmed : jsonEncode(detail);
+  }
+
+  /// Persists the raw structured payload next to the rendered document.
+  ///
+  /// The document alone loses field types when a user edits prose; keeping the
+  /// payload lets the adventure snapshot rebuild the full character/worldview
+  /// shape without re-calling the model.
+  Map<String, Object?> _metadataWithPayload(
+    SettingCard card,
+    Map<String, Object?> generated,
+  ) {
+    final metadata = Map<String, Object?>.from(card.metadata);
+    if (card.kind == SettingCardKind.worldview) {
+      final detail = generated[SettingCardMarkdownParser.detailJsonKey];
+      final decoded = detail is String ? _tryDecodeMap(detail) : detail;
+      if (decoded is Map) {
+        metadata[SettingCardMarkdownParser.detailJsonKey] = decoded;
+      }
+    } else {
+      metadata[SettingCardMarkdownParser.structuredPayloadKey] = generated;
+    }
+    return metadata;
+  }
+
+  static Map<String, dynamic>? _tryDecodeMap(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } on FormatException {
+      // A non-JSON detail string carries no structured payload.
+    }
+    return null;
   }
 
   /// Renders a generated structured payload into the single document.

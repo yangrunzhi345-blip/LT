@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../application/setting_cards/setting_card_reference_input.dart';
 import '../../../../application/setting_cards/setting_card_service.dart';
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -12,6 +13,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../widgets/setting_card_reference_editor.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -38,6 +40,8 @@ final class _SettingCardCreatePageState
   final _name = TextEditingController();
   final _summary = TextEditingController();
   final _instruction = TextEditingController();
+  SettingCardReferenceMode _referenceMode = SettingCardReferenceMode.paste;
+  SettingCardReferenceInput? _reference;
   bool _busy = false;
 
   @override
@@ -66,7 +70,11 @@ final class _SettingCardCreatePageState
         mode: widget.mode.storageValue,
       );
       if (generate) {
-        await service.generate(id: card.id, instruction: instruction);
+        await service.generate(
+          id: card.id,
+          instruction: instruction,
+          reference: _reference,
+        );
       }
       if (!mounted) return;
       Navigator.of(context).pop<String>(card.id);
@@ -135,6 +143,13 @@ final class _SettingCardCreatePageState
                 label: l10n.resourceSummaryOptionalLabel,
                 hintText: l10n.resourceManualSummaryHint,
                 enabled: !_busy,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SettingCardReferenceEditor(
+                mode: _referenceMode,
+                enabled: !_busy,
+                onModeChanged: (mode) => setState(() => _referenceMode = mode),
+                onChanged: (reference) => _reference = reference,
               ),
               const SizedBox(height: AppSpacing.md),
               AppTextField(

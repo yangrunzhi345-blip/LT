@@ -77,6 +77,11 @@ void main() {
 
     await tester.enterText(
         find.byKey(const Key('setting-card-create-name')), '银月大陆');
+    // The reference editor above the instruction field pushes the action row
+    // below the 320px fold, so scroll it into view before tapping.
+    await tester
+        .ensureVisible(find.byKey(const Key('setting-card-create-manual')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('setting-card-create-manual')));
     await tester.pumpAndSettle();
 
