@@ -10,7 +10,9 @@ import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
 import '../application/resources/resource_trash_repository.dart';
 import '../application/resources/resource_trash_service.dart';
+import '../application/setting_cards/setting_card_migration_service.dart';
 import '../services/repositories/resource_tree_repository_impl.dart';
+import '../services/repositories/setting_card_repository_impl.dart';
 import 'auto_backup_service.dart';
 import 'repositories/world_embedding_repository.dart';
 import 'repositories/world_embedding_repository_impl.dart';
@@ -53,7 +55,7 @@ class DatabaseService {
   /// `resource_blueprints.budget_policy_version` column so a frozen run keeps
   /// the exact ceiling formula that produced its budget (1 = historical
   /// `min(..., A)`, 2 = elastic breakout without an absolute clip).
-  static const int schemaVersion = 50;
+  static const int schemaVersion = 51;
 
   static Database? _db;
   static Future<Database>? _opening;
@@ -280,6 +282,7 @@ class DatabaseService {
                         await createV44Schema(db);
                         await createRuntimeCheckpointSchema(db);
                         await createResourceCharacterRelationshipSchema(db);
+                        await createSettingCardSchema(db);
                       },
                       onUpgrade: (db, oldVersion, newVersion) async {
                         if (oldVersion > newVersion) {
@@ -290,6 +293,7 @@ class DatabaseService {
                       },
                     );
                     await _verifyForeignKeysEnabled(restoredDb);
+                    await _runSettingCardMigration(restoredDb);
                     return restoredDb;
                   }
                 } catch (e) {
@@ -355,7 +359,8 @@ class DatabaseService {
         await createRuntimeCheckpointSchema(db);
         await createCreationLibrarySchema(db);
         await createResourceCharacterRelationshipSchema(db);
-        _log('全新安装，v49 schema 创建完毕');
+        await createSettingCardSchema(db);
+        _log('全新安装，v51 schema 创建完毕');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         _log('数据库升级: v$oldVersion → v$newVersion');
@@ -377,7 +382,26 @@ class DatabaseService {
       },
     );
     await _verifyForeignKeysEnabled(db);
+    await _runSettingCardMigration(db);
     return db;
+  }
+
+  /// One-time merge of the retired tree into lightweight setting cards.
+  ///
+  /// Non-fatal by design: the compatibility read paths keep working when this
+  /// fails, and the next launch retries because the completion marker is only
+  /// written after a full run.
+  static Future<void> _runSettingCardMigration(Database db) async {
+    try {
+      final stats = await SettingCardMigrationService(
+        getDb: () async => db,
+      ).run();
+      if (stats.created > 0 || stats.failed > 0) {
+        _log('设定卡兼容迁移: $stats');
+      }
+    } catch (e) {
+      _log('设定卡兼容迁移失败（非致命，下次启动重试）: $e');
+    }
   }
 
   static Future<void> _verifyForeignKeysEnabled(Database db) async {
@@ -388,6 +412,10 @@ class DatabaseService {
       throw StateError('数据库 foreign_keys 策略未生效，已拒绝继续使用连接');
     }
   }
+
+  /// v51 — lightweight setting cards.
+  static Future<void> createSettingCardSchema(Database db) =>
+      SettingCardRepositoryImpl.createSchema(db);
 
   /// Latest schema — used for new installations.
   static Future<void> createV22Schema(Database db) async {
@@ -2604,6 +2632,11 @@ class DatabaseService {
       await safeAddColumn(db, 'resource_blueprints', 'budget_policy_version',
           'INTEGER NOT NULL DEFAULT 1');
       _log('  迁移 v49 → v50 完成');
+    }
+    if (oldVersion < 51 && newVersion >= 51) {
+      _log('  执行迁移: v50 → v51（轻量设定卡）');
+      await createSettingCardSchema(db);
+      _log('  迁移 v50 → v51 完成');
     }
 
     _log('migrateStepByStep 全部完成');
