@@ -2,7 +2,7 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-app-02569B?logo=flutter)](https://flutter.dev/) [![Latest release](https://img.shields.io/github/v/release/yangrunzhi345-blip/LT)](https://github.com/yangrunzhi345-blip/LT/releases/latest)
 
-[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 LT Dialogue 是一个本地优先的 AI 互动叙事、世界观与角色创作工作台。
 
@@ -61,7 +61,7 @@ AI 文本生成与翻译会向你配置的服务发送所需上下文，该服�
 
 ## 多语言支持
 
-UI 支持 English、简体中文、繁體中文、日本語与 한국어。首次启动或设置中可选择语言。翻译源文件位于 [`lib/l10n/`](lib/l10n/)。
+UI 支持 English 与简体中文。首次启动或设置中可选择语言。翻译源文件位于 [`lib/l10n/`](lib/l10n/)。
 
 ## 安装
 

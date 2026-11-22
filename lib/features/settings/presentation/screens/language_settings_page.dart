@@ -49,9 +49,6 @@ class LanguageSettingsContent extends ConsumerWidget {
     return switch (locale) {
       AppLocale.en => 'English',
       AppLocale.zhHans => 'Simplified Chinese',
-      AppLocale.zhHant => 'Traditional Chinese',
-      AppLocale.ja => 'Japanese',
-      AppLocale.ko => 'Korean',
     };
   }
 }

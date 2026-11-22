@@ -101,8 +101,6 @@ void main() {
     setViewport(tester, width: 390, height: 844);
     for (final locale in const [
       Locale('en'),
-      Locale('ja'),
-      Locale('ko'),
       Locale('zh'),
       Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
       Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),

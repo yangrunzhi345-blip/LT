@@ -15,9 +15,6 @@ Baseline: `main` at `8981942`
 
 - [README.md](README.md) — rewritten as the English primary entry point.
 - [README.zh-CN.md](README.zh-CN.md) — added Simplified Chinese translation.
-- [README.zh-TW.md](README.zh-TW.md) — added Traditional Chinese translation.
-- [README.ja.md](README.ja.md) — added Japanese translation.
-- [README.ko.md](README.ko.md) — added Korean translation.
 - [readme-audit.md](docs/documentation/readme-audit.md) — source and documentation audit.
 - [readme-structure-plan.md](docs/documentation/readme-structure-plan.md) — README structure and content plan.
 

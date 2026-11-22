@@ -31,7 +31,7 @@ class _MemorySettingsRepository implements ISettingsRepository {
 
 void main() {
   group('AppLocale Domain & Helpers', () {
-    test('fromCode 解析支持的所有 5 种语言及变体', () {
+    test('fromCode 解析支持的两种语言及变体', () {
       expect(AppLocale.fromCode('en'), AppLocale.en);
       expect(AppLocale.fromCode('en-US'), AppLocale.en);
       expect(AppLocale.fromCode('en_GB'), AppLocale.en);
@@ -40,15 +40,10 @@ void main() {
       expect(AppLocale.fromCode('zh_CN'), AppLocale.zhHans);
       expect(AppLocale.fromCode('zh'), AppLocale.zhHans);
 
-      expect(AppLocale.fromCode('zh-Hant'), AppLocale.zhHant);
-      expect(AppLocale.fromCode('zh_TW'), AppLocale.zhHant);
-      expect(AppLocale.fromCode('zh-HK'), AppLocale.zhHant);
-
-      expect(AppLocale.fromCode('ja'), AppLocale.ja);
-      expect(AppLocale.fromCode('ja-JP'), AppLocale.ja);
-
-      expect(AppLocale.fromCode('ko'), AppLocale.ko);
-      expect(AppLocale.fromCode('ko-KR'), AppLocale.ko);
+      // Legacy Traditional Chinese codes converge on the single Chinese locale.
+      expect(AppLocale.fromCode('zh-Hant'), AppLocale.zhHans);
+      expect(AppLocale.fromCode('zh_TW'), AppLocale.zhHans);
+      expect(AppLocale.fromCode('zh-HK'), AppLocale.zhHans);
     });
 
     test('fromCode 非法值与空值 fail-safe 回退到 English', () {
@@ -57,17 +52,11 @@ void main() {
       expect(AppLocale.fromCode('invalid_locale'), AppLocale.en);
       expect(AppLocale.fromCode('fr-FR'), AppLocale.en);
       expect(AppLocale.fromCode('de'), AppLocale.en);
+      expect(AppLocale.fromCode('ja'), AppLocale.en);
+      expect(AppLocale.fromCode('ko'), AppLocale.en);
     });
 
     test('matchSystemLocale 正确识别支持语言并对不支持语言回退到 English', () {
-      expect(
-        AppLocale.matchSystemLocale(const Locale('ja')),
-        AppLocale.ja,
-      );
-      expect(
-        AppLocale.matchSystemLocale(const Locale('ko')),
-        AppLocale.ko,
-      );
       expect(
         AppLocale.matchSystemLocale(const Locale('zh', 'CN')),
         AppLocale.zhHans,
@@ -76,11 +65,11 @@ void main() {
         AppLocale.matchSystemLocale(
           const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
         ),
-        AppLocale.zhHant,
+        AppLocale.zhHans,
       );
       expect(
         AppLocale.matchSystemLocale(const Locale('zh', 'TW')),
-        AppLocale.zhHant,
+        AppLocale.zhHans,
       );
       expect(
         AppLocale.matchSystemLocale(const Locale('en', 'US')),
@@ -94,6 +83,8 @@ void main() {
         AppLocale.matchSystemLocale(const Locale('ru')),
         AppLocale.en,
       );
+      expect(AppLocale.matchSystemLocale(const Locale('ja')), AppLocale.en);
+      expect(AppLocale.matchSystemLocale(const Locale('ko')), AppLocale.en);
     });
   });
 
@@ -109,7 +100,7 @@ void main() {
       expect(repo.values[AppLocaleKeys.uiLocale], isNull);
     });
 
-    test('保存所有 5 种支持语言并持久化', () async {
+    test('保存所有支持语言并持久化', () async {
       final repo = _MemorySettingsRepository();
       final controller = AppLocaleController(settingsRepo: repo);
 
@@ -136,14 +127,14 @@ void main() {
 
     test('重启后从存储恢复语言', () async {
       final repo = _MemorySettingsRepository();
-      repo.values[AppLocaleKeys.uiLocale] = 'ja';
+      repo.values[AppLocaleKeys.uiLocale] = 'zh-Hans';
 
       final controller = AppLocaleController(settingsRepo: repo);
       await controller.loadLocale();
 
       expect(controller.isFirstRun, isFalse);
-      expect(controller.currentLocale, AppLocale.ja);
-      expect(controller.locale, const Locale('ja'));
+      expect(controller.currentLocale, AppLocale.zhHans);
+      expect(controller.locale, AppLocale.zhHans.locale);
     });
 
     test('连续热切换语言且状态正确通知', () async {
@@ -161,18 +152,6 @@ void main() {
       await controller.setLocale(AppLocale.en);
       expect(controller.currentLocale, AppLocale.en);
       expect(notifyCount, 2);
-
-      await controller.setLocale(AppLocale.ja);
-      expect(controller.currentLocale, AppLocale.ja);
-      expect(notifyCount, 3);
-
-      await controller.setLocale(AppLocale.ko);
-      expect(controller.currentLocale, AppLocale.ko);
-      expect(notifyCount, 4);
-
-      await controller.setLocale(AppLocale.zhHant);
-      expect(controller.currentLocale, AppLocale.zhHant);
-      expect(notifyCount, 5);
     });
   });
 
@@ -182,20 +161,16 @@ void main() {
       final controller = AppLocaleController(settingsRepo: repo);
       await controller.loadLocale();
 
-      // 用户在首次启动引导中选择了日语
-      await controller.setLocale(AppLocale.ja, isFirstRunSetup: true);
+      await controller.setLocale(AppLocale.zhHans, isFirstRunSetup: true);
 
-      expect(repo.values[AppLocaleKeys.uiLocale], 'ja');
-      expect(repo.values[ReadAloudSettingKeys.languageTag], 'ja-JP');
+      expect(repo.values[AppLocaleKeys.uiLocale], 'zh-Hans');
+      expect(repo.values[ReadAloudSettingKeys.languageTag], 'zh-CN');
     });
 
     test('首次启动 setup 时，各语言对应的 TTS fallback 映射准确', () async {
       final expectedFallbacks = {
         AppLocale.en: 'en-US',
         AppLocale.zhHans: 'zh-CN',
-        AppLocale.zhHant: 'zh-TW',
-        AppLocale.ja: 'ja-JP',
-        AppLocale.ko: 'ko-KR',
       };
 
       for (final entry in expectedFallbacks.entries) {
@@ -228,19 +203,12 @@ void main() {
 
       final controller = AppLocaleController(settingsRepo: repo);
 
-      // 用户将 UI 切换为 English
       await controller.setLocale(AppLocale.en);
       expect(repo.values[AppLocaleKeys.uiLocale], 'en');
       expect(repo.values[ReadAloudSettingKeys.languageTag], 'ja-JP');
 
-      // 用户将 UI 切换为 简体中文
       await controller.setLocale(AppLocale.zhHans);
       expect(repo.values[AppLocaleKeys.uiLocale], 'zh-Hans');
-      expect(repo.values[ReadAloudSettingKeys.languageTag], 'ja-JP');
-
-      // 用户将 UI 切换为 繁體中文
-      await controller.setLocale(AppLocale.zhHant);
-      expect(repo.values[AppLocaleKeys.uiLocale], 'zh-Hant');
       expect(repo.values[ReadAloudSettingKeys.languageTag], 'ja-JP');
     });
   });

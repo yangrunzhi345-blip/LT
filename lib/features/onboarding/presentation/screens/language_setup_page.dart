@@ -255,9 +255,6 @@ class _LanguageSetupPageState extends ConsumerState<LanguageSetupPage> {
     return switch (locale) {
       AppLocale.en => 'Choose Language',
       AppLocale.zhHans => '选择语言',
-      AppLocale.zhHant => '選擇語言',
-      AppLocale.ja => '言語を選択',
-      AppLocale.ko => '언어 선택',
     };
   }
 
@@ -265,9 +262,6 @@ class _LanguageSetupPageState extends ConsumerState<LanguageSetupPage> {
     return switch (locale) {
       AppLocale.en => 'Please select your preferred application language',
       AppLocale.zhHans => '请选择应用显示语言',
-      AppLocale.zhHant => '請選擇應用程式顯示語言',
-      AppLocale.ja => 'アプリケーションの表示言語を選択してください',
-      AppLocale.ko => '애플리케이션 표시 언어를 선택해 주세요',
     };
   }
 
@@ -275,9 +269,6 @@ class _LanguageSetupPageState extends ConsumerState<LanguageSetupPage> {
     return switch (locale) {
       AppLocale.en => 'Continue',
       AppLocale.zhHans => '确认并继续',
-      AppLocale.zhHant => '確認並繼續',
-      AppLocale.ja => '確定して次へ',
-      AppLocale.ko => '확인 및 계속',
     };
   }
 
@@ -285,9 +276,6 @@ class _LanguageSetupPageState extends ConsumerState<LanguageSetupPage> {
     return switch (locale) {
       AppLocale.en => 'English',
       AppLocale.zhHans => 'Simplified Chinese',
-      AppLocale.zhHant => 'Traditional Chinese',
-      AppLocale.ja => 'Japanese',
-      AppLocale.ko => 'Korean',
     };
   }
 }

@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 
 /// 支持的应用 UI 语言枚举。
 ///
-/// 严格限定于首发 5 种语言：
+/// 仅保留两种语言：
 /// 1. English (en)
 /// 2. 简体中文 (zh-Hans)
-/// 3. 繁體中文 (zh-Hant)
-/// 4. 日本語 (ja)
-/// 5. 한국어 (ko)
 enum AppLocale {
   en(
     code: 'en',
@@ -20,24 +17,6 @@ enum AppLocale {
     nativeName: '简体中文',
     locale: Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
     defaultTtsTag: 'zh-CN',
-  ),
-  zhHant(
-    code: 'zh-Hant',
-    nativeName: '繁體中文',
-    locale: Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
-    defaultTtsTag: 'zh-TW',
-  ),
-  ja(
-    code: 'ja',
-    nativeName: '日本語',
-    locale: Locale('ja'),
-    defaultTtsTag: 'ja-JP',
-  ),
-  ko(
-    code: 'ko',
-    nativeName: '한국어',
-    locale: Locale('ko'),
-    defaultTtsTag: 'ko-KR',
   );
 
   const AppLocale({
@@ -84,13 +63,7 @@ enum AppLocale {
       case 'zh-tw':
       case 'zh-hk':
       case 'zh-mo':
-        return AppLocale.zhHant;
-      case 'ja':
-      case 'ja-jp':
-        return AppLocale.ja;
-      case 'ko':
-      case 'ko-kr':
-        return AppLocale.ko;
+        return AppLocale.zhHans;
       default:
         return fallback;
     }
@@ -102,21 +75,8 @@ enum AppLocale {
   static AppLocale matchSystemLocale(Locale? systemLocale) {
     if (systemLocale == null) return fallback;
     final lang = systemLocale.languageCode.toLowerCase();
-    final script = systemLocale.scriptCode?.toLowerCase();
-    final country = systemLocale.countryCode?.toUpperCase();
 
-    if (lang == 'zh') {
-      if (script == 'hant' ||
-          country == 'TW' ||
-          country == 'HK' ||
-          country == 'MO') {
-        return AppLocale.zhHant;
-      }
-      return AppLocale.zhHans;
-    }
-
-    if (lang == 'ja') return AppLocale.ja;
-    if (lang == 'ko') return AppLocale.ko;
+    if (lang == 'zh') return AppLocale.zhHans;
     if (lang == 'en') return AppLocale.en;
 
     return fallback;

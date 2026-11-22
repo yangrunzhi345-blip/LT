@@ -4,7 +4,6 @@ import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart'
 import 'package:lt_dialogue/domain/errors/app_error.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
-import 'package:lt_dialogue/l10n/generated/app_localizations_ja.dart';
 
 void main() {
   final l10n = AppLocalizationsEn();
@@ -110,14 +109,11 @@ void main() {
     );
     final zh = localizeAdventureReadiness(readiness, AppLocalizationsZh());
     final en = localizeAdventureReadiness(readiness, AppLocalizationsEn());
-    final ja = localizeAdventureReadiness(readiness, AppLocalizationsJa());
 
     expect(zh, contains('资源准备失败'));
     expect(en, contains('Resource preparation failed'));
     expect(zh, isNot(contains('：\n')));
     expect(zh, isNot(en));
-    expect(ja, contains('リソースの準備に失敗しました'));
-    expect(ja, isNot(en));
   });
 
   group('adventureLaunchError', () {

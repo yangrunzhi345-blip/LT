@@ -57,14 +57,8 @@ void main() {
       lookupAppLocalizations(const Locale('en')),
       event,
     );
-    final ja = localizeAppEvent(
-      lookupAppLocalizations(const Locale('ja')),
-      event,
-    );
     expect(zh, contains('100'));
     expect(en, contains('100'));
-    expect(ja, contains('100'));
     expect(zh, isNot(en));
-    expect(ja, isNot(en));
   });
 }

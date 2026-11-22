@@ -82,8 +82,6 @@ void main() {
         () {
       for (final locale in const [
         Locale('en'),
-        Locale('ja'),
-        Locale('ko'),
         Locale('zh'),
         Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
         Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')
@@ -194,8 +192,6 @@ void main() {
           const PartGenerationBudgetInfeasibleException(infeasibleAllocation));
       for (final locale in const [
         Locale('en'),
-        Locale('ja'),
-        Locale('ko'),
         Locale('zh'),
         Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
         Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant')

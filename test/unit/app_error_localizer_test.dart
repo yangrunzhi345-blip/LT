@@ -9,8 +9,6 @@ void main() {
   test('every error code has localized copy in all supported locales', () {
     final localizations = <AppLocalizations>[
       lookupAppLocalizations(const Locale('en')),
-      lookupAppLocalizations(const Locale('ja')),
-      lookupAppLocalizations(const Locale('ko')),
       lookupAppLocalizations(const Locale('zh')),
       lookupAppLocalizations(const Locale('zh', 'Hans')),
       lookupAppLocalizations(const Locale('zh', 'Hant')),

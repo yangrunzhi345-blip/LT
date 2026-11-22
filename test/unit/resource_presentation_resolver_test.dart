@@ -3,16 +3,12 @@ import 'package:lt_dialogue/application/resources/resource_lifecycle_projection.
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/resolvers/resource_presentation_resolver.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
-import 'package:lt_dialogue/l10n/generated/app_localizations_ja.dart';
-import 'package:lt_dialogue/l10n/generated/app_localizations_ko.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 
 void main() {
   group('ResourcePresentationResolver Unit Tests', () {
     final l10nEn = AppLocalizationsEn();
     final l10nZh = AppLocalizationsZh();
-    final l10nJa = AppLocalizationsJa();
-    final l10nKo = AppLocalizationsKo();
 
     test('resolveLifecycle maps ResourceLifecycleState correctly', () {
       expect(
@@ -102,21 +98,6 @@ void main() {
         ),
         'Ready',
       );
-      expect(
-        ResourcePresentationResolver.localizedLifecycleLabel(
-          ResourcePresentationLifecycle.ready,
-          l10nJa,
-        ),
-        '準備完了',
-      );
-      expect(
-        ResourcePresentationResolver.localizedLifecycleLabel(
-          ResourcePresentationLifecycle.ready,
-          l10nKo,
-        ),
-        '준비 완료',
-      );
-
       // Planning
       expect(
         ResourcePresentationResolver.localizedLifecycleLabel(

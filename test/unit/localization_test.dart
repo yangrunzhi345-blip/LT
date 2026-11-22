@@ -18,8 +18,6 @@ void main() {
       () {
     final locales = <Locale>[
       const Locale('en'),
-      const Locale('ja'),
-      const Locale('ko'),
       const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
       const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
     ];
@@ -145,11 +143,7 @@ void main() {
   test('ARB message and placeholder sets stay in sync', () {
     final files = [
       'app_en.arb',
-      'app_ja.arb',
-      'app_ko.arb',
       'app_zh.arb',
-      'app_zh_Hans.arb',
-      'app_zh_Hant.arb',
     ];
     Set<String>? expectedKeys;
     Set<String>? expectedPlaceholders;

@@ -2,7 +2,7 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-app-02569B?logo=flutter)](https://flutter.dev/) [![Latest release](https://img.shields.io/github/v/release/yangrunzhi345-blip/LT)](https://github.com/yangrunzhi345-blip/LT/releases/latest)
 
-[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md) | [한국어](README.ko.md)
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 LT Dialogue is a local-first workbench for AI interactive storytelling, worldbuilding, and character creation.
 
@@ -61,7 +61,7 @@ AI text generation and translation send the required context to your configured 
 
 ## Localization
 
-The UI supports English, Simplified Chinese, Traditional Chinese, Japanese, and Korean. Select a language during onboarding or in Settings. Translation sources are in [`lib/l10n/`](lib/l10n/).
+The UI supports English and Simplified Chinese. Select a language during onboarding or in Settings. Translation sources are in [`lib/l10n/`](lib/l10n/).
 
 ## Installation
 
