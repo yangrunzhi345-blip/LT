@@ -68,7 +68,9 @@ class DatabaseService {
     } catch (_) {}
     try {
       await _db?.close();
-    } catch (_) {}
+    } catch (e) {
+      _log('resetDatabase: 关闭旧连接失败（已忽略）: $e');
+    }
     _db = null;
     _opening = null;
     // Also reset repository caches
@@ -290,13 +292,16 @@ class DatabaseService {
                     await _verifyForeignKeysEnabled(restoredDb);
                     return restoredDb;
                   }
-                } catch (_) {
+                } catch (e) {
+                  _log('备份 ${backup.path} 不可用，尝试下一个: $e');
                   continue; // 尝试下一个备份
                 }
               }
               _log('所有备份均不可用，已保留原数据库并停止启动');
             }
-          } catch (_) {}
+          } catch (e) {
+            _log('备份恢复流程出错（已保留原数据库）: $e');
+          }
           throw DatabaseRecoveryRequiredException(
             path,
             preservedCopyPath: preservedCopyPath,
