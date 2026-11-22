@@ -62,3 +62,6 @@ app.*.map.json
 *.tar.bz2
 voices.bin
 espeak-ng-data/
+
+# Generated localization output (produced by `flutter gen-l10n`).
+lib/l10n/generated/
