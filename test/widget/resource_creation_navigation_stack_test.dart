@@ -28,6 +28,7 @@ import 'package:lt_dialogue/services/database_service.dart';
 
 import '../helpers/localization_test_helper.dart';
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/legacy_library_runtime_override.dart';
 
 Finder _fieldByLabel(String label) => find.descendant(
       of: find.widgetWithText(AppTextField, label),
@@ -82,6 +83,7 @@ void main() {
     setViewport(tester, width: width, height: height);
     final container = ProviderContainer(
       overrides: [
+        legacyLibraryRuntimeOverride(),
         llmGatewayProvider
             .overrideWithValue(_AiResponses(suggestedName: suggestedName)),
       ],

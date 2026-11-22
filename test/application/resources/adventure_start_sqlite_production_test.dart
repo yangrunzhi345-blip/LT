@@ -836,7 +836,14 @@ void main() {
     final gate = container.read(adventureReadinessGateProvider);
     await gate.prepare(id);
     final frozen = await gate.enforceAndFreeze(config(id));
-    expect(frozen.resourceBindings, hasLength(1));
+    // Phase 5b: the startup compatibility migration turns this legacy row into
+    // a lightweight setting card, so the card becomes the frozen snapshot
+    // authority and no tree revision binding is published.
+    expect(frozen.resourceBindings, isEmpty);
+    final frozenCharacter = frozen.selectedCharacters.single;
+    expect(frozenCharacter.characterName, '旧角色');
+    expect(frozenCharacter.characterCardJson, isNotNull);
+    expect(frozenCharacter.characterCardJson!['content'], isNotEmpty);
     expect(await db.query('character_cards'), hasLength(1));
     final chat = container.read(chatProvider);
     await chat.loadApiKey();

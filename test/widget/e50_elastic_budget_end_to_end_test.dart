@@ -35,6 +35,7 @@ import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart'
 import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/legacy_library_runtime_override.dart';
 import '../helpers/r01_streaming_fixture.dart';
 
 /// E50 弹性预算 UI→Controller→Repository→SQLite 端到端验收（ADR-0003）。
@@ -230,7 +231,8 @@ void main() {
     testWidgets('numeric input persists and reloads from the settings table',
         (tester) async {
       setViewport(tester, width: 390, height: 844);
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(container.dispose);
 
       await tester.pumpWidget(UncontrolledProviderScope(
@@ -261,7 +263,8 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await setGlobal(20);
       final stack = await seedRun(key: 'studio_ov', target: 8000);
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
@@ -327,7 +330,8 @@ void main() {
           await seedRun(key: 'pri_res', target: 8000, resourceOverride: 50);
       expect(await frozenPercent(stack.blueprintId), 50);
 
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
@@ -351,7 +355,8 @@ void main() {
           sessionOverride: 35);
       expect(await frozenPercent(stack.blueprintId), 35);
 
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
@@ -369,7 +374,8 @@ void main() {
       final stack = await seedRun(key: 'pri_glob', target: 8000);
       expect(await frozenPercent(stack.blueprintId), 20);
 
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
@@ -393,7 +399,8 @@ void main() {
       await setGlobal(50);
       expect(await frozenPercent(stack.blueprintId), 20);
 
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
@@ -410,7 +417,10 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await setGlobal(45);
       final container = ProviderContainer(
-        overrides: [llmGatewayProvider.overrideWithValue(_E50Gateway())],
+        overrides: [
+          legacyLibraryRuntimeOverride(),
+          llmGatewayProvider.overrideWithValue(_E50Gateway())
+        ],
       );
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -555,7 +565,10 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       await setGlobal(20);
       final container = ProviderContainer(
-        overrides: [llmGatewayProvider.overrideWithValue(_E50Gateway())],
+        overrides: [
+          legacyLibraryRuntimeOverride(),
+          llmGatewayProvider.overrideWithValue(_E50Gateway())
+        ],
       );
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -614,7 +627,8 @@ void main() {
         setViewport(tester, width: 320, height: 568);
         await setGlobal(20);
         final stack = await seedRun(key: 'resp_$scale', target: 8000);
-        final container = ProviderContainer();
+        final container =
+            ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
         addTearDown(() async {
           await tester.pumpWidget(const SizedBox.shrink());
           container.dispose();

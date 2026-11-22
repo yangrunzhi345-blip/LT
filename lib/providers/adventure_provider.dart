@@ -23,6 +23,8 @@ import '../application/adventure/tracked_state_snapshot.dart';
 import '../application/resources/assembly_readiness_coordinator.dart';
 import '../application/resources/assembly_readiness_repository.dart';
 import '../application/resources/resource_assembly_builder.dart';
+import '../application/setting_cards/setting_card_adventure_snapshot.dart';
+import '../services/repositories/setting_card_repository_impl.dart';
 import '../application/resources/resource_revision_repository.dart';
 import '../application/resources/resource_revision_service.dart';
 import '../services/repositories/adventure_repository.dart';
@@ -289,13 +291,16 @@ class AdventureProvider extends ChangeNotifier {
       builder: builder,
       typeResolver: (id) async => (await treeRepository.findResource(id))?.type,
     );
-    return AdventureReadinessGate(
-      getDb: getDb,
-      treeRepository: treeRepository,
-      revisionRepository: revisionRepository,
-      revisionService: revisionService,
-      coordinator: coordinator,
-      builder: builder,
+    return SettingCardAwareReadinessGate(
+      inner: AdventureReadinessGate(
+        getDb: getDb,
+        treeRepository: treeRepository,
+        revisionRepository: revisionRepository,
+        revisionService: revisionService,
+        coordinator: coordinator,
+        builder: builder,
+      ),
+      cards: SettingCardRepositoryImpl(getDb: getDb),
     );
   }
 

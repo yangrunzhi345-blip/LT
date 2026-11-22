@@ -12,6 +12,11 @@ import 'package:sqflite/sqflite.dart';
 
 import '../services/database_service.dart';
 import '../domain/resources/resource_contracts.dart';
+import '../domain/setting_cards/setting_card_repository.dart';
+import '../services/repositories/setting_card_repository_impl.dart';
+import '../application/setting_cards/setting_card_service.dart';
+import '../application/setting_cards/setting_card_library_runtime.dart';
+import '../application/setting_cards/setting_card_adventure_snapshot.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/repositories/adventure_repository_impl.dart';
 import '../services/repositories/world_entry_repository.dart';
@@ -677,11 +682,28 @@ final resourceTrashRuntimeProvider = Provider<ResourceTrashRuntime>((ref) {
 });
 
 /// Production data and creation boundary for the unified Resource Library.
+/// Lightweight setting card store (single document per worldview/character/NPC).
+final settingCardRepositoryProvider = Provider<SettingCardRepository>((ref) {
+  return SettingCardRepositoryImpl(getDb: () => DatabaseService.database);
+});
+
+final settingCardServiceProvider = Provider<SettingCardService>((ref) {
+  return SettingCardService(
+    repository: ref.watch(settingCardRepositoryProvider),
+    gateway: ref.watch(llmGatewayProvider),
+  );
+});
+
+/// Library runtime: lightweight cards first, legacy rows only as a fallback for
+/// data the compatibility migration has not reached yet.
 final resourceLibraryRuntimeProvider = Provider<ResourceLibraryRuntime>((ref) {
-  return ProductionResourceLibraryRuntime(
-    crud: ref.read(resourceCrudControllerProvider),
-    studio: ref.read(resourceStudioRuntimeProvider),
-    reconciler: ref.read(resourceLifecycleReconcilerProvider),
+  return SettingCardLibraryRuntime(
+    service: ref.watch(settingCardServiceProvider),
+    fallback: ProductionResourceLibraryRuntime(
+      crud: ref.read(resourceCrudControllerProvider),
+      studio: ref.read(resourceStudioRuntimeProvider),
+      reconciler: ref.read(resourceLifecycleReconcilerProvider),
+    ),
   );
 });
 
@@ -813,14 +835,17 @@ final assemblyReadinessCompressionLinkProvider = Provider<void>((ref) {
 /// Adventure 启动边界（Phase 10）：按被选资源解析 readiness，fail-closed
 /// 阻止未就绪启动，并把被采用的 revision 冻结进 AdventureConfig。
 final adventureReadinessGateProvider = Provider<IAdventureReadinessGate>((ref) {
-  return AdventureReadinessGate(
-    getDb: () => DatabaseService.database,
-    treeRepository: ResourceTreeRepositoryImpl(
+  return SettingCardAwareReadinessGate(
+    inner: AdventureReadinessGate(
       getDb: () => DatabaseService.database,
+      treeRepository: ResourceTreeRepositoryImpl(
+        getDb: () => DatabaseService.database,
+      ),
+      revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
+      revisionService: ref.watch(resourceRevisionServiceProvider),
+      coordinator: ref.watch(assemblyReadinessCoordinatorProvider),
+      builder: ref.watch(resourceAssemblyBuilderProvider),
     ),
-    revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
-    revisionService: ref.watch(resourceRevisionServiceProvider),
-    coordinator: ref.watch(assemblyReadinessCoordinatorProvider),
-    builder: ref.watch(resourceAssemblyBuilderProvider),
+    cards: ref.watch(settingCardRepositoryProvider),
   );
 });

@@ -34,6 +34,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/core/widgets/app_text_field.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/legacy_library_runtime_override.dart';
 import '../helpers/localization_test_helper.dart';
 import '../helpers/studio_scroll_helper.dart';
 
@@ -112,8 +113,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: [legacyLibraryRuntimeOverride()],
+          child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -192,6 +194,7 @@ void main() {
           (tester) async {
         setViewport(tester, width: width, height: 844);
         final container = ProviderContainer(overrides: [
+          legacyLibraryRuntimeOverride(),
           llmGatewayProvider.overrideWithValue(_AiResponses()),
         ]);
         addTearDown(() async {
@@ -250,17 +253,18 @@ void main() {
       tester.view.padding = const FakeViewPadding(top: 24, bottom: 16);
       tester.view.viewPadding = const FakeViewPadding(top: 24, bottom: 16);
       await tester.pumpWidget(ProviderScope(
+          overrides: [legacyLibraryRuntimeOverride()],
           child: MaterialApp(
-        locale: const Locale('zh'),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        initialRoute: '/library',
-        onGenerateRoute: AppRouter.onGenerateRoute,
-        builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: const TextScaler.linear(1.6)),
-            child: child!),
-      )));
+            locale: const Locale('zh'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            initialRoute: '/library',
+            onGenerateRoute: AppRouter.onGenerateRoute,
+            builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: const TextScaler.linear(1.6)),
+                child: child!),
+          )));
       await _waitFor(tester, find.text('还没有资源'));
       final libraryContext = tester.element(find.byType(ResourceLibraryScreen));
       expect(MediaQuery.sizeOf(libraryContext), const Size(320, 568));
@@ -309,7 +313,8 @@ void main() {
           'should map real validation for ${content == null ? 'empty section' : content.isEmpty ? 'missing body' : 'oversize body'}',
           (tester) async {
         setViewport(tester, width: 320, height: 568);
-        final container = ProviderContainer();
+        final container =
+            ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
         addTearDown(container.dispose);
         final repository =
             ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
@@ -382,8 +387,9 @@ void main() {
       testWidgets('should create edit save and reload ${type.name}',
           (tester) async {
         setViewport(tester, width: 390, height: 844);
-        await tester.pumpWidget(const ProviderScope(
-          child: MaterialApp(
+        await tester.pumpWidget(ProviderScope(
+          overrides: [legacyLibraryRuntimeOverride()],
+          child: const MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

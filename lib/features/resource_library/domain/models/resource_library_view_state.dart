@@ -60,6 +60,7 @@ final class ResourceLibraryItem {
     this.isConsumable = false,
     this.lifecycleState,
     this.originWorldviewId = '',
+    this.isSettingCard = false,
   });
 
   final String id;
@@ -74,6 +75,10 @@ final class ResourceLibraryItem {
 
   /// Native worldview identity used to validate related-character generation.
   final String originWorldviewId;
+
+  /// True when this item is backed by a lightweight setting card rather than
+  /// the retired resource tree. The library uses it to pick the editor.
+  final bool isSettingCard;
 
   String localizedName(AppLocalizations l10n) =>
       name.trim().isEmpty ? l10n.resourceUnnamed : name;

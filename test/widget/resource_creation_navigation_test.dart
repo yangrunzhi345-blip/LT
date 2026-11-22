@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/legacy_library_runtime_override.dart';
 
 /// Drags the form until the submit button is fully on screen. `ensureVisible`
 /// alone can leave it below the fold in this nested scroll structure, and the
@@ -70,6 +71,7 @@ void main() {
 
   Widget buildTestApp(Widget home) {
     return ProviderScope(
+      overrides: [legacyLibraryRuntimeOverride()],
       child: MaterialApp(
         locale: const Locale('zh'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,

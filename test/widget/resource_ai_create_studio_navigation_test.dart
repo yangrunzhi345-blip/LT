@@ -31,6 +31,7 @@ import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/legacy_library_runtime_override.dart';
 import '../helpers/localization_test_helper.dart';
 import '../helpers/studio_scroll_helper.dart';
 
@@ -103,7 +104,8 @@ void main() {
     testWidgets('inherit keeps the global ceiling; independent re-freezes it',
         (tester) async {
       setViewport(tester, width: 390, height: 844);
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
@@ -190,7 +192,8 @@ void main() {
         'the unified picker exposes all eleven percents inside a '
         'height-capped scrollable sheet', (tester) async {
       setViewport(tester, width: 320, height: 568);
-      final container = ProviderContainer();
+      final container =
+          ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         container.dispose();
@@ -314,7 +317,10 @@ void main() {
         'budget, not just the UI', (tester) async {
       setViewport(tester, width: 390, height: 844);
       final container = ProviderContainer(
-        overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+        overrides: [
+          legacyLibraryRuntimeOverride(),
+          llmGatewayProvider.overrideWithValue(_AiResponses())
+        ],
       );
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -410,7 +416,10 @@ void main() {
           'target length', (tester) async {
         setViewport(tester, width: 390, height: 844);
         final container = ProviderContainer(
-          overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+          overrides: [
+            legacyLibraryRuntimeOverride(),
+            llmGatewayProvider.overrideWithValue(_AiResponses())
+          ],
         );
         addTearDown(() async {
           await tester.pumpWidget(const SizedBox.shrink());
@@ -493,6 +502,7 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       final container = ProviderContainer(
         overrides: [
+          legacyLibraryRuntimeOverride(),
           // A slow planner keeps the transient creation state observable.
           llmGatewayProvider.overrideWithValue(_AiResponses(planDelay: 2000)),
         ],
@@ -544,6 +554,7 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       final container = ProviderContainer(
         overrides: [
+          legacyLibraryRuntimeOverride(),
           llmGatewayProvider
               .overrideWithValue(_AiResponses(failPlanning: true)),
         ],
@@ -589,7 +600,10 @@ void main() {
         'task', (tester) async {
       setViewport(tester, width: 390, height: 844);
       final container = ProviderContainer(
-        overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+        overrides: [
+          legacyLibraryRuntimeOverride(),
+          llmGatewayProvider.overrideWithValue(_AiResponses())
+        ],
       );
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -636,6 +650,7 @@ void main() {
       setViewport(tester, width: 390, height: 844);
       final container = ProviderContainer(
         overrides: [
+          legacyLibraryRuntimeOverride(),
           llmGatewayProvider.overrideWithValue(
             _AiResponses(suggestedName: '返回刷新资源'),
           ),
@@ -682,7 +697,10 @@ void main() {
         (tester) async {
       setViewport(tester, width: 320, height: 568);
       final container = ProviderContainer(
-        overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+        overrides: [
+          legacyLibraryRuntimeOverride(),
+          llmGatewayProvider.overrideWithValue(_AiResponses())
+        ],
       );
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -723,7 +741,10 @@ void main() {
         (tester) async {
       setViewport(tester, width: 390, height: 844);
       final container = ProviderContainer(
-        overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+        overrides: [
+          legacyLibraryRuntimeOverride(),
+          llmGatewayProvider.overrideWithValue(_AiResponses())
+        ],
       );
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
@@ -763,7 +784,10 @@ void main() {
           (tester) async {
         setViewport(tester, width: 390, height: 844);
         final container = ProviderContainer(
-          overrides: [llmGatewayProvider.overrideWithValue(_AiResponses())],
+          overrides: [
+            legacyLibraryRuntimeOverride(),
+            llmGatewayProvider.overrideWithValue(_AiResponses())
+          ],
         );
         addTearDown(() async {
           await tester.pumpWidget(const SizedBox.shrink());

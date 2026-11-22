@@ -18,6 +18,7 @@ import '../../../../core/widgets/workbench_chrome.dart';
 import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../../../../application/resources/resource_creation_contracts.dart';
+import '../../../../application/setting_cards/setting_card_library_runtime.dart';
 import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../domain/models/tracked_state_library_view_state.dart';
@@ -29,6 +30,8 @@ import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/resource_creation_flow.dart';
 import 'resource_create_page.dart';
 import 'resource_library_detail_page.dart';
+import 'setting_card_create_page.dart';
+import 'setting_card_detail_page.dart';
 import 'resource_tracked_state_edit_page.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
@@ -503,24 +506,12 @@ final class _ResourceLibraryScreenState
     ]);
   }
 
-  ResourceLibraryDetailPage _detailFor(ResourceLibraryItem item,
-          {bool embedded = false}) =>
-      ResourceLibraryDetailPage(
-        key: ValueKey('resource-detail-${item.id}'),
-        item: item,
+  Widget _detailFor(ResourceLibraryItem item, {bool embedded = false}) {
+    if (item.isSettingCard) {
+      return SettingCardDetailPage(
+        key: ValueKey('setting-card-detail-${item.id}'),
+        cardId: item.id,
         embedded: embedded,
-        relationshipResources: [
-          for (final candidate in _controller.state.items)
-            if (candidate.isStudioAvailable &&
-                (candidate.type == ResourceType.character ||
-                    candidate.type == ResourceType.npc))
-              candidate,
-        ],
-        onOpenStudio: embedded
-            ? () async {
-                setState(() => _studioResourceId = item.id);
-              }
-            : null,
         onDeleted: embedded
             ? (message) async {
                 setState(() => _selectedResourceId = null);
@@ -528,12 +519,38 @@ final class _ResourceLibraryScreenState
                 if (mounted) AppFeedback.success(context, message);
               }
             : null,
-        onMoveToTrash: () async {
-          final result = await _controller.moveToTrash(item);
-          if (!result.success || !mounted) return null;
-          return result.message ?? _l10n(context).resourceMovedToTrash;
-        },
       );
+    }
+    return ResourceLibraryDetailPage(
+      key: ValueKey('resource-detail-${item.id}'),
+      item: item,
+      embedded: embedded,
+      relationshipResources: [
+        for (final candidate in _controller.state.items)
+          if (candidate.isStudioAvailable &&
+              (candidate.type == ResourceType.character ||
+                  candidate.type == ResourceType.npc))
+            candidate,
+      ],
+      onOpenStudio: embedded
+          ? () async {
+              setState(() => _studioResourceId = item.id);
+            }
+          : null,
+      onDeleted: embedded
+          ? (message) async {
+              setState(() => _selectedResourceId = null);
+              await _controller.load();
+              if (mounted) AppFeedback.success(context, message);
+            }
+          : null,
+      onMoveToTrash: () async {
+        final result = await _controller.moveToTrash(item);
+        if (!result.success || !mounted) return null;
+        return result.message ?? _l10n(context).resourceMovedToTrash;
+      },
+    );
+  }
 
   Widget _buildPaginationBar(
     BuildContext context,
@@ -587,6 +604,21 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _startCreation() async {
+    final runtime = ref.read(resourceLibraryRuntimeProvider);
+    if (runtime is SettingCardLibraryRuntime) {
+      final id = await AppRouter.push<String>(
+        context,
+        pageBuilder: (_) => SettingCardCreatePage(mode: widget.mode),
+      );
+      if (!mounted || id == null) return;
+      await _controller.load();
+      if (!mounted) return;
+      final item = _controller.state.items
+          .where((candidate) => candidate.id == id)
+          .firstOrNull;
+      if (item != null) await _openDetails(item);
+      return;
+    }
     final availableResources = _controller.state.items
         .where((item) => item.isStudioAvailable)
         .toList(growable: false);
