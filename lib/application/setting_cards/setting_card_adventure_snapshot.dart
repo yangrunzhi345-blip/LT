@@ -5,8 +5,7 @@ import '../../models/adventure_config.dart';
 import '../../models/supporting_character.dart';
 import '../../models/worldview_details.dart';
 import '../adventure/adventure_readiness_gate.dart';
-import '../resources/assembly_readiness_coordinator.dart';
-import '../resources/assembly_readiness_repository.dart';
+import '../resources/resource_readiness_contracts.dart';
 
 /// Adventure start gate that freezes lightweight setting cards into the
 /// AdventureConfig.

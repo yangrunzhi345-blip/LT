@@ -11,7 +11,7 @@ import 'package:lt_dialogue/controllers/adventure_setup_controller.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
-import 'package:lt_dialogue/application/resources/assembly_readiness_coordinator.dart';
+import 'package:lt_dialogue/application/resources/resource_readiness_contracts.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';

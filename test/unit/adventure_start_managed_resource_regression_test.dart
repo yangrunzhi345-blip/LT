@@ -2,10 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:lt_dialogue/application/resources/legacy_resource_mapper.dart';
 import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
-import 'package:lt_dialogue/domain/resources/resource_revision.dart';
+import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
@@ -15,16 +14,15 @@ import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/character_relationship_repository.dart';
 import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 
 import '../helpers/phase10_fixture.dart';
 
-/// Production-path regression: an Adventure launched from real managed
-/// (unified-tree) resources must create, seed, persist and reopen through the
-/// real providers and SQLite — including resource ids that are not ASCII
-/// identifiers, which is what real character-card libraries contain.
+/// Production-path regression: an Adventure launched from card-backed
+/// resources must create, seed, persist and reopen through the real providers
+/// and SQLite — including resource ids that are not ASCII identifiers, which
+/// is what real character-card libraries contain.
 final class _FakeLlm extends LLMService {
   _FakeLlm(this.response)
       : super(const LLMConfig(
@@ -103,20 +101,20 @@ void main() {
     return id;
   }
 
-  test('managed worldview + character start persists and reopens', () async {
-    final wv = await fixture.createWorldview(
-      'res_wv_1',
-      [
-        ['艾尔德兰大陆，帝国与邻国长期对峙。'],
-        ['魔法源于元素共鸣，使用需消耗精神。'],
-      ],
-      summary: '帝国与邻国对峙的大陆',
-      confirmed: true,
+  test('card worldview + character start persists and reopens', () async {
+    await fixture.putCard(
+      id: 'res_wv_1',
+      kind: SettingCardKind.worldview,
       name: '艾尔德兰',
+      summary: '帝国与邻国对峙的大陆',
+      content: '艾尔德兰大陆，帝国与邻国长期对峙。魔法源于元素共鸣，使用需消耗精神。',
     );
-    await fixture.coordinator.prepare(wv);
-    await fixture.createCharacter('res_ch_1');
-    await fixture.coordinator.prepare(const ResourceId('res_ch_1'));
+    await fixture.putCard(
+      id: 'res_ch_1',
+      kind: SettingCardKind.character,
+      name: '林澈',
+      content: '林澈是一名年轻的航海者。',
+    );
 
     final config = AdventureConfig(
       name: '林澈',
@@ -143,81 +141,47 @@ void main() {
     expect(chat.isAdventureChatOpen, isTrue);
   });
 
-  test('managed world + 2 characters + attributes + relationship + npc',
-      () async {
-    final wv = await fixture.createWorldview(
-      'res_wv_2',
-      [
-        ['艾尔德兰大陆，帝国与邻国长期对峙。'],
-        ['魔法源于元素共鸣，使用需消耗精神。'],
-      ],
-      summary: '帝国与邻国对峙的大陆',
-      confirmed: true,
+  test('card world + 2 characters + relationship + npc starts', () async {
+    await fixture.putCard(
+      id: 'res_wv_2',
+      kind: SettingCardKind.worldview,
       name: '艾尔德兰',
+      summary: '帝国与邻国对峙的大陆',
+      content: '艾尔德兰大陆，帝国与邻国长期对峙。魔法源于元素共鸣，使用需消耗精神。',
     );
-    await fixture.coordinator.prepare(wv);
+    await fixture.putCard(
+      id: 'res_ch_p',
+      kind: SettingCardKind.character,
+      name: '林澈',
+      content: '林澈是一名年轻的航海者。',
+    );
+    await fixture.putCard(
+      id: 'res_ch_c',
+      kind: SettingCardKind.character,
+      name: '苏晚',
+      content: '苏晚是林澈的同伴。',
+    );
+    await fixture.putCard(
+      id: 'res_npc_1',
+      kind: SettingCardKind.npc,
+      name: '老船长',
+      summary: '经验丰富的老水手',
+      content: '“上船吧。”',
+      originWorldviewId: 'res_wv_2',
+    );
 
-    Future<ResourceId> character(
-      String id,
-      String name, {
-      required bool withAttributes,
-    }) async {
-      final resourceId = await fixture.treeRepository.createResourceTree(
-        ResourceTreeDraft(
-          id: ResourceId(id),
-          type: ResourceType.character,
-          name: name,
-          summary: '$name 摘要',
-          sections: [
-            const ResourceTreeSectionDraft(
-              title: LegacyResourceMapper.characterProfileSectionTitle,
-              parts: [
-                ResourceTreePartDraft(title: '性别', content: '未知'),
-                ResourceTreePartDraft(title: '职业', content: '冒险者'),
-              ],
-            ),
-            if (withAttributes)
-              const ResourceTreeSectionDraft(
-                title: LegacyResourceMapper.characterAttributesSectionTitle,
-                parts: [
-                  ResourceTreePartDraft(title: '心情', content: '平静'),
-                  ResourceTreePartDraft(title: '体力', content: '80/100'),
-                ],
-              ),
-            const ResourceTreeSectionDraft(
-              title: '剧情',
-              parts: [ResourceTreePartDraft(title: '开场白', content: '“来了。”')],
-            ),
-          ],
-        ),
-      );
-      await fixture.revisionService
-          .captureRevision(resourceId, cause: RevisionCause.manualSave);
-      await fixture.coordinator.prepare(resourceId);
-      return resourceId;
+    // Relationship endpoints must reference live resource rows; the card store
+    // is the document authority but the relationship table validates endpoints.
+    final db = await DatabaseService.database;
+    for (final id in ['res_ch_p', 'res_ch_c']) {
+      await db.insert('resources', {
+        'id': id,
+        'type': 'character',
+        'name': id,
+        'created_at': '2026-01-01T00:00:00.000',
+        'updated_at': '2026-01-01T00:00:00.000',
+      });
     }
-
-    await character('res_ch_p', '林澈', withAttributes: true);
-    await character('res_ch_c', '苏晚', withAttributes: true);
-
-    final npcId = await fixture.treeRepository.createResourceTree(
-      const ResourceTreeDraft(
-        id: ResourceId('res_npc_1'),
-        type: ResourceType.npc,
-        name: '老船长',
-        summary: '经验丰富的老水手',
-        sections: [
-          ResourceTreeSectionDraft(
-            title: '剧情',
-            parts: [ResourceTreePartDraft(title: '开场白', content: '“上船吧。”')],
-          ),
-        ],
-      ),
-    );
-    await fixture.revisionService
-        .captureRevision(npcId, cause: RevisionCause.manualSave);
-    await fixture.coordinator.prepare(npcId);
-
     final relationships = CharacterRelationshipRepositoryImpl(
         getDb: () => DatabaseService.database);
     await relationships.create(
@@ -265,25 +229,26 @@ void main() {
     await start(chat, config, label: 'managed rich');
   });
 
-  test('name-based (non-ASCII) character resource id still starts and reopens',
+  test('name-based (non-ASCII) character id still starts and reopens',
       () async {
-    // A character card imported through the character manager gets a resource
-    // id of `<name>_<creator>`, which is non-ASCII for a typical CJK card. It
-    // must remain usable as the adventure's stable runtime entity id.
-    final wv = await fixture.createWorldview(
-      'res_wv_3',
-      [
-        ['某大陆正文'],
-      ],
-      summary: '某大陆',
-      confirmed: true,
+    // A character card imported through the character manager keeps a
+    // non-ASCII id for a typical CJK card. It must remain usable as the
+    // adventure's stable runtime entity id.
+    await fixture.putCard(
+      id: 'res_wv_3',
+      kind: SettingCardKind.worldview,
       name: '某大陆',
+      summary: '某大陆',
+      content: '某大陆正文',
     );
-    await fixture.coordinator.prepare(wv);
 
     const charId = '林澈_某作者';
-    await fixture.createCharacter(charId);
-    await fixture.coordinator.prepare(const ResourceId(charId));
+    await fixture.putCard(
+      id: charId,
+      kind: SettingCardKind.character,
+      name: '林澈',
+      content: '林澈是一名年轻的航海者。',
+    );
 
     final config = AdventureConfig(
       name: '林澈',

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
-import '../../application/resources/resource_trash_service.dart';
+import '../../application/resources/legacy_tombstone_store.dart';
 import '../../application/adventure/adventure_character_identity.dart';
 import '../../application/adventure/adventure_tracked_state_registry.dart';
 import '../../core/utils/json_value_reader.dart';
@@ -43,12 +43,12 @@ part 'adventure_repository_impl.diagnostics.dart';
 abstract class _AdventureRepositoryBase implements IAdventureRepository {
   _AdventureRepositoryBase({
     required Future<Database> Function() getDb,
-    ResourceTrashService? trashService,
+    LegacyTombstoneStore? tombstoneStore,
   })  : _getDb = getDb,
-        _trashService = trashService;
+        _tombstoneStore = tombstoneStore;
 
   final Future<Database> Function() _getDb;
-  final ResourceTrashService? _trashService;
+  final LegacyTombstoneStore? _tombstoneStore;
 
   // Cross-store turn/runtime helpers, implemented by the runtime stores.
   RuntimeStateCommitDraft? _mergeRuntimeDrafts({
@@ -274,7 +274,7 @@ class AdventureRepositoryImpl extends _AdventureRepositoryBase
     implements IAdventureRepository {
   AdventureRepositoryImpl({
     required super.getDb,
-    super.trashService,
+    super.tombstoneStore,
   });
 
   @override
@@ -349,17 +349,16 @@ class AdventureRepositoryImpl extends _AdventureRepositoryBase
 
   @override
   Future<void> moveAdventureToTrash(int id) async {
-    final trash = _trashService;
-    if (trash == null) throw StateError('冒险回收站服务未配置');
+    final store = _tombstoneStore;
+    if (store == null) throw StateError('冒险回收站服务未配置');
     final db = await _getDb();
     final rows = await db.query('adventures',
         where: 'id = ?', whereArgs: [id], limit: 1);
     if (rows.isEmpty) throw StateError('冒险不存在');
-    await trash.deleteLegacyOnlyResource(
-      resourceId: 'adventure:$id',
-      markerNodeId: 'adventure:$id',
+    await store.markDeleted(
+      nodeId: 'adventure:$id',
       sourceTable: 'adventures',
-      sourceId: '$id',
+      sourceId: id,
       title: rows.single['title'] as String,
     );
   }

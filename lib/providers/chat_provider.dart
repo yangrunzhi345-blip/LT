@@ -1,4 +1,3 @@
-import '../application/resources/resource_creation_pipeline.dart';
 import '../engines/chat_engine.dart' show PendingAssistantPhase;
 
 /// Presentation 层禁止直接 import engines；pending 助手回复的展示阶段枚举
@@ -229,15 +228,13 @@ class ChatProvider extends ChangeNotifier {
       : this.withRepos(
           adventureRepo: AdventureRepositoryImpl(
               getDb: () => DatabaseService.database,
-              trashService: DatabaseService.resourceTrashService),
+              tombstoneStore: DatabaseService.legacyTombstoneStore),
           worldEntryRepo:
               WorldEntryRepositoryImpl(getDb: () => DatabaseService.database),
           libraryRepo: LibraryRepositoryImpl(
             getDb: () => DatabaseService.database,
-            // Phase 9 (R2-B1): library deletions must reach the recycle bin
-            // even on this legacy construction path, so take the bridge from
-            // the single source rather than leaving the repo half-wired.
-            trashBridge: DatabaseService.libraryTrashBridge,
+            // Legacy deletes stay recoverable even on this constructor path.
+            tombstoneStore: DatabaseService.legacyTombstoneStore,
           ),
           settingsRepo:
               SettingsRepositoryImpl(getDb: () => DatabaseService.database),
@@ -250,7 +247,9 @@ class ChatProvider extends ChangeNotifier {
     required ILibraryRepository libraryRepo,
     required ISettingsRepository settingsRepo,
     IAdventureReadinessGate? readinessGate,
-    ResourceCreationPipeline? creationPipeline,
+    // Retained only for composition-root compatibility; no longer routed to a
+    // creation pipeline.
+    Object? creationPipeline,
     AdventureResourceRelationshipLoader? relationshipLoader,
     ReadAloudController? readAloud,
   }) {

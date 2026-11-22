@@ -34,11 +34,9 @@ void main() {
       expect(source, isNot(contains('generateDetailedResourceCharacter')));
     });
 
-    test('production composition keeps one creation runtime', () {
+    test('production composition keeps no import generation runtime', () {
       final providers =
           File('lib/providers/riverpod_providers.dart').readAsStringSync();
-      expect(providers, contains('resourceCreationPipelineProvider'));
-      expect(providers, contains('streamingGenerationRecoveryProvider'));
       expect(providers, isNot(contains('ImportGenerationRuntime')));
       expect(providers, isNot(contains('ImportRecoveryService')));
     });
@@ -67,20 +65,15 @@ void main() {
       }
     });
 
-    test('resource creation has one production composition root', () {
+    test('removed creation authorities stay removed', () {
       final violations = <String>[];
       for (final path in dartFilesUnder('lib')) {
         final source = File(path).readAsStringSync();
         if (source.contains('LegacyCreationBridge') ||
             source.contains('legacy_creation_bridge.dart') ||
-            source.contains('entryCreationPipeline')) {
+            source.contains('entryCreationPipeline') ||
+            source.contains('ResourceCreationPipeline')) {
           violations.add('$path contains a removed creation authority');
-        }
-        if (source.contains('ResourceCreationPipeline(') &&
-            path != 'lib/providers/riverpod_providers.dart' &&
-            path !=
-                'lib/application/resources/resource_creation_pipeline.dart') {
-          violations.add('$path constructs ResourceCreationPipeline directly');
         }
       }
       expect(violations, isEmpty, reason: violations.join('\n'));

@@ -46,8 +46,6 @@ void main() {
       final translation =
           File('lib/models/translation_mode.dart').readAsStringSync();
       final worldEntry = File('lib/models/world_entry.dart').readAsStringSync();
-      final providers =
-          File('lib/providers/riverpod_providers.dart').readAsStringSync();
       final narrative = File('lib/application/narrative/narrative_context.dart')
           .readAsStringSync();
 
@@ -57,10 +55,6 @@ void main() {
       expect(translation, contains('storageCode'));
       expect(worldEntry, contains('WorldEntryPosition decode'));
       expect(worldEntry, contains("'before_prompt'"));
-      expect(providers, contains('streamingGenerationRecoveryProvider'));
-      expect(providers, contains('findInterruptedSessions'));
-      expect(providers, contains('recoverInterruptedGeneration'));
-      expect(providers, contains('resourceRevisionRepositoryProvider'));
       expect(narrative, contains('class ContextOrchestrator'));
       expect(narrative, contains('TokenEstimator'));
     });

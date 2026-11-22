@@ -4,14 +4,10 @@
 /// ChangeNotifier Provider，无需重写为 Notifier<T> 不可变状态。
 library;
 
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:sqflite/sqflite.dart';
 
 import '../services/database_service.dart';
-import '../domain/resources/resource_contracts.dart';
 import '../domain/setting_cards/setting_card_repository.dart';
 import '../services/repositories/setting_card_repository_impl.dart';
 import '../application/setting_cards/setting_card_service.dart';
@@ -57,41 +53,11 @@ import '../services/read_aloud/flutter_tts_engine.dart';
 import '../services/read_aloud/read_aloud_settings_store.dart';
 import '../services/read_aloud/routed_read_aloud_engine.dart';
 import '../application/conversation/export_conversation_use_case.dart';
-import '../application/resources/compression_coordinator.dart';
-import '../application/resources/compression_job_repository.dart';
-import '../application/resources/compression_worker.dart';
-import '../application/resources/legacy_library_row_purger.dart';
-import '../application/resources/resource_owned_state_purger.dart';
-import '../application/resources/assembly_readiness_coordinator.dart';
-import '../application/resources/assembly_readiness_repository.dart';
-import '../application/resources/authorized_generation_budget.dart';
-import '../application/resources/resource_assembly_builder.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
-import '../application/resources/part_content_commit_service.dart';
-import '../application/resources/part_generation_coordinator.dart';
-import '../application/resources/resource_autosave_repository.dart';
-import '../application/resources/resource_autosave_service.dart';
-import '../application/resources/resource_blueprint_repository.dart';
-import '../application/resources/resource_capacity_repository.dart';
-import '../application/resources/resource_capacity_service.dart';
-import '../application/resources/resource_compression_publisher.dart';
-import '../application/resources/resource_creation_port.dart';
-import '../application/resources/resource_creation_pipeline.dart';
-import '../application/resources/resource_generation_task_repository.dart';
-import '../application/resources/resource_library_trash_bridge.dart';
-import '../application/resources/resource_revision_maintenance.dart';
-import '../application/resources/resource_revision_repository.dart';
-import '../application/resources/resource_revision_service.dart';
-import '../application/resources/resource_lifecycle_projection.dart';
-import '../application/resources/resource_lifecycle_reconciler.dart';
-import '../application/resources/resource_trash_repository.dart';
-import '../application/resources/resource_trash_service.dart';
-import '../application/resources/streaming_generation_session_repository.dart';
-import '../application/resources/streaming_resource_generation_service.dart';
+import '../application/resources/authorized_generation_budget.dart';
+import '../application/resources/legacy_tombstone_store.dart';
 import '../features/resource_library/application/use_cases/resource_library_runtime.dart';
 import '../features/resource_library/application/use_cases/tracked_state_library_runtime.dart';
-import '../services/repositories/resource_tree_repository_impl.dart';
-import '../services/repositories/section_control_repository_impl.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // Repository Providers
@@ -109,7 +75,7 @@ final characterRelationshipManagementProvider =
 final adventureRepoProvider = Provider<IAdventureRepository>((ref) {
   return AdventureRepositoryImpl(
     getDb: () => DatabaseService.database,
-    trashService: ref.read(resourceTrashServiceProvider),
+    tombstoneStore: ref.read(legacyTombstoneStoreProvider),
   );
 });
 
@@ -120,15 +86,19 @@ final worldEntryRepoProvider = Provider<IWorldEntryRepository>((ref) {
 final libraryRepoProvider = Provider<ILibraryRepository>((ref) {
   return LibraryRepositoryImpl(
     getDb: () => DatabaseService.database,
-    // Phase 9 (R2-B1): the Resource Library UI deletes through this chain, so
-    // it must carry the recycle-bin bridge. Without it `_moveToTrash`
-    // fail-closes and every delete in the UI fails.
-    trashBridge: ref.read(resourceLibraryTrashBridgeProvider),
+    // The library deletes legacy rows through this chain, so it must carry the
+    // tombstone store; without it `_moveToTrash` fail-closes.
+    tombstoneStore: ref.read(legacyTombstoneStoreProvider),
   );
 });
 
 final settingsRepoProvider = Provider<ISettingsRepository>((ref) {
   return SettingsRepositoryImpl(getDb: () => DatabaseService.database);
+});
+
+/// Legacy-row tombstones shared with [DatabaseService]'s library singleton.
+final legacyTombstoneStoreProvider = Provider<LegacyTombstoneStore>((ref) {
+  return DatabaseService.legacyTombstoneStore;
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -171,9 +141,6 @@ final ChangeNotifierProvider<ChatProvider> chatProvider =
     readAloud: ref.read(readAloudControllerProvider),
     // Phase 10: Adventure 创建前必须经过 assembly readiness 门禁。
     readinessGate: ref.watch(adventureReadinessGateProvider),
-    // The app composition root owns the process-wide creation pipeline. Keep
-    // ChatProvider and both of its child providers on that same instance.
-    creationPipeline: ref.read(resourceCreationPipelineProvider),
   );
 });
 
@@ -213,68 +180,6 @@ final llmGatewayProvider = Provider<LlmGateway>((ref) {
     llmResolver: () => ref.read(chatProvider).llmService,
   );
 });
-
-// TODO(phase-5d): the creation/assembly/compression providers below are no
-// longer used by the card-only library, readiness gate or CRUD paths, but are
-// retained because kept files (ChatProvider, LibraryProvider, Studio) and tests
-// still reference them. Remove once those consumers are retired.
-/// The single production creation pipeline of the process.
-///
-/// Built by the streaming-generation infrastructure so Library CRUD, imports
-/// and Studio creation share one pipeline contract including revision capture
-/// (R05-B). Do not construct ad-hoc pipelines elsewhere.
-final resourceCreationPipelineProvider =
-    Provider<ResourceCreationPipeline>((ref) {
-  return ref.read(_streamingGenerationInfrastructureProvider).pipeline;
-});
-
-/// The production creation port over [resourceCreationPipelineProvider].
-final resourceCreationPortProvider = Provider<ResourceCreationPort>((ref) {
-  return ResourceCreationPort(ref.read(resourceCreationPipelineProvider));
-});
-
-/// Read-only lifecycle composition. It never writes sessions, resources or
-/// revisions; each dependency remains the authority for its own state.
-final resourceLifecycleProjectionProvider =
-    Provider<ResourceLifecycleProjection>((ref) {
-  final treeRepository = ResourceTreeRepositoryImpl(
-    getDb: () => DatabaseService.database,
-  );
-  return ResourceLifecycleProjection(
-    resourceReader: treeRepository,
-    creationReader: ref.read(resourceCreationPipelineProvider),
-    generationReader: ref.read(streamingGenerationSessionRepositoryProvider),
-    revisionReader: ref.read(resourceRevisionRepositoryProvider),
-    readinessReader: ref.read(assemblyReadinessRepositoryProvider),
-  );
-});
-
-/// Read-side lifecycle convergence: composes the projection with the assembly
-/// readiness authority so a completed-but-stuck post-generation state is
-/// deterministically re-prepared once (single-flight, idempotent) instead of
-/// rendering「质量校验中」forever.
-final resourceLifecycleReconcilerProvider =
-    Provider<ResourceLifecycleReconciler>((ref) {
-  return ResourceLifecycleReconciler(
-    projection: ref.watch(resourceLifecycleProjectionProvider),
-    readiness: ref.watch(assemblyReadinessCoordinatorProvider),
-  );
-});
-
-/// Reconciled lifecycle slice of one resource, consumed by Resource Detail.
-///
-/// Watching this makes the detail page update automatically when a pending
-/// validation finishes: the read coalesces with / runs the readiness authority
-/// and returns the persisted terminal state. `autoDispose` so re-entering a
-/// resource always re-reads rather than reusing a stale snapshot.
-final resourceLifecycleSnapshotProvider =
-    FutureProvider.family<ResourceLifecycleProjectionResult, String>(
-  (ref, resourceId) {
-    final reconciler = ref.watch(resourceLifecycleReconcilerProvider);
-    return reconciler.read(ResourceId(resourceId));
-  },
-  isAutoDispose: true,
-);
 
 final resourceCrudControllerProvider =
     ChangeNotifierProvider<ResourceCrudController>((ref) {
@@ -369,253 +274,6 @@ final conversationExportUseCaseProvider =
   return const ConversationExportUseCase();
 });
 
-/// The single revision repository of this process (Phase 9).
-///
-/// Shared instead of re-created per feature because revision ids are generated
-/// from a timestamp plus a per-instance counter: two instances could collide
-/// inside the same microsecond. One instance makes the generator single, which
-/// is the same reason the compression coordinator is a singleton.
-final resourceRevisionRepositoryProvider =
-    Provider<IResourceRevisionRepository>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return ResourceRevisionRepositoryImpl(getDb: getDb);
-});
-
-/// The single revision capture engine of this process (Phase 9).
-///
-/// Every path that may lose confirmed content — generation commit, manual
-/// edit, compression publish, restore, delete — goes through this one engine,
-/// so the "record before, record after" rule has exactly one implementation.
-final revisionCaptureEngineProvider = Provider<RevisionCaptureEngine>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return RevisionCaptureEngine(
-    revisionRepository: ref.read(resourceRevisionRepositoryProvider),
-    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
-  );
-});
-
-/// Recycle-bin persistence (Phase 9).
-final resourceTrashRepositoryProvider =
-    Provider<IResourceTrashRepository>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return ResourceTrashRepositoryImpl(getDb: getDb);
-});
-
-/// Autosave draft journal (Phase 9).
-final resourceAutosaveRepositoryProvider =
-    Provider<IResourceAutosaveRepository>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return ResourceAutosaveRepositoryImpl(getDb: getDb);
-});
-
-/// The single writer of manual Part body changes (Phase 9).
-///
-/// Reused by both the autosave debounce and the explicit Studio save so an
-/// editor flush and a button save cannot produce two different transactions for
-/// the same content.
-final partContentCommitServiceProvider =
-    Provider<PartContentCommitService>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return PartContentCommitService(
-    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
-    validationBoundary: SectionControlRepositoryImpl(getDb: getDb),
-    captureEngine: ref.read(revisionCaptureEngineProvider),
-    autosaveRepository: ref.read(resourceAutosaveRepositoryProvider),
-    getDb: getDb,
-    taskReset: PartGenerationTaskRepositoryImpl(getDb: getDb),
-  );
-});
-
-/// Revision history, restore and retention cleanup (Phase 9).
-final resourceRevisionServiceProvider =
-    Provider<ResourceRevisionService>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return ResourceRevisionService(
-    revisionRepository: ref.read(resourceRevisionRepositoryProvider),
-    captureEngine: ref.read(revisionCaptureEngineProvider),
-    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
-    getDb: getDb,
-    taskReset: PartGenerationTaskRepositoryImpl(getDb: getDb),
-  );
-});
-
-/// Recycle-bin operations (Phase 9).
-///
-/// [legacyRowPort] is what makes the bin's *explicit* permanent delete the only
-/// code path able to remove a legacy library row; normal deletes go through
-/// [resourceLibraryTrashBridgeProvider] instead.
-final resourceTrashServiceProvider = Provider<ResourceTrashService>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return ResourceTrashService(
-    repository: ref.read(resourceTrashRepositoryProvider),
-    treeBoundary: ResourceTreeRepositoryImpl(getDb: getDb),
-    captureEngine: ref.read(revisionCaptureEngineProvider),
-    getDb: getDb,
-    legacyRowPort: LegacyLibraryRowPurger(getDb: getDb),
-    // R03-B: auxiliary state is discharged inside the purge transaction.
-    ownedStatePort: ResourceOwnedStatePurger(),
-  );
-});
-
-/// Runs the revision retention pass at a controlled point (Phase 9).
-///
-/// Started once from `main.dart`'s post-frame hook: without a production trigger
-/// the revision chain grew forever (audit P9-M3).
-final revisionMaintenanceProvider =
-    Provider<ResourceRevisionMaintenance>((ref) {
-  return ResourceRevisionMaintenance(
-    revisionService: ref.read(resourceRevisionServiceProvider),
-  );
-});
-
-/// Routes Resource Library deletes into the recycle bin (Phase 9).
-///
-/// Deliberately delegates to [DatabaseService.libraryTrashBridge] instead of
-/// building its own: that static is the single bridge source, so this chain
-/// and `DatabaseService._libraryRepo` can never drift into one-wired /
-/// one-unwired assemblies again (R2-B1).
-final resourceLibraryTrashBridgeProvider =
-    Provider<ResourceLibraryTrashBridge>((ref) {
-  return DatabaseService.libraryTrashBridge;
-});
-
-/// Factory for per-editor autosave services.
-///
-/// A factory rather than a cached provider because the service owns mutable
-/// per-editor state (the debounce buffer). Two open editors must not share one
-/// buffer, or closing one would flush the other's text.
-final resourceAutosaveServiceFactoryProvider =
-    Provider<AutosaveServiceFactory>((ref) {
-  return () => ResourceAutosaveService(
-        journal: ref.read(resourceAutosaveRepositoryProvider),
-        committer: ref.read(partContentCommitServiceProvider),
-        treeBoundary: ResourceTreeRepositoryImpl(
-          getDb: () => DatabaseService.database,
-        ),
-        getDb: () => DatabaseService.database,
-      );
-});
-
-final class _StreamingGenerationInfrastructure {
-  const _StreamingGenerationInfrastructure({
-    required this.treeRepository,
-    required this.taskRepository,
-    required this.blueprintRepository,
-    required this.pipeline,
-    required this.coordinator,
-  });
-
-  final ResourceTreeRepositoryImpl treeRepository;
-  final PartGenerationTaskRepositoryImpl taskRepository;
-  final ResourceBlueprintRepositoryImpl blueprintRepository;
-  final ResourceCreationPipeline pipeline;
-  final PartGenerationCoordinator coordinator;
-}
-
-final _streamingGenerationInfrastructureProvider =
-    Provider<_StreamingGenerationInfrastructure>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  final readinessCoordinator = ref.read(assemblyReadinessCoordinatorProvider);
-  final treeRepository = ResourceTreeRepositoryImpl(getDb: getDb);
-  final taskRepository = PartGenerationTaskRepositoryImpl(
-    getDb: getDb,
-    // Phase 9: the commit transaction now also records the pre-write state and
-    // the post-write revision head, so a regeneration can always be rolled back.
-    revisionBoundary: ref.read(revisionCaptureEngineProvider),
-  );
-  final blueprintRepository = ResourceBlueprintRepositoryImpl(
-    getDb: getDb,
-    treeRepository: treeRepository,
-    revisionCapture: ref.read(revisionCaptureEngineProvider),
-  );
-  final pipeline = ResourceCreationPipeline(
-    getDb: getDb,
-    hasAiCredentials: () => ref.read(chatProvider).isKeyConfigured,
-    onResourceReadyForAssembly: (resourceId) async {
-      await readinessCoordinator.prepare(resourceId);
-    },
-    treeRepository: treeRepository,
-    blueprintRepository: blueprintRepository,
-    generationTaskRepository: taskRepository,
-    revisionCapture: ref.read(revisionCaptureEngineProvider),
-  );
-  final coordinator = PartGenerationCoordinator(
-    taskRepository: taskRepository,
-    blueprintRepository: blueprintRepository,
-    pipeline: pipeline,
-    gateway: ref.read(llmGatewayProvider),
-    maxConcurrency: 1,
-  );
-  return _StreamingGenerationInfrastructure(
-    treeRepository: treeRepository,
-    taskRepository: taskRepository,
-    blueprintRepository: blueprintRepository,
-    pipeline: pipeline,
-    coordinator: coordinator,
-  );
-});
-
-final streamingGenerationSessionRepositoryProvider =
-    Provider<IStreamingGenerationSessionRepository>((ref) {
-  return StreamingGenerationSessionRepositoryImpl(
-    getDb: () => DatabaseService.database,
-  );
-});
-
-final streamingResourceGenerationServiceProvider =
-    Provider<StreamingResourceGenerationService>((ref) {
-  final infrastructure = ref.read(_streamingGenerationInfrastructureProvider);
-  final service = StreamingResourceGenerationService(
-    sessionRepository: ref.read(streamingGenerationSessionRepositoryProvider),
-    taskRepository: infrastructure.taskRepository,
-    blueprintRepository: infrastructure.blueprintRepository,
-    coordinator: infrastructure.coordinator,
-    onGenerationCompletedForAssembly: (resourceId) async {
-      await ref.read(assemblyReadinessCoordinatorProvider).prepare(resourceId);
-    },
-  );
-  ref.onDispose(service.dispose);
-  return service;
-});
-
-/// Recovers persisted in-flight sessions without replaying model requests.
-final streamingGenerationRecoveryProvider = FutureProvider<void>((ref) async {
-  final repository = ref.read(streamingGenerationSessionRepositoryProvider);
-  final service = ref.read(streamingResourceGenerationServiceProvider);
-  final interrupted = await repository.findInterruptedSessions();
-  Object? firstError;
-  StackTrace? firstStackTrace;
-
-  for (final session in interrupted) {
-    try {
-      await service.recoverInterruptedGeneration(
-        session.sessionId,
-        autoResume: false,
-      );
-    } catch (error, stackTrace) {
-      firstError ??= error;
-      firstStackTrace ??= stackTrace;
-    }
-  }
-
-  if (firstError case final error?) {
-    Error.throwWithStackTrace(error, firstStackTrace!);
-  }
-});
-
-/// Production capacity measurement service.
-///
-/// Shared by the compression coordinator and the background worker so both read
-/// the same thresholds and the same measured numbers.
-final resourceCapacityServiceProvider =
-    Provider<ResourceCapacityService>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return ResourceCapacityService(
-    repository: ResourceCapacityRepositoryImpl(getDb: getDb),
-  );
-});
-
-/// Production data and creation boundary for the unified Resource Library.
 /// Lightweight setting card store (single document per worldview/character/NPC).
 final settingCardRepositoryProvider = Provider<SettingCardRepository>((ref) {
   return SettingCardRepositoryImpl(getDb: () => DatabaseService.database);
@@ -646,103 +304,6 @@ final trackedStateLibraryRuntimeProvider =
   return ProductionTrackedStateLibraryRuntime(
     repository: ref.watch(libraryRepoProvider),
   );
-});
-
-/// The single compression coordinator of this process.
-///
-/// One instance means one worker identity and one place that owns job claims;
-/// it is deliberately not `autoDispose`, because the background worker outlives
-/// any single Studio page.
-final compressionCoordinatorProvider = Provider<CompressionCoordinator>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return CompressionCoordinator(
-    jobRepository: CompressionJobRepositoryImpl(getDb: getDb),
-    treeRepository: ResourceTreeRepositoryImpl(getDb: getDb),
-    capacityRepository: ResourceCapacityRepositoryImpl(getDb: getDb),
-    llmPort: LlmGatewayCompressionAdapter(ref.read(llmGatewayProvider)),
-  );
-});
-
-/// Phase 8's background compression worker.
-///
-/// Started once at app startup (it reclaims jobs orphaned by a previous
-/// process) and triggered when an editor is left. It is the runtime owner of
-/// the automatic compression path, so that path is not tied to a screen.
-final compressionBackgroundWorkerProvider =
-    Provider<CompressionBackgroundWorker>((ref) {
-  return CompressionBackgroundWorker(
-    coordinator: ref.read(compressionCoordinatorProvider),
-    capacityService: ref.read(resourceCapacityServiceProvider),
-  );
-});
-
-/// Publishes validated compression candidates behind the revision boundary.
-///
-/// The Phase 8 coordinator only ever creates candidates; this is the single
-/// path that turns one into the resource head, and it always records the
-/// pre-compression content as a revision first.
-final compressionPublisherProvider = Provider<CompressionPublisher>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  return CompressionPublisher(
-    jobRepository: CompressionJobRepositoryImpl(getDb: getDb),
-    revisionService: ref.read(resourceRevisionServiceProvider),
-    getDb: getDb,
-  );
-});
-
-// ═══════════════════════════════════════════════════════════════
-// Phase 10 — Assembly Readiness
-// ═══════════════════════════════════════════════════════════════
-
-/// Readiness 行与 assembly 语义索引文档的持久化（Phase 10）。
-final assemblyReadinessRepositoryProvider =
-    Provider<IAssemblyReadinessRepository>((ref) {
-  return AssemblyReadinessRepositoryImpl(
-    getDb: () => DatabaseService.database,
-  );
-});
-
-/// 从不可变 revision 构建运行时输出（fragments / worldview payload / 卡片行 /
-/// 语义索引文档）。只读 revision，绝不读取 live tree。
-final resourceAssemblyBuilderProvider = Provider<ResourceAssemblyBuilder>(
-  (ref) {
-    return ResourceAssemblyBuilder(
-      revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
-      typeResolver: (id) async => ResourceTreeRepositoryImpl(
-        getDb: () => DatabaseService.database,
-      ).findResource(id).then((resource) => resource?.type),
-    );
-  },
-);
-
-/// 组装就绪协调器（Phase 10 核心）：
-/// latest head → capacity/验证 → immutable build → head 复核 → assembly 发布
-/// → 语义索引同步 → ready。OVERFLOW head 走已有 Phase 8 压缩准备并保持
-/// preparing；所有终态写入都带 attempt-token CAS，迟到任务不能覆盖新任务。
-///
-/// 压缩挂接通过 [assemblyReadinessCompressionLinkProvider] 在启动时惰性接入，
-/// 避免与 chatProvider → llmGateway 的静态 Provider 循环。
-final assemblyReadinessCoordinatorProvider =
-    Provider<AssemblyReadinessCoordinator>((ref) {
-  return AssemblyReadinessCoordinator(
-    getDb: () => DatabaseService.database,
-    readinessRepository: ref.watch(assemblyReadinessRepositoryProvider),
-    revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
-    revisionService: ref.watch(resourceRevisionServiceProvider),
-    builder: ref.watch(resourceAssemblyBuilderProvider),
-    typeResolver: (id) async => ResourceTreeRepositoryImpl(
-      getDb: () => DatabaseService.database,
-    ).findResource(id).then((resource) => resource?.type),
-  );
-});
-
-/// 在启动时把 Phase 8 压缩基础设施挂接到 readiness 协调器。
-final assemblyReadinessCompressionLinkProvider = Provider<void>((ref) {
-  ref.watch(assemblyReadinessCoordinatorProvider).attachCompression(
-        coordinatorGetter: () => ref.read(compressionCoordinatorProvider),
-        workerGetter: () => ref.read(compressionBackgroundWorkerProvider),
-        publisherGetter: () => ref.read(compressionPublisherProvider),
-      );
 });
 
 /// Adventure 启动边界（Phase 10）：按被选资源解析 readiness，fail-closed

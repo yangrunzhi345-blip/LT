@@ -13,8 +13,6 @@ import 'package:lt_dialogue/models/runtime_relationship_state.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/character_relationship_repository.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -37,27 +35,35 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
+  /// Inserts the minimal resource row the relationship endpoints point at.
+  Future<ResourceId> createResource(
+    String id,
+    String name, {
+    String type = 'character',
+  }) async {
+    final db = await DatabaseService.database;
+    await db.insert('resources', {
+      'id': id,
+      'type': type,
+      'name': name,
+      'created_at': '2026-01-01T00:00:00.000',
+      'updated_at': '2026-01-01T00:00:00.000',
+    });
+    return ResourceId(id);
+  }
+
   test('loads unified and legacy NPC identities at creation time', () async {
-    final trees =
-        ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
     final relationships = CharacterRelationshipRepositoryImpl(
       getDb: () => DatabaseService.database,
     );
-    final unified = await trees.createResource(
-      type: ResourceType.character,
-      name: '统一角色',
-    );
+    final unified = await createResource('res_unified', '统一角色');
     final legacyNpcId = LegacyResourceMapper.resourceIdFor(
       LegacySourceTables.npcCards,
       'npc-1',
     );
-    await trees.createResourceTree(ResourceTreeDraft(
-      id: legacyNpcId,
-      type: ResourceType.npc,
-      name: '旧 NPC',
-    ));
+    await createResource(legacyNpcId.value, '旧 NPC', type: 'npc');
     await relationships.create(
-      firstResourceId: unified.id,
+      firstResourceId: unified,
       firstRole: 'friend',
       secondResourceId: legacyNpcId,
       secondRole: 'friend',
@@ -68,7 +74,7 @@ void main() {
       selectedCharacters: [
         AdventureSelectedCharacter(
           id: 'slot-a',
-          characterId: unified.id.value,
+          characterId: unified.value,
           characterName: '统一角色',
         ),
         AdventureSelectedCharacter(
@@ -91,20 +97,16 @@ void main() {
   test(
       'should isolate the frozen runtime from resource edits, deletion and purge',
       () async {
-    final trees =
-        ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
     final relationships = CharacterRelationshipRepositoryImpl(
         getDb: () => DatabaseService.database);
     final adventures =
         AdventureRepositoryImpl(getDb: () => DatabaseService.database);
-    final a =
-        await trees.createResource(type: ResourceType.character, name: 'Alice');
-    final b =
-        await trees.createResource(type: ResourceType.character, name: 'Bob');
+    final a = await createResource('res_a', 'Alice');
+    final b = await createResource('res_b', 'Bob');
     final edge = await relationships.create(
-      firstResourceId: a.id,
+      firstResourceId: a,
       firstRole: 'friend',
-      secondResourceId: b.id,
+      secondResourceId: b,
       secondRole: 'friend',
       relationType: CharacterRelationshipType.friend,
       description: 'frozen ally',
@@ -112,11 +114,11 @@ void main() {
     final roster = AdventureConfig(name: 'Alice', selectedCharacters: [
       AdventureSelectedCharacter(
           id: 'a',
-          characterId: a.id.value,
+          characterId: a.value,
           characterName: 'Alice',
           isProtagonist: true),
       AdventureSelectedCharacter(
-          id: 'b', characterId: b.id.value, characterName: 'Bob'),
+          id: 'b', characterId: b.value, characterName: 'Bob'),
     ]);
     final selection = await AdventureResourceRelationshipLoader(
       getDb: () => DatabaseService.database,
@@ -185,14 +187,14 @@ void main() {
     }
 
     await verifyFrozenRuntime();
-    final node = await trees.readNodeState(a.id);
-    await trees.softDeleteNode(id: a.id, expectedUpdatedAt: node!.updatedAt);
-    expect(await relationships.listForResource(b.id), isEmpty);
-    await verifyFrozenRuntime();
     final db = await DatabaseService.database;
+    await db.update('resources', {'deleted_at': 'trash'},
+        where: 'id = ?', whereArgs: [a.value]);
+    expect(await relationships.listForResource(b), isEmpty);
+    await verifyFrozenRuntime();
     await db.transaction((txn) async {
-      await relationships.deleteForResourcePurge(txn, a.id);
-      await trees.purgeNodeInTransaction(txn, a.id);
+      await relationships.deleteForResourcePurge(txn, a);
+      await txn.delete('resources', where: 'id = ?', whereArgs: [a.value]);
     });
     expect(await relationships.getById(edge.id), isNull);
     await verifyFrozenRuntime();

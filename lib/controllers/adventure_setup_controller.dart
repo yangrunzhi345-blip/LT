@@ -62,9 +62,9 @@ class AdventureSetupController extends ChangeNotifier {
             AdventureSetupUseCase(
               LibraryRepositoryImpl(
                 getDb: () => DatabaseService.database,
-                // Phase 9 (R2-B1): fallback assembly still goes through the
-                // single bridge source so it can never be half-wired.
-                trashBridge: DatabaseService.libraryTrashBridge,
+                // Fallback assembly uses the shared tombstone store so legacy
+                // deletes stay recoverable on every construction path.
+                tombstoneStore: DatabaseService.legacyTombstoneStore,
               ),
             );
 

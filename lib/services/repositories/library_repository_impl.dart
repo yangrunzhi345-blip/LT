@@ -1,12 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'library_repository.dart';
-import 'resource_tree_repository_impl.dart';
-import '../../application/resources/resource_library_trash_bridge.dart';
-import '../../application/resources/resource_read_facade.dart';
-import '../../application/resources/resource_adventure_view.dart';
-import '../../application/resources/legacy_resource_mapper.dart';
-import '../../application/resources/resource_migration_service.dart';
-import '../../domain/resources/resource_contracts.dart';
+import '../../application/resources/legacy_tombstone_store.dart';
 import '../../data/skill_presets.dart';
 import '../../models/resource_library_mode.dart';
 
@@ -15,36 +9,16 @@ class LibraryRepositoryImpl implements ILibraryRepository {
 
   LibraryRepositoryImpl({
     required Future<Database> Function() getDb,
-    ResourceLibraryTrashBridge? trashBridge,
+    LegacyTombstoneStore? tombstoneStore,
   })  : _getDb = getDb,
-        _trashBridge = trashBridge,
-        _resourceReadFacade = ResourceReadFacade(getDb: getDb),
-        _treeReader = ResourceTreeRepositoryImpl(getDb: getDb);
+        _tombstoneStore = tombstoneStore;
 
-  /// Transitional unified-tree-first read path (Phase 2).
+  /// Legacy tombstone markers.
   ///
-  /// The legacy read methods above keep reading legacy tables unchanged; this
-  /// facade is what Phase 3 / Phase 11 switch over to.
-  final ResourceReadFacade _resourceReadFacade;
-
-  /// Reads unified-tree resources for the transitional list/search union.
-  final ResourceTreeRepositoryImpl _treeReader;
-
-  /// Phase 9 recycle-bin bridge.
-  ///
-  /// Required for the delete paths: without it a delete would have to fall back
-  /// to physically removing a legacy row, which Phase 9 forbids. Reads treat a
-  /// missing bridge as "nothing is in the bin", which is harmless.
-  final ResourceLibraryTrashBridge? _trashBridge;
-
-  @override
-  Future<ResourceReadResult> readResourcePreferringTree({
-    required ResourceType type,
-    required String legacyId,
-  }) {
-    return _resourceReadFacade.readPreferringTree(
-        type: type, legacyId: legacyId);
-  }
+  /// Required for the delete paths: a legacy row has no soft-delete column, so
+  /// deleting it means writing a tombstone instead of physically removing it.
+  /// Reads treat a missing store as "nothing is in the bin", which is harmless.
+  final LegacyTombstoneStore? _tombstoneStore;
 
   Future<bool> _hasModeColumn(DatabaseExecutor db, String table) async {
     final info = await db.rawQuery('PRAGMA table_info($table)');
@@ -128,11 +102,10 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     String table,
     List<Map<String, dynamic>> rows,
   ) async {
-    final bridge = _trashBridge;
-    if (bridge == null || rows.isEmpty) return rows;
-    final hidden = await bridge.hiddenLegacyIds(
-      db,
-      table: table,
+    final store = _tombstoneStore;
+    if (store == null || rows.isEmpty) return rows;
+    final hidden = await store.activeNodeIds(
+      sourceTable: table,
       candidateIds: rows.map((row) => row['id']?.toString() ?? ''),
     );
     if (hidden.isEmpty) return rows;
@@ -148,13 +121,18 @@ class LibraryRepositoryImpl implements ILibraryRepository {
   /// `DELETE` it replaced. A `mode` is not needed — bin entries are keyed by
   /// resource/node id, and legacy ids are unique per row.
   Future<void> _moveToTrash(String table, String id) async {
-    final bridge = _trashBridge;
-    if (bridge == null) {
+    final store = _tombstoneStore;
+    if (store == null) {
       throw StateError(
-        '资源删除需要 Phase 9 回收站桥接（ResourceLibraryTrashBridge），未接线时拒绝删除以避免不可逆数据损失',
+        '资源删除需要旧表墓碑存储（LegacyTombstoneStore），未接线时拒绝删除以避免不可逆数据损失',
       );
     }
-    await bridge.moveToTrash(table: table, id: id);
+    await store.markDeleted(
+      nodeId: id,
+      sourceTable: table,
+      sourceId: id,
+      title: '',
+    );
   }
 
   /// Deletes one row of a non-resource library table.
@@ -193,164 +171,13 @@ class LibraryRepositoryImpl implements ILibraryRepository {
 
   // ─── Worldview Presets ───
 
-  /// Resources that exist only in the unified content tree (created through the
-  /// Phase 3 pipeline), projected into the legacy row shape.
-  ///
-  /// Phase 3 writes new resources to the tree only, so without this the library
-  /// would stop seeing them. Resources that also have a legacy row are skipped
-  /// and keep returning that row unchanged.
-  Future<List<Map<String, dynamic>>> _treeOnlyRows({
-    required ResourceType type,
-    required ResourceLibraryMode mode,
-    required Set<String> knownIds,
-  }) async {
-    final List<Resource> resources;
-    try {
-      resources = await _treeReader.listResources(
-        type: type,
-        includeArchived: true,
-      );
-    } catch (_) {
-      return const <Map<String, dynamic>>[];
-    }
-
-    final rows = <Map<String, dynamic>>[];
-    for (final resource in resources) {
-      final isUnifiedNative =
-          resource.metadata.containsKey('creation_session_id');
-      if (knownIds.contains(resource.id.value) && !isUnifiedNative) continue;
-      final resourceMode = resource.metadata['mode']?.toString() ?? '';
-      if (resourceMode.isNotEmpty && resourceMode != mode.storageValue) {
-        continue;
-      }
-      final tree = await _treeReader.readTree(resource.id);
-      if (tree == null) continue;
-      final state = await _treeReader.readNodeState(resource.id);
-      final stamp = state?.updatedAt ?? '';
-      rows.add(ResourceAdventureView(tree).toLegacyRow(
-        type: type,
-        mode: mode.storageValue,
-        updatedAt: stamp,
-        createdAt: stamp,
-      ));
-    }
-    return rows;
-  }
-
-  Future<List<Map<String, dynamic>>> _mergeTreeRows(
-    Database db,
-    List<Map<String, dynamic>> legacyRows, {
-    required ResourceType type,
-    required ResourceLibraryMode mode,
-    required String sourceTable,
-  }) async {
-    final extra = await _treeOnlyRows(
-      type: type,
-      mode: mode,
-      knownIds: legacyRows.map((row) => row['id']?.toString() ?? '').toSet(),
-    );
-    if (extra.isEmpty) return legacyRows;
-    final unifiedIds = extra.map((row) => row['id']?.toString() ?? '').toSet();
-    final migrationRows = await db.query(
-      ResourceMigrationService.table,
-      columns: const <String>[
-        'source_id',
-        'resource_id',
-        'status',
-        'source_hash',
-      ],
-      where: 'source_table = ? AND migration_version = ?',
-      whereArgs: <Object?>[
-        sourceTable,
-        LegacyResourceMapper.migrationVersion,
-      ],
-    );
-    final migrationByResourceId = <String, Map<String, dynamic>>{
-      for (final row in migrationRows)
-        if ((row['resource_id']?.toString() ?? '').isNotEmpty)
-          row['resource_id']!.toString(): row,
-    };
-    final legacyById = <String, Map<String, dynamic>>{
-      for (final row in legacyRows) row['id']?.toString() ?? '': row,
-    };
-    final migratedLegacyIds = <String>{};
-    final staleTreeIds = <String>{};
-    for (final resourceId in unifiedIds) {
-      final migration = migrationByResourceId[resourceId];
-      if (migration == null) continue;
-      final sourceId = migration['source_id']?.toString() ?? '';
-      final legacy = legacyById[sourceId];
-      final isCurrent = migration['status'] ==
-              ResourceMigrationOutcome.succeeded.storageValue &&
-          (legacy == null ||
-              migration['source_hash']?.toString() ==
-                  LegacyResourceMapper.sourceHash(sourceTable, legacy));
-      if (isCurrent) {
-        migratedLegacyIds.add(sourceId);
-      } else {
-        // A source_changed (or otherwise non-current) migration must not leak
-        // its stale tree projection into the union beside the legacy row.
-        staleTreeIds.add(resourceId);
-      }
-    }
-    final merged = <Map<String, dynamic>>[
-      ...legacyRows.where(
-        (row) {
-          final id = row['id']?.toString() ?? '';
-          return !unifiedIds.contains(id) && !migratedLegacyIds.contains(id);
-        },
-      ),
-      ...extra.where(
-        (row) => !staleTreeIds.contains(row['id']?.toString() ?? ''),
-      ),
-    ];
-    merged.sort((a, b) => (b['updated_at']?.toString() ?? '')
-        .compareTo(a['updated_at']?.toString() ?? ''));
-    return merged;
-  }
-
-  /// Search runs over the same union as the list, so a tree-only resource is
-  /// findable by the same columns.
-  Future<List<Map<String, dynamic>>> _searchIncludingTree(
-    Database db,
-    String table, {
-    required ResourceType type,
-    required String query,
-    required ResourceLibraryMode mode,
-    required String orderBy,
-    required List<String> columns,
-  }) async {
-    final legacyRows =
-        await _queryByMode(db, table, mode: mode, orderBy: orderBy);
-    final union = await _mergeTreeRows(
-      db,
-      legacyRows,
-      type: type,
-      mode: mode,
-      sourceTable: table,
-    );
-    final trimmed = query.trim();
-    if (trimmed.isEmpty) return union;
-    return union
-        .where((row) => columns.any(
-              (column) => (row[column]?.toString() ?? '').contains(trimmed),
-            ))
-        .toList();
-  }
-
   @override
   Future<List<Map<String, dynamic>>> getWorldviewPresets({
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _mergeTreeRows(
-      db,
-      await _queryByMode(db, 'worldview_presets',
-          mode: mode, orderBy: 'updated_at DESC'),
-      type: ResourceType.worldview,
-      mode: mode,
-      sourceTable: LegacySourceTables.worldviewPresets,
-    );
+    return _queryByMode(db, 'worldview_presets',
+        mode: mode, orderBy: 'updated_at DESC');
   }
 
   @override
@@ -359,10 +186,9 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _searchIncludingTree(
+    return _searchByMode(
       db,
       'worldview_presets',
-      type: ResourceType.worldview,
       query: query,
       mode: mode,
       orderBy: 'updated_at DESC',
@@ -443,14 +269,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _mergeTreeRows(
-      db,
-      await _queryByMode(db, 'character_cards',
-          mode: mode, orderBy: 'updated_at DESC'),
-      type: ResourceType.character,
-      mode: mode,
-      sourceTable: LegacySourceTables.characterCards,
-    );
+    return _queryByMode(db, 'character_cards',
+        mode: mode, orderBy: 'updated_at DESC');
   }
 
   @override
@@ -459,10 +279,9 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _searchIncludingTree(
+    return _searchByMode(
       db,
       'character_cards',
-      type: ResourceType.character,
       query: query,
       mode: mode,
       orderBy: 'updated_at DESC',
@@ -696,14 +515,8 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _mergeTreeRows(
-      db,
-      await _queryByMode(db, 'npc_cards',
-          mode: mode, orderBy: 'updated_at DESC'),
-      type: ResourceType.npc,
-      mode: mode,
-      sourceTable: LegacySourceTables.npcCards,
-    );
+    return _queryByMode(db, 'npc_cards',
+        mode: mode, orderBy: 'updated_at DESC');
   }
 
   @override
@@ -712,10 +525,9 @@ class LibraryRepositoryImpl implements ILibraryRepository {
     ResourceLibraryMode mode = ResourceLibraryMode.adventure,
   }) async {
     final db = await _getDb();
-    return _searchIncludingTree(
+    return _searchByMode(
       db,
       'npc_cards',
-      type: ResourceType.npc,
       query: query,
       mode: mode,
       orderBy: 'updated_at DESC',

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import '../helpers/phase9_recovery_fixtures.dart';
+import 'package:lt_dialogue/application/resources/legacy_tombstone_store.dart';
 import 'package:lt_dialogue/models/adventure_config.dart';
 import 'package:lt_dialogue/models/adventure_runtime_state.dart';
 import 'package:lt_dialogue/application/adventure/adventure_assembler.dart';
@@ -21,13 +21,14 @@ import 'package:lt_dialogue/services/key_vault.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/library_repository.dart';
+import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 import 'package:lt_dialogue/providers/adventure_provider.dart';
 import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
-import 'package:lt_dialogue/application/resources/assembly_readiness_coordinator.dart';
+import 'package:lt_dialogue/application/resources/resource_readiness_contracts.dart';
 
 class _PassthroughReadinessGate implements IAdventureReadinessGate {
   @override
@@ -68,12 +69,14 @@ void main() {
 
     settingsRepo =
         SettingsRepositoryImpl(getDb: () => DatabaseService.database);
-    // Phase 9: the library delete path is wired to the recycle bin, exactly as
-    // the production composition root does. An unwired repository refuses to
-    // delete rather than falling back to the legacy hard delete.
-    libraryRepo = Phase9RecoveryFixture(
+    // The library delete path is wired to the legacy tombstone store, exactly
+    // as the production composition root does. An unwired repository refuses
+    // to delete rather than falling back to the legacy hard delete.
+    libraryRepo = LibraryRepositoryImpl(
       getDb: () => DatabaseService.database,
-    ).libraryRepository();
+      tombstoneStore:
+          LegacyTombstoneStore(getDb: () => DatabaseService.database),
+    );
     adventureRepo =
         AdventureRepositoryImpl(getDb: () => DatabaseService.database);
     worldEntryRepo =

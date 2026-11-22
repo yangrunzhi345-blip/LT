@@ -1,4 +1,3 @@
-import '../application/resources/resource_creation_pipeline.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/persona.dart';
@@ -22,7 +21,9 @@ class LibraryProvider extends ChangeNotifier {
 
   LibraryProvider({
     required ILibraryRepository libraryRepo,
-    ResourceCreationPipeline? creationPipeline,
+    // Retained only for composition-root compatibility; character saves no
+    // longer route through a creation pipeline.
+    Object? creationPipeline,
   }) : _libraryRepo = libraryRepo {
     _charMgr = CharacterManager(
       notifyParent: notifyListeners,

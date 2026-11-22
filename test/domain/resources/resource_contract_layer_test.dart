@@ -40,19 +40,11 @@ const List<String> _forbiddenTargetPrefixes = [
 /// `resource_limits.dart`.
 final RegExp _capacityLiterals = RegExp(r'\b(50000|60000|20000|24000)\b');
 
-/// The only sanctioned JSON codec call in the contract layer: decoding a SINGLE
-/// Structured Part's body (`structuredObjectV1`) to check its required fields.
-///
-/// ADR-0001 §5 forbids serializing a WHOLE resource tree as one giant JSON
-/// column and forbids physical nesting — it does not forbid validating one
-/// limited node. So `jsonDecode` is allowed in exactly this one file, while:
-///   * `jsonEncode` / `toJson` (serialization) stay forbidden EVERYWHERE, that
-///     file included;
-///   * `jsonDecode` stays forbidden in every OTHER contract file.
-/// The contract layer therefore never gains general-purpose JSON codec access.
-const Map<String, Set<String>> _sanctionedJsonCodecUsage = {
-  'lib/domain/resources/content_requirements.dart': {'jsonDecode'},
-};
+/// Phase 5c removed the structured Part body contract, so no file in the
+/// contract layer may use a JSON codec anymore. The map stays so the guard can
+/// grant an exception again without rewriting the pure checker.
+const Map<String, Set<String>> _sanctionedJsonCodecUsage =
+    <String, Set<String>>{};
 
 /// JSON codec identifiers that would let the contract layer serialize or
 /// deserialize a resource tree.
@@ -124,21 +116,6 @@ void main() {
       );
     });
 
-    test('confines the sanctioned decode to the structured Part body', () {
-      final source = File(
-        '$_contractDirectory/content_requirements.dart',
-      ).readAsStringSync();
-      // The one allowed codec call decodes the Part body for the structured
-      // profile; serialization and any other shape stay banned even here.
-      // Matched by intent (a jsonDecode call + the structured profile) rather
-      // than the local variable name, so a behaviour-preserving rename does
-      // not spuriously fail the guard.
-      expect(source.contains('jsonEncode'), isFalse);
-      expect(source.contains('toJson'), isFalse);
-      expect(RegExp(r'\bjsonDecode\s*\(').hasMatch(source), isTrue);
-      expect(source.contains('structuredObjectV1'), isTrue);
-    });
-
     group('the JSON guard still fails closed on new offenders', () {
       const sanctioned = 'lib/domain/resources/content_requirements.dart';
 
@@ -181,15 +158,6 @@ void main() {
           ],
         );
       });
-
-      test('allows only the sanctioned single-Part jsonDecode', () {
-        expect(
-          _jsonSerializationViolations({
-            sanctioned: 'final decoded = jsonDecode(body);',
-          }),
-          isEmpty,
-        );
-      });
     });
 
     test('keeps the four capacity numbers inside resource_limits.dart', () {
@@ -206,29 +174,6 @@ void main() {
         isEmpty,
         reason: 'Capacity numbers must come from ResourceLimits instead of '
             'being copied into another contract file:\n${offenders.join('\n')}',
-      );
-    });
-
-    test('makes ResourcePart the only tree node that owns long body text', () {
-      final source = File(
-        '$_contractDirectory/resource_contracts.dart',
-      ).readAsStringSync();
-      final contentField = RegExp(r'final String content\s*;');
-
-      final partStart = source.indexOf('final class ResourcePart');
-      final treeStart = source.indexOf('final class ResourceTree');
-      expect(partStart, greaterThan(0));
-      expect(treeStart, greaterThan(partStart));
-
-      expect(
-        contentField.hasMatch(source.substring(0, partStart)),
-        isFalse,
-        reason: 'Resource and ResourceSection must not carry body text.',
-      );
-      expect(
-        contentField.allMatches(source.substring(partStart, treeStart)).length,
-        1,
-        reason: 'ResourcePart must own exactly one content field.',
       );
     });
   });

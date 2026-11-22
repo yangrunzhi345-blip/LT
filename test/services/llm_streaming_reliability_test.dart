@@ -7,9 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:lt_dialogue/models/llm_task.dart';
 import 'package:http/http.dart' as http;
 import 'package:lt_dialogue/core/debug/generation_diagnostics.dart';
-import 'package:lt_dialogue/application/resources/generation_patch_parser.dart';
-import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
-import 'package:lt_dialogue/domain/resources/resource_generation_protocol.dart';
 import 'package:lt_dialogue/models/llm_message.dart';
 import 'package:lt_dialogue/models/chat_failure.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
@@ -1544,33 +1541,6 @@ void main() {
 
       expect(chunks, ['真实内容']);
       expect(result.content, '真实内容');
-    });
-
-    test(
-        'D11 the fallback path produces the exact same protocol contract as '
-        'the streaming path', () {
-      // Both paths converge on the same canonical patch sequence, the same
-      // accumulator (sequence/cursor/identity validation) and the same
-      // validator. This pins the equivalence contract the fallback relies on:
-      // a full response is translated into the same 3-patch protocol the
-      // streaming parser enforces - it cannot bypass the whitelist, the
-      // sequence check or completion semantics.
-      const response = PartGenerationResponse(
-        protocolVersion: 1,
-        generationId: 'gen',
-        resourceId: ResourceId('res'),
-        sectionId: SectionId('sec'),
-        partId: PartId('part'),
-        attemptId: 'att',
-        content: '正文内容',
-        summary: '摘要',
-      );
-      final patches = GenerationPatchParser.responseToPatches(response);
-
-      expect(patches.map((p) => p.op.name).toList(),
-          ['startPart', 'appendText', 'completePart']);
-      expect(patches.map((p) => p.sequence).toList(), [0, 1, 2]);
-      expect(patches.last.cursor, '正文内容'.length);
     });
   });
 }

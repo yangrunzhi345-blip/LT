@@ -6,9 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:lt_dialogue/application/adventure/adventure_readiness_gate.dart';
-import 'package:lt_dialogue/application/resources/resource_migration_service.dart';
-import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
-import 'package:lt_dialogue/application/resources/resource_creation_port.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
 import 'package:lt_dialogue/models/supporting_character.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
@@ -193,55 +190,6 @@ void main() {
     });
   }
 
-  test('editing, unchanged failed save retry and subsequent start', () async {
-    const id = 'edit-retry';
-    final port = container.read(resourceCreationPortProvider);
-    Future<void> save(String description) async {
-      final data = card('测试角色');
-      (data['data']! as Map<String, Object?>)['description'] = description;
-      await port.saveCharacter(
-          id: id,
-          name: '测试角色',
-          jsonData: jsonEncode(data),
-          mode: 'adventure',
-          origin: 'edit-regression');
-    }
-
-    await save('原始正文');
-    final coordinator = container.read(assemblyReadinessCoordinatorProvider);
-    coordinator.debugInterleaveHook =
-        () async => throw StateError('private-body-sentinel');
-    await save('编辑后的正文');
-    final repo = container.read(assemblyReadinessRepositoryProvider);
-    expect((await repo.read(id))!.state, ReadinessState.failed);
-    coordinator.debugInterleaveHook = null;
-    await save('编辑后的正文');
-    expect((await repo.read(id))!.state, ReadinessState.ready);
-    coordinator.debugInterleaveHook =
-        () async => throw StateError('private-body-sentinel');
-    await coordinator.prepare(const ResourceId(id));
-    expect((await repo.read(id))!.state, ReadinessState.failed);
-    coordinator.debugInterleaveHook = null;
-    final updated = card('测试角色');
-    (updated['data']! as Map<String, Object?>)['description'] = '编辑后的正文';
-    final batch = await port.saveCards([
-      LegacyCardSave(
-          type: ResourceType.character,
-          id: id,
-          name: '测试角色',
-          jsonData: jsonEncode(updated),
-          mode: 'adventure',
-          origin: 'edit-regression')
-    ]);
-    expect(batch.single.reusedExisting, isTrue);
-    expect((await repo.read(id))!.state, ReadinessState.ready);
-    final chat = container.read(chatProvider);
-    await chat.loadApiKey();
-    final adventure = await chat.startAdventureWithConfig(config(id));
-    expect(await container.read(adventureRepoProvider).getMessages(adventure),
-        hasLength(1));
-  });
-
   test('associated worldview, two characters and NPC freeze together',
       () async {
     await seedCard(
@@ -334,12 +282,12 @@ void main() {
         '$table initialization failure rolls back only the new session and permits immediate retry',
         () async {
       const id = 'failed-start-resource';
-      await container.read(resourceCreationPortProvider).saveCharacter(
-          id: id,
-          name: '测试角色',
-          jsonData: jsonEncode(card('测试角色')),
-          mode: 'adventure',
-          origin: 'rollback-regression');
+      await seedCard(
+        id: id,
+        kind: SettingCardKind.character,
+        name: '测试角色',
+        content: jsonEncode(card('测试角色')),
+      );
       final chat = container.read(chatProvider);
       await chat.loadApiKey();
       final baseline = await chat
@@ -352,7 +300,7 @@ void main() {
       final repo = container.read(adventureRepoProvider);
       expect(await repo.getAdventures(), hasLength(1));
       expect(await repo.getMessages(baseline), hasLength(1));
-      expect(await db.query('resources', where: 'id = ?', whereArgs: [id]),
+      expect(await db.query('setting_cards', where: 'id = ?', whereArgs: [id]),
           hasLength(1));
       await db.execute('DROP TRIGGER fail_start');
       final retry = await chat.startAdventureWithConfig(config(id));
@@ -375,7 +323,6 @@ void main() {
     await old.close();
     final db = await DatabaseService.database;
     expect(await db.getVersion(), DatabaseService.schemaVersion);
-    await ResourceMigrationService(getDb: () => DatabaseService.database).run();
     const id = 'res_legacy_character_cards_legacy-card';
     // The compatibility migration turns the legacy row into a lightweight
     // setting card, reachable by both its stable id and its legacy id.

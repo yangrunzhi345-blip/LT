@@ -61,16 +61,6 @@ void main() {
     return (rows.first['c'] as num).toInt();
   }
 
-  Future<String> singleTrashId() async {
-    final db = await getDb();
-    final rows = await db.query(
-      'resource_trash',
-      where: 'restored_at IS NULL',
-      limit: 1,
-    );
-    return rows.single['trash_id'] as String;
-  }
-
   /// Lets the fire-and-forget library-refresh callbacks (fired by a successful
   /// production delete) finish their database work before the test closes it.
   Future<void> settleLibraryRefresh() =>
@@ -115,8 +105,8 @@ void main() {
       );
 
       await container
-          .read(resourceTrashServiceProvider)
-          .restore(await singleTrashId());
+          .read(legacyTombstoneStoreProvider)
+          .restoreByNodeId('wv-prod');
       await settleLibraryRefresh();
 
       expect(
@@ -153,8 +143,8 @@ void main() {
       );
 
       await container
-          .read(resourceTrashServiceProvider)
-          .restore(await singleTrashId());
+          .read(legacyTombstoneStoreProvider)
+          .restoreByNodeId('card-prod');
       await settleLibraryRefresh();
 
       expect(
@@ -187,8 +177,8 @@ void main() {
     );
 
     await container
-        .read(resourceTrashServiceProvider)
-        .restore(await singleTrashId());
+        .read(legacyTombstoneStoreProvider)
+        .restoreByNodeId('npc-prod');
 
     expect(
       await listedIds(await repo.getNpcCards()),
@@ -204,8 +194,8 @@ void main() {
       final db = await getDb();
       expect(db, isNotNull);
       expect(
-        DatabaseService.libraryTrashBridge,
-        same(DatabaseService.libraryTrashBridge),
+        DatabaseService.legacyTombstoneStore,
+        same(DatabaseService.legacyTombstoneStore),
       );
       final repo = container.read(libraryRepoProvider);
       // The provider-built repository can actually delete: fail-closed would

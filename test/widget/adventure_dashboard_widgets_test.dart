@@ -311,8 +311,12 @@ void main() {
         expect(find.text('取消'), findsOneWidget);
         await tester.runAsync(() async {
           expect(await repo.getAdventureById(id), isNotNull);
-          expect(await container.read(resourceTrashServiceProvider).list(),
-              isEmpty);
+          expect(
+            await container
+                .read(legacyTombstoneStoreProvider)
+                .isDeleted('adventure:$id'),
+            isFalse,
+          );
         });
         await tester.tap(find.text('取消'));
         await tester.pumpAndSettle();
@@ -336,11 +340,15 @@ void main() {
           // Phase 5c retired the recycle-bin restore runtime and its UI. The
           // durable trash entry is what now keeps the story recoverable, so the
           // delete path is asserted against it rather than a restore call.
-          final marker =
-              (await container.read(resourceTrashServiceProvider).list())
-                  .single;
-          expect(marker.linkedSourceTable, 'adventures');
-          expect(marker.linkedSourceId, '$id');
+          final marker = (await db.query(
+            'resource_trash',
+            where: 'node_id = ?',
+            whereArgs: ['adventure:$id'],
+          ))
+              .single;
+          expect(marker['node_id'], 'adventure:$id');
+          expect(marker['metadata_json'] as String, contains('adventures'));
+          expect(marker['metadata_json'] as String, contains('"$id"'));
         });
 
         expect(tester.takeException(), isNull);

@@ -6,7 +6,6 @@ import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/application/resources/legacy_resource_mapper.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/character_relationship_repository.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -16,19 +15,29 @@ void main() {
   databaseFactory = databaseFactoryFfiNoIsolate;
 
   late Directory tempDir;
-  late ResourceTreeRepositoryImpl resources;
   late CharacterRelationshipRepositoryImpl relationships;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('lt_relationships_');
     DatabaseService.customDbDir = tempDir.path;
     await DatabaseService.resetDatabase();
-    resources =
-        ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
     relationships = CharacterRelationshipRepositoryImpl(
       getDb: () => DatabaseService.database,
     );
   });
+
+  /// Inserts the minimal resource row a relationship endpoint points at.
+  Future<_ResourceRef> createResource(String id) async {
+    final db = await DatabaseService.database;
+    await db.insert('resources', {
+      'id': id,
+      'type': 'character',
+      'name': id,
+      'created_at': '2026-01-01T00:00:00.000',
+      'updated_at': '2026-01-01T00:00:00.000',
+    });
+    return _ResourceRef(ResourceId(id));
+  }
 
   tearDown(() async {
     await DatabaseService.resetDatabase();
@@ -51,10 +60,8 @@ void main() {
 
   test('creates, reads from either side, rejects duplicates, and updates',
       () async {
-    final a =
-        await resources.createResource(type: ResourceType.character, name: 'A');
-    final b =
-        await resources.createResource(type: ResourceType.character, name: 'B');
+    final a = await createResource('res_a');
+    final b = await createResource('res_b');
     final relation = await relationships.create(
       firstResourceId: b.id,
       firstRole: 'student',
@@ -90,12 +97,9 @@ void main() {
   test(
       'hidden while an endpoint is trashed and purge removes only touching edges',
       () async {
-    final a =
-        await resources.createResource(type: ResourceType.character, name: 'A');
-    final b =
-        await resources.createResource(type: ResourceType.character, name: 'B');
-    final c =
-        await resources.createResource(type: ResourceType.character, name: 'C');
+    final a = await createResource('res_a');
+    final b = await createResource('res_b');
+    final c = await createResource('res_c');
     await relationships.create(
       firstResourceId: a.id,
       firstRole: 'friend',
@@ -251,4 +255,10 @@ void main() {
       throwsA(isA<LegacyResourceUnresolvedException>()),
     );
   });
+}
+
+final class _ResourceRef {
+  const _ResourceRef(this.id);
+
+  final ResourceId id;
 }

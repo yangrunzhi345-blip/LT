@@ -3,15 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/resource_library_mode.dart';
-import '../application/resources/legacy_library_row_purger.dart';
-import '../application/resources/resource_owned_state_purger.dart';
-import '../application/resources/resource_library_trash_bridge.dart';
-import '../application/resources/resource_revision_repository.dart';
-import '../application/resources/resource_revision_service.dart';
-import '../application/resources/resource_trash_repository.dart';
-import '../application/resources/resource_trash_service.dart';
+import '../application/resources/legacy_tombstone_store.dart';
 import '../application/setting_cards/setting_card_migration_service.dart';
-import '../services/repositories/resource_tree_repository_impl.dart';
 import '../services/repositories/setting_card_repository_impl.dart';
 import 'auto_backup_service.dart';
 import 'repositories/world_embedding_repository.dart';
@@ -78,8 +71,7 @@ class DatabaseService {
     // Also reset repository caches
     __worldEmbeddingRepo = null;
     __libraryRepo = null;
-    __libraryTrash = null;
-    __resourceTrashService = null;
+    __legacyTombstoneStore = null;
     __characterRelationshipRepo = null;
   }
 
@@ -93,8 +85,11 @@ class DatabaseService {
       _worldEmbeddingRepo;
 
   static ILibraryRepository? __libraryRepo;
-  static ILibraryRepository get _libraryRepo => __libraryRepo ??=
-      LibraryRepositoryImpl(getDb: () => database, trashBridge: _libraryTrash);
+  static ILibraryRepository get _libraryRepo =>
+      __libraryRepo ??= LibraryRepositoryImpl(
+        getDb: () => database,
+        tombstoneStore: legacyTombstoneStore,
+      );
 
   static CharacterRelationshipRepository? __characterRelationshipRepo;
   static CharacterRelationshipRepository get characterRelationshipRepo =>
@@ -102,56 +97,15 @@ class DatabaseService {
         getDb: () => database,
       );
 
-  /// Phase 9 recycle-bin bridge used by the Resource Library.
+  /// Minimal legacy tombstone store shared by the retired legacy tables.
   ///
-  /// Built here (rather than in a Riverpod provider) because the library
-  /// repository is a lazily-created singleton owned by this service. It shares
-  /// this service's database accessor, so it sees exactly the same data as the
-  /// provider-side stack.
-  static ResourceLibraryTrashBridge? __libraryTrash;
-  static ResourceLibraryTrashBridge get _libraryTrash =>
-      __libraryTrash ??= _buildLibraryTrash();
-
-  /// The single source of the Phase 9 recycle-bin bridge.
-  ///
-  /// Every production `LibraryRepositoryImpl` construction site — the Riverpod
-  /// `libraryRepoProvider` chain included — must take its bridge from here.
-  /// Round 2 acceptance (R2-B1) found that two independent assemblies existed
-  /// and only one was wired, which turned the fail-closed delete guard into
-  /// "deletes are impossible" on the main UI. One source makes a half-wired
-  /// assembly structurally impossible again. The bridge only closes over
-  /// [database], so it stays valid across `resetDatabase()`.
-  static ResourceLibraryTrashBridge get libraryTrashBridge => _libraryTrash;
-
-  static ResourceTrashService? __resourceTrashService;
-  static ResourceTrashService get resourceTrashService =>
-      __resourceTrashService ??= _buildResourceTrashService();
-
-  static ResourceLibraryTrashBridge _buildLibraryTrash() =>
-      ResourceLibraryTrashBridge(
-          getDb: () => database, trashService: resourceTrashService);
-
-  static ResourceTrashService _buildResourceTrashService() {
-    Future<Database> getDb() => database;
-    final tree = ResourceTreeRepositoryImpl(getDb: getDb);
-    final revisions = ResourceRevisionRepositoryImpl(getDb: getDb);
-    final engine = RevisionCaptureEngine(
-      revisionRepository: revisions,
-      treeBoundary: tree,
-    );
-    final trash = ResourceTrashService(
-      repository: ResourceTrashRepositoryImpl(getDb: getDb),
-      treeBoundary: tree,
-      captureEngine: engine,
-      getDb: getDb,
-      // The only path allowed to remove a legacy row (explicit permanent delete).
-      legacyRowPort: LegacyLibraryRowPurger(getDb: getDb),
-      // R03-B: auxiliary state (revisions, autosaves, compression, generation,
-      // assembly) is discharged inside the purge transaction itself.
-      ownedStatePort: ResourceOwnedStatePurger(),
-    );
-    return trash;
-  }
+  /// The library repository is a lazily-created singleton owned by this
+  /// service, so it takes its store from here; the Riverpod composition root
+  /// reads the same instance. It only closes over [database], which keeps it
+  /// valid across `resetDatabase()`.
+  static LegacyTombstoneStore? __legacyTombstoneStore;
+  static LegacyTombstoneStore get legacyTombstoneStore =>
+      __legacyTombstoneStore ??= LegacyTombstoneStore(getDb: () => database);
 
   static Future<Database> get database async {
     if (_db != null) return _db!;

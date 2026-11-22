@@ -1,16 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/application/resources/compression_coordinator.dart';
-import 'package:lt_dialogue/application/resources/compression_job_repository.dart';
-import 'package:lt_dialogue/application/resources/resource_capacity_repository.dart';
-import 'package:lt_dialogue/domain/resources/resource_compression.dart';
-import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/services/database_service.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
-import '../../helpers/resource_capacity_fakes.dart';
 
 Future<List<String>> _columns(Database db, String table) async {
   final info = await db.rawQuery('PRAGMA table_info($table)');
@@ -124,30 +116,12 @@ void main() {
           .single;
       // The migration does not rewrite business rows: the legacy `running` row
       // keeps its status and simply cannot prove ownership.
-      expect(row['status'], CompressionJobStatus.running.storageValue);
+      expect(row['status'], 'running');
       expect(row['attempts'], 1);
       expect(row['error_message'], '');
       expect(row['worker_id'], '');
       expect(row['claimed_at'], isNull);
       expect(row['lease_expires_at'], isNull);
-
-      // Which is exactly what stale recovery handles, so no legacy running job
-      // is left unrecoverable.
-      final coordinator = CompressionCoordinator(
-        jobRepository:
-            CompressionJobRepositoryImpl(getDb: () async => upgraded),
-        treeRepository: ResourceTreeRepositoryImpl(getDb: () async => upgraded),
-        capacityRepository:
-            ResourceCapacityRepositoryImpl(getDb: () async => upgraded),
-        llmPort: FakeCompressionLlm(),
-      );
-      expect(await coordinator.recoverStaleJobs(), 1);
-      expect(
-        (await coordinator.jobsForResource(const ResourceId('res_legacy')))
-            .single
-            .status,
-        CompressionJobStatus.queued,
-      );
     });
 
     test('re-running the upgrade step is idempotent', () async {
