@@ -2937,7 +2937,6 @@
   },
   "resourcePaginationPrev": "Previous",
   "resourcePaginationNext": "Next",
-  "resourceBlueprintPlanning": "Planning blueprint...",
   "resourceValidationFailed": "Failed",
   "resourceInFlightGenerating": "Generating content...",
   "resourceInFlightValidating": "Validating quality...",

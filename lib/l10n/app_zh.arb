@@ -3004,7 +3004,6 @@
   },
   "resourcePaginationPrev": "上一页",
   "resourcePaginationNext": "下一页",
-  "resourceBlueprintPlanning": "正在规划蓝图...",
   "resourceValidationFailed": "校验未通过",
   "resourceInFlightGenerating": "正在生成正文...",
   "resourceInFlightValidating": "正在校验质量...",

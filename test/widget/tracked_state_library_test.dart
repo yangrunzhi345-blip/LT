@@ -39,22 +39,6 @@ class _FakeLibraryRuntime implements ResourceLibraryRuntime {
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async =>
       items;
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async =>
-      throw UnimplementedError();
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      throw UnimplementedError();
 }
 
 class _FakeTrackedStateRuntime implements TrackedStateLibraryRuntime {
@@ -119,7 +103,6 @@ ResourceLibraryItem _item(
       summary: '',
       updatedAt: at,
       status: ResourceDisplayStatus.ready,
-      isStudioAvailable: true,
     );
 
 TrackedStateLibraryEntry _owner({

@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/resource_lifecycle_projection.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_library_runtime.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
-import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/core/responsive/app_breakpoints.dart';
 import 'package:lt_dialogue/core/widgets/app_empty_state.dart';
 import 'package:lt_dialogue/core/widgets/app_error_view.dart';
@@ -39,24 +38,6 @@ final class _MockResourceLibraryRuntime implements ResourceLibraryRuntime {
     }
     return List.unmodifiable(items);
   }
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async {
-    items = items.where((candidate) => candidate.id != item.id).toList();
-    return const ResourceOperationResult.success(message: '已移入回收站');
-  }
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      'item_manual_1';
 }
 
 final _testItems = <ResourceLibraryItem>[
@@ -68,7 +49,6 @@ final _testItems = <ResourceLibraryItem>[
         '详细阐述了黄金律法被毁之后，玛莉卡女王的诸位半神子嗣为了夺取大卢恩发动破碎战争的宏大历史背景。包含宁姆格福、利耶尼亚、盖利德以及罗德尔王城的地理与势力分布。',
     updatedAt: '2026-09-26 12:00',
     status: ResourceDisplayStatus.ready,
-    isStudioAvailable: true,
     isConsumable: true,
     lifecycleState: ResourceLifecycleState.ready,
   ),
@@ -79,7 +59,6 @@ final _testItems = <ResourceLibraryItem>[
     summary: '暗月之剑的主人，卡利亚王室的真正继承人。',
     updatedAt: '2026-09-25 10:00',
     status: ResourceDisplayStatus.generating,
-    isStudioAvailable: true,
     isConsumable: false,
     lifecycleState: ResourceLifecycleState.generating,
   ),
@@ -90,7 +69,6 @@ final _testItems = <ResourceLibraryItem>[
     summary: '活壶战士，为了磨砺自我前往盖利德参与红狮子城战斗祭典。',
     updatedAt: '2026-09-24 08:00',
     status: ResourceDisplayStatus.optimizing,
-    isStudioAvailable: true,
     isConsumable: false,
     lifecycleState: ResourceLifecycleState.validating,
   ),
@@ -101,7 +79,6 @@ final _testItems = <ResourceLibraryItem>[
     summary: '菈妮的从者与忠诚卫士。',
     updatedAt: '2026-09-20 18:00',
     status: ResourceDisplayStatus.optimizationFailed,
-    isStudioAvailable: true,
     isConsumable: false,
     lifecycleState: ResourceLifecycleState.failed,
   ),
@@ -476,7 +453,6 @@ void main() {
           summary: '这是角色卡 $i 的简短介绍。',
           updatedAt: '2026-09-26 10:${(30 - i).toString().padLeft(2, '0')}',
           status: ResourceDisplayStatus.ready,
-          isStudioAvailable: true,
           isConsumable: true,
           lifecycleState: ResourceLifecycleState.ready,
         ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
@@ -21,26 +20,9 @@ final class _LeakyLibraryRuntime implements ResourceLibraryRuntime {
               'Summary with file:///home/user/LT/db.sqlite and revision: 1',
           updatedAt: '2026-09-26',
           status: ResourceDisplayStatus.ready,
-          isStudioAvailable: true,
           isConsumable: true,
         ),
       ];
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async =>
-      const ResourceOperationResult.success(message: '已移入回收站');
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      'item_1';
 }
 
 void main() {

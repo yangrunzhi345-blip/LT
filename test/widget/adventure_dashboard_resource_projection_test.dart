@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/adventure/presentation/home/screens/adventure_dashboard_screen.dart';
@@ -46,22 +45,6 @@ final class _FakeLibraryRuntime implements ResourceLibraryRuntime {
 
   /// Completes the most recent deferred [load] with the current [items].
   void completeLatest() => _pending?.complete(List.of(items));
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async =>
-      const ResourceOperationResult.success(message: '已移入回收站');
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      items.first.id;
 }
 
 const _worldview = ResourceLibraryItem(
@@ -71,7 +54,6 @@ const _worldview = ResourceLibraryItem(
   summary: '银月大陆与古老法则',
   updatedAt: '2026-10-01 10:00',
   status: ResourceDisplayStatus.ready,
-  isStudioAvailable: true,
 );
 
 const _character = ResourceLibraryItem(
@@ -81,7 +63,6 @@ const _character = ResourceLibraryItem(
   summary: '游侠 · 冷静',
   updatedAt: '2026-09-30 10:00',
   status: ResourceDisplayStatus.saved,
-  isStudioAvailable: true,
 );
 
 void main() {
@@ -344,20 +325,4 @@ final class _FailingRuntime implements ResourceLibraryRuntime {
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async =>
       throw StateError('authority unavailable');
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async =>
-      const ResourceOperationResult.success();
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      '';
 }

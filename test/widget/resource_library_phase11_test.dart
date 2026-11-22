@@ -231,7 +231,7 @@ void main() {
       );
       expect(
         tester.widget<Text>(find.byKey(const Key('app-feedback-message'))).data,
-        '已移入回收站',
+        '已删除',
       );
       expect(tester.takeException(), isNull);
       // Let the transient feedback timer retire before the test ends.

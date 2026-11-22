@@ -56,11 +56,9 @@ final class ResourceLibraryItem {
     required this.summary,
     required this.updatedAt,
     required this.status,
-    required this.isStudioAvailable,
     this.isConsumable = false,
     this.lifecycleState,
     this.originWorldviewId = '',
-    this.isSettingCard = false,
   });
 
   final String id;
@@ -69,16 +67,11 @@ final class ResourceLibraryItem {
   final String summary;
   final String updatedAt;
   final ResourceDisplayStatus status;
-  final bool isStudioAvailable;
   final bool isConsumable;
   final ResourceLifecycleState? lifecycleState;
 
   /// Native worldview identity frozen into the Adventure snapshot.
   final String originWorldviewId;
-
-  /// True when this item is backed by a lightweight setting card rather than
-  /// the retired resource tree. The library uses it to pick the editor.
-  final bool isSettingCard;
 
   String localizedName(AppLocalizations l10n) =>
       name.trim().isEmpty ? l10n.resourceUnnamed : name;

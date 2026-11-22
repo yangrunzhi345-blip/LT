@@ -72,7 +72,6 @@ void main() {
         summary: '',
         updatedAt: '',
         status: ResourceDisplayStatus.ready,
-        isStudioAvailable: false,
       );
       expect(unnamedResource.localizedName(l10n), l10n.resourceUnnamed);
       final statusPresetTexts = <String>[

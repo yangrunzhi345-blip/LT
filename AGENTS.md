@@ -14,6 +14,16 @@
 
 任务权威优先级统一为：1) 用户当前明确授权与任务 Scope；2) 本文件的安全、Git、数据保护和质量硬规则；3) 当前代码事实与实际调用链；4) 当前正式 architecture authority；5) 已批准的 implementation spec；6) 历史阶段文档；7) 聊天中的旧假设。用户授权可以改变 workflow、角色分离、执行 cadence 和 review handoff，但不能取消凭证安全、用户数据保护、禁止破坏性 Git、测试真实性或不得伪造验证结果。
 
+## 当前资源架构
+
+资源已从 `Resource → Section → Part` 编辑 IDE 收敛为单文档设定卡（setting card）。世界观、角色卡与 NPC 都以一份 `SettingCard` 表达：名称、摘要、状态、整份正文与少量 metadata，存放在 `setting_cards` 表；角色关系仍由既有关系数据维护，由创建向导与运行态中心读取。
+
+- 编辑与 AI 起草都是一次一张卡：AI 草稿渲染为整份文档，用户可在此基础上继续编辑。不存在 blueprint / candidate / shard 生成、逐 Part 流式写入、revision 发布或压缩 / assembly 管线。
+- 启动 Adventure 时冻结所选卡片为 Adventure 快照，之后的卡片编辑不影响进行中的冒险。
+- 旧表仅作兼容：`LegacyTombstoneStore` 只通过既有 `resource_trash` 记录“某条 legacy 行或冒险已删除”，不复制正文、不写树；`SettingCardMigrationService` 迁移时只读旧表并插入缺失卡片，不回写、不删除 legacy 数据。
+
+旧资源表以及 `lib/domain/resources/`、`lib/application/resources/` 中的对应类型只服务于兼容迁移、关系读取与 tombstone，不是新功能的扩展点。新增资源能力必须基于 `lib/domain/setting_cards/`，不得恢复 Resource Studio、树契约、revision / trash / compression 或 assembly 管线。
+
 ## 默认工作流程
 
 遵循“先理解，再设计，再修改，再验证，最后提交”：检查任务与 Git 状态，阅读相关代码，搜索已有实现，分析调用链和影响范围，确定最小修改，实施后格式化、静态分析、测试、检查 diff 与重复实现，最后提交并汇报。
@@ -125,15 +135,15 @@ LT 的正式设计语言为 **LT Narrative Workbench Design Language**。产品 
 
 Desktop 默认采用 `Navigation | Workspace | Inspector`。三者职责明确，保持工作区上下文和稳定结构，不把所有对象都设计成独立全屏页面。
 
-**Navigation** 是长期稳定的信息架构，主要覆盖 Adventure、Chapters、Characters、World、Timeline、Resources、Creation Studio、Runtime State、Settings。Desktop 优先使用 persistent sidebar，合理场景允许用户折叠；不得过度装饰，也不得因对象层级不断 push 新页面或进入 Character / World / Resource 而让导航和整个工作区上下文消失。
+**Navigation** 是长期稳定的信息架构，主要覆盖 Adventure、Chapters、Characters、World、Timeline、Resources、Runtime State、Settings。Desktop 优先使用 persistent sidebar，合理场景允许用户折叠；不得过度装饰，也不得因对象层级不断 push 新页面或进入 Character / World / Resource 而让导航和整个工作区上下文消失。
 
-**Workspace** 是主要工作区域，负责 Narrative reading / generation、Character / World / Resource editing、Creation Studio、Timeline inspection、Runtime State 和 Settings content。实际内容必须优先展示；推荐 `Title → Metadata → Primary content → Contextual actions`，禁止以 Decorative header、Gradient banner、Large cards、Feature cards 层层堆叠后才出现实际内容。
+**Workspace** 是主要工作区域，负责 Narrative reading / generation、Character / World / Resource editing、Timeline inspection、Runtime State 和 Settings content。实际内容必须优先展示；推荐 `Title → Metadata → Primary content → Contextual actions`，禁止以 Decorative header、Gradient banner、Large cards、Feature cards 层层堆叠后才出现实际内容。
 
 **Inspector** 显示当前选中对象的上下文、属性、状态和操作，必须随选择变化，不能成为第二套 Navigation。例如：
 
 - Character「林恩」：Current State（Location、Presence、Life、Mood）、Relations、Scene、Revision、History。
 - World Entity「银月城」：World State（Faction、Population、Weather、Threat）、Revision、History。
-- Resource：Type、Status、Generation、Revision、Metadata。
+- Setting Card：Type、Status、Relations、Updated、Metadata。
 
 ### Reading Mode 与 Typography
 
@@ -198,9 +208,9 @@ Timeline 面向普通用户呈现叙事活动与语义变化，不能只是 Debu
 
 Runtime State 建议按 Characters、World、Scene、Relations 分层；Character State 采用 Current（Life、Location、Presence、Mood）与 Changes。默认不得向普通用户暴露 raw schema path、internal ID 或 implementation terminology，详细变化也应使用用户可理解的语义。
 
-### Creation Studio、Settings 与 Command Palette
+### Setting Card 编辑器、Settings 与 Command Palette
 
-Creation Studio 采用 `Outline | Editor | Inspector`：Outline 可包含 Overview、Appearance、Personality、Background、Relations、Runtime Defaults、Generation Rules；中间编辑内容，右侧展示 Generation state、Revision、Metadata、Validation、Context、Runtime defaults。不得做成长页面堆叠 Card。
+Setting Card 编辑器采用 `Document | Inspector`：Workspace 直接编辑整份文档（名称、摘要、状态、正文），Inspector 展示类型、关系、更新时间和 metadata。不得把单文档编辑器拆成多级 Section / Part 树，也不得做成长页面堆叠 Card；AI 起草只把草稿渲染进同一份文档供继续编辑。
 
 Settings 采用稳定二栏结构：左侧类别，右侧实际设置。类别可包括 General、Appearance、Language、Read Aloud、AI Providers、Context、Storage、About；不要每个设置项单独放入大型 Card，设置数量增加后可支持搜索。移动端按下述规则重组，保留类别与当前内容的关系。
 
@@ -216,7 +226,7 @@ Settings 采用稳定二栏结构：左侧类别，右侧实际设置。类别�
 | Tablet | Navigation / Workspace | Inspector 使用 Drawer 或 Overlay panel |
 | Phone | Workspace 为主 | Navigation 使用 Bottom Navigation、Drawer 或 Compact navigation；Inspector 使用 Detail page、Bottom sheet 或 Full-screen detail |
 
-Creation Studio、Settings 等多栏结构同样需按可用空间重组，保持当前位置、选择和上下文可理解。具体断点、最低 320 px、SafeArea、键盘、触控区域和 viewport 测试遵守下方「Flutter 响应式布局与移动端溢出防护」，不得因高密度桌面设计降低移动端要求。
+Setting Card 编辑器、Settings 等多栏结构同样需按可用空间重组，保持当前位置、选择和上下文可理解。具体断点、最低 320 px、SafeArea、键盘、触控区域和 viewport 测试遵守下方「Flutter 响应式布局与移动端溢出防护」，不得因高密度桌面设计降低移动端要求。
 
 ### Motion、Interaction Density 与 Material 3
 
@@ -239,7 +249,7 @@ LT 正式产品 UI 不得使用 Emoji 作为导航、功能、按钮、菜单、
 
 New product UI icons MUST use SVG assets/components. Do not introduce Emoji, Unicode pseudo-icons, or decorative text symbols as substitutes for icons.
 
-新增产品 UI 需要图标时必须使用 SVG。适用范围包括 Navigation、Sidebar、Bottom Navigation、AppBar、Toolbar、Action buttons、Context / Popup menu、Settings、Inspector、Character / World management、Timeline、Runtime State、Resources、Creation Studio，以及 Search、Filter、Sort、Expand / Collapse、Back / Forward、Add / Remove、Edit、Delete、Copy、Share、Import / Export、History、Revision、Read Aloud、Language、Theme 和需要图形表达的 Warning / Error / Success 状态。不得以字体图标或其他伪图标替代这一新增要求。
+新增产品 UI 需要图标时必须使用 SVG。适用范围包括 Navigation、Sidebar、Bottom Navigation、AppBar、Toolbar、Action buttons、Context / Popup menu、Settings、Inspector、Character / World management、Timeline、Runtime State、Resources、Setting Card 编辑器，以及 Search、Filter、Sort、Expand / Collapse、Back / Forward、Add / Remove、Edit、Delete、Copy、Share、Import / Export、History、Revision、Read Aloud、Language、Theme 和需要图形表达的 Warning / Error / Success 状态。不得以字体图标或其他伪图标替代这一新增要求。
 
 Do not add an icon merely because a UI element can have one.
 
@@ -264,7 +274,7 @@ Do not add an icon merely because a UI element can have one.
 
 **No new visual debt. Touch it, align it.**
 
-本任务仅固化设计规范，不要求为更新 AGENTS.md 全量重构历史页面，也不涉及业务、数据库、Repository、Domain、State System、LLM / Streaming / Creation pipeline、版本号、依赖或资产迁移。新增页面必须符合设计语言；修改已有 UI 时在受修改组件范围内同步收敛，不新增 Emoji、Unicode pseudo-icons、无意义渐变、Card Everything 或模块彩虹色，不以此扩大无关重构范围。
+本任务仅固化设计规范，不要求为更新 AGENTS.md 全量重构历史页面，也不涉及业务、数据库、Repository、Domain、State System、LLM / 流式管线、版本号、依赖或资产迁移。新增页面必须符合设计语言；修改已有 UI 时在受修改组件范围内同步收敛，不新增 Emoji、Unicode pseudo-icons、无意义渐变、Card Everything 或模块彩虹色，不以此扩大无关重构范围。
 
 图标方面继续遵守 **No new Emoji debt. Touch it, fix it.**
 

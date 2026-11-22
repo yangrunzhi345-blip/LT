@@ -27,11 +27,11 @@ During play, stream narrative turns, choose actions, create branches, switch the
 
 ## Resource Library
 
-Create, edit, search, filter, sort, and delete worldviews, character cards, and NPCs. Each resource is a single editable document rather than a tree of sections and parts: the editor writes the whole card, and an AI draft is rendered into that same document for review before saving.
+Create, edit, search, filter, sort, and delete worldviews, character cards, and NPCs. Each one is a single setting card: one editable document with a name, summary, status, and body. The editor writes the whole document, and an AI draft is rendered into that same document so you can keep editing from there.
 
-Legacy tree rows and older library rows are migrated once into this card shape, so existing data stays readable and editable. Deleting a card removes it from the library; the app has no recycle-bin restore screen.
+Cards migrated from older library data are read from the legacy tables once and written as cards; the old rows are left untouched. Deleting a card removes it from the library.
 
-Character and NPC cards also carry the relationships and tracked-state definitions that the Adventure wizard and the Runtime State Hub read.
+Character and NPC cards work with the relationships and tracked-state definitions that the Adventure wizard and the Runtime State Hub read.
 
 ## Characters, Relationships & Runtime State
 
@@ -41,19 +41,21 @@ For the active Adventure, the Runtime State Hub provides a dashboard, character 
 
 ## AI-Assisted Authoring
 
-Configure an OpenAI-compatible endpoint, model, and API key. The Resource Library can draft a worldview, character, or NPC from a short instruction, and the model's structured answer is rendered into the card document, which you edit and save yourself. Generation is one request per card; there is no multi-step blueprint, part-by-part streaming, revision history, or automatic compression stage.
+Configure an OpenAI-compatible endpoint, model, and API key. The Resource Library can draft a worldview, character, or NPC from a short instruction. Drafting is one operation per card: the model's structured answer is rendered into the card document, and you edit the result from there.
 
 Adventure generation assembles resource snapshots, recent narrative, summaries, and runtime state within a context budget. Structured state output is parsed and validated before accepted changes are persisted and used in later turns.
 
 ## Read Aloud
 
-Read-aloud uses the platform's system speech engine; no neural model is bundled, downloaded, or selectable. Settings expose enable, automatic reading, rate, pitch, and language.
+Read-aloud uses the platform's system speech engine. Settings expose enable, automatic reading, rate, pitch, and language.
 
 On Linux, system read-aloud uses Speech Dispatcher when available. Conversation translation uses the configured text model, independently of read-aloud.
 
 ## Local-first Architecture
 
-Resources, Adventures, messages, and application settings are primarily persisted in local SQLite. API keys go to the platform credential store when the OS provides one, with an application-encrypted SQLite fallback; this does not mean the entire database is encrypted.
+Setting cards, Adventures, messages, and application settings are primarily persisted in local SQLite. API keys go to the platform credential store when the OS provides one, with an application-encrypted SQLite fallback; this does not mean the entire database is encrypted.
+
+Cards live in the `setting_cards` table. Starting an Adventure freezes copies of the selected cards into the Adventure snapshot, so later card edits do not rewrite a running story. Resource tables from earlier versions are kept for compatibility only: they are read once during migration and never drive the current library.
 
 AI text generation and translation send the required context to your configured endpoint, which may be remote. Local-first storage does not mean every AI feature works offline.
 

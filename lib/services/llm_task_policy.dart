@@ -97,42 +97,6 @@ class LlmTaskPolicyTable {
       maxTokens: 1024,
       temperature: 0.15,
     ),
-    LlmTask.resourceBlueprintPlanning: LlmTaskPolicy(
-      task: LlmTask.resourceBlueprintPlanning,
-      thinking: ThinkingPolicy.followUserSetting,
-      reasoningEffort: 'medium',
-      preferJsonOutput: true,
-      // Defensive fallback only. `BlueprintPlanner` always supplies a dynamic,
-      // model-bounded `max_tokens` (see `BlueprintTokenBudgetPolicy`); this
-      // value applies solely to a caller that omits one, so a plan is never
-      // silently pinned to a fixed 4096-token ceiling.
-      maxTokens: 4096,
-      temperature: 0.7,
-    ),
-    LlmTask.resourcePartGeneration: LlmTaskPolicy(
-      task: LlmTask.resourcePartGeneration,
-      // Part generation runs non-thinking by design: the fixed 4096-token
-      // output budget must carry the whole NDJSON body, and DeepSeek counts
-      // reasoning tokens inside that same budget (thinking would risk
-      // `finish_reason=length` truncating the protocol tail). Both streaming
-      // and raw gateways pass `enableThinking: false`, so this is also what
-      // production has always done — declared here instead of implied.
-      thinking: ThinkingPolicy.disabled,
-      reasoningEffort: 'low',
-      preferJsonOutput: false,
-      maxTokens: 4096,
-      temperature: 0.7,
-    ),
-    LlmTask.resourceCompression: LlmTaskPolicy(
-      task: LlmTask.resourceCompression,
-      // Compression must be faithful to the source, so it never inherits the
-      // user's creative thinking toggle and runs at a low, stable temperature.
-      thinking: ThinkingPolicy.disabled,
-      reasoningEffort: 'low',
-      preferJsonOutput: true,
-      maxTokens: 4096,
-      temperature: 0.3,
-    ),
   };
 
   static LlmTaskPolicy policyFor(LlmTask task) => _table[task]!;

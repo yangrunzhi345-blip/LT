@@ -76,7 +76,6 @@ void main() {
     final items = await library().load(ResourceLibraryMode.adventure);
 
     expect(items, hasLength(3));
-    expect(items.every((item) => item.isSettingCard), isTrue);
     expect(items.every((item) => item.isConsumable), isTrue);
   });
 

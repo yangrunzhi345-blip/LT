@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
@@ -16,22 +15,6 @@ final class _FakeLibraryRuntime implements ResourceLibraryRuntime {
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async =>
       items;
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async =>
-      const ResourceOperationResult.success(message: '已移入回收站');
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      items.first.id;
 }
 
 void main() {
@@ -43,7 +26,6 @@ void main() {
       summary: '贸易海港与古老法则',
       updatedAt: '2026-09-18',
       status: ResourceDisplayStatus.ready,
-      isStudioAvailable: true,
     ),
     const ResourceLibraryItem(
       id: 'c1',
@@ -52,7 +34,6 @@ void main() {
       summary: '守夜人',
       updatedAt: '2026-09-17',
       status: ResourceDisplayStatus.saved,
-      isStudioAvailable: true,
     ),
   ];
 
@@ -90,20 +71,6 @@ void main() {
       expect(failing.state.error, ResourceLibraryError.loadFailed);
     });
 
-    test('should convert a thrown trash operation into a failure result',
-        () async {
-      final failing = ResourceLibraryController(
-        runtime: _FailingRuntime(),
-        mode: ResourceLibraryMode.adventure,
-      );
-      addTearDown(failing.dispose);
-
-      final result = await failing.moveToTrash(items.first);
-
-      expect(result.success, isFalse);
-      expect(result.errorMessage, contains('test'));
-    });
-
     test('should ignore stale loads and completions after disposal', () async {
       final runtime = _SequencedLibraryRuntime();
       final raced = ResourceLibraryController(
@@ -138,48 +105,14 @@ final class _SequencedLibraryRuntime implements ResourceLibraryRuntime {
     return completer.future;
   }
 
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async =>
-      const ResourceOperationResult.success(message: '已移入回收站');
-
   void complete(int index, List<ResourceLibraryItem> value) {
     _loads[index].complete(value);
   }
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      'created';
 }
 
 final class _FailingRuntime implements ResourceLibraryRuntime {
   @override
   Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async {
-    throw StateError('test');
-  }
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async {
-    throw StateError('test');
-  }
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async {
     throw StateError('test');
   }
 }

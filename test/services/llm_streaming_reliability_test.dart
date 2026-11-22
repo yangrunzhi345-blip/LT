@@ -1086,11 +1086,11 @@ void main() {
         taskHandle: GenerationTaskHandle(taskId: 'private-task')
             .forRequest('private-request'),
         params: const CompletionParams(
-            diagnosticTask: LlmTask.resourceBlueprintPlanning),
+            diagnosticTask: LlmTask.structuredExtraction),
       );
       expect(result.content, 'private-body');
       expect(wire!.containsKey('diagnosticTask'), isFalse);
-      expect(wire.toString(), isNot(contains('resourceBlueprintPlanning')));
+      expect(wire.toString(), isNot(contains('structuredExtraction')));
       for (final secret in [
         'private-key',
         'private-user',
@@ -1114,8 +1114,7 @@ void main() {
       final events = records();
       expect(events.map((event) => event['attemptSequence']).toSet(),
           hasLength(1));
-      expect(
-          events.every((event) => event['task'] == 'resourceBlueprintPlanning'),
+      expect(events.every((event) => event['task'] == 'structuredExtraction'),
           isTrue);
       expect(events.first['provider'], 'deepseek');
       expect(events.first['model'], 'deepseek-flash');

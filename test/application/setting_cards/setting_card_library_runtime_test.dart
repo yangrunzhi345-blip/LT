@@ -3,20 +3,9 @@ import 'package:lt_dialogue/application/setting_cards/setting_card_library_runti
 import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
-import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 
 import '../../helpers/setting_card_fakes.dart';
-
-ResourceLibraryItem _item(String id) => ResourceLibraryItem(
-      id: id,
-      type: ResourceType.character,
-      name: '旧 $id',
-      summary: '',
-      updatedAt: '2025-01-01T00:00:00.000',
-      status: ResourceDisplayStatus.saved,
-      isStudioAvailable: true,
-    );
 
 void main() {
   late MemorySettingCardRepository repository;
@@ -51,7 +40,6 @@ void main() {
 
     expect(items, hasLength(1));
     expect(items.single.id, 'res_legacy_character_cards_c1');
-    expect(items.single.isSettingCard, isTrue);
   });
 
   test('an empty card store yields an empty library', () async {
@@ -62,8 +50,7 @@ void main() {
     expect(items, isEmpty);
   });
 
-  test('card items project the card fields and never claim Studio support',
-      () async {
+  test('card items project the card fields', () async {
     repository.cards['card-w'] = const SettingCard(
       id: 'card-w',
       kind: SettingCardKind.worldview,
@@ -82,7 +69,6 @@ void main() {
     expect(items.single.type, ResourceType.worldview);
     expect(items.single.summary, '大陆概述');
     expect(items.single.isConsumable, isTrue);
-    expect(items.single.isStudioAvailable, isFalse);
     expect(items.single.originWorldviewId, 'w-root');
   });
 
@@ -100,52 +86,5 @@ void main() {
     final items = await runtime.load(ResourceLibraryMode.conversation);
 
     expect(items, isEmpty);
-  });
-
-  test('moveToTrash soft deletes a card', () async {
-    repository.cards['card-1'] = const SettingCard(
-      id: 'card-1',
-      kind: SettingCardKind.character,
-      name: '林恩',
-      mode: 'adventure',
-      updatedAt: '2026-01-01T00:00:00.000',
-      createdAt: '2026-01-01T00:00:00.000',
-    );
-    final runtime = SettingCardLibraryRuntime(service: service);
-
-    final result = await runtime.moveToTrash(
-      item: _item('card-1'),
-      mode: ResourceLibraryMode.adventure,
-    );
-
-    expect(result.success, isTrue);
-    expect(repository.cards['card-1']!.isDeleted, isTrue);
-  });
-
-  test('moveToTrash fails for an unknown id', () async {
-    final runtime = SettingCardLibraryRuntime(service: service);
-
-    final result = await runtime.moveToTrash(
-      item: _item('missing'),
-      mode: ResourceLibraryMode.adventure,
-    );
-
-    expect(result.success, isFalse);
-  });
-
-  test('createManual writes a card with the current mode', () async {
-    final runtime = SettingCardLibraryRuntime(service: service);
-
-    final id = await runtime.createManual(
-      type: ResourceType.npc,
-      name: '北门守卫',
-      summary: '守序',
-      mode: ResourceLibraryMode.conversation,
-    );
-
-    expect(id, 'new-card');
-    final card = repository.cards['new-card']!;
-    expect(card.kind, SettingCardKind.npc);
-    expect(card.mode, 'conversation');
   });
 }

@@ -28,8 +28,7 @@ void main() {
       expect(GenerationDiagnostics.safeLlmEnabled,
           const bool.fromEnvironment('LT_SAFE_LLM_DIAGNOSTICS'));
       GenerationDiagnostics.instance.markSafeLlm('ATTEMPT_START',
-          attemptSequence: 1,
-          details: {'task': LlmTask.resourceBlueprintPlanning});
+          attemptSequence: 1, details: {'task': LlmTask.structuredExtraction});
       expect(output, hasLength(GenerationDiagnostics.safeLlmEnabled ? 1 : 0));
     });
 

@@ -52,16 +52,6 @@ enum LlmTask {
   /// the turn's state authority, while structured extraction is a generic
   /// helper that must never be allowed to settle a turn.
   turnSettlement,
-
-  /// Adaptive Resource Blueprint planning (dynamic sections, parts, goals, dependencies).
-  resourceBlueprintPlanning,
-
-  /// Adaptive Resource Part body generation (bounded single-part prose generation).
-  resourcePartGeneration,
-
-  /// Adaptive Resource semantic compression (faithful condensation of one
-  /// bounded node window; produces a candidate, never a replacement).
-  resourceCompression,
 }
 
 /// How a task decides whether thinking is enabled.

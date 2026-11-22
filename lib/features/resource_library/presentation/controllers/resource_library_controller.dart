@@ -1,8 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../../../controllers/resource_crud_controller.dart';
-import '../../../../../domain/resources/resource_contracts.dart';
-import '../../../../../core/localization/app_error_localizer.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../application/use_cases/resource_library_runtime.dart';
 import '../../domain/models/resource_library_view_state.dart';
@@ -71,40 +68,6 @@ final class ResourceLibraryController extends ChangeNotifier {
   void nextPage() {
     if (_state.currentPage < _state.totalPages) {
       setPage(_state.currentPage + 1);
-    }
-  }
-
-  Future<String?> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-  }) async {
-    try {
-      final id = await _runtime.createManual(
-        type: type,
-        name: name,
-        summary: summary,
-        mode: _mode,
-      );
-      await load();
-      return id;
-    } catch (_) {
-      _setState(_state.copyWith(
-        status: ResourceLibraryStatus.error,
-        error: ResourceLibraryError.createFailed,
-      ));
-      return null;
-    }
-  }
-
-  Future<ResourceOperationResult> moveToTrash(ResourceLibraryItem item) async {
-    try {
-      return await _runtime.moveToTrash(item: item, mode: _mode);
-    } catch (error) {
-      return ResourceOperationResult.failure(
-        error.toString(),
-        error: asAppDomainError(error),
-      );
     }
   }
 

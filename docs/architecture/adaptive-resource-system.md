@@ -1,9 +1,11 @@
 # ADR-0001：自适应资源系统的内容树架构契约
 
-- 状态：Frozen（Phase 0）
-- 适用范围：Phase 0–12 全部资源重构阶段
-- 契约代码：`lib/domain/resources/resource_contracts.dart`、`lib/domain/resources/resource_limits.dart`、`lib/domain/resources/resource_repository.dart`
-- 执行方案：`docs/adaptive-resource-system/`
+> 已归档 / 历史设计：已被单文档设定卡（setting_cards）替代，仅作历史参考。
+
+- 状态：Archived（原 Frozen，Phase 0）
+- 适用范围：原 Phase 0–12 资源重构阶段；该管线已在 slim 重构中退役
+- 契约代码：`lib/domain/resources/resource_contracts.dart`、`lib/domain/resources/resource_limits.dart`
+- 执行方案：`docs/adaptive-resource-system/`（相关报告已在 Phase 1 移出工作树，仅存于 git 历史）
 
 ## 背景
 
