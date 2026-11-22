@@ -12,7 +12,9 @@ import '../../../../domain/setting_cards/setting_card.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../widgets/setting_card_length_selector.dart';
 import '../widgets/setting_card_reference_editor.dart';
+import '../widgets/setting_card_relationships_section.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -56,6 +58,7 @@ final class _SettingCardDetailPageState
   bool _loading = true;
   bool _saving = false;
   bool _generating = false;
+  SettingCardGenerationLength _length = SettingCardGenerationLength.standard;
   String _progressLabel = '';
   String? _loadError;
 
@@ -136,6 +139,7 @@ final class _SettingCardDetailPageState
     if (request == null || !mounted) return;
     setState(() {
       _generating = true;
+      _length = request.length;
       _progressLabel = '';
     });
     try {
@@ -143,6 +147,7 @@ final class _SettingCardDetailPageState
             id: card.id,
             instruction: request.instruction,
             reference: request.reference,
+            targetTotalCharacters: request.length.targetCharacters,
             onProgress: (stage, total, name) {
               if (!mounted) return;
               setState(() => _progressLabel = name);
@@ -169,14 +174,72 @@ final class _SettingCardDetailPageState
     }
   }
 
-  Future<({String instruction, SettingCardReferenceInput? reference})?>
-      _askInstruction() async {
+  bool get _canRestore =>
+      _card?.metadata[SettingCardService.previousSnapshotKey] is Map;
+
+  Future<void> _restore() async {
+    final card = _card;
+    if (card == null || _saving || _generating) return;
+    final l10n = _l10n(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.settingCardRestoreConfirmTitle),
+        content: Text(l10n.settingCardRestoreConfirmMessage),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancelAction),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.settingCardRestorePrevious),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      final restored = await ref
+          .read(settingCardServiceProvider)
+          .restorePreviousSnapshot(card.id);
+      if (!mounted) return;
+      if (restored == null) {
+        AppFeedback.info(context, l10n.settingCardRestoreUnavailable);
+        return;
+      }
+      setState(() {
+        _card = restored;
+        _name.text = restored.name;
+        _summary.text = restored.summary;
+        _content.text = restored.content;
+      });
+      AppFeedback.success(context, l10n.settingCardRestored);
+    } catch (error) {
+      if (mounted) AppFeedback.error(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<
+      ({
+        String instruction,
+        SettingCardReferenceInput? reference,
+        SettingCardGenerationLength length,
+      })?> _askInstruction() async {
     final controller = TextEditingController(text: _card?.summary ?? '');
     final l10n = _l10n(context);
     var mode = SettingCardReferenceMode.paste;
     SettingCardReferenceInput? reference;
+    var length = _length;
     final result = await showDialog<
-        ({String instruction, SettingCardReferenceInput? reference})>(
+        ({
+          String instruction,
+          SettingCardReferenceInput? reference,
+          SettingCardGenerationLength length,
+        })>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setLocal) => AlertDialog(
@@ -198,6 +261,12 @@ final class _SettingCardDetailPageState
                 autofocus: true,
               ),
               const SizedBox(height: AppSpacing.lg),
+              SettingCardLengthSelector(
+                key: const Key('setting-card-generate-length'),
+                value: length,
+                onChanged: (value) => setLocal(() => length = value),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               SettingCardReferenceEditor(
                 mode: mode,
                 onModeChanged: (value) => setLocal(() => mode = value),
@@ -212,9 +281,11 @@ final class _SettingCardDetailPageState
             ),
             FilledButton(
               key: const Key('setting-card-generate-confirm'),
-              onPressed: () => Navigator.of(dialogContext).pop(
-                (instruction: controller.text.trim(), reference: reference),
-              ),
+              onPressed: () => Navigator.of(dialogContext).pop((
+                instruction: controller.text.trim(),
+                reference: reference,
+                length: length,
+              )),
               child: Text(l10n.settingCardGenerateAction),
             ),
           ],
@@ -339,6 +410,10 @@ final class _SettingCardDetailPageState
               ],
               const SizedBox(height: AppSpacing.lg),
               _buildActions(context, card),
+              if (card.kind != SettingCardKind.worldview) ...<Widget>[
+                const SizedBox(height: AppSpacing.lg),
+                SettingCardRelationshipsSection(card: card),
+              ],
               if (_generating) ...<Widget>[
                 const SizedBox(height: AppSpacing.md),
                 Row(
@@ -396,6 +471,12 @@ final class _SettingCardDetailPageState
           onPressed: _saving || _generating ? null : _generate,
           child: Text(l10n.settingCardGenerateAction),
         ),
+        if (_canRestore)
+          OutlinedButton(
+            key: const Key('setting-card-restore-previous'),
+            onPressed: _saving || _generating ? null : _restore,
+            child: Text(l10n.settingCardRestorePrevious),
+          ),
         AppReadAloudButton(
           sourceId: card.id,
           sourceType: ReadAloudSourceType.generic,

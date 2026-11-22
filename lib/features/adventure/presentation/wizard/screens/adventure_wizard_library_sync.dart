@@ -17,6 +17,32 @@ extension _WizardLibrarySync on _AdventureWizardScreenState {
       final crud = ref.read(resourceCrudControllerProvider);
       final activeWvId = _getOrCreateActiveWorldviewId();
 
+      // A generated/selected setting card is already the durable authority.
+      // Writing it again through the legacy preset path would create a mirror
+      // card (res_legacy_*) next to the original. Update only the editable
+      // title/summary on the card and keep its body.
+      final settingCards = ref.read(settingCardServiceProvider);
+      final existingCard = await settingCards.find(activeWvId);
+      if (existingCard != null) {
+        await settingCards.save(
+          id: existingCard.id,
+          name: wvName,
+          summary: wvDesc,
+          content: existingCard.content,
+        );
+        await _loadData();
+        if (mounted) {
+          _rebuild(() {
+            _selectedWorldviewId = existingCard.id;
+            _savingWorldview = false;
+          });
+          if (!silent) {
+            AppFeedback.success(context, l10n.worldviewSavedSuccess(wvName));
+          }
+        }
+        return true;
+      }
+
       final existingWv = _worldviews
           .where((w) => w['id']?.toString() == activeWvId)
           .firstOrNull;
@@ -92,6 +118,11 @@ extension _WizardLibrarySync on _AdventureWizardScreenState {
                 ? c.libraryEntry!.matchingWorldviewId!
                 : activeWvId;
 
+        // Card-backed roster entries already live in setting_cards; saving
+        // them as a legacy row would create a second mirror card. Only the
+        // legacy-only entries need the old write path.
+        final settingCards = ref.read(settingCardServiceProvider);
+        if (await settingCards.find(c.id) != null) continue;
         await repo.saveCharacterCard(
           id: c.id,
           name: c.name,
@@ -155,16 +186,21 @@ extension _WizardLibrarySync on _AdventureWizardScreenState {
               ? character.libraryEntry!.matchingWorldviewId!
               : activeWvId;
 
-      await repo.saveCharacterCard(
-        id: character.id,
-        name: character.name,
-        jsonData: jsonEncode(cardMap),
-        source: '冒险向导',
-        now: DateTime.now().toIso8601String(),
-        matchingWorldviewId: matchingWvId,
-        weight: '',
-        mode: ResourceLibraryMode.adventure,
-      );
+      // Card-backed characters are already persisted; a legacy write would
+      // duplicate them as mirror rows.
+      if (await ref.read(settingCardServiceProvider).find(character.id) ==
+          null) {
+        await repo.saveCharacterCard(
+          id: character.id,
+          name: character.name,
+          jsonData: jsonEncode(cardMap),
+          source: '冒险向导',
+          now: DateTime.now().toIso8601String(),
+          matchingWorldviewId: matchingWvId,
+          weight: '',
+          mode: ResourceLibraryMode.adventure,
+        );
+      }
 
       await _loadData();
       ref.read(libraryProvider).loadCharacterCards();

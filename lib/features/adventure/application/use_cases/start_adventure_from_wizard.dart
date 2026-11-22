@@ -2,6 +2,7 @@ import '../../../../application/adventure/adventure_readiness_gate.dart';
 import '../../../../controllers/adventure_setup_controller.dart';
 import '../../../../controllers/resource_crud_controller.dart';
 import '../../../../domain/errors/app_error.dart';
+import '../../../../domain/setting_cards/setting_card_repository.dart';
 import '../../../../models/adventure_config.dart';
 import '../../../../models/resource_library_mode.dart';
 
@@ -99,14 +100,17 @@ class StartAdventureFromWizardUseCase {
     required ResourceCrudController crud,
     required AdventureSetupController setup,
     required IAdventureReadinessGate gate,
+    required SettingCardRepository cards,
     this.sourceLabel = '冒险向导',
   })  : _crud = crud,
         _setup = setup,
-        _gate = gate;
+        _gate = gate,
+        _cards = cards;
 
   final ResourceCrudController _crud;
   final AdventureSetupController _setup;
   final IAdventureReadinessGate _gate;
+  final SettingCardRepository _cards;
   final String sourceLabel;
 
   /// Persists the draft, composes the config through [composeConfig] and runs
@@ -126,7 +130,17 @@ class StartAdventureFromWizardUseCase {
     final now = DateTime.now().toIso8601String();
     final worldview = draft.worldview;
 
-    if (worldview.saveToLibrary) {
+    // A setting card is already the durable authority. Writing it through the
+    // legacy preset path would create a res_legacy_* mirror next to the card
+    // and duplicate every generated asset in the library.
+    final existingWorldview = await _cards.findById(worldview.id);
+    if (existingWorldview != null) {
+      await _cards.save(existingWorldview.copyWith(
+        name: worldview.name,
+        summary: worldview.description,
+        updatedAt: now,
+      ));
+    } else if (worldview.saveToLibrary) {
       final result = await _crud.saveWorldviewPreset(
         id: worldview.id,
         name: worldview.name,
@@ -158,6 +172,9 @@ class StartAdventureFromWizardUseCase {
 
     if (draft.saveCharacters) {
       for (final character in draft.characters) {
+        // Card-backed roster rows are already persisted; the legacy write only
+        // exists for characters that have never left the old tables.
+        if (await _cards.findById(character.id) != null) continue;
         final result = await _crud.saveCharacterCard(
           id: character.id,
           name: character.name,

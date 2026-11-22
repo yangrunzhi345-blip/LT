@@ -122,10 +122,11 @@ final class SettingCard {
 
   /// Small runtime metadata only: provenance, source, tags. Never body text.
   ///
-  /// One deliberate exception: generation stores the raw model payload here
+  /// Two deliberate exceptions: generation stores the raw model payload here
   /// (`structured_payload` for characters/NPCs, `detail_json` for worldviews)
   /// so a frozen adventure can rebuild typed fields that the rendered document
-  /// would otherwise flatten into prose.
+  /// would otherwise flatten into prose, and `previous_content_snapshot`
+  /// keeps one pre-generation body for the one-step undo.
   final Map<String, Object?> metadata;
 
   /// Raw id of the legacy table row this card was migrated from.

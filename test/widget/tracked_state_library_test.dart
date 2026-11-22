@@ -8,6 +8,7 @@ import 'package:lt_dialogue/application/resource_library/edit_drafts.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/tracked_state_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
@@ -24,6 +25,7 @@ import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/repositories/library_repository.dart';
 
 import '../helpers/responsive_test_helper.dart';
+import '../helpers/setting_card_fakes.dart';
 
 final _l10n = AppLocalizationsZh();
 
@@ -206,12 +208,15 @@ Widget _editorHost({
   required String resourceId,
   required Map<String, dynamic> row,
   required _RecordingCrud crud,
+  MemorySettingCardRepository? cards,
 }) =>
     ProviderScope(
       overrides: [
         trackedStateLibraryRuntimeProvider.overrideWithValue(
             _FakeTrackedStateRuntime(const [], rows: {resourceId: row})),
         resourceCrudControllerProvider.overrideWith((ref) => crud),
+        if (cards != null)
+          settingCardRepositoryProvider.overrideWithValue(cards),
       ],
       child: MaterialApp(
         locale: const Locale('zh'),
@@ -532,6 +537,69 @@ void main() {
       expect(details.modules.keys, contains('world_rules'));
       expect(details.trackedStateDefinitions.map((d) => d.name),
           containsAll(<String>['战争紧张度', '魔力潮汐']));
+    });
+
+    testWidgets('card owners save through the tracked-state bridge',
+        (tester) async {
+      setViewport(tester, width: 1000, height: 900);
+      final crud = _RecordingCrud();
+      final cards = MemorySettingCardRepository();
+      await cards.save(SettingCard(
+        id: 'sc_alice',
+        kind: SettingCardKind.character,
+        name: '艾莉丝',
+        mode: 'adventure',
+        content: '## overview\n游侠',
+        metadata: <String, Object?>{
+          'structured_payload': <String, Object?>{
+            'name': '艾莉丝',
+            'tracked_state_definitions': [_curse.toJson()],
+          },
+        },
+        createdAt: '2026-01-01T00:00:00.000',
+        updatedAt: '2026-01-01T00:00:00.000',
+      ));
+      final row = {
+        'id': 'sc_alice',
+        'name': '艾莉丝',
+        'setting_card_id': 'sc_alice',
+        'json_data': jsonEncode({
+          'name': '艾莉丝',
+          'tracked_state_definitions': [_curse.toJson()],
+        }),
+      };
+      await tester.pumpWidget(_editorHost(
+        type: ResourceType.character,
+        resourceId: 'sc_alice',
+        row: row,
+        crud: crud,
+        cards: cards,
+      ));
+      await _openEditor(tester);
+
+      expect(find.text('诅咒侵蚀'), findsWidgets);
+
+      await tester.tap(find.text(_l10n.trackedStateAddAction));
+      await tester.pumpAndSettle();
+      await tester.enterText(_newDefinitionNameField(1), '身份暴露风险');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('tracked-state-edit-save')));
+      await tester.pumpAndSettle();
+
+      // The legacy draft authority is untouched; the card itself changed.
+      expect(crud.savedCharacter, isNull);
+      final saved = cards.cards['sc_alice'];
+      expect(saved, isNotNull);
+      final payload =
+          saved!.metadata['structured_payload'] as Map<String, Object?>;
+      final definitions = payload['tracked_state_definitions'] as List;
+      expect(definitions, hasLength(2));
+      expect(
+        definitions.map((item) => (item as Map)['name']),
+        containsAll(<String>['诅咒侵蚀', '身份暴露风险']),
+      );
+      expect(saved.content, contains('## overview'));
+      expect(saved.content, contains('## tracked_state_definitions'));
     });
   });
 }

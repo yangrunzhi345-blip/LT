@@ -13,6 +13,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../widgets/setting_card_length_selector.dart';
 import '../widgets/setting_card_reference_editor.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
@@ -42,7 +43,29 @@ final class _SettingCardCreatePageState
   final _instruction = TextEditingController();
   SettingCardReferenceMode _referenceMode = SettingCardReferenceMode.paste;
   SettingCardReferenceInput? _reference;
+  SettingCardGenerationLength _length = SettingCardGenerationLength.standard;
+  List<SettingCard> _worldviews = const <SettingCard>[];
+  String _originWorldviewId = '';
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_loadWorldviews);
+  }
+
+  Future<void> _loadWorldviews() async {
+    try {
+      final cards = await ref
+          .read(settingCardServiceProvider)
+          .list(kind: SettingCardKind.worldview);
+      if (!mounted) return;
+      setState(() => _worldviews = cards);
+    } catch (_) {
+      // The picker is optional context; a failed list must not block creation.
+      if (mounted) setState(() => _worldviews = const <SettingCard>[]);
+    }
+  }
 
   @override
   void dispose() {
@@ -62,27 +85,37 @@ final class _SettingCardCreatePageState
     }
     setState(() => _busy = true);
     final service = ref.read(settingCardServiceProvider);
+    String? createdId;
     try {
       final card = await service.create(
         kind: _kindOf(_type),
         name: name,
         summary: _summary.text.trim(),
         mode: widget.mode.storageValue,
+        originWorldviewId:
+            _type == ResourceType.worldview ? '' : _originWorldviewId,
       );
+      createdId = card.id;
       if (generate) {
         await service.generate(
           id: card.id,
           instruction: instruction,
           reference: _reference,
+          targetTotalCharacters: _length.targetCharacters,
         );
       }
       if (!mounted) return;
       Navigator.of(context).pop<String>(card.id);
     } on SettingCardGenerationException {
+      // A failed first generation must not leave an empty draft in the
+      // library; discardEmptyDraft only removes a card whose body is still
+      // empty, so authored content is never touched.
+      if (createdId != null) await service.discardEmptyDraft(createdId);
       if (mounted) {
         AppFeedback.error(context, _l10n(context).settingCardGenerateFailed);
       }
     } catch (error) {
+      if (createdId != null) await service.discardEmptyDraft(createdId);
       if (mounted) AppFeedback.error(context, error.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -143,6 +176,39 @@ final class _SettingCardCreatePageState
                 label: l10n.resourceSummaryOptionalLabel,
                 hintText: l10n.resourceManualSummaryHint,
                 enabled: !_busy,
+              ),
+              if (_type != ResourceType.worldview) ...<Widget>[
+                const SizedBox(height: AppSpacing.md),
+                AppSelect<String>(
+                  key: const Key('setting-card-create-origin-worldview'),
+                  label: l10n.settingCardOriginWorldviewLabel,
+                  value: _originWorldviewId,
+                  enabled: !_busy,
+                  items: <AppSelectItem<String>>[
+                    AppSelectItem<String>(
+                      value: '',
+                      label: l10n.settingCardOriginWorldviewNone,
+                    ),
+                    for (final card in _worldviews)
+                      AppSelectItem<String>(
+                        value: card.id,
+                        label: card.name.trim().isEmpty
+                            ? _l10n(context).resourceUnnamed
+                            : card.name.trim(),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _originWorldviewId = value ?? '');
+                  },
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              SettingCardLengthSelector(
+                key: const Key('setting-card-create-length'),
+                keyPrefix: 'setting-card-create-length',
+                value: _length,
+                enabled: !_busy,
+                onChanged: (value) => setState(() => _length = value),
               ),
               const SizedBox(height: AppSpacing.md),
               SettingCardReferenceEditor(

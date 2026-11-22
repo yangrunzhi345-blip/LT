@@ -39,6 +39,23 @@ void main() {
     return _ResourceRef(ResourceId(id));
   }
 
+  /// Inserts the minimal setting-cards row a native card endpoint points at.
+  Future<void> createCard(
+    String id, {
+    String kind = 'character',
+    String? deletedAt,
+  }) async {
+    final db = await DatabaseService.database;
+    await db.insert('setting_cards', {
+      'id': id,
+      'kind': kind,
+      'name': id,
+      'created_at': '2026-01-01T00:00:00.000',
+      'updated_at': '2026-01-01T00:00:00.000',
+      'deleted_at': deletedAt,
+    });
+  }
+
   tearDown(() async {
     await DatabaseService.resetDatabase();
     DatabaseService.customDbDir = null;
@@ -254,6 +271,126 @@ void main() {
       ),
       throwsA(isA<LegacyResourceUnresolvedException>()),
     );
+  });
+
+  group('native setting card endpoints', () {
+    test('creates and lists an edge between two cards from either side',
+        () async {
+      await createCard('sc_a');
+      await createCard('sc_b', kind: 'npc');
+      final relation = await relationships.create(
+        firstResourceId: const ResourceId('sc_b'),
+        firstRole: 'guard',
+        secondResourceId: const ResourceId('sc_a'),
+        secondRole: 'resident',
+        relationType: CharacterRelationshipType.friend,
+        description: 'night watch',
+      );
+      expect(relation.endpointAResourceId.value, 'sc_a');
+      expect(relation.endpointARole, 'resident');
+      expect(
+        (await relationships.listForResource(const ResourceId('sc_a')))
+            .single
+            .id,
+        relation.id,
+      );
+      expect(
+        (await relationships.listForResource(const ResourceId('sc_b')))
+            .single
+            .id,
+        relation.id,
+      );
+
+      await relationships.delete(relation.id);
+      expect(
+        await relationships.listForResource(const ResourceId('sc_a')),
+        isEmpty,
+      );
+    });
+
+    test('accepts one resource endpoint and one card endpoint', () async {
+      final resource = await createResource('res_a');
+      await createCard('sc_b');
+      final relation = await relationships.create(
+        firstResourceId: resource.id,
+        firstRole: 'friend',
+        secondResourceId: const ResourceId('sc_b'),
+        secondRole: 'friend',
+        relationType: CharacterRelationshipType.friend,
+      );
+      expect(
+        (await relationships.listForResource(resource.id)).single.id,
+        relation.id,
+      );
+      expect(
+        (await relationships.listForResource(const ResourceId('sc_b')))
+            .single
+            .id,
+        relation.id,
+      );
+    });
+
+    test('hides the edge once one card endpoint is soft deleted', () async {
+      await createCard('sc_a');
+      await createCard('sc_b');
+      final relation = await relationships.create(
+        firstResourceId: const ResourceId('sc_a'),
+        firstRole: 'friend',
+        secondResourceId: const ResourceId('sc_b'),
+        secondRole: 'friend',
+        relationType: CharacterRelationshipType.friend,
+      );
+      final db = await DatabaseService.database;
+      await db.update('setting_cards', {'deleted_at': 'trash'},
+          where: 'id = ?', whereArgs: ['sc_b']);
+      expect(
+        await relationships.listForResource(const ResourceId('sc_a')),
+        isEmpty,
+      );
+      // The hidden edge is still stored; it is filtered, not purged.
+      expect(await relationships.getById(relation.id), isNotNull);
+    });
+
+    test('rejects a deleted card endpoint with endpointNotLive', () async {
+      await createCard('sc_a');
+      await createCard('sc_b', deletedAt: 'trash');
+      await expectLater(
+        relationships.create(
+          firstResourceId: const ResourceId('sc_a'),
+          firstRole: 'friend',
+          secondResourceId: const ResourceId('sc_b'),
+          secondRole: 'friend',
+          relationType: CharacterRelationshipType.friend,
+        ),
+        throwsA(
+          isA<CharacterRelationshipValidationException>().having(
+            (error) => error.code,
+            'code',
+            CharacterRelationshipFailure.endpointNotLive,
+          ),
+        ),
+      );
+    });
+
+    test('rejects a missing card endpoint with endpointNotFound', () async {
+      await createCard('sc_a');
+      await expectLater(
+        relationships.create(
+          firstResourceId: const ResourceId('sc_a'),
+          firstRole: 'friend',
+          secondResourceId: const ResourceId('sc_missing'),
+          secondRole: 'friend',
+          relationType: CharacterRelationshipType.friend,
+        ),
+        throwsA(
+          isA<CharacterRelationshipValidationException>().having(
+            (error) => error.code,
+            'code',
+            CharacterRelationshipFailure.endpointNotFound,
+          ),
+        ),
+      );
+    });
   });
 }
 

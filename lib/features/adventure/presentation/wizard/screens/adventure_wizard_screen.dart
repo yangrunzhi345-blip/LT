@@ -23,6 +23,8 @@ import '../../../../../models/supporting_character.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
 import '../../../application/use_cases/start_adventure_from_wizard.dart';
 import '../../../../../domain/resources/resource_contracts.dart';
+import '../../../../../domain/setting_cards/setting_card.dart';
+import '../../../../resource_library/presentation/screens/setting_card_detail_page.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../providers/riverpod_providers.dart';
@@ -110,7 +112,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   late final TextEditingController _worldviewNameCtrl;
   late final TextEditingController _worldviewDescCtrl;
   late final TextEditingController _aiWorldviewPromptCtrl;
-  final bool _aiWorldviewGenerating = false;
+  bool _aiWorldviewGenerating = false;
   String? _aiWorldviewError;
   bool _aiWorldviewDetailed = false;
   String? _aiWorldviewProgress;
@@ -121,7 +123,7 @@ class _AdventureWizardScreenState extends ConsumerState<AdventureWizardScreen> {
   final List<WizardCharacterItem> _characters = [];
   final List<WizardRelationshipItem> _relationships = [];
   late final TextEditingController _aiCharacterPromptCtrl;
-  final bool _aiCharacterGenerating = false;
+  bool _aiCharacterGenerating = false;
   String? _aiCharacterError;
   bool _aiCharacterDetailed = false;
   String? _aiCharacterProgress;

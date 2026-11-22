@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/resource_library/edit_drafts.dart';
+import '../../../../application/setting_cards/setting_card_tracked_state_bridge.dart';
 import '../../../../core/feedback/app_feedback.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_empty_state.dart';
@@ -54,18 +55,33 @@ final class _ResourceTrackedStateEditPageState
 
   Future<void> _load() async {
     final runtime = ref.read(trackedStateLibraryRuntimeProvider);
+    // Captured before the await: reading a provider after the page could be
+    // disposed is not safe.
+    final bridge = _bridge;
     final row = await runtime.loadOwnerRow(
       type: widget.ownerType,
       resourceId: widget.resourceId,
       mode: widget.mode,
     );
+    final cardId = _settingCardIdOf(row);
+    final definitions = cardId.isEmpty
+        ? (row == null ? const <TrackedStateDefinition>[] : _definitionsOf(row))
+        : await bridge.read(cardId);
     if (!mounted) return;
     setState(() {
       _row = row;
-      _definitions = row == null ? const [] : _definitionsOf(row);
+      _definitions = definitions;
       _loading = false;
     });
   }
+
+  /// The bridge that reads and writes a card owner's definitions.
+  SettingCardTrackedStateBridge get _bridge => SettingCardTrackedStateBridge(
+        repository: ref.read(settingCardRepositoryProvider),
+      );
+
+  static String _settingCardIdOf(Map<String, dynamic>? row) =>
+      row?['setting_card_id']?.toString().trim() ?? '';
 
   List<TrackedStateDefinition> _definitionsOf(Map<String, dynamic> row) =>
       switch (widget.ownerType) {
@@ -82,6 +98,13 @@ final class _ResourceTrackedStateEditPageState
   Future<bool> _persist(List<TrackedStateDefinition> definitions) async {
     final row = _row;
     if (row == null) return false;
+    // A card owner has no legacy draft authority: only the card bridge may
+    // write, and it keeps every other card field intact.
+    final cardId = _settingCardIdOf(row);
+    if (cardId.isNotEmpty) {
+      final saved = await _bridge.write(cardId, definitions);
+      return saved != null;
+    }
     final crud = ref.read(resourceCrudControllerProvider);
     final result = switch (widget.ownerType) {
       ResourceType.character => await crud.saveCharacterCardDraft(

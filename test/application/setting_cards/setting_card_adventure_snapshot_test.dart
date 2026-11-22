@@ -328,4 +328,40 @@ void main() {
     );
     expect(entries.length, greaterThan(2));
   });
+
+  test(
+      'managed entries use the real adventure id, not the snapshot placeholder',
+      () async {
+    cards.cards['w1'] = _card(
+      'w1',
+      SettingCardKind.worldview,
+      name: '银月大陆',
+      content: '''
+## locations
+
+\u0060\u0060\u0060json
+[{"name": "银月城", "summary": "月光之城"}]
+\u0060\u0060\u0060
+''',
+    );
+    final frozen = await gate.enforceAndFreeze(
+      AdventureConfig(
+        worldviewSnapshot: <String, dynamic>{'source_id': 'w1'},
+      ),
+    );
+    final snapshot = frozen.worldviewSnapshot!;
+
+    // The snapshot copy documents the entries with a placeholder id so the
+    // frozen config stays self-describing; no consumer inserts this list.
+    final stored = (jsonDecode(snapshot['entries_json'] as String) as List)
+        .cast<Map<String, dynamic>>();
+    expect(stored, isNotEmpty);
+    expect(stored.every((entry) => entry['adventure_id'] == 0), isTrue);
+
+    // Adventure start rebuilds the list with the persisted adventure id.
+    final persisted =
+        WorldviewSnapshotService.buildManagedEntries(42, snapshot);
+    expect(persisted, isNotEmpty);
+    expect(persisted.every((entry) => entry.adventureId == 42), isTrue);
+  });
 }

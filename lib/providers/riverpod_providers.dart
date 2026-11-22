@@ -239,6 +239,7 @@ final startAdventureFromWizardUseCaseProvider =
     crud: ref.read(resourceCrudControllerProvider),
     setup: ref.read(adventureSetupControllerProvider),
     gate: ref.read(adventureReadinessGateProvider),
+    cards: ref.watch(settingCardRepositoryProvider),
   );
 });
 
@@ -303,6 +304,8 @@ final trackedStateLibraryRuntimeProvider =
     Provider<TrackedStateLibraryRuntime>((ref) {
   return ProductionTrackedStateLibraryRuntime(
     repository: ref.watch(libraryRepoProvider),
+    // Card-backed owners live in setting_cards, not the legacy library tables.
+    cards: ref.watch(settingCardRepositoryProvider),
   );
 });
 

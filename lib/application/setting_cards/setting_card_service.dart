@@ -33,6 +33,14 @@ final class SettingCardService {
         _clock = clock ?? _defaultClock,
         _idGenerator = idGenerator ?? _defaultIdGenerator;
 
+  /// Metadata key holding the body the last generation overwrote.
+  ///
+  /// Regeneration is destructive for a hand-edited card, so one generation
+  /// keeps the immediately previous body (plus its structured payload) here.
+  /// Only the newest snapshot is kept: a second generation replaces it, which
+  /// deliberately limits undo to one level instead of growing a revision list.
+  static const String previousSnapshotKey = 'previous_content_snapshot';
+
   static const Set<String> _documentMetaKeys = <String>{
     'id',
     'name',
@@ -150,6 +158,56 @@ final class SettingCardService {
   Future<void> delete(String id) =>
       _repository.softDelete(id, deletedAt: _clock());
 
+  /// Restores the body [generate] overwrote most recently.
+  ///
+  /// Returns null when the card never had a snapshot, or the snapshot carries
+  /// no body, without touching storage. A successful restore consumes the
+  /// snapshot so the same overwrite cannot be undone twice.
+  ///
+  /// Payload keys behave symmetrically: a key present in the snapshot is put
+  /// back, a key absent from it is removed. Keeping the newer payload next to
+  /// an older body would leave the card internally inconsistent.
+  Future<SettingCard?> restorePreviousSnapshot(String id) async {
+    final card = await _repository.findById(id);
+    if (card == null) {
+      throw SettingCardGenerationException('设定卡不存在: $id');
+    }
+    final snapshot = _decodeSnapshot(card.metadata[previousSnapshotKey]);
+    final content = snapshot?['content']?.toString() ?? '';
+    if (snapshot == null || content.trim().isEmpty) return null;
+
+    final metadata = Map<String, Object?>.from(card.metadata)
+      ..remove(previousSnapshotKey);
+    for (final key in _snapshotPayloadKeys) {
+      if (snapshot.containsKey(key)) {
+        metadata[key] = snapshot[key];
+      } else {
+        metadata.remove(key);
+      }
+    }
+    final updated = card.copyWith(
+      summary: snapshot['summary']?.toString() ?? '',
+      content: content,
+      metadata: metadata,
+      updatedAt: _clock(),
+    );
+    await _repository.save(updated);
+    return updated;
+  }
+
+  /// Soft-deletes a card whose body is still empty.
+  ///
+  /// The create page may persist a draft before the first generation; when
+  /// that generation fails, this cleans up the orphan without ever touching a
+  /// card that holds user content. A missing id is a no-op so callers do not
+  /// have to branch on cleanup.
+  Future<void> discardEmptyDraft(String id) async {
+    final card = await _repository.findById(id);
+    if (card == null) return;
+    if (card.content.trim().isNotEmpty) return;
+    await _repository.softDelete(id, deletedAt: _clock());
+  }
+
   /// Runs exactly one generation for [id] and merges the result into the card.
   ///
   /// [instruction] is the user's free-form description; an empty instruction
@@ -159,6 +217,10 @@ final class SettingCardService {
   /// gateway has one `source` channel, so oversized reference material and
   /// worldviews are reduced to the most relevant passages instead of being
   /// dropped or flooding the prompt.
+  ///
+  /// When the card already holds a body, it is snapshotted under
+  /// [previousSnapshotKey] before the generated document replaces it. A
+  /// failed generation throws before saving, so it never writes a snapshot.
   Future<SettingCard> generate({
     required String id,
     required String instruction,
@@ -258,6 +320,14 @@ final class SettingCardService {
     }
     final generatedName = generated['name']?.toString().trim() ?? '';
     final generatedSummary = generated['description']?.toString().trim() ?? '';
+    final now = _clock();
+    final metadata = _metadataWithPayload(card, generated);
+    // Snapshotting after the new payload is merged keeps the old body and its
+    // old payload together under one key while the new payload stays at the
+    // metadata top level.
+    if (card.content.trim().isNotEmpty) {
+      metadata[previousSnapshotKey] = _contentSnapshot(card, now);
+    }
     final updated = card.copyWith(
       name: card.name.trim().isEmpty && generatedName.isNotEmpty
           ? generatedName
@@ -266,8 +336,8 @@ final class SettingCardService {
           ? generatedSummary
           : card.summary,
       content: content,
-      metadata: _metadataWithPayload(card, generated),
-      updatedAt: _clock(),
+      metadata: metadata,
+      updatedAt: now,
     );
     await _repository.save(updated);
     return updated;
@@ -330,6 +400,40 @@ final class SettingCardService {
     return detail == null ? trimmed : jsonEncode(detail);
   }
 
+  /// Metadata keys that carry a payload and therefore travel with a snapshot.
+  static const List<String> _snapshotPayloadKeys = <String>[
+    SettingCardMarkdownParser.structuredPayloadKey,
+    SettingCardMarkdownParser.detailJsonKey,
+  ];
+
+  /// Captures the parts of [card] a regeneration is about to replace.
+  ///
+  /// Payload keys are copied only when present, so a snapshot never invents an
+  /// empty payload that [restorePreviousSnapshot] would then write back.
+  Map<String, Object?> _contentSnapshot(SettingCard card, String savedAt) {
+    final snapshot = <String, Object?>{
+      'content': card.content,
+      'summary': card.summary,
+      'saved_at': savedAt,
+    };
+    for (final key in _snapshotPayloadKeys) {
+      final value = card.metadata[key];
+      if (value != null) snapshot[key] = value;
+    }
+    return snapshot;
+  }
+
+  /// Normalizes a stored snapshot into a plain key/value map.
+  ///
+  /// A database round-trip yields a map with untyped keys, so the restore path
+  /// must not rely on the in-memory map type.
+  static Map<String, Object?>? _decodeSnapshot(Object? raw) {
+    if (raw is! Map) return null;
+    return <String, Object?>{
+      for (final entry in raw.entries) entry.key.toString(): entry.value,
+    };
+  }
+
   /// Persists the raw structured payload next to the rendered document.
   ///
   /// The document alone loses field types when a user edits prose; keeping the
@@ -344,12 +448,38 @@ final class SettingCardService {
       final detail = generated[SettingCardMarkdownParser.detailJsonKey];
       final decoded = detail is String ? _tryDecodeMap(detail) : detail;
       if (decoded is Map) {
-        metadata[SettingCardMarkdownParser.detailJsonKey] = decoded;
+        metadata[SettingCardMarkdownParser.detailJsonKey] = _carryDefinitions(
+            decoded, card.metadata[SettingCardMarkdownParser.detailJsonKey]);
       }
     } else {
-      metadata[SettingCardMarkdownParser.structuredPayloadKey] = generated;
+      metadata[SettingCardMarkdownParser.structuredPayloadKey] =
+          _carryDefinitions(generated,
+              card.metadata[SettingCardMarkdownParser.structuredPayloadKey]);
     }
     return metadata;
+  }
+
+  /// Keeps the card's monitoring definitions across a regeneration.
+  ///
+  /// Definitions are authored metadata, not model output: a fresh document
+  /// replaces the prose, but silently dropping the user's monitored stats would
+  /// break the tracked-state chain the card already declared.
+  static Map<String, Object?> _carryDefinitions(
+    Map<dynamic, dynamic> next,
+    Object? previous,
+  ) {
+    final result = <String, Object?>{
+      for (final entry in next.entries) entry.key.toString(): entry.value,
+    };
+    final old = previous is String ? _tryDecodeMap(previous) : previous;
+    if (result.containsKey('tracked_state_definitions') || old is! Map) {
+      return result;
+    }
+    final carried = old['tracked_state_definitions'];
+    if (carried is List && carried.isNotEmpty) {
+      result['tracked_state_definitions'] = carried;
+    }
+    return result;
   }
 
   static Map<String, dynamic>? _tryDecodeMap(String raw) {

@@ -18,6 +18,35 @@ final class CharacterRelationshipManagement {
         .toList(growable: false);
   }
 
+  /// Creates one edge from the editor's subject/counterpart perspective.
+  ///
+  /// Canonicalizes the pair before persisting so the caller may pass the two
+  /// characters in either order and the stored roles stay attached to their
+  /// resource.
+  Future<CharacterRelationship> createFromPerspective({
+    required ResourceId subjectResourceId,
+    required ResourceId counterpartResourceId,
+    required CharacterRelationshipType relationType,
+    required String subjectRole,
+    required String counterpartRole,
+    String description = '',
+  }) {
+    final endpoints = CharacterRelationshipEndpoints.canonicalize(
+      firstResourceId: subjectResourceId,
+      firstRole: subjectRole,
+      secondResourceId: counterpartResourceId,
+      secondRole: counterpartRole,
+    );
+    return _repository.create(
+      firstResourceId: endpoints.aResourceId,
+      firstRole: endpoints.aRole,
+      secondResourceId: endpoints.bResourceId,
+      secondRole: endpoints.bRole,
+      relationType: relationType,
+      description: description,
+    );
+  }
+
   /// Updates one edge after validating both endpoint roles.
   Future<CharacterRelationship> update({
     required String relationshipId,

@@ -25,6 +25,8 @@ import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
 
+import '../helpers/setting_card_fakes.dart';
+
 /// Forces [isKeyConfigured] so the Wizard reaches its persistence/assembly
 /// steps without touching secure storage or a live provider.
 class _KeyConfiguredChatProvider extends ChatProvider {
@@ -349,6 +351,11 @@ void main() {
           repo?.call() ?? _NoopRepo(getDb: () => DatabaseService.database)),
       adventureReadinessGateProvider
           .overrideWith((ref) => _NoopReadinessGate()),
+      // The start use case checks the card store before touching legacy tables.
+      // An in-memory store keeps that check on microtasks instead of blocking
+      // the fake-async pump on a real SQLite open.
+      settingCardRepositoryProvider
+          .overrideWithValue(MemorySettingCardRepository()),
     ];
     await tester.pumpWidget(
       ProviderScope(

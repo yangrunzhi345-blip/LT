@@ -153,16 +153,29 @@ final class CharacterRelationshipRepositoryImpl
   Future<List<CharacterRelationship>> listForResource(
       ResourceId resourceId) async {
     final db = await _getDb();
-    final rows = await db.rawQuery('''
-      SELECT r.* FROM $table r
-      JOIN resources a ON a.id = r.endpoint_a_resource_id
-      JOIN resources b ON b.id = r.endpoint_b_resource_id
-      WHERE (r.endpoint_a_resource_id = ? OR r.endpoint_b_resource_id = ?)
-        AND a.deleted_at IS NULL AND b.deleted_at IS NULL
-        AND a.type IN ('character', 'npc') AND b.type IN ('character', 'npc')
-      ORDER BY r.updated_at DESC, r.id ASC
-    ''', [resourceId.value, resourceId.value]);
-    return rows.map(_map).toList();
+    // No join: an endpoint is either a live character/npc resource row or a
+    // live character/npc setting card. Joining `resources` would silently hide
+    // every edge between native (sc_*) cards.
+    final rows = await db.query(
+      table,
+      where: 'endpoint_a_resource_id = ? OR endpoint_b_resource_id = ?',
+      whereArgs: [resourceId.value, resourceId.value],
+      orderBy: 'updated_at DESC, id ASC',
+    );
+    if (rows.isEmpty) return const <CharacterRelationship>[];
+    final endpointIds = <String>{
+      for (final row in rows) ...[
+        row['endpoint_a_resource_id'].toString(),
+        row['endpoint_b_resource_id'].toString(),
+      ],
+    };
+    final live = await _liveCharacterEndpoints(db, endpointIds);
+    return [
+      for (final row in rows)
+        if (live.contains(row['endpoint_a_resource_id'].toString()) &&
+            live.contains(row['endpoint_b_resource_id'].toString()))
+          _map(row),
+    ];
   }
 
   @override
@@ -238,36 +251,109 @@ final class CharacterRelationshipRepositoryImpl
         whereArgs: [resourceId.value, resourceId.value]);
   }
 
+  /// Accepts an endpoint that is either a live character/npc row in
+  /// `resources` or a live character/npc row in `setting_cards`.
+  ///
+  /// Native cards never exist in `resources`, so the resource check alone
+  /// would reject every relationship between two cards.
   Future<void> _validateEndpoints(
     DatabaseExecutor db,
     CharacterRelationshipEndpoints endpoints,
   ) async {
-    final rows = await db.query('resources',
-        columns: ['id', 'type', 'deleted_at'],
-        where: 'id IN (?, ?)',
-        whereArgs: [endpoints.aResourceId.value, endpoints.bResourceId.value]);
-    if (rows.length != 2) {
+    final states = await _endpointStates(
+      db,
+      <String>{endpoints.aResourceId.value, endpoints.bResourceId.value},
+    );
+    final ordered = <String>[
+      endpoints.aResourceId.value,
+      endpoints.bResourceId.value,
+    ];
+    if (ordered.any((id) => states[id] == _EndpointState.notFound)) {
       throw const CharacterRelationshipValidationException(
         CharacterRelationshipFailure.endpointNotFound,
         'Both relationship endpoints must exist',
       );
     }
-    for (final row in rows) {
-      final type = row['type']?.toString();
-      if (type != 'character' && type != 'npc') {
-        throw const CharacterRelationshipValidationException(
-          CharacterRelationshipFailure.endpointNotFound,
-          'Relationship endpoints must be character resources',
-        );
-      }
-      if (row['deleted_at'] != null) {
-        throw const CharacterRelationshipValidationException(
-          CharacterRelationshipFailure.endpointNotLive,
-          'Relationship endpoints must be live resources',
-        );
-      }
+    if (ordered.any((id) => states[id] != _EndpointState.live)) {
+      throw const CharacterRelationshipValidationException(
+        CharacterRelationshipFailure.endpointNotLive,
+        'Relationship endpoints must be live resources',
+      );
     }
   }
+
+  /// Classifies each candidate id as live / not live / missing.
+  ///
+  /// A resource row wins when it already satisfies the contract; otherwise the
+  /// same id is looked up in `setting_cards` (a soft-deleted card is reported
+  /// as not live instead of missing so the caller keeps the existing error
+  /// codes).
+  Future<Map<String, _EndpointState>> _endpointStates(
+    DatabaseExecutor db,
+    Set<String> ids,
+  ) async {
+    if (ids.isEmpty) return const <String, _EndpointState>{};
+    final states = <String, _EndpointState>{};
+    final unresolved = <String>[];
+
+    final resourceRows = await db.query(
+      'resources',
+      columns: ['id', 'type', 'deleted_at'],
+      where: 'id IN (${_placeholders(ids.length)})',
+      whereArgs: ids.toList(),
+    );
+    for (final row in resourceRows) {
+      final id = row['id'].toString();
+      final type = row['type']?.toString();
+      if ((type == 'character' || type == 'npc') && row['deleted_at'] == null) {
+        states[id] = _EndpointState.live;
+        continue;
+      }
+      states[id] = row['deleted_at'] != null
+          ? _EndpointState.notLive
+          : _EndpointState.notFound;
+      unresolved.add(id);
+    }
+    for (final id in ids) {
+      if (states.containsKey(id)) continue;
+      states[id] = _EndpointState.notFound;
+      unresolved.add(id);
+    }
+
+    if (unresolved.isNotEmpty) {
+      final cardRows = await db.query(
+        'setting_cards',
+        columns: ['id', 'kind', 'deleted_at'],
+        where: 'id IN (${_placeholders(unresolved.length)})',
+        whereArgs: unresolved,
+      );
+      for (final row in cardRows) {
+        final id = row['id'].toString();
+        final kind = row['kind']?.toString();
+        if (kind != 'character' && kind != 'npc') continue;
+        states[id] = row['deleted_at'] == null
+            ? _EndpointState.live
+            : _EndpointState.notLive;
+      }
+    }
+    return states;
+  }
+
+  /// Batch liveness check used by [listForResource].
+  Future<Set<String>> _liveCharacterEndpoints(
+    DatabaseExecutor db,
+    Set<String> ids,
+  ) async {
+    if (ids.isEmpty) return const <String>{};
+    final states = await _endpointStates(db, ids);
+    return {
+      for (final entry in states.entries)
+        if (entry.value == _EndpointState.live) entry.key,
+    };
+  }
+
+  static String _placeholders(int count) =>
+      List<String>.filled(count, '?').join(', ');
 
   Future<Map<String, Object?>?> _findBetween(
     DatabaseExecutor db,
@@ -304,3 +390,6 @@ final class CharacterRelationshipRepositoryImpl
         updatedAt: DateTime.parse(row['updated_at'].toString()),
       );
 }
+
+/// Liveness of one relationship endpoint across both storage surfaces.
+enum _EndpointState { live, notLive, notFound }

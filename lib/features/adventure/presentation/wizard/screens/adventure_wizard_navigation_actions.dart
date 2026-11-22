@@ -132,6 +132,62 @@ extension _WizardNavigationActions on _AdventureWizardScreenState {
 
   /// 进入角色创建/编辑界面（直接复用资料库的新建/编辑角色卡）
   Future<void> _openCharacterEditor({WizardCharacterItem? existing}) async {
+    // A card-backed roster character must be edited as a setting card. The
+    // legacy card editor would write character_cards with the card id and the
+    // mirror would create a second res_legacy_* card.
+    if (existing != null) {
+      final card = await ref.read(settingCardServiceProvider).find(existing.id);
+      if (!mounted) return;
+      if (card != null) {
+        await AppRouter.push<void>(
+          context,
+          pageBuilder: (_) => SettingCardDetailPage(cardId: card.id),
+        );
+        if (!mounted) return;
+        await _loadData();
+        if (!mounted) return;
+        final entry =
+            _characterCardEntries.where((c) => c.id == card.id).firstOrNull;
+        if (entry == null) {
+          // A load error is not a deletion: keep the row and let the error
+          // banner explain why it could not refresh.
+          if (_characterLoadError == null) {
+            // The card was deleted in the editor: drop the roster row instead
+            // of keeping a ghost that would still enter the adventure config.
+            _removeCharacter(card.id);
+          }
+          return;
+        }
+        // A malformed row carries empty fields; refreshing from it would blank
+        // the roster entry. Keep the previous values until the card is fixed.
+        if (entry.hasParseError) return;
+        // _bindCharacterFromLibrary is a no-op for an existing row, so refresh
+        // the fields in place; otherwise edits in the card editor never reach
+        // the roster.
+        final index = _characters.indexWhere((c) => c.id == card.id);
+        if (index < 0) {
+          _rebuild(() => _bindCharacterFromLibrary(entry));
+        } else {
+          _rebuild(() {
+            final current = _characters[index];
+            _characters[index] = current.copyWith(
+              name: entry.name,
+              gender: entry.gender,
+              age: entry.age,
+              profession: entry.profession,
+              personality: entry.personality,
+              background: entry.background,
+              libraryEntry: entry,
+              rawJson: entry.rawData,
+            );
+            _syncRelationships();
+          });
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
+
     final activeWv = _getActiveWorldviewItem();
     final effectivePresets = _buildEffectiveWorldviews();
 
