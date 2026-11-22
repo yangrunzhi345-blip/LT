@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import '../../../../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,8 +14,6 @@ import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
 import '../../../../../application/adventure/adventure_readiness_gate.dart';
-import '../../../../../application/resources/assembly_readiness_coordinator.dart';
-import '../../../../../domain/resources/resource_contracts.dart';
 import '../adventure_preview_saver.dart';
 import '../adventure_readiness_message_localization.dart';
 
@@ -77,99 +73,15 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
   /// duplicate Adventure.
   bool _launched = false;
   bool _readinessLoading = true;
-  bool _retryingReadiness = false;
   Map<String, AdventureAssetReadiness> _readiness =
       const <String, AdventureAssetReadiness>{};
   String? _readinessError;
   String? _errorMessage;
-  AssemblyReadinessCoordinator? _coordinator;
   int _loadEpoch = 0;
-
-  void _onReadinessChanged() {
-    if (mounted) unawaited(_loadReadiness());
-  }
-
-  @override
-  void dispose() {
-    _coordinator?.removeListener(_onReadinessChanged);
-    super.dispose();
-  }
-
-  Future<void> _reviewCompression() async {
-    if (_retryingReadiness) return;
-    final coordinator = ref.read(assemblyReadinessCoordinatorProvider);
-    final revisions = ref.read(resourceRevisionRepositoryProvider);
-    final publisher = ref.read(compressionPublisherProvider);
-    setState(() => _retryingReadiness = true);
-    try {
-      for (final item in _readiness.values.toList()) {
-        if (item.parameters['diagnosticCode'] !=
-            'compressionApprovalRequired') {
-          continue;
-        }
-        final id = ResourceId(item.assetId);
-        final head =
-            await revisions.readHead(id, ResourceRevisionKind.latestHead);
-        if (head == null) continue;
-        final candidates = await publisher.publishableCandidates(id);
-        if (candidates.isEmpty) continue;
-        final original = await revisions.readState(head.revisionId);
-        if (!mounted) return;
-        final l10n = _l10n(context);
-        final approved = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-                  title: Text(l10n.readinessCompressionReview),
-                  content: SizedBox(
-                      width: 560,
-                      child: SingleChildScrollView(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                            for (final candidate in candidates) ...[
-                              Text(l10n.readinessCompressionOriginal),
-                              SelectableText(original
-                                      .nodes[candidate.targetNodeId]?.content ??
-                                  ''),
-                              const SizedBox(height: 12),
-                              Text(l10n.readinessCompressionProposed),
-                              SelectableText(candidate.compressedContent),
-                              const Divider(),
-                            ],
-                          ]))),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: Text(l10n.readinessCompressionCancel)),
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: Text(l10n.readinessCompressionApply)),
-                  ],
-                ));
-        if (approved == true) {
-          await coordinator.approveCompression(
-              resourceId: id,
-              candidateIds:
-                  candidates.map((candidate) => candidate.candidateId).toList(),
-              expectedHeadRevisionId: head.revisionId.value);
-        }
-      }
-      await _loadReadiness();
-    } catch (error) {
-      if (mounted) {
-        setState(() => _readinessError =
-            localizeAdventureLaunchFailure(error, _l10n(context)));
-      }
-    } finally {
-      if (mounted) setState(() => _retryingReadiness = false);
-    }
-  }
 
   @override
   void initState() {
     super.initState();
-    _coordinator = ref.read(assemblyReadinessCoordinatorProvider);
-    _coordinator!.addListener(_onReadinessChanged);
     _loadReadiness();
   }
 
@@ -195,38 +107,6 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
         );
         _errorMessage = null;
       });
-    }
-  }
-
-  Future<void> _retryReadiness() async {
-    if (_retryingReadiness || _readinessLoading) return;
-    final blocked = _readiness.values.where(
-      (item) => item.isManaged && item.status != AdventureAssetGateStatus.ready,
-    );
-    if (blocked.isEmpty) return;
-    setState(() {
-      _retryingReadiness = true;
-      _readinessError = null;
-      _errorMessage = null;
-    });
-    try {
-      final gate = ref.read(adventureReadinessGateProvider);
-      for (final item in blocked) {
-        await gate.prepare(item.assetId);
-      }
-      await _loadReadiness();
-    } catch (error) {
-      if (mounted) {
-        setState(() {
-          _readinessError = localizeAppError(
-            _l10n(context),
-            asAppDomainError(error),
-          );
-          _errorMessage = null;
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _retryingReadiness = false);
     }
   }
 
@@ -477,49 +357,6 @@ class _AssemblyPreviewPageState extends ConsumerState<AssemblyPreviewPage> {
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
-                        if (!_readinessLoading &&
-                            _readinessError == null &&
-                            !_assemblyReady) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          ..._readiness.values
-                              .where((item) =>
-                                  item.isManaged &&
-                                  item.status != AdventureAssetGateStatus.ready)
-                              .map(
-                                (item) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 2),
-                                  child: Text(
-                                    localizeAdventureReadiness(item, l10n),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: scheme.error,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          if (_readiness.values.any((item) =>
-                              item.parameters['diagnosticCode'] ==
-                              'compressionApprovalRequired'))
-                            TextButton(
-                                key: const Key(
-                                    'assembly-preview-compression-review'),
-                                onPressed: _retryingReadiness
-                                    ? null
-                                    : _reviewCompression,
-                                child: Text(l10n.readinessCompressionReview)),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton(
-                              key: const Key('assembly-preview-retry-button'),
-                              onPressed:
-                                  _retryingReadiness ? null : _retryReadiness,
-                              child: Text(
-                                _retryingReadiness
-                                    ? l10n.readinessRetrying
-                                    : l10n.readinessRetry,
-                              ),
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),

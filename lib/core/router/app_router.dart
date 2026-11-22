@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import '../../features/adventure/presentation/session/screens/model_select_page.dart';
 import '../../features/adventure/presentation/session/screens/conversation_manage_page.dart';
 import '../../features/adventure/presentation/wizard/screens/assembly_create_page.dart';
-import '../../features/resource_library/presentation/screens/resource_create_page.dart';
 import '../../features/resource_library/presentation/screens/resource_library_screen.dart';
-import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../features/settings/presentation/screens/settings_pages.dart';
 import '../../features/settings/presentation/screens/language_settings_page.dart';
 import '../../features/settings/presentation/screens/chat_transfer_pages.dart';
@@ -27,7 +25,6 @@ class AppRouter {
     final first = segments.first;
     final resourceId =
         segments.length > 1 ? segments[1] : uri.queryParameters['resourceId'];
-    final sessionId = uri.queryParameters['sessionId'];
     if (first == 'conversations' &&
         segments.length > 1 &&
         segments[1] == 'manage') {
@@ -54,31 +51,9 @@ class AppRouter {
     if (first == 'library' ||
         first == 'resource-library' ||
         first == 'resources') {
-      if (segments.length > 1 && segments[1] == 'create') {
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (_) => const ResourceCreatePage(),
-        );
-      }
       return MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => ResourceLibraryScreen(initialResourceId: resourceId),
-      );
-    }
-    if (first == 'studio' || first == 'resource-studio') {
-      if ((resourceId == null || resourceId.isEmpty) &&
-          (sessionId == null || sessionId.isEmpty)) {
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (_) => const ResourceLibraryScreen(),
-        );
-      }
-      return MaterialPageRoute<void>(
-        settings: settings,
-        builder: (_) => ResourceStudioPage(
-          resourceId: resourceId,
-          sessionId: sessionId,
-        ),
       );
     }
     if (first == 'adventure') {

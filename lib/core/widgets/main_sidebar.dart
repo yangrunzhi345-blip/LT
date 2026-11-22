@@ -173,15 +173,6 @@ class _MainSidebarState extends ConsumerState<MainSidebar> {
                         .openResourceLibrary(ResourceLibraryMode.adventure)),
                   ),
                   _NavItem(
-                    key: const Key('sidebar-nav-trash'),
-                    icon: 'delete',
-                    label: l10n.recycleBinTitle,
-                    expanded: expanded,
-                    selected: chat.currentSection == AppSection.trash,
-                    onTap: () => _navigate(
-                        () => chat.setCurrentSection(AppSection.trash)),
-                  ),
-                  _NavItem(
                     key: const Key('sidebar-nav-runtime'),
                     icon: 'state',
                     label: l10n.runtimeStateCurrent,

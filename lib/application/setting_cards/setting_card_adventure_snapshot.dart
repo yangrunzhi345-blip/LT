@@ -1,45 +1,62 @@
+import '../../domain/resources/resource_contracts.dart';
 import '../../domain/setting_cards/setting_card.dart';
 import '../../domain/setting_cards/setting_card_repository.dart';
 import '../../models/adventure_config.dart';
 import '../../models/supporting_character.dart';
+import '../../models/worldview_details.dart';
 import '../adventure/adventure_readiness_gate.dart';
 import '../resources/assembly_readiness_coordinator.dart';
+import '../resources/assembly_readiness_repository.dart';
 
 /// Adventure start gate that freezes lightweight setting cards into the
 /// AdventureConfig.
 ///
 /// Card-backed assets are always ready: the card is the document, so there is
-/// no assembly revision to wait for. Any asset without a card is delegated to
-/// the retired tree gate unchanged, which keeps old data readable during the
-/// transition (Phase 5c removes that fallback).
+/// no assembly revision to wait for. Any id without a card is `notManaged`.
 final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
-  SettingCardAwareReadinessGate({
-    required IAdventureReadinessGate inner,
-    required SettingCardRepository cards,
-  })  : _inner = inner,
-        _cards = cards;
+  SettingCardAwareReadinessGate({required SettingCardRepository cards})
+      : _cards = cards;
 
-  final IAdventureReadinessGate _inner;
   final SettingCardRepository _cards;
 
+  /// The card-only gate has nothing to prepare.
+  ///
+  /// [IAdventureReadinessGate.prepare] is fixed to `Future<AssemblyPrepareOutcome>`,
+  /// which can only carry an [AssemblyReadinessRecord], so the no-op returns a
+  /// synthetic ready record. No inner gate is consulted.
   @override
-  Future<AssemblyPrepareOutcome> prepare(String assetId) =>
-      _inner.prepare(assetId);
+  Future<AssemblyPrepareOutcome> prepare(String assetId) async {
+    final record = AssemblyReadinessRecord(
+      resourceId: assetId,
+      state: ReadinessState.ready,
+    );
+    return AssemblyPrepareOutcome(record: record);
+  }
 
   @override
   Future<Map<String, AdventureAssetReadiness>> resolve(
     Iterable<String> assetIds,
   ) async {
-    final result = await _inner.resolve(assetIds);
-    final cards = await _cardsById(assetIds);
-    for (final entry in cards.entries) {
-      result[entry.key] = AdventureAssetReadiness(
-        assetId: entry.key,
+    final ids = assetIds.toList(growable: false);
+    final cards = await _cardsById(ids);
+    final result = <String, AdventureAssetReadiness>{};
+    for (final id in ids) {
+      final card = cards[id];
+      if (card == null) {
+        result[id] = AdventureAssetReadiness(
+          assetId: id,
+          status: AdventureAssetGateStatus.notManaged,
+          issueCode: AdventureReadinessIssueCode.notManaged,
+        );
+        continue;
+      }
+      result[id] = AdventureAssetReadiness(
+        assetId: id,
         status: AdventureAssetGateStatus.ready,
         issueCode: AdventureReadinessIssueCode.ready,
         parameters: <String, Object?>{
-          'name': entry.value.name,
-          'resourceType': entry.value.kind.storageValue,
+          'name': card.name,
+          'resourceType': card.kind.storageValue,
           'snapshot': 'setting_card',
         },
       );
@@ -56,21 +73,10 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
   @override
   Future<AdventureConfig> enforceAndFreeze(AdventureConfig config) async {
     final cards = await _cardsById(_referencedIds(config));
-    if (cards.isEmpty) return _inner.enforceAndFreeze(config);
-
-    // Freeze card-backed assets on a copy of the caller's config.
+    // Deep copy so the caller's config can never be mutated, then apply every
+    // card snapshot.
     final frozen = AdventureConfig.fromJson(config.toJson());
-    _applyCards(frozen, cards);
-
-    // Everything else still goes through the retired gate, but without the card
-    // ids so an assembly revision can never overwrite a card snapshot.
-    final legacyConfig = _withoutCards(config, cards.keys);
-    if (_referencedIds(legacyConfig).isEmpty) {
-      _applyCards(frozen, cards);
-      return frozen;
-    }
-    final legacyFrozen = await _inner.enforceAndFreeze(legacyConfig);
-    _mergeLegacy(frozen, legacyFrozen, cards.keys);
+    if (cards.isEmpty) return frozen;
     _applyCards(frozen, cards);
     return frozen;
   }
@@ -102,37 +108,6 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
     return ids;
   }
 
-  /// Deep copy with every card-backed reference removed, so the legacy gate
-  /// sees only assets it can actually resolve.
-  static AdventureConfig _withoutCards(
-    AdventureConfig config,
-    Iterable<String> cardIds,
-  ) {
-    final stripped = AdventureConfig.fromJson(config.toJson());
-    final worldviewId =
-        stripped.worldviewSnapshot?['source_id']?.toString() ?? '';
-    if (cardIds.contains(worldviewId)) {
-      stripped.worldviewSnapshot = null;
-    }
-    stripped.selectedCharacters = stripped.selectedCharacters
-        .where((item) => !cardIds.contains(item.characterId))
-        .toList();
-    stripped.npcSnapshots = stripped.npcSnapshots
-        .where((item) => !cardIds.contains(item.assetId))
-        .toList();
-    stripped.resourceBindings = stripped.resourceBindings
-        .where((binding) => !cardIds.contains(binding.resourceId))
-        .toList();
-    final protagonist = config.protagonistCharacter;
-    if (protagonist != null && cardIds.contains(protagonist.characterId)) {
-      // The protagonist fields describe a card, so the legacy gate must not
-      // rewrite them.
-      stripped.name = config.name;
-      stripped.characterCard = null;
-    }
-    return stripped;
-  }
-
   static void _applyCards(
     AdventureConfig config,
     Map<String, SettingCard> cards,
@@ -148,6 +123,13 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
             'name': card.name,
             'summary': card.summary,
             'content': card.content,
+            // `WorldviewSnapshotService.buildManagedEntries` reads the legacy
+            // preset keys, not this card-only payload. Without `description`
+            // and a `detail_json` overview module the adventure freezes with
+            // zero world entries, so mirror the simple-preset shape here.
+            'description': card.content,
+            'detail_json': _worldviewDetailJson(card),
+            'entries_json': '[]',
           };
         case SettingCardKind.character:
           final protagonist = config.protagonistCharacter;
@@ -187,46 +169,6 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
     }
   }
 
-  static void _mergeLegacy(
-    AdventureConfig result,
-    AdventureConfig legacyFrozen,
-    Iterable<String> cardIds,
-  ) {
-    final worldviewId =
-        result.worldviewSnapshot?['source_id']?.toString() ?? '';
-    if (!cardIds.contains(worldviewId)) {
-      result.worldviewSnapshot = legacyFrozen.worldviewSnapshot;
-    }
-    final legacyById = <String, AdventureSelectedCharacter>{
-      for (final item in legacyFrozen.selectedCharacters)
-        item.characterId: item,
-    };
-    result.selectedCharacters = result.selectedCharacters
-        .map((item) => cardIds.contains(item.characterId)
-            ? item
-            : legacyById[item.characterId] ?? item)
-        .toList();
-    final legacyNpcs = <String, AdventureNpcSnapshot>{
-      for (final npc in legacyFrozen.npcSnapshots) npc.assetId: npc,
-    };
-    result.npcSnapshots = result.npcSnapshots
-        .map((npc) => cardIds.contains(npc.assetId)
-            ? npc
-            : legacyNpcs[npc.assetId] ?? npc)
-        .toList();
-    final protagonist = result.protagonistCharacter;
-    if (protagonist == null || !cardIds.contains(protagonist.characterId)) {
-      result.name = legacyFrozen.name;
-      result.gender = legacyFrozen.gender;
-      result.age = legacyFrozen.age;
-      result.personality = legacyFrozen.personality;
-      result.protagonistClass = legacyFrozen.protagonistClass;
-      result.protagonistBackground = legacyFrozen.protagonistBackground;
-      result.characterCard = legacyFrozen.characterCard;
-    }
-    result.resourceBindings = legacyFrozen.resourceBindings;
-  }
-
   static SupportingCharacter _renameSupporting(
     SupportingCharacter item,
     String name,
@@ -235,6 +177,13 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
     if (name.trim().isNotEmpty) copy.name = name;
     return copy;
   }
+
+  /// Serialized simple-worldview payload for [card].
+  ///
+  /// Reuses [WorldviewDetails.simple] so the frozen card and a legacy simple
+  /// preset produce the same confirmed `overview` module.
+  static String _worldviewDetailJson(SettingCard card) =>
+      WorldviewDetails.simple(card.content).encode();
 
   static Map<String, dynamic> _cardJson(SettingCard card) => <String, dynamic>{
         'id': card.id,

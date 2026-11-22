@@ -2,20 +2,18 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:lt_dialogue/application/resources/resource_creation_contracts.dart';
-import 'package:lt_dialogue/application/resources/resource_creation_pipeline.dart';
+import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/resources/resource_limits.dart';
+import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
 import 'package:lt_dialogue/services/database_service.dart';
-import 'package:lt_dialogue/services/repositories/library_repository.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
+import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
+import 'package:lt_dialogue/services/repositories/setting_card_repository_impl.dart';
 import 'package:lt_dialogue/services/resource_integrity_validator.dart';
-
-class _MockLibraryRepository extends Mock implements ILibraryRepository {}
 
 /// A character card whose only body field is `description`, sized to exactly
 /// [bodyCharacters] UTF-16 code units so the validator boundary is exact.
@@ -198,7 +196,10 @@ void main() {
   group('manual edit save path end to end', () {
     late Directory tempDir;
     late ResourceCrudController controller;
-    late ResourceTreeRepositoryImpl treeRepository;
+    late SettingCardRepositoryImpl cards;
+
+    String mirrorId(String id) =>
+        LegacyCardMirror.cardIdFor(SettingCardKind.character, id);
 
     setUp(() async {
       sqfliteFfiInit();
@@ -206,15 +207,11 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp('lt_card_capacity_');
       DatabaseService.customDbDir = tempDir.path;
       await DatabaseService.resetDatabase();
-      treeRepository =
-          ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
+      cards = SettingCardRepositoryImpl(getDb: () => DatabaseService.database);
       controller = ResourceCrudController(
-        repository: _MockLibraryRepository(),
-        creationPipeline: ResourceCreationPipeline(
-          getDb: () => DatabaseService.database,
-          hasAiCredentials: () => true,
-          treeRepository: treeRepository,
-        ),
+        repository:
+            LibraryRepositoryImpl(getDb: () => DatabaseService.database),
+        cardMirror: LegacyCardMirror(repository: cards),
       );
     });
 
@@ -234,6 +231,10 @@ void main() {
       );
       expect(saved.success, isTrue);
 
+      final savedCard = await cards.findById(mirrorId('capacity-normal'));
+      expect(savedCard, isNotNull);
+      expect(savedCard!.content, isNotEmpty);
+
       final rejected = await controller.saveCharacterCard(
         id: 'capacity-overflow',
         name: '超限角色',
@@ -243,11 +244,8 @@ void main() {
       );
       expect(rejected.success, isFalse);
       expect(rejected.errorMessage, contains('24000'));
-      // The rejected card must never have been written.
-      expect(
-        await treeRepository.readTree(const ResourceId('capacity-overflow')),
-        isNull,
-      );
+      // The rejected card must never have been written to the card store.
+      expect(await cards.findById(mirrorId('capacity-overflow')), isNull);
     });
   });
 }

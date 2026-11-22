@@ -6,11 +6,12 @@ import '../models/worldview_preset.dart';
 import '../models/worldview_details.dart';
 import '../utils/content_hasher.dart';
 import '../services/repositories/world_entry_repository.dart';
-import '../application/resources/resource_creation_port.dart';
-import '../application/resources/resource_creation_pipeline.dart';
+import '../application/setting_cards/setting_card_service.dart';
+import '../domain/setting_cards/setting_card.dart';
 import '../models/resource_library_mode.dart';
 import '../services/database_service.dart';
 import '../services/repositories/library_repository.dart';
+import '../services/repositories/setting_card_repository_impl.dart';
 import '../services/resource_integrity_validator.dart';
 
 class WorldEngine {
@@ -18,8 +19,15 @@ class WorldEngine {
   final IWorldEntryRepository _worldEntryRepo;
   final ILibraryRepository _libraryRepo;
 
-  /// Unified creation pipeline adapter: saves go to the content tree.
-  final ResourceCreationPort? _creationPort;
+  /// Mirrors every legacy worldview save/delete into the lightweight card the
+  /// library reads. Lazily built when the composition root does not inject one.
+  LegacyCardMirror? _mirrorOverride;
+
+  LegacyCardMirror get _mirror => _mirrorOverride ??= LegacyCardMirror(
+        repository: SettingCardRepositoryImpl(
+          getDb: () => DatabaseService.database,
+        ),
+      );
 
   List<WorldEntry> _worldEntries = [];
   List<WorldviewPreset> _worldviewPresets = [];
@@ -27,18 +35,6 @@ class WorldEngine {
 
   List<WorldEntry> get worldEntries => _worldEntries;
   List<WorldviewPreset> get worldviewPresets => _worldviewPresets;
-
-  /// The injected creation port used by this engine's persistence operations.
-  ResourceCreationPort get creationPort => _requireCreationPort();
-
-  ResourceCreationPort _requireCreationPort() {
-    final port = _creationPort;
-    if (port == null) {
-      throw StateError(
-          'ResourceCreationPort must be injected for resource saves');
-    }
-    return port;
-  }
 
   static int get worldScanDepth => _worldScanDepth;
 
@@ -52,12 +48,14 @@ class WorldEngine {
     required this.notifyParent,
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
-    ResourceCreationPipeline? creationPipeline,
+    // Retained only for composition-root compatibility; Phase 5c no longer
+    // routes worldview saves through the creation pipeline.
+    // ignore: avoid_unused_constructor_parameters
+    Object? creationPipeline,
+    LegacyCardMirror? cardMirror,
   })  : _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,
-        _creationPort = creationPipeline == null
-            ? null
-            : ResourceCreationPort(creationPipeline);
+        _mirrorOverride = cardMirror;
 
   Future<void> addWorldEntry(WorldEntry entry) async {
     try {
@@ -218,14 +216,26 @@ class WorldEngine {
       debugPrint('[WorldEngine] content dedup unavailable: '
           '${error.runtimeType} hash=${contentHash.length >= 8 ? contentHash.substring(0, 8) : contentHash}');
     }
-    await _requireCreationPort().saveWorldview(
+    final detailJson = preset.details.encode();
+    await _libraryRepo.saveWorldviewPreset(
       id: preset.id,
       name: name,
       description: description,
       entriesJson: entriesJson,
-      detailJson: preset.details.encode(),
+      now: DateTime.now().toIso8601String(),
+      detailJson: detailJson,
+      mode: ResourceLibraryMode.adventure,
+    );
+    await _mirror.upsertLegacyMirror(
+      kind: SettingCardKind.worldview,
+      legacyId: preset.id,
+      name: name,
+      summary: description,
+      content: LegacyCardMirror.worldviewContent(
+        description: description,
+        detailJson: detailJson,
+      ),
       mode: ResourceLibraryMode.adventure.storageValue,
-      origin: 'world-engine.save',
     );
     _worldviewPresets.removeWhere((p) => p.id == preset.id);
     _worldviewPresets.insert(0, preset);
@@ -255,6 +265,10 @@ class WorldEngine {
 
   Future<void> deleteWorldviewPreset(String id) async {
     await _libraryRepo.deleteWorldviewPreset(id);
+    await _mirror.softDeleteLegacyMirror(
+      kind: SettingCardKind.worldview,
+      legacyId: id,
+    );
     _worldviewPresets.removeWhere((p) => p.id == id);
     notifyParent();
   }
@@ -315,14 +329,27 @@ class WorldEngine {
         _worldviewPresets = presets;
         for (final p in presets) {
           try {
-            await _requireCreationPort().saveWorldview(
+            final entriesJson = const JsonEncoder().convert(p.worldEntries);
+            final detailJson = p.details.encode();
+            await _libraryRepo.saveWorldviewPreset(
               id: p.id,
               name: p.name,
               description: p.description,
-              entriesJson: const JsonEncoder().convert(p.worldEntries),
-              detailJson: p.details.encode(),
+              entriesJson: entriesJson,
+              now: DateTime.now().toIso8601String(),
+              detailJson: detailJson,
+              mode: ResourceLibraryMode.adventure,
+            );
+            await _mirror.upsertLegacyMirror(
+              kind: SettingCardKind.worldview,
+              legacyId: p.id,
+              name: p.name,
+              summary: p.description,
+              content: LegacyCardMirror.worldviewContent(
+                description: p.description,
+                detailJson: detailJson,
+              ),
               mode: ResourceLibraryMode.adventure.storageValue,
-              origin: 'world-engine.prefs-migration',
             );
           } catch (e) {
             debugPrint('[WorldEngine] _migrateFromPrefs 保存失败: $e');

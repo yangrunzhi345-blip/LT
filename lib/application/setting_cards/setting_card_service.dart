@@ -74,6 +74,26 @@ final class SettingCardService {
     return _repository.findLegacyId(legacyId);
   }
 
+  /// Creates a card from a `resources.type` storage value.
+  ///
+  /// String-based so lightweight callers that only know the legacy type (for
+  /// example the adventure wizard part, which cannot import the card model)
+  /// can create a card without naming [SettingCardKind].
+  Future<SettingCard> createFromType({
+    required String type,
+    required String name,
+    String summary = '',
+    String mode = '',
+    String content = '',
+  }) =>
+      create(
+        kind: SettingCardKind.fromStorageValue(type),
+        name: name,
+        summary: summary,
+        mode: mode,
+        content: content,
+      );
+
   Future<SettingCard> create({
     required SettingCardKind kind,
     required String name,
@@ -226,5 +246,144 @@ final class SettingCardService {
     if (buffer.isNotEmpty) buffer.writeln();
     buffer.writeln(text);
     buffer.writeln();
+  }
+}
+
+/// Mirrors legacy library-table writes into lightweight setting cards.
+///
+/// Phase 5c keeps `worldview_presets` / `character_cards` / `npc_cards` as the
+/// write authority for chat, character and worldview saves while the library
+/// reads cards. This helper is the one place that maps such a write onto its
+/// card, so the two stores cannot drift. It owns no tree, revision or assembly
+/// concept.
+final class LegacyCardMirror {
+  LegacyCardMirror({
+    required SettingCardRepository repository,
+    String Function()? clock,
+  })  : _repository = repository,
+        _clock = clock ?? DateTime.now().toIso8601String;
+
+  static const Map<SettingCardKind, String> _sourceTables =
+      <SettingCardKind, String>{
+    SettingCardKind.worldview: 'worldview_presets',
+    SettingCardKind.character: 'character_cards',
+    SettingCardKind.npc: 'npc_cards',
+  };
+
+  final SettingCardRepository _repository;
+  final String Function() _clock;
+
+  /// Stable card id for the legacy row [legacyId] in [kind]'s source table.
+  ///
+  /// Matches `LegacyResourceMapper.resourceIdFor` so a mirror write updates the
+  /// exact card the compatibility migration created, rather than a duplicate.
+  static String cardIdFor(SettingCardKind kind, String legacyId) =>
+      'res_legacy_${_sourceTables[kind]}_$legacyId';
+
+  /// Creates or updates the mirror card for one saved legacy row.
+  ///
+  /// An existing card keeps its `createdAt`, editorial `status`, `origin` and
+  /// metadata; only the editable body fields and `updatedAt` move. A soft
+  /// deleted card is revived so a re-save reappears in the library.
+  Future<void> upsertLegacyMirror({
+    required SettingCardKind kind,
+    required String legacyId,
+    required String name,
+    String summary = '',
+    required String content,
+    String mode = '',
+  }) async {
+    final trimmedId = legacyId.trim();
+    if (trimmedId.isEmpty) return;
+    final cardId = cardIdFor(kind, trimmedId);
+    final existing = await _repository.findById(cardId) ??
+        await _repository.findLegacyId(trimmedId, kind: kind);
+    final now = _clock();
+    await _repository.save(SettingCard(
+      id: existing?.id ?? cardId,
+      kind: kind,
+      name: name,
+      summary: summary,
+      content: content,
+      status: existing?.status ?? SettingCardStatus.draft,
+      origin: existing?.origin ?? SettingCardOrigin.legacyRow,
+      mode: mode,
+      originWorldviewId: existing?.originWorldviewId ?? '',
+      metadata: existing?.metadata ?? const <String, Object?>{},
+      legacyId: trimmedId,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    ));
+  }
+
+  /// Soft-deletes the mirror card when its legacy row is deleted.
+  Future<void> softDeleteLegacyMirror({
+    required SettingCardKind kind,
+    required String legacyId,
+  }) async {
+    final trimmedId = legacyId.trim();
+    if (trimmedId.isEmpty) return;
+    var card = await _repository.findById(cardIdFor(kind, trimmedId));
+    card ??= await _repository.findLegacyId(trimmedId, kind: kind);
+    if (card == null) return;
+    await _repository.softDelete(card.id, deletedAt: _clock());
+  }
+
+  /// Pretty-prints a legacy card JSON payload for the mirror body (lossless).
+  static String cardContent(String jsonData) {
+    final trimmed = jsonData.trim();
+    if (trimmed.isEmpty) return '';
+    try {
+      return const JsonEncoder.withIndent('  ').convert(jsonDecode(trimmed));
+    } on FormatException {
+      return trimmed;
+    }
+  }
+
+  /// Best-effort summary extracted from a legacy card JSON payload.
+  static String cardSummary(String jsonData) {
+    try {
+      final decoded = jsonDecode(jsonData);
+      if (decoded is Map) {
+        for (final key in const <String>[
+          'description',
+          'background',
+          'personality',
+        ]) {
+          final value = decoded[key];
+          if (value is String && value.trim().isNotEmpty) return value.trim();
+        }
+      }
+    } on FormatException {
+      // Unparseable payload: no summary rather than inventing one.
+    }
+    return '';
+  }
+
+  /// Worldview body: the description plus the detail JSON when it carries data.
+  static String worldviewContent({
+    required String description,
+    String detailJson = '',
+  }) {
+    final buffer = StringBuffer(description.trim());
+    final detail = detailJson.trim();
+    if (detail.isNotEmpty && detail != '{}' && detail != '[]') {
+      if (buffer.isNotEmpty) {
+        buffer.writeln();
+        buffer.writeln();
+      }
+      buffer.writeln('## detail');
+      buffer.writeln();
+      try {
+        final pretty =
+            const JsonEncoder.withIndent('  ').convert(jsonDecode(detail));
+        buffer.writeln('```json');
+        buffer.writeln(pretty);
+        buffer.writeln('```');
+      } on FormatException {
+        buffer.writeln(detail);
+      }
+    }
+    return buffer.toString().trim();
   }
 }

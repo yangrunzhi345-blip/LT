@@ -1,37 +1,6 @@
 part of 'adventure_wizard_screen.dart';
 
 extension _WizardAiDrafts on _AdventureWizardScreenState {
-  Future<void> _openAiWorldviewCreator() async {
-    final l10n = _l10n(context);
-    final oldIds = _worldviews.map((w) => w['id']?.toString()).toSet();
-
-    WorldviewTab.showAiImport(
-      context,
-      () async {
-        await _loadData();
-        if (!mounted) return;
-
-        final newWv = _worldviews
-            .where((w) => !oldIds.contains(w['id']?.toString()))
-            .firstOrNull;
-
-        if (newWv != null) {
-          _rebuild(() {
-            _selectedWorldviewId = newWv['id'] as String;
-            _worldviewNameCtrl.text = newWv['name'] as String? ?? '';
-            _worldviewDescCtrl.text = newWv['description'] as String? ?? '';
-          });
-          AppFeedback.success(
-            context,
-            l10n.worldviewSelectedSuccess(newWv['name']?.toString() ?? ''),
-          );
-        }
-      },
-      _worldviews,
-      mode: ResourceLibraryMode.adventure,
-    );
-  }
-
   /// AI 自动编写世界观设定（支持简约模式与详细模式4段多轮连续生成）
   Future<void> _generateWorldviewWithAi() async {
     final l10n = _l10n(context);
@@ -45,23 +14,22 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
     final source = _aiWorldviewPromptCtrl.text.trim().isEmpty
         ? '请规划一个适合冒险创建的世界观'
         : _aiWorldviewPromptCtrl.text.trim();
-    await AppRouter.push<void>(
-      context,
-      pageBuilder: (_) => ResourceStudioPage(
-        creationDraft: ResourceStudioCreationDraft(
-          type: ResourceType.worldview,
-          name: '冒险世界观',
-          referenceSource: ReferenceSource.text(
-            source,
-            label: 'adventure wizard worldview',
-          ),
-          targetCharacters: _aiWorldviewDetailed ? 10000 : 4000,
-          origin: 'adventure-wizard',
-          libraryMode: ResourceLibraryMode.adventure.storageValue,
-        ),
-      ),
-    );
-    if (mounted) await _loadData();
+    try {
+      final service = ref.read(settingCardServiceProvider);
+      final card = await service.createFromType(
+        type: ResourceType.worldview.storageValue,
+        name: '冒险世界观',
+        mode: ResourceLibraryMode.adventure.storageValue,
+      );
+      await service.generate(id: card.id, instruction: source);
+      if (mounted) await _loadData();
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(
+        context,
+        l10n.aiGenerationFailed(localizeAppError(l10n, asAppDomainError(e))),
+      );
+    }
   }
 
   /// AI 自动编写角色设定（支持简约模式与详细全维模式生成）
@@ -90,25 +58,22 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
       source += '。请与已有角色「${relatedNames.join('、')}」建立【$relation】羁绊。';
     }
 
-    await AppRouter.push<void>(
-      context,
-      pageBuilder: (_) => ResourceStudioPage(
-        creationDraft: ResourceStudioCreationDraft(
-          type: ResourceType.character,
-          name: '冒险角色',
-          referenceSource: ReferenceSource.text(
-            source,
-            label: 'adventure wizard character',
-          ),
-          targetCharacters: _aiCharacterDetailed
-              ? GenerationLimits.detailedCharacterDefaultCharacters
-              : GenerationLimits.detailedCharacterMinimumCharacters,
-          origin: 'adventure-wizard',
-          libraryMode: ResourceLibraryMode.adventure.storageValue,
-        ),
-      ),
-    );
-    if (mounted) await _loadData();
+    try {
+      final service = ref.read(settingCardServiceProvider);
+      final card = await service.createFromType(
+        type: ResourceType.character.storageValue,
+        name: '冒险角色',
+        mode: ResourceLibraryMode.adventure.storageValue,
+      );
+      await service.generate(id: card.id, instruction: source);
+      if (mounted) await _loadData();
+    } catch (e) {
+      if (!mounted) return;
+      AppFeedback.error(
+        context,
+        l10n.aiGenerationFailed(localizeAppError(l10n, asAppDomainError(e))),
+      );
+    }
   }
 
   /// 获取关联角色的简短显示名称
@@ -156,64 +121,6 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
       ));
     }
     return options;
-  }
-
-  /// 打开资料库 AI 创作角色卡并直接加入当前向导队伍
-  Future<void> _openAiCharacterCreator() async {
-    final l10n = _l10n(context);
-    final detailMode = await showSceneImportDetailModePicker(context);
-    if (!mounted || detailMode == null) return;
-
-    final oldIds = _characterCardEntries.map((c) => c.id).toSet();
-    final effectiveWorldviews = _buildEffectiveWorldviews();
-    final activeId = _getOrCreateActiveWorldviewId();
-
-    CharacterCardTab.showAiImport(
-      context,
-      () async {
-        await _loadData();
-        if (!mounted) return;
-
-        final newCards =
-            _characterCardEntries.where((c) => !oldIds.contains(c.id)).toList();
-
-        if (newCards.isNotEmpty) {
-          _rebuild(() {
-            for (final card in newCards) {
-              if (!_characters.any((c) => c.id == card.id)) {
-                final isFirst = _characters.isEmpty;
-                _characters.add(WizardCharacterItem(
-                  id: card.id,
-                  name: card.name,
-                  gender: card.gender,
-                  age: card.age,
-                  profession: card.profession,
-                  personality: card.personality,
-                  background: card.background,
-                  isProtagonist: isFirst,
-                  narrativeRole: isFirst
-                      ? AdventureCharacterRole.protagonist
-                      : AdventureCharacterRole.companion,
-                  libraryEntry: card,
-                  rawJson: card.rawData,
-                ));
-              }
-            }
-            _syncRelationships();
-          });
-          AppFeedback.success(
-              context, l10n.charactersAddedToRoster(newCards.length));
-        }
-      },
-      effectiveWorldviews,
-      characterCards: _characterCardEntries.map((c) => c.rawData).toList(),
-      detailInstruction: detailMode.instruction,
-      aiDepth: detailMode == SceneImportDetailMode.detailed
-          ? AiGenerationDepth.detailed
-          : AiGenerationDepth.simple,
-      initialWorldviewId: activeId,
-      mode: ResourceLibraryMode.adventure,
-    );
   }
 
   /// AI 自动编写序章与初始行动分支

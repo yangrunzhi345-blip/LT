@@ -10,43 +10,16 @@ extension _WizardWorldviewStep on _AdventureWizardScreenState {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LayoutBuilder(builder: (context, constraints) {
-            final stackActions = constraints.maxWidth < 420;
-            return stackActions
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        AppSvgIcon('world', size: 20, color: scheme.primary),
-                        const SizedBox(width: 8),
-                        Expanded(
-                            child: Text(l10n.worldSelectionTitle,
-                                style: theme.textTheme.titleMedium)),
-                      ]),
-                      const SizedBox(height: AppSpacing.sm),
-                      FilledButton.tonalIcon(
-                        onPressed: _openAiWorldviewCreator,
-                        icon: const AppSvgIcon('generation', size: 16),
-                        label: Text(l10n.worldviewCreateAction),
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      AppSvgIcon('world', size: 20, color: scheme.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(l10n.worldSelectionTitle,
-                            style: theme.textTheme.titleMedium),
-                      ),
-                      FilledButton.tonalIcon(
-                        onPressed: _openAiWorldviewCreator,
-                        icon: const AppSvgIcon('generation', size: 16),
-                        label: Text(l10n.worldviewCreateAction),
-                      ),
-                    ],
-                  );
-          }),
+          Row(
+            children: [
+              AppSvgIcon('world', size: 20, color: scheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.worldSelectionTitle,
+                    style: theme.textTheme.titleMedium),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.sm),
           // AI 快速编写世界观卡片
           Container(
@@ -252,14 +225,6 @@ extension _WizardWorldviewStep on _AdventureWizardScreenState {
                                 ? l10n.wizardRegenerateWorldviewAction
                                 : l10n.wizardGenerateWorldviewAction),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    OutlinedButton.icon(
-                      onPressed: _aiWorldviewGenerating
-                          ? null
-                          : _openAiWorldviewCreator,
-                      icon: const AppSvgIcon('book', size: 16),
-                      label: Text(l10n.worldviewAiAssistantTitle),
                     ),
                     if (_worldviewNameCtrl.text.isNotEmpty ||
                         _worldviewDescCtrl.text.isNotEmpty) ...[

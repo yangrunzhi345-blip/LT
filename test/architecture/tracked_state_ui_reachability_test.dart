@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// The underlying runtime authority is already covered elsewhere; this guard is
 /// about discoverability. It fails the build if the tracked view loses its
 /// first-class navigation entry, if the empty state stops offering a management
-/// action, or if a resource detail stops surfacing its definitions.
+/// action, or if a resource surface stops rendering its definitions.
 void main() {
   group('Tracked state UI reachability', () {
     test('the runtime hub exposes tracked as a first-class view', () {
@@ -51,15 +51,20 @@ void main() {
       expect(inspector, contains('trackedStateStatusTitle'));
     });
 
-    test('resource detail surfaces definitions, never a current value', () {
-      final detail = File(
-        'lib/features/resource_library/presentation/screens/resource_library_detail_page.dart',
+    test('the resource library wires the tracked-state surface', () {
+      final screen = File(
+        'lib/features/resource_library/presentation/screens/resource_library_screen.dart',
       ).readAsStringSync();
-      expect(detail, contains('_buildTrackedDefinitionsSection'));
-      expect(detail, contains('_trackedStateDefinitions'));
-      expect(detail, contains('trackedStateMonitorLabel'));
-      // Definitions are definitions: no runtime overlay is read in the detail.
-      expect(detail, isNot(contains('RuntimeEntityState')));
+      expect(screen, contains('TrackedStateLibrarySurface'));
+      expect(screen, contains('ResourceLibraryFilter.trackedState'));
+
+      final surface = File(
+        'lib/features/resource_library/presentation/widgets/tracked_state_library_surface.dart',
+      ).readAsStringSync();
+      expect(surface, contains('_DefinitionRow'));
+      expect(surface, contains('definition.name'));
+      // Definitions are definitions: no runtime overlay is read in the surface.
+      expect(surface, isNot(contains('RuntimeEntityState')));
     });
   });
 }

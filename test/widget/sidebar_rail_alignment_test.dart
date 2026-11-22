@@ -35,7 +35,6 @@ void main() {
     Key('sidebar-toggle'),
     Key('sidebar-nav-adventure'),
     Key('sidebar-nav-resources'),
-    Key('sidebar-nav-trash'),
     Key('sidebar-nav-runtime'),
     Key('sidebar-nav-new-adventure'),
     Key('sidebar-nav-settings'),

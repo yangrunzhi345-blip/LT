@@ -17,9 +17,6 @@ import '../../../../core/widgets/app_loading_view.dart';
 import '../../../../core/widgets/workbench_chrome.dart';
 import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
-import '../../../../application/resources/resource_creation_contracts.dart';
-import '../../../../application/setting_cards/setting_card_library_runtime.dart';
-import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../../../domain/resources/resource_contracts.dart';
 import '../../domain/models/tracked_state_library_view_state.dart';
 import '../../domain/models/resource_library_view_state.dart';
@@ -27,9 +24,6 @@ import '../controllers/tracked_state_library_controller.dart';
 import '../controllers/resource_library_controller.dart';
 import '../widgets/tracked_state_library_surface.dart';
 import '../resolvers/resource_presentation_resolver.dart';
-import '../widgets/resource_creation_flow.dart';
-import 'resource_create_page.dart';
-import 'resource_library_detail_page.dart';
 import 'setting_card_create_page.dart';
 import 'setting_card_detail_page.dart';
 import 'resource_tracked_state_edit_page.dart';
@@ -81,8 +75,6 @@ final class _ResourceLibraryScreenState
   late final ResourceLibraryController _controller;
   late final TrackedStateLibraryController _statusController;
   String? _selectedResourceId;
-  String? _studioResourceId;
-  ResourceStudioCreationDraft? _studioCreationDraft;
   final _searchController = TextEditingController();
   bool _usesInlineDetail = false;
 
@@ -120,22 +112,6 @@ final class _ResourceLibraryScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_studioResourceId != null || _studioCreationDraft != null) {
-      return Scaffold(
-          body: ResourceStudioPage(
-              key: ValueKey(
-                  'library-studio-${_studioResourceId ?? _studioCreationDraft?.idempotencyKey}'),
-              resourceId: _studioResourceId,
-              creationDraft: _studioCreationDraft,
-              embedded: true,
-              onClose: () {
-                setState(() {
-                  _studioResourceId = null;
-                  _studioCreationDraft = null;
-                });
-                unawaited(_controller.load());
-              }));
-    }
     return PageRefreshScope(
       onRefresh: () async {
         await _controller.load();
@@ -507,36 +483,10 @@ final class _ResourceLibraryScreenState
   }
 
   Widget _detailFor(ResourceLibraryItem item, {bool embedded = false}) {
-    if (item.isSettingCard) {
-      return SettingCardDetailPage(
-        key: ValueKey('setting-card-detail-${item.id}'),
-        cardId: item.id,
-        embedded: embedded,
-        onDeleted: embedded
-            ? (message) async {
-                setState(() => _selectedResourceId = null);
-                await _controller.load();
-                if (mounted) AppFeedback.success(context, message);
-              }
-            : null,
-      );
-    }
-    return ResourceLibraryDetailPage(
-      key: ValueKey('resource-detail-${item.id}'),
-      item: item,
+    return SettingCardDetailPage(
+      key: ValueKey('setting-card-detail-${item.id}'),
+      cardId: item.id,
       embedded: embedded,
-      relationshipResources: [
-        for (final candidate in _controller.state.items)
-          if (candidate.isStudioAvailable &&
-              (candidate.type == ResourceType.character ||
-                  candidate.type == ResourceType.npc))
-            candidate,
-      ],
-      onOpenStudio: embedded
-          ? () async {
-              setState(() => _studioResourceId = item.id);
-            }
-          : null,
       onDeleted: embedded
           ? (message) async {
               setState(() => _selectedResourceId = null);
@@ -544,11 +494,6 @@ final class _ResourceLibraryScreenState
               if (mounted) AppFeedback.success(context, message);
             }
           : null,
-      onMoveToTrash: () async {
-        final result = await _controller.moveToTrash(item);
-        if (!result.success || !mounted) return null;
-        return result.message ?? _l10n(context).resourceMovedToTrash;
-      },
     );
   }
 
@@ -604,97 +549,17 @@ final class _ResourceLibraryScreenState
   }
 
   Future<void> _startCreation() async {
-    final runtime = ref.read(resourceLibraryRuntimeProvider);
-    if (runtime is SettingCardLibraryRuntime) {
-      final id = await AppRouter.push<String>(
-        context,
-        pageBuilder: (_) => SettingCardCreatePage(mode: widget.mode),
-      );
-      if (!mounted || id == null) return;
-      await _controller.load();
-      if (!mounted) return;
-      final item = _controller.state.items
-          .where((candidate) => candidate.id == id)
-          .firstOrNull;
-      if (item != null) await _openDetails(item);
-      return;
-    }
-    final availableResources = _controller.state.items
-        .where((item) => item.isStudioAvailable)
-        .toList(growable: false);
-    // The stable host route this creation flow starts from. Every creation
-    // route (hub / AI form / manual form / blueprint review) is pushed above it
-    // and is removed once the flow commits, so Back returns here.
-    final host = ModalRoute.of(context);
-
-    final draft = await AppRouter.push<Object?>(
+    final id = await AppRouter.push<String>(
       context,
-      pageBuilder: (_) => ResourceCreatePage(resources: availableResources),
+      pageBuilder: (_) => SettingCardCreatePage(mode: widget.mode),
     );
-    if (!mounted || draft == null) return;
-
-    if (draft is ResourceStudioCreationDraft) {
-      if (_usesInlineDetail) {
-        setState(() => _studioCreationDraft = draft);
-        return;
-      }
-      await _openStudioForCreation(
-        host: host,
-        pageBuilder: (_) => ResourceStudioPage(creationDraft: draft),
-      );
-      if (mounted) await _controller.load();
-    } else if (draft is ResourceAiCreationIdentity) {
-      // The blueprint-review path persists the resource and starts generation
-      // before this screen regains control, so the Studio must be opened from
-      // the resulting identity rather than a fresh creation draft.
-      if (_usesInlineDetail) {
-        setState(() {
-          _studioCreationDraft = null;
-          _studioResourceId = draft.resourceId.value;
-        });
-        return;
-      }
-      await _openStudioForCreation(
-        host: host,
-        pageBuilder: (_) => ResourceStudioPage(
-          resourceId: draft.resourceId.value,
-          sessionId: draft.generationSessionId,
-        ),
-      );
-      if (mounted) await _controller.load();
-    } else if (draft is ManualResourceDraft) {
-      final id = await _controller.createManual(
-        type: draft.type,
-        name: draft.name,
-        summary: draft.summary,
-      );
-      if (!mounted || id == null) return;
-      final item = _controller.state.items
-          .where((candidate) => candidate.id == id)
-          .firstOrNull;
-      if (item != null) await _openDetails(item);
-    }
-  }
-
-  /// Opens the generation workspace for a committed creation while collapsing
-  /// any finished creation route above [host].
-  ///
-  /// Anchoring the removal at [host] keeps the Resource Library mounted, so the
-  /// created resource's detail page (and the Studio itself) return to the
-  /// library instead of the create / generation / review pages.
-  Future<void> _openStudioForCreation({
-    required Route<dynamic>? host,
-    required WidgetBuilder pageBuilder,
-  }) async {
-    if (host == null) {
-      await AppRouter.push<void>(context, pageBuilder: pageBuilder);
-      return;
-    }
-    await AppRouter.pushAndRemoveUntil<void>(
-      context,
-      pageBuilder: pageBuilder,
-      predicate: (route) => route == host,
-    );
+    if (!mounted || id == null) return;
+    await _controller.load();
+    if (!mounted) return;
+    final item = _controller.state.items
+        .where((candidate) => candidate.id == id)
+        .firstOrNull;
+    if (item != null) await _openDetails(item);
   }
 
   Future<void> _openDetails(ResourceLibraryItem item) async {

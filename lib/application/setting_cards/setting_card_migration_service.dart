@@ -6,11 +6,8 @@ import '../../domain/resources/resource_contracts.dart';
 import '../../domain/setting_cards/setting_card.dart';
 import '../../domain/setting_cards/setting_card_repository.dart';
 import '../../services/repositories/resource_tree_repository.dart';
-import '../../services/repositories/resource_tree_repository_impl.dart';
 import '../../services/repositories/setting_card_repository_impl.dart';
 import '../resources/legacy_resource_mapper.dart';
-import '../resources/resource_migration_service.dart';
-import '../resources/resource_read_facade.dart';
 
 /// Counters for the one-time compatibility migration.
 ///
@@ -53,16 +50,10 @@ final class SettingCardMigrationService {
   SettingCardMigrationService({
     required Future<Database> Function() getDb,
     SettingCardRepository? cards,
-    ResourceTreeRepositoryImpl? treeRepository,
-    ResourceMigrationService? migrationService,
     LegacyResourceMapper mapper = const LegacyResourceMapper(),
     String Function()? clock,
   })  : _getDb = getDb,
         _cards = cards,
-        _treeRepository =
-            treeRepository ?? ResourceTreeRepositoryImpl(getDb: getDb),
-        _migrationService =
-            migrationService ?? ResourceMigrationService(getDb: getDb),
         _mapper = mapper,
         _clock = clock ?? _defaultClock;
 
@@ -78,8 +69,6 @@ final class SettingCardMigrationService {
 
   final Future<Database> Function() _getDb;
   final SettingCardRepository? _cards;
-  final ResourceTreeRepositoryImpl _treeRepository;
-  final ResourceMigrationService _migrationService;
   final LegacyResourceMapper _mapper;
   final String Function() _clock;
 
@@ -117,12 +106,6 @@ final class SettingCardMigrationService {
     var skipped = 0;
     var failed = 0;
 
-    final facade = ResourceReadFacade(
-      getDb: _getDb,
-      treeRepository: _treeRepository,
-      migrationService: _migrationService,
-    );
-
     for (final source in const <({String table, SettingCardKind kind})>[
       (
         table: LegacySourceTables.worldviewPresets,
@@ -149,7 +132,6 @@ final class SettingCardMigrationService {
         }
         try {
           final card = await _cardFromLegacyRow(
-            facade: facade,
             sourceTable: source.table,
             kind: source.kind,
             legacyId: legacyId,
@@ -209,7 +191,6 @@ final class SettingCardMigrationService {
   }
 
   Future<SettingCard> _cardFromLegacyRow({
-    required ResourceReadFacade facade,
     required String sourceTable,
     required SettingCardKind kind,
     required String legacyId,
@@ -217,22 +198,19 @@ final class SettingCardMigrationService {
   }) async {
     final resourceId =
         LegacyResourceMapper.resourceIdFor(sourceTable, legacyId);
-    final read = await facade.readPreferringTree(
-      type: _resourceTypeOf(kind),
-      legacyId: legacyId,
-    );
+    final db = await _getDb();
+    final treeRow = await _readResourceRow(db, resourceId.value);
 
-    final tree = read.tree;
-    if (tree != null) {
+    if (treeRow != null) {
       return _buildCard(
         id: resourceId.value,
         kind: kind,
-        name: tree.resource.name,
-        summary: tree.resource.summary,
-        content: _render(_sectionsOfTree(tree)),
-        status: tree.resource.status,
+        name: treeRow['name']?.toString() ?? '',
+        summary: treeRow['summary']?.toString() ?? '',
+        content: _render(await _readSections(db, resourceId.value)),
+        status: _nodeStatusOf(treeRow['status']),
         origin: SettingCardOrigin.legacyTree,
-        metadata: tree.resource.metadata,
+        metadata: _decodeMetadata(treeRow['metadata_json']),
         legacyId: legacyId,
         fallbackName: row['name']?.toString() ?? '',
         fallbackSummary: row['description']?.toString() ?? '',
@@ -278,22 +256,112 @@ final class SettingCardMigrationService {
 
   Future<SettingCard?> _cardFromTreeRow(Map<String, Object?> row) async {
     final id = row['id']?.toString() ?? '';
-    final tree = await _treeRepository.readTree(ResourceId(id));
-    if (tree == null) return null;
+    if (id.isEmpty) return null;
+    final db = await _getDb();
     return _buildCard(
       id: id,
       kind: SettingCardKind.fromStorageValue(row['type']?.toString()),
-      name: tree.resource.name,
-      summary: tree.resource.summary,
-      content: _render(_sectionsOfTree(tree)),
-      status: tree.resource.status,
+      name: row['name']?.toString() ?? '',
+      summary: row['summary']?.toString() ?? '',
+      content: _render(await _readSections(db, id)),
+      status: _nodeStatusOf(row['status']),
       origin: SettingCardOrigin.legacyTree,
-      metadata: tree.resource.metadata,
+      metadata: _decodeMetadata(row['metadata_json']),
       legacyId: null,
       fallbackName: row['name']?.toString() ?? '',
       fallbackSummary: row['summary']?.toString() ?? '',
       row: row,
     );
+  }
+
+  /// Reads one live resource row directly, or null when the id is not a tree
+  /// resource. The retired tree repository is intentionally not involved.
+  static Future<Map<String, Object?>?> _readResourceRow(
+    Database db,
+    String id,
+  ) async {
+    try {
+      final rows = await db.query(
+        'resources',
+        where: 'id = ? AND deleted_at IS NULL',
+        whereArgs: <Object?>[id],
+        limit: 1,
+      );
+      return rows.isEmpty ? null : rows.first;
+    } catch (_) {
+      // A database without the tree tables has no resource to merge.
+      return null;
+    }
+  }
+
+  /// Reads sections then parts for [resourceId] in stable sort order and
+  /// flattens them into the renderer's section shape.
+  static Future<List<_RenderSection>> _readSections(
+    Database db,
+    String resourceId,
+  ) async {
+    final List<Map<String, Object?>> sectionRows;
+    try {
+      sectionRows = await db.query(
+        'resource_sections',
+        where: 'resource_id = ? AND deleted_at IS NULL',
+        whereArgs: <Object?>[resourceId],
+        orderBy: 'sort_order ASC, id ASC',
+      );
+    } catch (_) {
+      return const <_RenderSection>[];
+    }
+    final sections = <_RenderSection>[];
+    for (final sectionRow in sectionRows) {
+      final sectionId = sectionRow['id']?.toString() ?? '';
+      List<Map<String, Object?>> partRows;
+      try {
+        partRows = await db.query(
+          'resource_parts',
+          where: 'section_id = ? AND deleted_at IS NULL',
+          whereArgs: <Object?>[sectionId],
+          orderBy: 'sort_order ASC, id ASC',
+        );
+      } catch (_) {
+        partRows = const <Map<String, Object?>>[];
+      }
+      sections.add((
+        title: sectionRow['title']?.toString() ?? '',
+        summary: sectionRow['summary']?.toString() ?? '',
+        parts: <_RenderPart>[
+          for (final partRow in partRows)
+            (
+              title: partRow['title']?.toString() ?? '',
+              content: partRow['content']?.toString() ?? '',
+            ),
+        ],
+      ));
+    }
+    return sections;
+  }
+
+  static NodeStatus _nodeStatusOf(Object? raw) {
+    final value = raw?.toString();
+    for (final status in NodeStatus.values) {
+      if (status.storageValue == value) return status;
+    }
+    return NodeStatus.draft;
+  }
+
+  static Map<String, Object?> _decodeMetadata(Object? raw) {
+    if (raw is! String || raw.trim().isEmpty) return const <String, Object?>{};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return <String, Object?>{
+          for (final entry in decoded.entries)
+            entry.key.toString(): entry.value,
+        };
+      }
+    } on FormatException {
+      return const <String, Object?>{};
+    }
+    return const <String, Object?>{};
   }
 
   SettingCard _buildCard({
@@ -368,12 +436,6 @@ final class SettingCardMigrationService {
     }
   }
 
-  static ResourceType _resourceTypeOf(SettingCardKind kind) => switch (kind) {
-        SettingCardKind.worldview => ResourceType.worldview,
-        SettingCardKind.character => ResourceType.character,
-        SettingCardKind.npc => ResourceType.npc,
-      };
-
   static SettingCardStatus _statusOf(NodeStatus status) => switch (status) {
         NodeStatus.draft => SettingCardStatus.draft,
         NodeStatus.confirmed => SettingCardStatus.confirmed,
@@ -420,19 +482,6 @@ final class SettingCardMigrationService {
             summary: section.summary,
             parts: <_RenderPart>[
               for (final part in section.parts)
-                (title: part.title, content: part.content),
-            ],
-          ),
-      ];
-
-  static List<_RenderSection> _sectionsOfTree(ResourceTree tree) =>
-      <_RenderSection>[
-        for (final section in tree.orderedSections)
-          (
-            title: section.title,
-            summary: section.summary,
-            parts: <_RenderPart>[
-              for (final part in tree.orderedPartsOf(section.id))
                 (title: part.title, content: part.content),
             ],
           ),

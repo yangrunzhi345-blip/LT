@@ -2,25 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/resources/resource_lifecycle_projection.dart';
+import 'package:lt_dialogue/application/setting_cards/setting_card_library_runtime.dart';
+import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
+import 'package:lt_dialogue/core/responsive/app_breakpoints.dart';
 import 'package:lt_dialogue/core/widgets/app_empty_state.dart';
 import 'package:lt_dialogue/core/widgets/app_error_view.dart';
+import 'package:lt_dialogue/core/widgets/app_text_field.dart';
 import 'package:lt_dialogue/core/widgets/workbench_chrome.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/setting_card_detail_page.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 
 import '../helpers/responsive_test_helper.dart';
-import '../helpers/resource_studio_fakes.dart';
-import '../helpers/section_control_fakes.dart';
-import '../helpers/resource_capacity_fakes.dart';
-import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
-import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
-import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_ai_create_page.dart';
+import '../helpers/setting_card_fakes.dart';
 
 final class _MockResourceLibraryRuntime implements ResourceLibraryRuntime {
   _MockResourceLibraryRuntime({
@@ -106,25 +107,47 @@ final _testItems = <ResourceLibraryItem>[
   ),
 ];
 
+/// Seeds one card per list fixture so the master/detail pane can resolve the
+/// selected row. The list itself is still driven by the injected runtime.
+MemorySettingCardRepository _seedCards() {
+  final repository = MemorySettingCardRepository();
+  for (final item in _testItems) {
+    repository.cards[item.id] = SettingCard(
+      id: item.id,
+      kind: switch (item.type) {
+        ResourceType.worldview => SettingCardKind.worldview,
+        ResourceType.character => SettingCardKind.character,
+        ResourceType.npc => SettingCardKind.npc,
+      },
+      name: item.name,
+      summary: item.summary,
+      content: item.isConsumable ? '设定卡正文' : '',
+      mode: 'adventure',
+      createdAt: item.updatedAt,
+      updatedAt: item.updatedAt,
+    );
+  }
+  return repository;
+}
+
+/// Current value of the detail page's name field (the card UI has no separate
+/// detail title).
+String? _detailName(WidgetTester tester) => tester
+    .widget<AppTextField>(find.byKey(const Key('setting-card-name')))
+    .controller
+    ?.text;
+
 Widget _buildTestApp({
   required ResourceLibraryRuntime runtime,
+  SettingCardService? cardService,
   ThemeMode themeMode = ThemeMode.light,
   double textScaleFactor = 1.0,
-  FakeResourceStudioRuntime? studioRuntime,
 }) {
-  final tree = buildStudioTestTree();
-  final studio = studioRuntime ??
-      FakeResourceStudioRuntime(
-          tree: tree, session: buildStudioTestSession(tree));
-  addTearDown(studio.eventsController.close);
+  final service = cardService ?? SettingCardService(repository: _seedCards());
   return ProviderScope(
     overrides: [
       resourceLibraryRuntimeProvider.overrideWithValue(runtime),
-      resourceStudioRuntimeProvider.overrideWithValue(studio),
-      sectionControlRuntimeProvider
-          .overrideWithValue(FakeSectionControlRuntime()),
-      resourceCapacityRuntimeProvider
-          .overrideWithValue(FakeResourceCapacityRuntime()),
+      settingCardServiceProvider.overrideWithValue(service),
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
@@ -189,103 +212,13 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('resource-list')), findsOneWidget);
-      expect(find.byType(ResourceLibraryDetailPage), findsOneWidget);
+      expect(find.byType(SettingCardDetailPage), findsOneWidget);
+      // The inline detail is the card editor for the auto-selected row.
+      expect(_detailName(tester), _testItems.first.name);
       // The search control stays a compact single-line field.
       final searchBox =
           tester.getSize(find.byKey(const Key('resource-search-field')));
       expect(searchBox.height, lessThanOrEqualTo(40));
-    });
-
-    testWidgets(
-        'related generation route locks the source and exposes another live reference',
-        (tester) async {
-      setViewport(tester, width: 390, height: 844);
-      final runtime = _MockResourceLibraryRuntime(items: _testItems);
-      final studioTree = buildStudioTestTree();
-      final studio = FakeResourceStudioRuntime(
-        tree: studioTree,
-        session: buildStudioTestSession(studioTree),
-      );
-      await tester.pumpWidget(
-        _buildTestApp(runtime: runtime, studioRuntime: studio),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(
-        find.byKey(const ValueKey<String>('resource-card-res_2')),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      final generate =
-          find.byKey(const Key('resource-generate-related-character'));
-      await tester.ensureVisible(generate);
-      await tester.tap(generate);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(ResourceAiCreatePage), findsOneWidget);
-      final sourceEditor =
-          find.byKey(const ValueKey<String>('ai-create-relationship-0'));
-      expect(sourceEditor, findsOneWidget);
-      expect(
-        find.descendant(of: sourceEditor, matching: find.text('魔女菈妮')),
-        findsOneWidget,
-      );
-      // The source supplied by Character Detail cannot be removed or replaced.
-      expect(
-        find.descendant(of: sourceEditor, matching: find.byTooltip('删除')),
-        findsNothing,
-      );
-
-      final addRelationship =
-          find.byKey(const Key('ai-create-add-relationship'));
-      await tester.ensureVisible(addRelationship);
-      await tester.tap(addRelationship);
-      await tester.pumpAndSettle();
-      final secondEditor =
-          find.byKey(const ValueKey<String>('ai-create-relationship-1'));
-      expect(secondEditor, findsOneWidget);
-      expect(
-        find.descendant(of: secondEditor, matching: find.text('铁拳亚历山大')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: secondEditor, matching: find.byTooltip('删除')),
-        findsOneWidget,
-      );
-
-      // Completing the form returns a draft through the detail callback and
-      // opens the same Resource Studio route used by ordinary creation.
-      await tester.enterText(
-        find.byKey(const Key('ai-create-name-field')),
-        '关联角色',
-      );
-      await tester.enterText(
-        find.byKey(const Key('ai-create-paste-field')),
-        '用于验证完整入口回调的角色资料。',
-      );
-      final submit = find.byKey(const Key('ai-create-submit-button'));
-      await tester.ensureVisible(submit);
-      await tester.tap(submit);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(ResourceStudioPage), findsOneWidget);
-      expect(studio.createCalled, isTrue);
-      expect(
-        studio.createdRelationshipDraft?.relationship.references,
-        hasLength(2),
-      );
-      expect(
-        studio.createdRelationshipDraft?.relationship.references.first
-            .sourceResourceId.value,
-        'res_2',
-      );
-      expect(
-        studio.createdRelationshipDraft?.relationship.references[1]
-            .sourceResourceId.value,
-        'res_3',
-      );
-      expect(tester.takeException(), isNull);
     });
   });
 
@@ -328,8 +261,7 @@ void main() {
         final runtime = _MockResourceLibraryRuntime(items: _testItems);
         await tester.pumpWidget(_buildTestApp(
             runtime: runtime, themeMode: ThemeMode.dark, textScaleFactor: 1.5));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
         final row = find.byKey(const ValueKey('resource-card-res_2'));
         final name = find.descendant(of: row, matching: find.text('魔女菈妮'));
         if (name.evaluate().isEmpty) {
@@ -341,25 +273,19 @@ void main() {
         await tester.ensureVisible(
             find.descendant(of: row, matching: find.text('魔女菈妮')));
         await tester.tap(find.descendant(of: row, matching: find.text('魔女菈妮')));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 300));
-        expect(
-            tester
-                .widget<Text>(find.byKey(const Key('resource-detail-title')))
-                .data,
-            '魔女菈妮');
-        final page = tester.widget<ResourceLibraryDetailPage>(
-            find.byType(ResourceLibraryDetailPage));
-        expect(page.embedded, width >= 1000);
-        final navigator = Navigator.of(
-            tester.element(find.byType(ResourceLibraryDetailPage)));
-        expect(navigator.canPop(), width < 1000);
-        if (width < 1000) {
+        await tester.pumpAndSettle();
+        expect(_detailName(tester), '魔女菈妮');
+        final page = tester
+            .widget<SettingCardDetailPage>(find.byType(SettingCardDetailPage));
+        expect(page.embedded, width >= AppBreakpoints.libraryTriPaneMin);
+        final navigator =
+            Navigator.of(tester.element(find.byType(SettingCardDetailPage)));
+        expect(navigator.canPop(), width < AppBreakpoints.libraryTriPaneMin);
+        if (width < AppBreakpoints.libraryTriPaneMin) {
           await tester.tap(find.byTooltip(MaterialLocalizations.of(
-                  tester.element(find.byType(ResourceLibraryDetailPage)))
+                  tester.element(find.byType(SettingCardDetailPage)))
               .backButtonTooltip));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 300));
+          await tester.pumpAndSettle();
           expect(find.byKey(const Key('resource-list')), findsOneWidget);
           await tester.scrollUntilVisible(
               find.byKey(const Key('resource-search-field')), -150,
@@ -372,93 +298,46 @@ void main() {
               find.byKey(const Key('resource-search-field')), findsOneWidget);
         } else {
           await tester.tap(find.byKey(const ValueKey('resource-filter-npc')));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 300));
-          expect(
-              tester
-                  .widget<Text>(find.byKey(const Key('resource-detail-title')))
-                  .data,
-              '铁拳亚历山大');
+          await tester.pumpAndSettle();
+          expect(_detailName(tester), '铁拳亚历山大');
           expect(navigator.canPop(), isFalse);
         }
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets(
-        'desktop Studio stays in library and preserves search on return',
+    testWidgets('inline delete confirms mutation and keeps workspace',
         (tester) async {
       setViewport(tester, width: 1280, height: 900);
-      final tree = buildStudioTestTree();
-      final runtime = _MockResourceLibraryRuntime(items: [
-        ResourceLibraryItem(
-          id: tree.resource.id.value,
-          type: tree.resource.type,
-          name: tree.resource.name,
-          summary: tree.resource.summary,
-          updatedAt: '2026-10-01',
-          status: ResourceDisplayStatus.ready,
-          isStudioAvailable: true,
-          isConsumable: true,
-        )
-      ]);
-      await tester.pumpWidget(_buildTestApp(runtime: runtime));
+      final cards = _seedCards();
+      final service = SettingCardService(repository: cards);
+      await tester.pumpWidget(_buildTestApp(
+        runtime: SettingCardLibraryRuntime(service: service),
+        cardService: service,
+      ));
       await tester.pumpAndSettle();
-      await tester.enterText(
-          find.byKey(const Key('resource-search-field')), '测试标题');
-      await tester.pumpAndSettle();
-      final open = find.byKey(const Key('resource-open-studio-button'));
-      await tester.ensureVisible(open);
-      await tester.tap(open);
-      await tester.pumpAndSettle();
-      final page =
-          tester.widget<ResourceStudioPage>(find.byType(ResourceStudioPage));
-      expect(page.embedded, isTrue);
-      expect(
-          Navigator.of(tester.element(find.byType(ResourceStudioPage)))
-              .canPop(),
-          isFalse);
-      await tester.tap(find.byTooltip('返回'));
-      await tester.pumpAndSettle();
-      expect(find.byType(ResourceStudioPage), findsNothing);
-      final field = tester
-          .widget<TextField>(find.byKey(const Key('resource-search-field')));
-      expect(field.controller!.text, '测试标题');
-      expect(
-          tester
-              .widget<Text>(find.byKey(const Key('resource-detail-title')))
-              .data,
-          tree.resource.name);
-      expect(tester.takeException(), isNull);
-    });
 
-    testWidgets('inline trash confirms mutation and keeps workspace',
-        (tester) async {
-      setViewport(tester, width: 1280, height: 900);
-      final runtime = _MockResourceLibraryRuntime(items: _testItems);
-      await tester.pumpWidget(_buildTestApp(runtime: runtime));
-      await tester.pumpAndSettle();
-      final remove = find.byKey(const Key('resource-move-to-trash-button'));
+      // The wide layout auto-selects the first card into the inline editor.
+      expect(_detailName(tester), _testItems.first.name);
+      final remove = find.byKey(const Key('setting-card-delete'));
       await tester.ensureVisible(remove);
       await tester.tap(remove);
       await tester.pumpAndSettle();
-      // Merely opening the confirmation must not mutate the resource list.
-      expect(runtime.items.length, 4);
-      await tester.tap(find.widgetWithText(FilledButton, '移入回收站'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(runtime.items.map((item) => item.id), isNot(contains('res_1')));
+      // Merely opening the confirmation must not delete the card.
+      expect(cards.cards['res_1']!.isDeleted, isFalse);
+      await tester.tap(find.widgetWithText(FilledButton, '删除'));
+      await tester.pumpAndSettle();
+      expect(cards.cards['res_1']!.isDeleted, isTrue);
       expect(find.byKey(const ValueKey('resource-card-res_1')), findsNothing);
+      // The workspace falls back to the next card instead of leaving the editor.
+      expect(_detailName(tester), '魔女菈妮');
       expect(
-          tester
-              .widget<Text>(find.byKey(const Key('resource-detail-title')))
-              .data,
-          '魔女菈妮');
-      expect(
-          Navigator.of(tester.element(find.byType(ResourceLibraryDetailPage)))
+          Navigator.of(tester.element(find.byType(SettingCardDetailPage)))
               .canPop(),
           isFalse);
       expect(tester.takeException(), isNull);
+      // Retire the transient feedback card and its dismiss timer.
+      await tester.pump(const Duration(seconds: 5));
     });
 
     testWidgets(

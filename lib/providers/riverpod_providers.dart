@@ -86,20 +86,12 @@ import '../application/resources/resource_lifecycle_projection.dart';
 import '../application/resources/resource_lifecycle_reconciler.dart';
 import '../application/resources/resource_trash_repository.dart';
 import '../application/resources/resource_trash_service.dart';
-import '../application/resources/section_control_service.dart';
 import '../application/resources/streaming_generation_session_repository.dart';
 import '../application/resources/streaming_resource_generation_service.dart';
-import '../features/resource_library/application/use_cases/resource_trash_runtime.dart';
 import '../features/resource_library/application/use_cases/resource_library_runtime.dart';
 import '../features/resource_library/application/use_cases/tracked_state_library_runtime.dart';
-import '../features/resource_studio/application/use_cases/resource_capacity_runtime.dart';
-import '../features/resource_studio/application/use_cases/resource_revision_runtime.dart';
-import '../features/resource_studio/application/use_cases/resource_studio_runtime.dart';
-import '../features/resource_studio/application/use_cases/section_control_runtime.dart';
-import '../features/resource_studio/application/use_cases/streaming_section_regeneration_executor.dart';
 import '../services/repositories/resource_tree_repository_impl.dart';
 import '../services/repositories/section_control_repository_impl.dart';
-import '../controllers/streaming_resource_generation_controller.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // Repository Providers
@@ -222,6 +214,10 @@ final llmGatewayProvider = Provider<LlmGateway>((ref) {
   );
 });
 
+// TODO(phase-5d): the creation/assembly/compression providers below are no
+// longer used by the card-only library, readiness gate or CRUD paths, but are
+// retained because kept files (ChatProvider, LibraryProvider, Studio) and tests
+// still reference them. Remove once those consumers are retired.
 /// The single production creation pipeline of the process.
 ///
 /// Built by the streaming-generation infrastructure so Library CRUD, imports
@@ -284,7 +280,11 @@ final resourceCrudControllerProvider =
     ChangeNotifierProvider<ResourceCrudController>((ref) {
   return ResourceCrudController(
     repository: ref.read(libraryRepoProvider),
-    creationPipeline: ref.read(resourceCreationPipelineProvider),
+    // Phase 5c: legacy writes go straight to the library repository and are
+    // mirrored into the lightweight card the library reads.
+    cardMirror: LegacyCardMirror(
+      repository: ref.watch(settingCardRepositoryProvider),
+    ),
     // Lets a re-edited AI-generated resource validate against its frozen
     // authorized budget instead of the ordinary absolute capacity.
     authorizedBudget: AuthorizedGenerationBudgetReader(
@@ -317,7 +317,12 @@ final pageRefreshControllerProvider = Provider<PageRefreshController>((ref) {
 final adventureSetupControllerProvider =
     ChangeNotifierProvider<AdventureSetupController>((ref) {
   return AdventureSetupController(
-    useCase: AdventureSetupUseCase(ref.read(libraryRepoProvider)),
+    useCase: AdventureSetupUseCase(
+      ref.read(libraryRepoProvider),
+      // Phase 5c: the wizard must also see cards written by the card library
+      // and AI drafts, which no longer land in the legacy tables.
+      cards: ref.watch(settingCardRepositoryProvider),
+    ),
   );
 });
 
@@ -598,86 +603,15 @@ final streamingGenerationRecoveryProvider = FutureProvider<void>((ref) async {
   }
 });
 
-/// Production runtime adapter used by the Resource Studio feature.
-final resourceStudioRuntimeProvider = Provider<ResourceStudioRuntime>((ref) {
-  final infrastructure = ref.read(_streamingGenerationInfrastructureProvider);
-  final sessionRepository =
-      ref.read(streamingGenerationSessionRepositoryProvider);
-  final service = ref.read(streamingResourceGenerationServiceProvider);
-  final runtime = StreamingResourceStudioRuntime(
-    controller: StreamingResourceGenerationController(
-      service: service,
-      sessionRepository: sessionRepository,
-      ownsService: false,
-    ),
-    sessionRepository: sessionRepository,
-    treeRepository: infrastructure.treeRepository,
-    blueprintRepository: infrastructure.blueprintRepository,
-    pipeline: infrastructure.pipeline,
-    gateway: ref.read(llmGatewayProvider),
-  );
-  ref.onDispose(runtime.dispose);
-  return runtime;
-});
-
-/// Production section-control runtime used by the Studio section controls.
-///
-/// Reuses the Studio runtime's streaming controller so regeneration shares one
-/// generation service, one event stream and one set of Phase 5 tasks. This
-/// provider requires the production Studio runtime; widget tests override it.
-final sectionControlRuntimeProvider = Provider<SectionControlRuntime>((ref) {
-  Future<Database> getDb() => DatabaseService.database;
-  final studioRuntime = ref.read(resourceStudioRuntimeProvider);
-  if (studioRuntime is! StreamingResourceStudioRuntime) {
-    throw StateError(
-      'sectionControlRuntimeProvider 需要生产 StreamingResourceStudioRuntime；'
-      '测试应覆盖本 provider 提供 fake runtime',
-    );
-  }
-
-  final service = SectionControlService(
-    repository: SectionControlRepositoryImpl(getDb: getDb),
-    treeRepository: ResourceTreeRepositoryImpl(getDb: getDb),
-    regenerationExecutor: StreamingSectionRegenerationExecutor(
-      runtime: StreamingRegenerationRuntimeAdapter(
-        controller: studioRuntime.controller,
-        sessionRepository: studioRuntime.sessionRepository,
-      ),
-    ),
-    partCommitService: ref.read(partContentCommitServiceProvider),
-    trashService: ref.read(resourceTrashServiceProvider),
-    revisionService: ref.read(resourceRevisionServiceProvider),
-  );
-  final runtime = SectionControlServiceRuntime(service: service);
-  ref.onDispose(runtime.dispose);
-  return runtime;
-});
-
 /// Production capacity measurement service.
 ///
-/// Shared by the compression coordinator and the Studio runtime so both read
+/// Shared by the compression coordinator and the background worker so both read
 /// the same thresholds and the same measured numbers.
 final resourceCapacityServiceProvider =
     Provider<ResourceCapacityService>((ref) {
   Future<Database> getDb() => DatabaseService.database;
   return ResourceCapacityService(
     repository: ResourceCapacityRepositoryImpl(getDb: getDb),
-  );
-});
-
-/// Production revision runtime used by the Studio history panel (Phase 9).
-final resourceRevisionRuntimeProvider =
-    Provider<ResourceRevisionRuntime>((ref) {
-  return ResourceRevisionServiceRuntime(
-    service: ref.read(resourceRevisionServiceProvider),
-  );
-});
-
-/// Production recycle-bin runtime used by the Resource Library (Phase 9).
-final resourceTrashRuntimeProvider = Provider<ResourceTrashRuntime>((ref) {
-  return ResourceTrashServiceRuntime(
-    service: ref.read(resourceTrashServiceProvider),
-    onAdventureRestored: () => ref.read(chatProvider).loadAdventureList(),
   );
 });
 
@@ -694,16 +628,11 @@ final settingCardServiceProvider = Provider<SettingCardService>((ref) {
   );
 });
 
-/// Library runtime: lightweight cards first, legacy rows only as a fallback for
-/// data the compatibility migration has not reached yet.
+/// Library runtime: lightweight cards only (Phase 5c retired the legacy
+/// fallback / Studio-backed library).
 final resourceLibraryRuntimeProvider = Provider<ResourceLibraryRuntime>((ref) {
   return SettingCardLibraryRuntime(
     service: ref.watch(settingCardServiceProvider),
-    fallback: ProductionResourceLibraryRuntime(
-      crud: ref.read(resourceCrudControllerProvider),
-      studio: ref.read(resourceStudioRuntimeProvider),
-      reconciler: ref.read(resourceLifecycleReconcilerProvider),
-    ),
   );
 });
 
@@ -758,22 +687,6 @@ final compressionPublisherProvider = Provider<CompressionPublisher>((ref) {
     jobRepository: CompressionJobRepositoryImpl(getDb: getDb),
     revisionService: ref.read(resourceRevisionServiceProvider),
     getDb: getDb,
-  );
-});
-
-/// Production capacity runtime used by the Studio capacity panel.
-///
-/// Composes the measured capacity service with the compression coordinator so
-/// the panel can show live capacity and queue compression candidates. The
-/// coordinator only ever writes candidates; publishing goes through
-/// [compressionPublisherProvider], which is revision-boundary protected.
-final resourceCapacityRuntimeProvider =
-    Provider<ResourceCapacityRuntime>((ref) {
-  return ResourceCapacityServiceRuntime(
-    capacityService: ref.read(resourceCapacityServiceProvider),
-    compressionCoordinator: ref.read(compressionCoordinatorProvider),
-    compressionPublisher: ref.read(compressionPublisherProvider),
-    worker: ref.read(compressionBackgroundWorkerProvider),
   );
 });
 
@@ -836,16 +749,6 @@ final assemblyReadinessCompressionLinkProvider = Provider<void>((ref) {
 /// 阻止未就绪启动，并把被采用的 revision 冻结进 AdventureConfig。
 final adventureReadinessGateProvider = Provider<IAdventureReadinessGate>((ref) {
   return SettingCardAwareReadinessGate(
-    inner: AdventureReadinessGate(
-      getDb: () => DatabaseService.database,
-      treeRepository: ResourceTreeRepositoryImpl(
-        getDb: () => DatabaseService.database,
-      ),
-      revisionRepository: ref.watch(resourceRevisionRepositoryProvider),
-      revisionService: ref.watch(resourceRevisionServiceProvider),
-      coordinator: ref.watch(assemblyReadinessCoordinatorProvider),
-      builder: ref.watch(resourceAssemblyBuilderProvider),
-    ),
     cards: ref.watch(settingCardRepositoryProvider),
   );
 });

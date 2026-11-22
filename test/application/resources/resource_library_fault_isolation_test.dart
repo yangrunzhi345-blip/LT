@@ -1,179 +1,165 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/application/resources/assembly_readiness_repository.dart';
-import 'package:lt_dialogue/application/resources/resource_lifecycle_projection.dart';
-import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
 import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
-import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
+import 'package:lt_dialogue/services/database_service.dart';
+import 'package:lt_dialogue/services/repositories/setting_card_repository_impl.dart';
 
-import '../../helpers/phase10_fixture.dart';
-
-/// Fault isolation of the Resource Library read path against a real SQLite
-/// tree/readiness stack.
+/// Fault isolation of the card-only Resource Library read path.
 ///
-/// One bad resource must never take the whole list down: a per-resource
-/// lifecycle fault becomes a terminal「校验失败」item, while only a genuine
-/// table/database level failure is allowed to surface as a library error.
+/// The library is now a single `setting_cards` enumeration. One card whose
+/// metadata or body cannot be interpreted must never take the whole list down;
+/// only a genuine table/database level failure may surface as a library error.
 void main() {
-  late Phase10Fixture fixture;
+  TestWidgetsFlutterBinding.ensureInitialized();
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfiNoIsolate;
+
+  late Directory tempDir;
   late ProviderContainer container;
+  late SettingCardRepositoryImpl cards;
 
   setUp(() async {
-    fixture = Phase10Fixture();
-    await fixture.setUp(prefix: 'lt_lib_isolation_');
+    tempDir = await Directory.systemTemp.createTemp('lt_lib_isolation_');
+    DatabaseService.customDbDir = tempDir.path;
+    await DatabaseService.resetDatabase();
     container = ProviderContainer();
+    cards = SettingCardRepositoryImpl(getDb: () => DatabaseService.database);
   });
 
   tearDown(() async {
     container.dispose();
-    await fixture.tearDown();
+    await DatabaseService.resetDatabase();
+    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
   ResourceLibraryRuntime library() =>
       container.read(resourceLibraryRuntimeProvider);
 
-  Future<void> prepare(ResourceId id) => fixture.coordinator.prepare(id);
+  Future<void> seedCard({
+    required String id,
+    required SettingCardKind kind,
+    required String name,
+    required String content,
+    String summary = '',
+  }) =>
+      cards.save(SettingCard(
+        id: id,
+        kind: kind,
+        name: name,
+        summary: summary,
+        content: content,
+        createdAt: '2026-01-01T00:00:00',
+        updatedAt: '2026-01-01T00:00:00',
+      ));
 
-  test('all-ready resources load successfully', () async {
-    final a = await fixture.createWorldview('res_a', [
-      ['A 内容']
-    ]);
-    final b = await fixture.createWorldview('res_b', [
-      ['B 内容']
-    ]);
-    final c = await fixture.createWorldview('res_c', [
-      ['C 内容']
-    ]);
-    for (final id in [a, b, c]) {
-      await prepare(id);
-    }
+  test('all card-backed resources load successfully', () async {
+    await seedCard(
+        id: 'card_a',
+        kind: SettingCardKind.worldview,
+        name: 'A',
+        content: 'A 内容');
+    await seedCard(
+        id: 'card_b',
+        kind: SettingCardKind.character,
+        name: 'B',
+        content: 'B 内容');
+    await seedCard(
+        id: 'card_c', kind: SettingCardKind.npc, name: 'C', content: 'C 内容');
 
     final items = await library().load(ResourceLibraryMode.adventure);
 
     expect(items, hasLength(3));
-    expect(
-      items
-          .every((item) => item.lifecycleState == ResourceLifecycleState.ready),
-      isTrue,
-    );
+    expect(items.every((item) => item.isSettingCard), isTrue);
     expect(items.every((item) => item.isConsumable), isTrue);
   });
 
-  test('one failed readiness still lists every resource', () async {
-    final a = await fixture.createWorldview('res_a', [
-      ['A 内容']
-    ]);
-    final b = await fixture.createWorldview('res_b', [
-      ['B 内容']
-    ]);
-    final c = await fixture.createWorldview('res_c', [
-      ['C 内容']
-    ]);
-    await prepare(a);
-    await prepare(c);
-    await fixture.db.transaction((txn) {
-      return fixture.readinessRepository.writeInTransaction(
-        txn,
-        AssemblyReadinessRecord(
-          resourceId: b.value,
-          state: ReadinessState.failed,
-          attemptToken: 'attempt_terminal',
-        ),
-      );
-    });
-
-    final items = await library().load(ResourceLibraryMode.adventure);
-
-    expect(items, hasLength(3));
-    final failed = items
-        .where((item) => item.lifecycleState == ResourceLifecycleState.failed);
-    expect(failed, hasLength(1));
-    expect(failed.single.id, b.value);
-    expect(failed.single.status, ResourceDisplayStatus.optimizationFailed);
-    expect(failed.single.isConsumable, isFalse);
-    expect(
-      items.where((item) => item.isConsumable),
-      hasLength(2),
-    );
-  });
-
-  test('an unreadable per-resource lifecycle is isolated, not escalated',
-      () async {
-    final a = await fixture.createWorldview('res_a', [
-      ['A 内容']
-    ]);
-    final b = await fixture.createWorldview('res_b', [
-      ['B 内容']
-    ]);
-    final c = await fixture.createWorldview('res_c', [
-      ['C 内容']
-    ]);
-    for (final id in [a, b, c]) {
-      await prepare(id);
-    }
-    // A legacy / unknown readiness state makes the projection for `b`
-    // unrepresentable. It must degrade to one failed item, not fail the list.
-    await fixture.db.rawUpdate(
-      "UPDATE resource_assembly_readiness SET state = 'weird_legacy_state' "
-      'WHERE resource_id = ?',
-      <Object?>[b.value],
-    );
-
-    final items = await library().load(ResourceLibraryMode.adventure);
-
-    expect(items, hasLength(3));
-    final failed = items.firstWhere((item) => item.id == b.value);
-    expect(failed.lifecycleState, ResourceLifecycleState.failed);
-    expect(failed.status, ResourceDisplayStatus.optimizationFailed);
-    expect(failed.isConsumable, isFalse);
-    expect(
-      items.where((item) => item.isConsumable),
-      hasLength(2),
-    );
-  });
-
-  test('a legacy resource with no generation session does not break the list',
-      () async {
-    await fixture.createWorldview('res_legacy', [
-      ['旧资源']
-    ]);
-
-    final items = await library().load(ResourceLibraryMode.adventure);
-
-    expect(items, hasLength(1));
-    expect(items.single.lifecycleState, isNot(ResourceLifecycleState.failed));
-  });
-
-  test('an unmappable stored row does not fail the enumeration', () async {
-    await fixture.createWorldview('res_ok', [
-      ['正常内容']
-    ]);
-    await fixture.db.insert('resources', <String, Object?>{
-      'id': 'res_corrupt',
-      'type': 'worldview',
-      'name': '损坏资源',
+  test('a corrupt metadata row degrades without breaking the list', () async {
+    await seedCard(
+        id: 'card_ok',
+        kind: SettingCardKind.worldview,
+        name: '正常',
+        content: '正常内容');
+    final db = await DatabaseService.database;
+    await db.insert('setting_cards', <String, Object?>{
+      'id': 'card_bad_meta',
+      'kind': 'character',
+      'name': '损坏元数据',
       'summary': '',
-      'status': 'draft',
+      'content': '正文仍然可读',
       'metadata_json': '{not valid json',
-      'schema_version': 1,
       'created_at': '2026-01-01T00:00:00',
       'updated_at': '2026-01-01T00:00:00',
     });
 
     final items = await library().load(ResourceLibraryMode.adventure);
 
-    // The valid resource still loads; the unmappable row cannot be represented
-    // and is skipped rather than aborting the whole library.
-    expect(items.any((item) => item.id == 'res_ok'), isTrue);
+    expect(items, hasLength(2));
+    // The damaged metadata degrades to an empty map instead of hiding the card.
+    final degraded = await cards.findById('card_bad_meta');
+    expect(degraded, isNotNull);
+    expect(degraded!.metadata, isEmpty);
+    // The body — the part the user cares about — is still listed and usable.
+    final bad = items.firstWhere((item) => item.id == 'card_bad_meta');
+    expect(bad.isConsumable, isTrue);
+    expect(bad.name, '损坏元数据');
+    expect(items.any((item) => item.id == 'card_ok'), isTrue);
+  });
+
+  test('an unparseable card body still lists verbatim', () async {
+    await seedCard(
+        id: 'card_ok',
+        kind: SettingCardKind.worldview,
+        name: '正常',
+        content: '正常内容');
+    final db = await DatabaseService.database;
+    await db.insert('setting_cards', <String, Object?>{
+      'id': 'card_bad_body',
+      'kind': 'npc',
+      'name': '损坏正文',
+      'summary': '',
+      'content': '{not valid json',
+      'metadata_json': '{}',
+      'created_at': '2026-01-01T00:00:00',
+      'updated_at': '2026-01-01T00:00:00',
+    });
+
+    final items = await library().load(ResourceLibraryMode.adventure);
+
+    expect(items, hasLength(2));
+    final bad = await cards.findById('card_bad_body');
+    expect(bad!.content, '{not valid json');
+    expect(items.firstWhere((item) => item.id == 'card_bad_body').isConsumable,
+        isTrue);
+  });
+
+  test('an empty-body card is listed as non-consumable', () async {
+    await seedCard(
+        id: 'card_empty',
+        kind: SettingCardKind.character,
+        name: '空卡',
+        content: '');
+
+    final items = await library().load(ResourceLibraryMode.adventure);
+
+    expect(items, hasLength(1));
+    expect(items.single.isConsumable, isFalse);
   });
 
   test('a fatal table-level failure propagates as a library error', () async {
-    await fixture.createWorldview('res_a', [
-      ['A 内容']
-    ]);
-    await fixture.db.execute('DROP TABLE worldview_presets');
+    await seedCard(
+        id: 'card_a',
+        kind: SettingCardKind.worldview,
+        name: 'A',
+        content: 'A 内容');
+    final db = await DatabaseService.database;
+    await db.execute('DROP TABLE setting_cards');
 
     expect(
       () => library().load(ResourceLibraryMode.adventure),

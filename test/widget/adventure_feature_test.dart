@@ -214,8 +214,6 @@ void main() {
 
       // 验证步骤 1 世界观的 AI 创作与编写组件
       expect(find.text(l10n.worldSelectionTitle), findsOneWidget);
-      expect(find.text(l10n.worldviewCreateAction), findsWidgets);
-      expect(find.text(l10n.worldviewAiAssistantTitle), findsWidgets);
       expect(find.text(l10n.wizardWorldviewAiSummary), findsOneWidget);
       expect(find.text(l10n.wizardWorldviewPromptLabel), findsOneWidget);
       expect(find.text(l10n.wizardGenerateWorldviewAction), findsOneWidget);
@@ -309,8 +307,6 @@ void main() {
 
       expect(find.text(l10n.characterCardCreateTitle), findsOneWidget);
       expect(find.text(l10n.characterCardInfoSection), findsOneWidget);
-      expect(find.text(l10n.characterCardAiAssistedCreation), findsOneWidget);
-      expect(find.text(l10n.aiFillIn), findsOneWidget);
       expect(find.text('${l10n.characterNameLabel} *'), findsOneWidget);
       expect(find.text(l10n.occupationLabel), findsOneWidget);
     });

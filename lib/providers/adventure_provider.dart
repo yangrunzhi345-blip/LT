@@ -1,4 +1,3 @@
-import '../application/resources/resource_creation_pipeline.dart';
 import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/widgets.dart';
@@ -20,17 +19,11 @@ import '../services/database_service.dart';
 import '../application/adventure/adventure_readiness_gate.dart';
 import '../application/adventure/adventure_tracked_state_freezer.dart';
 import '../application/adventure/tracked_state_snapshot.dart';
-import '../application/resources/assembly_readiness_coordinator.dart';
-import '../application/resources/assembly_readiness_repository.dart';
-import '../application/resources/resource_assembly_builder.dart';
 import '../application/setting_cards/setting_card_adventure_snapshot.dart';
 import '../services/repositories/setting_card_repository_impl.dart';
-import '../application/resources/resource_revision_repository.dart';
-import '../application/resources/resource_revision_service.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/repositories/world_entry_repository.dart';
 import '../services/repositories/library_repository.dart';
-import '../services/repositories/resource_tree_repository_impl.dart';
 import '../engines/world_engine.dart';
 import '../services/worldview_snapshot_service.dart';
 import '../engines/game_engine.dart';
@@ -167,7 +160,10 @@ class AdventureProvider extends ChangeNotifier {
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
     IAdventureReadinessGate? readinessGate,
-    ResourceCreationPipeline? creationPipeline,
+    // Retained only for composition-root compatibility; the wizard and runtime
+    // no longer route resources through the creation pipeline.
+    // ignore: avoid_unused_constructor_parameters
+    Object? creationPipeline,
     AdventureResourceRelationshipLoader? relationshipLoader,
   })  : _adventureRepo = adventureRepo,
         _worldEntryRepo = worldEntryRepo,
@@ -178,7 +174,6 @@ class AdventureProvider extends ChangeNotifier {
       notifyParent: notifyListeners,
       worldEntryRepo: _worldEntryRepo,
       libraryRepo: _libraryRepo,
-      creationPipeline: creationPipeline,
     );
 
     // v2.7 P0: GameEngine DI 激活 — 6 个 Manager 全部注入
@@ -265,41 +260,11 @@ class AdventureProvider extends ChangeNotifier {
     return _lazyGate ??= _buildDefaultReadinessGate();
   }
 
+  /// Card-only default gate: the library is card-backed, so no tree/revision
+  /// machinery is needed to freeze a config.
   static IAdventureReadinessGate _buildDefaultReadinessGate() {
     Future<Database> getDb() => DatabaseService.database;
-    final treeRepository = ResourceTreeRepositoryImpl(getDb: getDb);
-    final revisionRepository = ResourceRevisionRepositoryImpl(getDb: getDb);
-    final captureEngine = RevisionCaptureEngine(
-      revisionRepository: revisionRepository,
-      treeBoundary: treeRepository,
-    );
-    final revisionService = ResourceRevisionService(
-      revisionRepository: revisionRepository,
-      captureEngine: captureEngine,
-      treeBoundary: treeRepository,
-      getDb: getDb,
-    );
-    final builder = ResourceAssemblyBuilder(
-      revisionRepository: revisionRepository,
-      typeResolver: (id) async => (await treeRepository.findResource(id))?.type,
-    );
-    final coordinator = AssemblyReadinessCoordinator(
-      getDb: getDb,
-      readinessRepository: AssemblyReadinessRepositoryImpl(getDb: getDb),
-      revisionRepository: revisionRepository,
-      revisionService: revisionService,
-      builder: builder,
-      typeResolver: (id) async => (await treeRepository.findResource(id))?.type,
-    );
     return SettingCardAwareReadinessGate(
-      inner: AdventureReadinessGate(
-        getDb: getDb,
-        treeRepository: treeRepository,
-        revisionRepository: revisionRepository,
-        revisionService: revisionService,
-        coordinator: coordinator,
-        builder: builder,
-      ),
       cards: SettingCardRepositoryImpl(getDb: getDb),
     );
   }

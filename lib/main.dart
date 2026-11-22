@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -23,7 +22,6 @@ import 'features/onboarding/presentation/screens/first_run_api_setup_page.dart';
 import 'features/onboarding/presentation/screens/language_setup_page.dart';
 import 'features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'features/resource_library/domain/models/resource_library_view_state.dart';
-import 'features/resource_library/presentation/widgets/resource_trash_sheet.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'l10n/generated/app_localizations_en.dart';
 import 'l10n/generated/app_localizations_zh.dart';
@@ -190,44 +188,6 @@ class _MainGateState extends ConsumerState<MainGate> {
         _initializeApp();
       });
     }
-    // Phase 9: the revision retention pass. Startup is the controlled point for
-    // it — no edit can be in flight — and it runs at most once per interval, so
-    // it cannot turn into a background load. Without a caller the chains grew
-    // forever (audit P9-M3).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(ref.read(revisionMaintenanceProvider).runIfDue());
-    });
-    // Phase 10: attach the compression infrastructure to the readiness
-    // coordinator (lazy read avoids the chatProvider build cycle), then mark
-    // `preparing` rows orphaned by a previous process as retryable failures —
-    // fail-closed: they never auto-ready. Startup recovery must never crash
-    // the app shell, so its failure is swallowed here (the row stays
-    // `preparing`, which still blocks Adventure start).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        ref.read(assemblyReadinessCompressionLinkProvider);
-        unawaited(
-          ref
-              .read(compressionBackgroundWorkerProvider)
-              .start()
-              .then((_) => ref
-                  .read(assemblyReadinessCoordinatorProvider)
-                  .recoverInterrupted())
-              .catchError((Object _) => 0),
-        );
-      } catch (_) {
-        // Startup recovery is best-effort; readiness stays fail-closed.
-      }
-    });
-    // Recover interrupted streaming sessions to a user-resumable state without
-    // replaying billable model requests during application startup.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        ref.read(streamingGenerationRecoveryProvider);
-      } catch (_) {
-        // Startup recovery is best-effort; the persisted state remains retryable.
-      }
-    });
   }
 
   Future<void> _initializeApp() async {
@@ -489,12 +449,6 @@ class _MainGateState extends ConsumerState<MainGate> {
           initialResourceId: initialResourceId,
           onMenuPressed: onMenu,
           onReturnHome: cp.navigateToAdventureHome,
-        );
-
-      case AppSection.trash:
-        return ResourceTrashPage(
-          runtime: ref.read(resourceTrashRuntimeProvider),
-          onMenuPressed: onMenu,
         );
 
       case AppSection.runtimeState:

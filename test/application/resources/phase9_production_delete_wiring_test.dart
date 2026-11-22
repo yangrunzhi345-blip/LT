@@ -115,7 +115,7 @@ void main() {
       );
 
       await container
-          .read(resourceTrashRuntimeProvider)
+          .read(resourceTrashServiceProvider)
           .restore(await singleTrashId());
       await settleLibraryRefresh();
 
@@ -153,7 +153,7 @@ void main() {
       );
 
       await container
-          .read(resourceTrashRuntimeProvider)
+          .read(resourceTrashServiceProvider)
           .restore(await singleTrashId());
       await settleLibraryRefresh();
 
@@ -187,7 +187,7 @@ void main() {
     );
 
     await container
-        .read(resourceTrashRuntimeProvider)
+        .read(resourceTrashServiceProvider)
         .restore(await singleTrashId());
 
     expect(

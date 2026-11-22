@@ -1,53 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_library_runtime.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
-import 'package:lt_dialogue/controllers/resource_crud_controller.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
-import 'package:lt_dialogue/features/resource_library/application/use_cases/resource_library_runtime.dart';
 import 'package:lt_dialogue/features/resource_library/domain/models/resource_library_view_state.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 
 import '../../helpers/setting_card_fakes.dart';
 
-final class _FakeFallback implements ResourceLibraryRuntime {
-  _FakeFallback(this.items);
-
-  List<ResourceLibraryItem> items;
-  int trashCalls = 0;
-
-  @override
-  Future<List<ResourceLibraryItem>> load(ResourceLibraryMode mode) async =>
-      items;
-
-  @override
-  Future<ResourceOperationResult> moveToTrash({
-    required ResourceLibraryItem item,
-    required ResourceLibraryMode mode,
-  }) async {
-    trashCalls++;
-    items = items.where((candidate) => candidate.id != item.id).toList();
-    return const ResourceOperationResult.success();
-  }
-
-  @override
-  Future<String> createManual({
-    required ResourceType type,
-    required String name,
-    required String summary,
-    required ResourceLibraryMode mode,
-  }) async =>
-      'legacy-created';
-}
-
-ResourceLibraryItem _legacyItem(String id, {String type = 'character'}) =>
-    ResourceLibraryItem(
+ResourceLibraryItem _item(String id) => ResourceLibraryItem(
       id: id,
-      type: type == 'worldview'
-          ? ResourceType.worldview
-          : type == 'npc'
-              ? ResourceType.npc
-              : ResourceType.character,
+      type: ResourceType.character,
       name: '旧 $id',
       summary: '',
       updatedAt: '2025-01-01T00:00:00.000',
@@ -71,20 +34,18 @@ void main() {
     );
   });
 
-  test('cards replace their migrated legacy row in the list', () async {
+  test('migrated card is visible in the library', () async {
     repository.cards['res_legacy_character_cards_c1'] = const SettingCard(
       id: 'res_legacy_character_cards_c1',
       kind: SettingCardKind.character,
       name: '迁移角色',
       content: '正文',
       legacyId: 'c1',
+      mode: 'adventure',
       updatedAt: '2026-01-01T00:00:00.000',
       createdAt: '2026-01-01T00:00:00.000',
     );
-    final runtime = SettingCardLibraryRuntime(
-      service: service,
-      fallback: _FakeFallback(<ResourceLibraryItem>[_legacyItem('c1')]),
-    );
+    final runtime = SettingCardLibraryRuntime(service: service);
 
     final items = await runtime.load(ResourceLibraryMode.adventure);
 
@@ -93,17 +54,12 @@ void main() {
     expect(items.single.isSettingCard, isTrue);
   });
 
-  test('legacy rows without a card stay visible during the transition',
-      () async {
-    final runtime = SettingCardLibraryRuntime(
-      service: service,
-      fallback: _FakeFallback(<ResourceLibraryItem>[_legacyItem('old-1')]),
-    );
+  test('an empty card store yields an empty library', () async {
+    final runtime = SettingCardLibraryRuntime(service: service);
 
     final items = await runtime.load(ResourceLibraryMode.adventure);
 
-    expect(items.map((item) => item.id), <String>['old-1']);
-    expect(items.single.isSettingCard, isFalse);
+    expect(items, isEmpty);
   });
 
   test('card items project the card fields and never claim Studio support',
@@ -119,10 +75,7 @@ void main() {
       updatedAt: '2026-02-01T00:00:00.000',
       createdAt: '2026-01-01T00:00:00.000',
     );
-    final runtime = SettingCardLibraryRuntime(
-      service: service,
-      fallback: _FakeFallback(const <ResourceLibraryItem>[]),
-    );
+    final runtime = SettingCardLibraryRuntime(service: service);
 
     final items = await runtime.load(ResourceLibraryMode.adventure);
 
@@ -142,61 +95,46 @@ void main() {
       updatedAt: '2026-01-01T00:00:00.000',
       createdAt: '2026-01-01T00:00:00.000',
     );
-    final runtime = SettingCardLibraryRuntime(
-      service: service,
-      fallback: _FakeFallback(const <ResourceLibraryItem>[]),
-    );
+    final runtime = SettingCardLibraryRuntime(service: service);
 
     final items = await runtime.load(ResourceLibraryMode.conversation);
 
     expect(items, isEmpty);
   });
 
-  test('moveToTrash soft deletes a card without touching the fallback',
-      () async {
+  test('moveToTrash soft deletes a card', () async {
     repository.cards['card-1'] = const SettingCard(
       id: 'card-1',
       kind: SettingCardKind.character,
       name: '林恩',
+      mode: 'adventure',
       updatedAt: '2026-01-01T00:00:00.000',
       createdAt: '2026-01-01T00:00:00.000',
     );
-    final fallback = _FakeFallback(const <ResourceLibraryItem>[]);
-    final runtime = SettingCardLibraryRuntime(
-      service: service,
-      fallback: fallback,
-    );
+    final runtime = SettingCardLibraryRuntime(service: service);
 
     final result = await runtime.moveToTrash(
-      item: _legacyItem('card-1'),
+      item: _item('card-1'),
       mode: ResourceLibraryMode.adventure,
     );
 
     expect(result.success, isTrue);
-    expect(fallback.trashCalls, 0);
     expect(repository.cards['card-1']!.isDeleted, isTrue);
   });
 
-  test('moveToTrash delegates when the item is not a card', () async {
-    final fallback = _FakeFallback(<ResourceLibraryItem>[_legacyItem('old-1')]);
-    final runtime = SettingCardLibraryRuntime(
-      service: service,
-      fallback: fallback,
-    );
+  test('moveToTrash fails for an unknown id', () async {
+    final runtime = SettingCardLibraryRuntime(service: service);
 
-    await runtime.moveToTrash(
-      item: _legacyItem('old-1'),
+    final result = await runtime.moveToTrash(
+      item: _item('missing'),
       mode: ResourceLibraryMode.adventure,
     );
 
-    expect(fallback.trashCalls, 1);
+    expect(result.success, isFalse);
   });
 
   test('createManual writes a card with the current mode', () async {
-    final runtime = SettingCardLibraryRuntime(
-      service: service,
-      fallback: _FakeFallback(const <ResourceLibraryItem>[]),
-    );
+    final runtime = SettingCardLibraryRuntime(service: service);
 
     final id = await runtime.createManual(
       type: ResourceType.npc,

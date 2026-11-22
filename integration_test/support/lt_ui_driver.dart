@@ -144,6 +144,17 @@ class LtUiDriver {
 
   Future<void> chooseAiCreate() => tapKey(LtUiKeys.createChoiceAi);
 
+  // ── Setting card create / detail ────────────────────────────────────
+
+  Future<void> enterSettingCardName(String name) =>
+      enterTextKey(LtUiKeys.settingCardCreateName, name);
+
+  Future<void> createSettingCardManually() =>
+      tapKey(LtUiKeys.settingCardCreateManual);
+
+  Future<void> waitForSettingCardDetail() =>
+      waitForKey(LtUiKeys.settingCardDetailName);
+
   Future<void> openResourceDetail(String resourceId) =>
       tapKey(LtUiKeys.libraryDetail(resourceId));
 

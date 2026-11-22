@@ -1,48 +1,45 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../domain/resources/resource_contracts.dart';
 import '../models/character_card.dart';
 import '../models/resource_library_mode.dart';
 import '../services/database_service.dart';
 import '../models/adventure_config.dart';
 import '../utils/content_hasher.dart';
-import '../application/resources/resource_creation_port.dart';
-import '../application/resources/resource_creation_pipeline.dart';
+import '../application/setting_cards/setting_card_service.dart';
+import '../domain/setting_cards/setting_card.dart';
 import '../services/repositories/library_repository.dart';
+import '../services/repositories/setting_card_repository_impl.dart';
 import '../services/resource_integrity_validator.dart';
 
 class CharacterManager {
   final VoidCallback notifyParent;
   final ILibraryRepository _libraryRepo;
 
-  /// Unified creation pipeline adapter: saves go to the content tree.
-  final ResourceCreationPort? _creationPort;
+  /// Mirrors every legacy save/delete into the lightweight card the library
+  /// reads. Lazily built when the composition root does not inject one.
+  LegacyCardMirror? _mirrorOverride;
+
+  LegacyCardMirror get _mirror => _mirrorOverride ??= LegacyCardMirror(
+        repository: SettingCardRepositoryImpl(
+          getDb: () => DatabaseService.database,
+        ),
+      );
 
   List<CharacterCard> _savedCharacterCards = [];
 
   List<CharacterCard> get savedCharacterCards => _savedCharacterCards;
 
-  /// The injected creation port used by this manager's persistence operations.
-  ResourceCreationPort get creationPort => _requireCreationPort();
-
-  ResourceCreationPort _requireCreationPort() {
-    final port = _creationPort;
-    if (port == null) {
-      throw StateError(
-          'ResourceCreationPort must be injected for resource saves');
-    }
-    return port;
-  }
-
   CharacterManager({
     required this.notifyParent,
     required ILibraryRepository libraryRepo,
-    ResourceCreationPipeline? creationPipeline,
+    // Retained only for composition-root compatibility; Phase 5c no longer
+    // routes character saves through the creation pipeline.
+    // ignore: avoid_unused_constructor_parameters
+    Object? creationPipeline,
+    LegacyCardMirror? cardMirror,
   })  : _libraryRepo = libraryRepo,
-        _creationPort = creationPipeline == null
-            ? null
-            : ResourceCreationPort(creationPipeline);
+        _mirrorOverride = cardMirror;
 
   Future<String> importCharacterCardJson(String jsonStr) async {
     final card = CharacterCard.parseFromJson(jsonStr, importSource: 'JSON导入');
@@ -55,14 +52,22 @@ class CharacterManager {
       return '导入失败：$error';
     }
     try {
-      await _requireCreationPort().saveCard(
-        type: ResourceType.character,
-        id: _cardId(card),
+      final id = _cardId(card);
+      await _libraryRepo.saveCharacterCard(
+        id: id,
         name: card.name,
         jsonData: jsonData,
         source: card.importSource,
+        now: DateTime.now().toIso8601String(),
+        mode: ResourceLibraryMode.adventure,
+      );
+      await _mirror.upsertLegacyMirror(
+        kind: SettingCardKind.character,
+        legacyId: id,
+        name: card.name,
+        summary: LegacyCardMirror.cardSummary(jsonData),
+        content: LegacyCardMirror.cardContent(jsonData),
         mode: ResourceLibraryMode.adventure.storageValue,
-        origin: 'character-manager.import',
       );
     } catch (e) {
       debugPrint('[CharacterManager] importCharacterCardJson 保存失败: $e');
@@ -118,14 +123,22 @@ class CharacterManager {
         return;
       }
     } catch (_) {/* DB unavailable — skip dedup */}
-    await _requireCreationPort().saveCard(
-      type: ResourceType.character,
-      id: _cardId(card),
+    final id = _cardId(card);
+    await _libraryRepo.saveCharacterCard(
+      id: id,
       name: card.name,
       jsonData: jsonData,
       source: card.importSource,
+      now: DateTime.now().toIso8601String(),
+      mode: ResourceLibraryMode.adventure,
+    );
+    await _mirror.upsertLegacyMirror(
+      kind: SettingCardKind.character,
+      legacyId: id,
+      name: card.name,
+      summary: LegacyCardMirror.cardSummary(jsonData),
+      content: LegacyCardMirror.cardContent(jsonData),
       mode: ResourceLibraryMode.adventure.storageValue,
-      origin: 'character-manager.save',
     );
     _savedCharacterCards
         .removeWhere((c) => c.name == card.name && c.creator == card.creator);
@@ -142,6 +155,10 @@ class CharacterManager {
   Future<void> deleteCharacterCardById(String id) async {
     if (id.isEmpty) return;
     await _libraryRepo.deleteCharacterCard(id);
+    await _mirror.softDeleteLegacyMirror(
+      kind: SettingCardKind.character,
+      legacyId: id,
+    );
     _savedCharacterCards.removeWhere((c) => c.dbId == id);
     notifyParent();
   }
@@ -155,14 +172,23 @@ class CharacterManager {
       for (final e in list) {
         final card = CharacterCard.fromJson(e as Map<String, dynamic>);
         try {
-          await _requireCreationPort().saveCard(
-            type: ResourceType.character,
-            id: _cardId(card),
+          final id = _cardId(card);
+          final jsonData = jsonEncode(card.toJson());
+          await _libraryRepo.saveCharacterCard(
+            id: id,
             name: card.name,
-            jsonData: jsonEncode(card.toJson()),
+            jsonData: jsonData,
             source: card.importSource,
+            now: DateTime.now().toIso8601String(),
+            mode: ResourceLibraryMode.adventure,
+          );
+          await _mirror.upsertLegacyMirror(
+            kind: SettingCardKind.character,
+            legacyId: id,
+            name: card.name,
+            summary: LegacyCardMirror.cardSummary(jsonData),
+            content: LegacyCardMirror.cardContent(jsonData),
             mode: ResourceLibraryMode.adventure.storageValue,
-            origin: 'character-manager.prefs-migration',
           );
         } catch (e) {
           debugPrint(

@@ -7,7 +7,7 @@ import '../../../../../../core/widgets/app_svg_icon.dart';
 import '../../../../../../l10n/generated/app_localizations.dart';
 
 /// Step 2 AI character assistant card: prompt, related-character association,
-/// generation mode and the two generation entry points.
+/// generation mode and the generation entry point.
 ///
 /// The wizard owns every piece of state; this panel receives it as plain props
 /// and reports intent through callbacks.
@@ -28,7 +28,6 @@ class WizardCharacterAiPanel extends StatelessWidget {
     required this.relationType,
     required this.customRelationController,
     required this.onGenerate,
-    required this.onOpenCreator,
     required this.onRetry,
     required this.onDismissError,
     required this.onDetailedChanged,
@@ -53,7 +52,6 @@ class WizardCharacterAiPanel extends StatelessWidget {
   final String relationType;
   final TextEditingController customRelationController;
   final VoidCallback onGenerate;
-  final VoidCallback onOpenCreator;
   final VoidCallback onRetry;
   final VoidCallback onDismissError;
   final ValueChanged<bool> onDetailedChanged;
@@ -283,12 +281,6 @@ class WizardCharacterAiPanel extends StatelessWidget {
                     ? l10n.wizardAddCharacterToRosterAction
                     : l10n.wizardGenerateMainCharacterAction),
           ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        OutlinedButton.icon(
-          onPressed: isGenerating ? null : onOpenCreator,
-          icon: const AppSvgIcon('book', size: 16),
-          label: Text(l10n.characterAiAssistantCreateTitle),
         ),
       ],
     );

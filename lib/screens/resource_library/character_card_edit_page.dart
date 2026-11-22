@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import '../../core/widgets/app_svg_icon.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
-import '../../application/resources/resource_creation_contracts.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../core/localization/app_error_localizer.dart';
-import '../../core/config/generation_limits.dart';
-import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/custom_attribute_editor_section.dart';
 import '../../core/widgets/tracked_state_definition_editor_section.dart';
@@ -18,8 +15,6 @@ import '../../models/custom_attribute_item.dart';
 import '../../models/tracked_state_definition.dart';
 import '../../models/resource_library_mode.dart';
 import '../../providers/riverpod_providers.dart';
-import '../../domain/resources/resource_contracts.dart';
-import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
 import '../../core/widgets/app_dialogs.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
@@ -94,9 +89,6 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   late final tabooCtrl = TextEditingController();
   late final relationshipCtrl = TextEditingController();
   late final customGenderCtrl = TextEditingController();
-  late final aiPromptCtrl = TextEditingController();
-
-  bool _openingAiStudio = false;
 
   /// Manual-save phase shown by the toolbar Save action.
   WorkbenchSavePhase _savePhase = WorkbenchSavePhase.idle;
@@ -105,20 +97,12 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
   /// and a second tap cannot issue a second write.
   bool _saving = false;
 
-  bool isDetailedMode = true;
-  int _targetTotalCharacters =
-      GenerationLimits.detailedCharacterDefaultCharacters;
   late String gender;
   late bool isCustomGender;
   late List<CustomAttributeItem> customAttributes;
   late List<TrackedStateDefinition> trackedStateDefinitions;
   late List<Map<String, dynamic>> worldviewList;
   late String matchingWorldviewId;
-
-  List<Map<String, dynamic>> _existingCharacterCards = [];
-  final Set<String> _aiSelectedAssociatedIds = {};
-  String _aiRelationType = '同伴';
-  late final TextEditingController _aiCustomRelationCtrl;
 
   @override
   void initState() {
@@ -146,7 +130,6 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     tabooCtrl.text = draft.taboosText;
     relationshipCtrl.text = draft.relationshipNotes;
     customGenderCtrl.text = draft.customGender;
-    _aiCustomRelationCtrl = TextEditingController();
 
     gender = draft.gender;
     isCustomGender = draft.isCustomGender;
@@ -175,14 +158,6 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
             });
           }
         }
-        final cards = await crud.loadCharacterCards(mode: widget.mode);
-        if (mounted) {
-          setState(() {
-            _existingCharacterCards = cards
-                .where((c) => c['id']?.toString() != widget.existingId)
-                .toList();
-          });
-        }
       } catch (_) {}
     });
   }
@@ -205,8 +180,6 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     tabooCtrl.dispose();
     relationshipCtrl.dispose();
     customGenderCtrl.dispose();
-    aiPromptCtrl.dispose();
-    _aiCustomRelationCtrl.dispose();
     super.dispose();
   }
 
@@ -348,88 +321,6 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
     }
   }
 
-  Future<void> _openManagedAiStudio() async {
-    if (_openingAiStudio) return;
-    final chat =
-        ProviderScope.containerOf(context, listen: false).read(chatProvider);
-    if (!chat.isKeyConfigured) {
-      showApiSettings(context);
-      return;
-    }
-
-    if (isEdit && !await _persistCard(closeOnSuccess: false)) {
-      return;
-    }
-    if (!mounted) return;
-    final existingResourceId = widget.existingId ?? draft.id;
-
-    final matchedWorldview = worldviewList
-        .where((worldview) => worldview['id'] == matchingWorldviewId)
-        .firstOrNull;
-    final worldviewDescription =
-        matchedWorldview?['description']?.toString().trim().isNotEmpty == true
-            ? matchedWorldview!['description'].toString().trim()
-            : widget.activeWorldviewDescription?.trim() ?? '';
-    final selectedNames = _existingCharacterCards
-        .where(
-          (card) => _aiSelectedAssociatedIds.contains(card['id']?.toString()),
-        )
-        .map((card) => card['name']?.toString().trim() ?? '')
-        .where((name) => name.isNotEmpty)
-        .toList(growable: false);
-    final relation = _aiRelationType == '自定义'
-        ? _aiCustomRelationCtrl.text.trim()
-        : _aiRelationType;
-    final request = aiPromptCtrl.text.trim().isEmpty
-        ? '请设计一个富有特色与戏剧魅力的角色卡设定。'
-        : aiPromptCtrl.text.trim();
-    final currentName = nameCtrl.text.trim();
-    final referenceLines = <String>[
-      request,
-      if (worldviewDescription.isNotEmpty) '世界观参考：$worldviewDescription',
-      if (selectedNames.isNotEmpty)
-        '关联角色：${selectedNames.join('、')}；关系：${relation.isEmpty ? '同伴' : relation}',
-      if (currentName.isNotEmpty) '当前姓名：$currentName',
-      if (ageCtrl.text.trim().isNotEmpty) '当前年龄：${ageCtrl.text.trim()}',
-      if (profCtrl.text.trim().isNotEmpty) '当前身份：${profCtrl.text.trim()}',
-      if (persCtrl.text.trim().isNotEmpty) '当前性格：${persCtrl.text.trim()}',
-      if (bgCtrl.text.trim().isNotEmpty) '当前背景：${bgCtrl.text.trim()}',
-      if (appearCtrl.text.trim().isNotEmpty) '当前外貌：${appearCtrl.text.trim()}',
-    ];
-    final targetCharacters = isDetailedMode
-        ? _targetTotalCharacters
-        : GenerationLimits.detailedCharacterMinimumCharacters;
-
-    final l10n = _l10n(context);
-    setState(() => _openingAiStudio = true);
-    try {
-      await AppRouter.push<void>(
-        context,
-        pageBuilder: (_) => ResourceStudioPage(
-          creationDraft: ResourceStudioCreationDraft(
-            type: ResourceType.character,
-            name: currentName.isEmpty ? l10n.characterCardUnnamed : currentName,
-            referenceSource: ReferenceSource.text(
-              referenceLines.join('\n'),
-              label: '角色卡编辑器创建参考',
-            ),
-            targetCharacters: targetCharacters,
-            origin: isEdit
-                ? 'character-editor-regeneration'
-                : 'character-editor-create',
-            libraryMode: widget.mode.storageValue,
-            targetResourceId: isEdit && existingResourceId != null
-                ? ResourceId(existingResourceId)
-                : null,
-          ),
-        ),
-      );
-      if (mounted && isEdit) Navigator.pop(context);
-    } finally {
-      if (mounted) setState(() => _openingAiStudio = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = _l10n(context);
@@ -486,316 +377,6 @@ class _CharacterCardEditPageState extends State<CharacterCardEditPage> {
                   setState(() => matchingWorldviewId = v ?? '');
                   _markDirty();
                 },
-              ),
-              const SizedBox(height: 10),
-              // AI 辅助编写角色卡
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer
-                      .withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.28),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        AppSvgIcon(
-                          'generation',
-                          size: 16,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          l10n.characterCardAiAssistedCreation,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                        const Spacer(),
-                        InkWell(
-                          onTap: _openingAiStudio
-                              ? null
-                              : () => setState(
-                                  () => isDetailedMode = !isDetailedMode),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: isDetailedMode
-                                  ? Theme.of(context)
-                                      .colorScheme
-                                      .primary
-                                      .withValues(alpha: 0.15)
-                                  : Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isDetailedMode
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withValues(alpha: 0.5)
-                                    : Colors.transparent,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AppSvgIcon(
-                                  isDetailedMode ? 'book' : 'bolt',
-                                  size: 12,
-                                  color: isDetailedMode
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  isDetailedMode
-                                      ? l10n.detailedMode
-                                      : l10n.conciseMode,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDetailedMode
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (isDetailedMode) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.characterCardTargetValidChars(
-                            _targetTotalCharacters,
-                            GenerationLimits
-                                .detailedCharacterMaximumCharacters),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      Slider(
-                        value: _targetTotalCharacters.toDouble(),
-                        min: GenerationLimits.detailedCharacterMinimumCharacters
-                            .toDouble(),
-                        max: GenerationLimits.detailedCharacterMaximumCharacters
-                            .toDouble(),
-                        divisions:
-                            GenerationLimits.detailedCharacterTargetDivisions,
-                        label: '$_targetTotalCharacters',
-                        onChanged: _openingAiStudio
-                            ? null
-                            : (value) => setState(
-                                  () => _targetTotalCharacters = value.round(),
-                                ),
-                      ),
-                      Text(
-                        l10n.characterCardSavedInStudioTip,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                    if (_existingCharacterCards.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      AppMultiSelectDropdown<String>(
-                        values: _aiSelectedAssociatedIds,
-                        label: l10n.characterCardRelateCharacterOptional,
-                        hintText: l10n.characterCardRelateCharacterHint,
-                        emptyText: l10n.characterCardNoOtherCharacters,
-                        triggerHeight: 38,
-                        triggerPadding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        direction: AppDropdownDirection.down,
-                        selectedBuilder: (values) => values.isEmpty
-                            ? l10n.characterCardIndependentRole
-                            : l10n.characterCardRelatedCount(values.length),
-                        options: _existingCharacterCards.map((card) {
-                          return AppDropdownOption(
-                            value: card['id']?.toString() ?? '',
-                            label: card['name']?.toString() ??
-                                l10n.characterCardUnnamed,
-                          );
-                        }).toList(),
-                        onChanged: _openingAiStudio
-                            ? null
-                            : (values) => setState(() {
-                                  _aiSelectedAssociatedIds
-                                    ..clear()
-                                    ..addAll(values);
-                                }),
-                      ),
-                      if (_aiSelectedAssociatedIds.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Text(
-                              l10n.characterCardBondRelation,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            AppDropdown<String>.compact(
-                              value: _aiRelationType,
-                              direction: AppDropdownDirection.down,
-                              options: [
-                                AppDropdownOption(
-                                    value: '同伴', label: l10n.relationCompanion),
-                                AppDropdownOption(
-                                    value: '青梅竹马',
-                                    label: l10n.relationChildhoodFriend),
-                                AppDropdownOption(
-                                    value: '恋人', label: l10n.relationLover),
-                                AppDropdownOption(
-                                    value: '师徒', label: l10n.relationMentor),
-                                AppDropdownOption(
-                                    value: '宿敌', label: l10n.relationRival),
-                                AppDropdownOption(
-                                    value: '亲人', label: l10n.relationKin),
-                                AppDropdownOption(
-                                    value: '救命恩人',
-                                    label: l10n.relationBenefactor),
-                                AppDropdownOption(
-                                    value: '雇佣关系',
-                                    label: l10n.relationEmployment),
-                                AppDropdownOption(
-                                    value: '自定义', label: l10n.relationCustom),
-                              ],
-                              onChanged: _openingAiStudio
-                                  ? null
-                                  : (val) {
-                                      if (val != null) {
-                                        setState(() => _aiRelationType = val);
-                                      }
-                                    },
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    ('同伴', l10n.relationCompanion),
-                                    ('青梅竹马', l10n.relationChildhoodFriend),
-                                    ('恋人', l10n.relationLover),
-                                    ('师徒', l10n.relationMentor),
-                                    ('宿敌', l10n.relationRival),
-                                  ].map((preset) {
-                                    final isSel = _aiRelationType == preset.$1;
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 4),
-                                      child: ChoiceChip(
-                                        label: Text(preset.$2,
-                                            style:
-                                                const TextStyle(fontSize: 11)),
-                                        selected: isSel,
-                                        visualDensity: VisualDensity.compact,
-                                        materialTapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                        onSelected: _openingAiStudio
-                                            ? null
-                                            : (selected) {
-                                                if (selected) {
-                                                  setState(() =>
-                                                      _aiRelationType =
-                                                          preset.$1);
-                                                }
-                                              },
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (_aiRelationType == '自定义') ...[
-                          const SizedBox(height: 6),
-                          SizedBox(
-                            height: 34,
-                            child: TextField(
-                              controller: _aiCustomRelationCtrl,
-                              enabled: !_openingAiStudio,
-                              style: const TextStyle(fontSize: 12),
-                              decoration: InputDecoration(
-                                labelText: l10n.relationCustomDescLabel,
-                                hintText: l10n.relationCustomDescHint,
-                                border: const OutlineInputBorder(),
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: aiPromptCtrl,
-                            enabled: !_openingAiStudio,
-                            decoration: InputDecoration(
-                              hintText: l10n.characterCardCoreKeywordHint,
-                              border: const OutlineInputBorder(),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
-                              ),
-                            ),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton.icon(
-                          onPressed:
-                              _openingAiStudio ? null : _openManagedAiStudio,
-                          icon: _openingAiStudio
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const AppSvgIcon('generation', size: 16),
-                          label: Text(
-                            _openingAiStudio
-                                ? l10n.opening
-                                : (isEdit ? l10n.aiRegenerate : l10n.aiFillIn),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(height: 10),
               TextField(

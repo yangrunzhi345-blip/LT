@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 
 import '../application/resource_library/edit_drafts.dart';
 import '../application/resources/authorized_generation_budget.dart';
-import '../application/resources/resource_creation_port.dart';
-import '../application/resources/resource_creation_pipeline.dart';
+import '../application/setting_cards/setting_card_service.dart';
+import '../domain/setting_cards/setting_card.dart';
 import '../services/repositories/library_repository.dart';
 import '../models/conversation_character_card.dart';
 import '../domain/resources/resource_contracts.dart';
@@ -73,8 +73,9 @@ class ResourceCrudController extends ChangeNotifier {
   final ILibraryRepository _repository;
   final FutureOr<void> Function()? _onLibraryChanged;
 
-  /// Every save below goes through the unified creation pipeline.
-  final ResourceCreationPort? _creationPort;
+  /// Mirrors each legacy save/delete into the lightweight card the library
+  /// now reads. Null in tests that only exercise legacy persistence.
+  final LegacyCardMirror? _mirror;
 
   /// Resolves a resource's authorized AI generation ceiling so re-editing an
   /// AI-generated resource validates against its frozen budget instead of the
@@ -97,14 +98,17 @@ class ResourceCrudController extends ChangeNotifier {
   ResourceCrudController({
     required ILibraryRepository repository,
     FutureOr<void> Function()? onLibraryChanged,
-    ResourceCreationPipeline? creationPipeline,
+    // Retained only so composition roots/tests that still pass the retired
+    // creation pipeline keep compiling. Phase 5c writes the legacy row and the
+    // card mirror directly, so the pipeline is never used.
+    // ignore: avoid_unused_constructor_parameters
+    Object? creationPipeline,
     IAuthorizedGenerationBudgetReader? authorizedBudget,
+    LegacyCardMirror? cardMirror,
   })  : _repository = repository,
         _onLibraryChanged = onLibraryChanged,
-        _creationPort = creationPipeline == null
-            ? null
-            : ResourceCreationPort(creationPipeline),
-        _authorizedBudget = authorizedBudget;
+        _authorizedBudget = authorizedBudget,
+        _mirror = cardMirror;
 
   bool _disposed = false;
 
@@ -155,24 +159,16 @@ class ResourceCrudController extends ChangeNotifier {
     return run;
   }
 
-  /// Port to the creation pipeline for resource saves and planning sessions.
-  ResourceCreationPort get creationPort => _requireCreationPort();
-
-  ResourceCreationPort _requireCreationPort() {
-    final port = _creationPort;
-    if (port == null) {
-      throw StateError(
-          'ResourceCreationPort must be injected for resource saves');
-    }
-    return port;
-  }
-
   /// 删除世界观预设。
   Future<ResourceOperationResult> deleteWorldviewPreset(String id,
           {ResourceLibraryMode mode = ResourceLibraryMode.adventure}) =>
       _runMutation(() async {
         try {
           await _repository.deleteWorldviewPreset(id, mode: mode);
+          await _mirror?.softDeleteLegacyMirror(
+            kind: SettingCardKind.worldview,
+            legacyId: id,
+          );
           await _onLibraryChanged?.call();
           return const ResourceOperationResult.success(
             notice: ResourceOperationNotice.movedToTrash,
@@ -192,6 +188,10 @@ class ResourceCrudController extends ChangeNotifier {
       _runMutation(() async {
         try {
           await _repository.deleteCharacterCard(id, mode: mode);
+          await _mirror?.softDeleteLegacyMirror(
+            kind: SettingCardKind.character,
+            legacyId: id,
+          );
           await _onLibraryChanged?.call();
           return const ResourceOperationResult.success(
             notice: ResourceOperationNotice.movedToTrash,
@@ -211,6 +211,10 @@ class ResourceCrudController extends ChangeNotifier {
       _runMutation(() async {
         try {
           await _repository.deleteNpcCard(id, mode: mode);
+          await _mirror?.softDeleteLegacyMirror(
+            kind: SettingCardKind.npc,
+            legacyId: id,
+          );
           await _onLibraryChanged?.call();
           return const ResourceOperationResult.success(
             notice: ResourceOperationNotice.movedToTrash,
@@ -266,24 +270,32 @@ class ResourceCrudController extends ChangeNotifier {
                   await _authorizedWidenedCeiling(id, ResourceType.worldview),
             );
           }
-          final creation = await _requireCreationPort().saveWorldview(
+          await _repository.saveWorldviewPreset(
             id: id,
             name: name,
             description: description,
-            detailJson: detailJson,
             entriesJson: entriesJson,
-            mode: mode.storageValue,
+            now: now,
+            source: source,
+            contentHash: contentHash,
+            detailJson: detailJson,
             authoringMethod: authoringMethod,
             aiGenerationDepth: aiGenerationDepth,
-            source: source,
-            matchingWorldviewId: matchingWorldviewId,
-            origin: 'resource-crud.worldview',
+            mode: mode,
+          );
+          await _mirror?.upsertLegacyMirror(
+            kind: SettingCardKind.worldview,
+            legacyId: id,
+            name: name,
+            summary: description,
+            content: LegacyCardMirror.worldviewContent(
+              description: description,
+              detailJson: detailJson,
+            ),
+            mode: mode.storageValue,
           );
           await _onLibraryChanged?.call();
-          return ResourceOperationResult.success(
-            resourceId: creation.resourceId,
-            sessionId: creation.sessionId,
-          );
+          return ResourceOperationResult.success(resourceId: ResourceId(id));
         } catch (e) {
           _error = null;
           return ResourceOperationResult.failure(
@@ -315,25 +327,29 @@ class ResourceCrudController extends ChangeNotifier {
             effectiveCeiling:
                 await _authorizedWidenedCeiling(id, ResourceType.character),
           );
-          final creation = await _requireCreationPort().saveCard(
-            type: ResourceType.character,
+          await _repository.saveCharacterCard(
             id: id,
             name: name,
             jsonData: jsonData,
             source: source,
-            mode: mode.storageValue,
+            now: now,
+            matchingWorldviewId: matchingWorldviewId,
+            weight: weight,
+            contentHash: contentHash,
             authoringMethod: authoringMethod,
             aiGenerationDepth: aiGenerationDepth,
-            extraMetadata: weight.isEmpty
-                ? const <String, Object?>{}
-                : <String, Object?>{'weight': weight},
-            origin: 'resource-crud.character',
+            mode: mode,
+          );
+          await _mirror?.upsertLegacyMirror(
+            kind: SettingCardKind.character,
+            legacyId: id,
+            name: name,
+            summary: LegacyCardMirror.cardSummary(jsonData),
+            content: LegacyCardMirror.cardContent(jsonData),
+            mode: mode.storageValue,
           );
           await _onLibraryChanged?.call();
-          return ResourceOperationResult.success(
-            resourceId: creation.resourceId,
-            sessionId: creation.sessionId,
-          );
+          return ResourceOperationResult.success(resourceId: ResourceId(id));
         } catch (e) {
           _error = null;
           return ResourceOperationResult.failure(
@@ -387,14 +403,26 @@ class ResourceCrudController extends ChangeNotifier {
       mode: ResourceLibraryMode.conversation,
     );
     if (cards.isEmpty) {
-      await _requireCreationPort().saveCard(
-        type: ResourceType.character,
+      final now = DateTime.now().toIso8601String();
+      await _repository.saveCharacterCard(
         id: ConversationCharacterCardDefaults.id,
         name: ConversationCharacterCardDefaults.name,
         jsonData: ConversationCharacterCardDefaults.jsonData,
         source: '系统预设',
+        now: now,
+        mode: ResourceLibraryMode.conversation,
+      );
+      await _mirror?.upsertLegacyMirror(
+        kind: SettingCardKind.character,
+        legacyId: ConversationCharacterCardDefaults.id,
+        name: ConversationCharacterCardDefaults.name,
+        summary: LegacyCardMirror.cardSummary(
+          ConversationCharacterCardDefaults.jsonData,
+        ),
+        content: LegacyCardMirror.cardContent(
+          ConversationCharacterCardDefaults.jsonData,
+        ),
         mode: ResourceLibraryMode.conversation.storageValue,
-        origin: 'resource-crud.conversation-default',
       );
       cards = await _repository.getCharacterCards(
         mode: ResourceLibraryMode.conversation,
@@ -448,18 +476,31 @@ class ResourceCrudController extends ChangeNotifier {
           final assignedId =
               draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
           draft.id = assignedId;
-          await _requireCreationPort().saveWorldview(
+          final detailJson = details.encode();
+          await _repository.saveWorldviewPreset(
             id: assignedId,
             name: draft.name,
             description: draft.description,
-            detailJson: details.encode(),
             entriesJson: draft.entriesJson,
-            mode: mode.storageValue,
+            now: DateTime.now().toIso8601String(),
             source: draft.source,
-            origin: 'resource-crud.worldview-draft',
+            detailJson: detailJson,
+            mode: mode,
+          );
+          await _mirror?.upsertLegacyMirror(
+            kind: SettingCardKind.worldview,
+            legacyId: assignedId,
+            name: draft.name,
+            summary: draft.description,
+            content: LegacyCardMirror.worldviewContent(
+              description: draft.description,
+              detailJson: detailJson,
+            ),
+            mode: mode.storageValue,
           );
           await _onLibraryChanged?.call();
-          return const ResourceOperationResult.success();
+          return ResourceOperationResult.success(
+              resourceId: ResourceId(assignedId));
         } catch (e) {
           _error = null;
           return ResourceOperationResult.failure(
@@ -483,18 +524,28 @@ class ResourceCrudController extends ChangeNotifier {
             effectiveCeiling:
                 await _authorizedWidenedCeiling(draft.id, ResourceType.npc),
           );
-          await _requireCreationPort().saveCard(
-            type: ResourceType.npc,
-            id: draft.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          final assignedId =
+              draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+          await _repository.saveNpcCard(
+            id: assignedId,
             name: draft.name,
             jsonData: jsonData,
             source: draft.source,
+            now: DateTime.now().toIso8601String(),
             matchingWorldviewId: draft.worldviewId,
+            mode: mode,
+          );
+          await _mirror?.upsertLegacyMirror(
+            kind: SettingCardKind.npc,
+            legacyId: assignedId,
+            name: draft.name,
+            summary: LegacyCardMirror.cardSummary(jsonData),
+            content: LegacyCardMirror.cardContent(jsonData),
             mode: mode.storageValue,
-            origin: 'resource-crud.npc-draft',
           );
           await _onLibraryChanged?.call();
-          return const ResourceOperationResult.success();
+          return ResourceOperationResult.success(
+              resourceId: ResourceId(assignedId));
         } catch (e) {
           _error = null;
           return ResourceOperationResult.failure('',
@@ -519,18 +570,26 @@ class ResourceCrudController extends ChangeNotifier {
           final assignedId =
               draft.id ?? DateTime.now().millisecondsSinceEpoch.toString();
           draft.id = assignedId;
-          await _requireCreationPort().saveCard(
-            type: ResourceType.character,
+          await _repository.saveCharacterCard(
             id: assignedId,
             name: draft.name,
             jsonData: jsonData,
             source: draft.source,
+            now: DateTime.now().toIso8601String(),
             matchingWorldviewId: draft.worldviewId,
+            mode: mode,
+          );
+          await _mirror?.upsertLegacyMirror(
+            kind: SettingCardKind.character,
+            legacyId: assignedId,
+            name: draft.name,
+            summary: LegacyCardMirror.cardSummary(jsonData),
+            content: LegacyCardMirror.cardContent(jsonData),
             mode: mode.storageValue,
-            origin: 'resource-crud.character-draft',
           );
           await _onLibraryChanged?.call();
-          return const ResourceOperationResult.success();
+          return ResourceOperationResult.success(
+              resourceId: ResourceId(assignedId));
         } catch (e) {
           _error = null;
           return ResourceOperationResult.failure(

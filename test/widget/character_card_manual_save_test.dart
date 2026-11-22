@@ -143,9 +143,12 @@ void main() {
 
     final cards = await loadCards(tester);
     final saved = cards.firstWhere((card) => card['name'] == '测试角色甲');
-    final envelope =
+    final decoded =
         jsonDecode(saved['json_data'] as String) as Map<String, dynamic>;
-    final data = envelope['data'] as Map<String, dynamic>;
+    // Manual cards are stored flat; imported cards may carry a data envelope.
+    final data = decoded['data'] is Map
+        ? Map<String, dynamic>.from(decoded['data'] as Map)
+        : decoded;
     expect(data['personality'], '冷静');
     expect((data['world_profile'] as Map)['relationship_notes'], '与林恩是同伴');
     expect(saved['matching_worldview_id'], '');
@@ -181,9 +184,12 @@ void main() {
 
     final cards = await loadCards(tester);
     final saved = cards.firstWhere((card) => card['id'] == id);
-    final envelope =
+    final decoded =
         jsonDecode(saved['json_data'] as String) as Map<String, dynamic>;
-    final data = envelope['data'] as Map<String, dynamic>;
+    // Manual cards are stored flat; imported cards may carry a data envelope.
+    final data = decoded['data'] is Map
+        ? Map<String, dynamic>.from(decoded['data'] as Map)
+        : decoded;
     expect(data['personality'], '温和');
     expect((data['world_profile'] as Map)['relationship_notes'], '林恩的挚友',
         reason: 'the relationship field must survive a manual save');

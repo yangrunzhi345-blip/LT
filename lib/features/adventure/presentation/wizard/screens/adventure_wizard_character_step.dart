@@ -58,7 +58,6 @@ extension _WizardCharacterStep on _AdventureWizardScreenState {
             relationType: _aiRelationType,
             customRelationController: _aiCustomRelationCtrl,
             onGenerate: _generateCharacterWithAi,
-            onOpenCreator: _openAiCharacterCreator,
             onRetry: _generateCharacterWithAi,
             onDismissError: () => _rebuild(() => _aiCharacterError = null),
             onDetailedChanged: (detailed) =>

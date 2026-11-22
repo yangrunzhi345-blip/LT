@@ -259,7 +259,7 @@ void main() {
     );
 
     testWidgets(
-      'DashboardRecentSaves keeps main CTA and moves long-title story to recoverable trash',
+      'DashboardRecentSaves keeps main CTA and moves long-title story to the recycle bin',
       (tester) async {
         setViewport(tester, width: 320, height: 640);
 
@@ -333,18 +333,15 @@ void main() {
           expect(await db.query('adventures', where: 'id = ?', whereArgs: [id]),
               hasLength(1));
           expect(await repo.getMessages(id), hasLength(1));
+          // Phase 5c retired the recycle-bin restore runtime and its UI. The
+          // durable trash entry is what now keeps the story recoverable, so the
+          // delete path is asserted against it rather than a restore call.
           final marker =
               (await container.read(resourceTrashServiceProvider).list())
                   .single;
-          await container
-              .read(resourceTrashRuntimeProvider)
-              .restore(marker.trashId);
-          expect(await repo.getAdventureById(id), isNotNull);
-          expect((await repo.getMessages(id)).single.content, '保留的叙事正文');
-          expect(chat.adventureList.single['id'], id);
+          expect(marker.linkedSourceTable, 'adventures');
+          expect(marker.linkedSourceId, '$id');
         });
-        await tester.pump();
-        expect(find.text('继续探索'), findsOneWidget);
 
         expect(tester.takeException(), isNull);
       },

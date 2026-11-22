@@ -28,6 +28,13 @@ abstract final class LtUiKeys {
   static const Key createChoiceAi = Key('create-choice-ai');
   static const Key createChoiceManual = Key('create-choice-manual');
 
+  // ── Setting card create / detail ────────────────────────────────────
+  static const Key settingCardCreateName = Key('setting-card-create-name');
+  static const Key settingCardCreateManual = Key('setting-card-create-manual');
+
+  /// The card's name field, present once the detail page has loaded a card.
+  static const Key settingCardDetailName = Key('setting-card-name');
+
   // ── Worldview / character / NPC AI creation ─────────────────────────
   static const Key aiCreateTypeSelect = Key('ai-create-type-select');
   static const Key aiCreateNameField = Key('ai-create-name-field');

@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/narrative/narrative_context.dart';
-import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/engines/chat_engine_host.dart';
 import 'package:lt_dialogue/engines/chat_engine_internals/summary_service.dart';
 import 'package:lt_dialogue/models/completion_params.dart';
@@ -17,7 +16,7 @@ import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/llm_service.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
+import 'package:lt_dialogue/services/repositories/setting_card_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -255,17 +254,19 @@ void main() {
     expect(saved.success, isTrue, reason: saved.errorMessage);
     await pumpEventQueue();
 
-    // The assembler consumes the authoritative tree from the same DB the
-    // production pipeline wrote.
-    final tree = await ResourceTreeRepositoryImpl(
-      getDb: () => DatabaseService.database,
-    ).readTree(const ResourceId('wv_e3'));
-    expect(tree, isNotNull);
+    // The library reads the lightweight card the CRUD save mirrored.
+    final cards =
+        SettingCardRepositoryImpl(getDb: () => DatabaseService.database);
+    final card = await cards.findById('res_legacy_worldview_presets_wv_e3') ??
+        await cards.findLegacyId('wv_e3');
+    expect(card, isNotNull);
+    expect(card!.name, 'E3 世界观');
+    expect(card.content, contains('E3 描述文本'));
 
     final entries = [
       WorldEntry(
         id: 1,
-        content: '【世界观/世界规则】${tree!.resource.name} 的铁律。',
+        content: '【世界观/世界规则】${card.name} 的铁律。',
         keys: const ['白港'],
         sticky: 1,
         sourceType: 'worldview_snapshot',
@@ -296,10 +297,11 @@ void main() {
     final crud = container.read(resourceCrudControllerProvider);
 
     Future<String?> resourceBody(String id) async {
-      final tree = await ResourceTreeRepositoryImpl(
-        getDb: () => DatabaseService.database,
-      ).readTree(ResourceId(id));
-      return tree?.parts.map((p) => p.content).join('\n');
+      final cards =
+          SettingCardRepositoryImpl(getDb: () => DatabaseService.database);
+      final card = await cards.findById('res_legacy_worldview_presets_$id') ??
+          await cards.findLegacyId(id);
+      return card?.content;
     }
 
     final first = await crud.saveWorldviewPreset(

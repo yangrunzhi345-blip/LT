@@ -1,51 +1,29 @@
 import 'dart:io';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lt_dialogue/core/widgets/workbench_chrome.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:lt_dialogue/application/llm/llm_gateway.dart';
-import 'package:lt_dialogue/models/llm_task.dart';
-import 'package:lt_dialogue/services/llm_service.dart';
+import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/core/router/app_router.dart';
-import 'package:lt_dialogue/application/resources/assembly_readiness_repository.dart';
-import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
-import 'package:lt_dialogue/core/widgets/app_select.dart';
-import 'package:lt_dialogue/domain/resources/resource_limits.dart';
-import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_detail_page.dart';
-import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
-import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_manual_create_page.dart';
-import 'package:lt_dialogue/main.dart';
+import 'package:lt_dialogue/core/widgets/app_text_field.dart';
 import 'package:lt_dialogue/core/widgets/main_sidebar.dart';
-import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
-import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
+import 'package:lt_dialogue/core/widgets/workbench_chrome.dart';
+import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
+import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/setting_card_create_page.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/setting_card_detail_page.dart';
+import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
+import 'package:lt_dialogue/main.dart';
 import 'package:lt_dialogue/services/database_service.dart';
-import 'package:lt_dialogue/providers/riverpod_providers.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository_impl.dart';
-import 'package:lt_dialogue/services/repositories/resource_tree_repository.dart';
-import 'package:lt_dialogue/features/resource_studio/domain/models/section_control_view_state.dart';
-import 'package:lt_dialogue/features/resource_studio/presentation/widgets/resource_studio_section_controls.dart';
+import 'package:lt_dialogue/services/repositories/setting_card_repository_impl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:lt_dialogue/core/widgets/app_text_field.dart';
-import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
-import '../helpers/responsive_test_helper.dart';
-import '../helpers/legacy_library_runtime_override.dart';
 import '../helpers/localization_test_helper.dart';
-import '../helpers/studio_scroll_helper.dart';
-
-/// U6: a confirmed narrative contract requires the body to reach the dynamic
-/// minimum (340 for an 800-length plan), so the fake AI body is long enough.
-final String _aiPartBody = 'AI生成正文：山海之间的城市和居民。${'补充正文内容。' * 60}';
-
-Finder _fieldByLabel(String label) => find.descendant(
-      of: find.widgetWithText(AppTextField, label),
-      matching: find.byType(TextField),
-    );
+import '../helpers/responsive_test_helper.dart';
 
 /// Locates a workbench sidebar destination (the label also appears as a page
 /// title in the workspace, so the sidebar subtree is scoped explicitly).
@@ -54,9 +32,72 @@ Finder _sidebarLabel(String label) => find.descendant(
       matching: find.text(label),
     );
 
+/// The production card store, backed by the real SQLite database.
+SettingCardService _cardService() => SettingCardService(
+      repository: SettingCardRepositoryImpl(
+        getDb: () => DatabaseService.database,
+      ),
+    );
+
+Future<List<Map<String, Object?>>> _settingCardRows(WidgetTester tester) async {
+  final rows = await tester.runAsync(
+    () async => (await DatabaseService.database).query('setting_cards'),
+  );
+  return rows!;
+}
+
+Finder _filterTab(String label) => find.descendant(
+      of: find.byKey(const Key('resource-filter')),
+      matching: find.text(label),
+    );
+
+Future<void> _pumpLibraryRoute(
+  WidgetTester tester, {
+  Finder? waitFor,
+}) async {
+  await tester.pumpWidget(
+    const ProviderScope(
+      child: MaterialApp(
+        locale: Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        initialRoute: AppRouter.resourceLibraryPath,
+        onGenerateRoute: AppRouter.onGenerateRoute,
+      ),
+    ),
+  );
+  await _waitFor(tester, waitFor ?? find.text('还没有资源'));
+}
+
+/// Creates one card through the card creation page and waits for its detail.
+Future<void> _createCard(
+  WidgetTester tester, {
+  required String name,
+  String? type,
+}) async {
+  await tester.tap(find.byKey(const Key('resource-create-button')));
+  await tester.pumpAndSettle();
+  if (type != null) {
+    await tester.tap(find.byKey(const Key('setting-card-create-type')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.text(type),
+    ));
+    await tester.pumpAndSettle();
+  }
+  await tester.enterText(
+    find.byKey(const Key('setting-card-create-name')),
+    name,
+  );
+  final submit = find.byKey(const Key('setting-card-create-manual'));
+  await tester.ensureVisible(submit);
+  await tester.pumpAndSettle();
+  await tester.tap(submit);
+  await _waitFor(tester, find.byType(SettingCardDetailPage));
+}
+
 void main() {
-  final l10n = AppLocalizationsZh();
-  final zh = lookupAppLocalizations(const Locale('zh'));
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfiNoIsolate;
@@ -87,35 +128,12 @@ void main() {
 
   group('Phase 11 production assembly', () {
     testWidgets(
-        'should move a resource to trash, refresh, and restore through production wiring',
+        'should open the library from the sidebar and create a card through production wiring',
         (tester) async {
       setViewport(tester, width: 1280, height: 900);
-      final repository = ResourceTreeRepositoryImpl(
-        getDb: () => DatabaseService.database,
-      );
-      const resourceId = ResourceId('resource-delete-production');
-      await tester.runAsync(
-        () => repository.createResourceTree(
-          const ResourceTreeDraft(
-            id: resourceId,
-            type: ResourceType.worldview,
-            name: '待删除的生产资源',
-            sections: <ResourceTreeSectionDraft>[
-              ResourceTreeSectionDraft(
-                title: '概览',
-                parts: <ResourceTreePartDraft>[
-                  ResourceTreePartDraft(title: '正文', content: '真实内容'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [legacyLibraryRuntimeOverride()],
-          child: const MaterialApp(
+        const ProviderScope(
+          child: MaterialApp(
             locale: Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -132,116 +150,174 @@ void main() {
       // The workbench sidebar is the single navigation authority: open the
       // library from it, not from a deep-link route.
       await tester.tap(_sidebarLabel('资料库'));
-      await _waitFor(tester, find.text('待删除的生产资源'));
-      await tester.tap(
-        find.byKey(
-          const ValueKey<String>('resource-card-resource-delete-production'),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final moveToTrash =
-          find.byKey(const Key('resource-move-to-trash-button'));
-      await tester.ensureVisible(moveToTrash);
-      await tester.pumpAndSettle();
-      await tester.tap(moveToTrash);
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, '移入回收站'));
       await _waitFor(tester, find.text('还没有资源'));
 
-      final db = await tester.runAsync(() => DatabaseService.database);
-      final resourceRows = await tester.runAsync(
-        () => db!.query(
-          'resources',
-          where: 'id = ?',
-          whereArgs: <Object?>[resourceId.value],
-        ),
-      );
-      final trashRows = await tester.runAsync(
-        () => db!.query(
-          'resource_trash',
-          where: 'node_id = ? AND restored_at IS NULL',
-          whereArgs: <Object?>[resourceId.value],
-        ),
-      );
-      expect(resourceRows!.single['deleted_at'], isNotNull);
-      expect(trashRows, hasLength(1));
+      await _createCard(tester, name: '生产设定卡');
 
-      // The recycle bin now lives in the sidebar as a first-class destination.
-      await tester.tap(_sidebarLabel('回收站'));
-      await _waitFor(tester, find.text('待删除的生产资源'));
-      await tester.tap(find.widgetWithText(TextButton, '恢复'));
-      await _waitFor(tester, find.text(l10n.resourceTrashRestoreOriginal));
-      final restoredRows = await tester.runAsync(
-        () => db!.query(
-          'resources',
-          where: 'id = ?',
-          whereArgs: <Object?>[resourceId.value],
-        ),
-      );
-      expect(restoredRows!.single['deleted_at'], isNull);
-
-      // Back to the library: the restored resource reappears.
-      await tester.tap(_sidebarLabel('资料库'));
-      await _waitFor(tester, find.text('待删除的生产资源'));
+      final rows = await _settingCardRows(tester);
+      expect(rows, hasLength(1));
+      expect(rows.single['name'], '生产设定卡');
+      expect(rows.single['kind'], 'worldview');
+      expect(rows.single['mode'], 'adventure');
+      expect(rows.single['deleted_at'], isNull);
       expect(tester.takeException(), isNull);
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
     });
 
-    for (final width in [390.0, 1280.0]) {
-      testWidgets(
-          'should refresh after production AI creation returns at $width',
+    testWidgets('should create a card, open its detail, and return to the list',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await _pumpLibraryRoute(tester);
+
+      await _createCard(tester, name: '手工生产设定卡');
+
+      expect(find.byKey(const Key('setting-card-name')), findsOneWidget);
+      expect(
+        tester
+            .widget<AppTextField>(find.byKey(const Key('setting-card-name')))
+            .controller
+            ?.text,
+        '手工生产设定卡',
+      );
+
+      await localizedPageBack(tester);
+      await tester.pumpAndSettle();
+      await _waitFor(tester, find.byType(ResourceLibraryScreen));
+      await _waitFor(tester, find.text('手工生产设定卡'));
+
+      expect(find.byType(SettingCardDetailPage), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('should save card content and reload it from SQLite',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await _pumpLibraryRoute(tester);
+
+      await _createCard(tester, name: '可保存设定卡');
+
+      await tester.enterText(
+        find.byKey(const Key('setting-card-content')),
+        '真实保存的设定正文',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('setting-card-save')));
+      await _waitFor(tester, find.text('已保存'));
+
+      final saved = await _settingCardRows(tester);
+      expect(saved.single['content'], '真实保存的设定正文');
+
+      // Reopen the card from the library: the persisted body is what renders.
+      await localizedPageBack(tester);
+      await tester.pumpAndSettle();
+      await _waitFor(tester, find.text('可保存设定卡'));
+      await tester.tap(
+        find.byKey(
+          ValueKey<String>('resource-card-${saved.single['id']}'),
+        ),
+      );
+      await _waitFor(tester, find.byType(SettingCardDetailPage));
+      expect(
+        tester
+            .widget<AppTextField>(find.byKey(const Key('setting-card-content')))
+            .controller
+            ?.text,
+        '真实保存的设定正文',
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('should delete a card from its detail and refresh the library',
+        (tester) async {
+      setViewport(tester, width: 390, height: 844);
+      await tester.runAsync(
+        () => _cardService().create(
+          kind: SettingCardKind.character,
+          name: '待删除的设定卡',
+          mode: 'adventure',
+        ),
+      );
+      await _pumpLibraryRoute(tester, waitFor: find.text('待删除的设定卡'));
+
+      final rows = await _settingCardRows(tester);
+      final cardId = rows.single['id']! as String;
+      await tester.tap(
+        find.byKey(ValueKey<String>('resource-card-$cardId')),
+      );
+      await _waitFor(tester, find.byType(SettingCardDetailPage));
+
+      await tester.tap(find.byKey(const Key('setting-card-delete')));
+      await tester.pumpAndSettle();
+      expect(find.text('删除设定卡'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, '删除'));
+      await _waitFor(tester, find.text('还没有资源'));
+
+      final deleted = await _settingCardRows(tester);
+      expect(deleted.single['deleted_at'], isNotNull);
+      expect(find.byType(SettingCardDetailPage), findsNothing);
+      expect(
+        find.byKey(ValueKey<String>('resource-card-$cardId')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+
+    for (final type in ResourceType.values) {
+      final tabLabel = switch (type) {
+        ResourceType.worldview => '世界观',
+        ResourceType.character => '角色',
+        ResourceType.npc => 'NPC',
+      };
+      testWidgets('should create, save and reload a ${type.name} card',
           (tester) async {
-        setViewport(tester, width: width, height: 844);
-        final container = ProviderContainer(overrides: [
-          legacyLibraryRuntimeOverride(),
-          llmGatewayProvider.overrideWithValue(_AiResponses()),
-        ]);
-        addTearDown(() async {
-          await tester.pumpWidget(const SizedBox.shrink());
-          container.dispose();
-        });
-        await tester.runAsync(() => container
-            .read(settingsProvider)
-            .setApiKey('test-only-not-a-real-key'));
-        await tester.pumpWidget(UncontrolledProviderScope(
-            container: container,
-            child: const MaterialApp(
-              locale: Locale('zh'),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              initialRoute: '/library',
-              onGenerateRoute: AppRouter.onGenerateRoute,
-            )));
-        await _waitFor(tester, find.text('还没有资源'));
-        await tester.tap(find.byKey(const Key('resource-create-button')));
+        setViewport(tester, width: 390, height: 844);
+        await _pumpLibraryRoute(tester);
+
+        await tester.enterText(
+            find.byKey(const Key('resource-search-field')), '测试');
         await tester.pumpAndSettle();
-        await tester.tap(find.text('AI 创建'));
+        await tester.tap(_filterTab(tabLabel));
         await tester.pumpAndSettle();
-        await tester.enterText(_fieldByLabel('名称'), 'AI新资源');
-        await tester.enterText(_fieldByLabel('粘贴参考内容'), '山海之间的城市和居民');
-        final submit = find.text('开始创建');
-        await tester.ensureVisible(submit);
-        await tester.pumpAndSettle();
-        await tester.tap(submit);
-        await _waitFor(tester, find.text('编辑正文'));
-        await _waitFor(tester, find.textContaining('AI生成正文'));
-        expect(
-            tester
-                .widget<ResourceStudioPage>(find.byType(ResourceStudioPage))
-                .embedded,
-            width >= 1000);
+
+        final name = '测试${type.name}';
+        await _createCard(tester, name: name, type: tabLabel);
+
+        await tester.enterText(
+          find.byKey(const Key('setting-card-content')),
+          '真实保存的${type.name}正文',
+        );
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('setting-card-save')));
+        await _waitFor(tester, find.text('已保存'));
+
+        final rows = await _settingCardRows(tester);
+        expect(rows.single['kind'], type.name);
+        expect(rows.single['content'], '真实保存的${type.name}正文');
+
         await localizedPageBack(tester);
-        await _waitFor(tester, find.byKey(const Key('resource-list')));
-        expect(
-            find.descendant(
-                of: find.byKey(const Key('resource-list')),
-                matching: find.text('AI新资源')),
-            findsOneWidget);
-        final rows = await tester.runAsync(() async =>
-            (await DatabaseService.database).query('resource_parts'));
-        expect(rows!.single['content'], _aiPartBody);
+        await tester.pumpAndSettle();
+        await _waitFor(tester, find.text(name));
+
+        final filter = tester.widget<WorkbenchTabButton>(
+            find.byKey(ValueKey('resource-filter-${type.name}')));
+        expect(filter.selected, isTrue);
+        expect(find.byType(SettingCardCreatePage), findsNothing);
         expect(tester.takeException(), isNull);
+
+        await tester.pump(const Duration(seconds: 5));
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
       });
@@ -253,244 +329,67 @@ void main() {
       tester.view.padding = const FakeViewPadding(top: 24, bottom: 16);
       tester.view.viewPadding = const FakeViewPadding(top: 24, bottom: 16);
       await tester.pumpWidget(ProviderScope(
-          overrides: [legacyLibraryRuntimeOverride()],
           child: MaterialApp(
-            locale: const Locale('zh'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            initialRoute: '/library',
-            onGenerateRoute: AppRouter.onGenerateRoute,
-            builder: (context, child) => MediaQuery(
-                data: MediaQuery.of(context)
-                    .copyWith(textScaler: const TextScaler.linear(1.6)),
-                child: child!),
-          )));
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        initialRoute: AppRouter.resourceLibraryPath,
+        onGenerateRoute: AppRouter.onGenerateRoute,
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.6)),
+            child: child!),
+      )));
       await _waitFor(tester, find.text('还没有资源'));
       final libraryContext = tester.element(find.byType(ResourceLibraryScreen));
       expect(MediaQuery.sizeOf(libraryContext), const Size(320, 568));
       expect(MediaQuery.paddingOf(libraryContext).top, 24);
+
       await tester.tap(find.byKey(const Key('resource-create-button')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('手动创建'));
-      await tester.tap(find.text('手动创建'));
       await tester.pumpAndSettle();
       tester.view.viewInsets = const FakeViewPadding(bottom: 240);
       await tester.pumpAndSettle();
-      final field = _fieldByLabel('名称');
       expect(
           MediaQuery.viewInsetsOf(
-                  tester.element(find.byType(ResourceManualCreatePage)))
+                  tester.element(find.byType(SettingCardCreatePage)))
               .bottom,
           240);
-      await tester.ensureVisible(field);
-      await tester.enterText(field, '长名称 Long Resource Name 用于小屏真实提交');
-      final summary = _fieldByLabel('简介（可选）');
+
+      final name = find.byKey(const Key('setting-card-create-name'));
+      await tester.ensureVisible(name);
+      await tester.pumpAndSettle();
+      await tester.enterText(name, '长名称 Long Setting Card Name 用于小屏真实提交');
+      final summary = find.byKey(const Key('setting-card-create-summary'));
       await tester.ensureVisible(summary);
+      await tester.pumpAndSettle();
       await tester.enterText(summary, '安全区和软键盘同时存在时，滚动填写并提交。');
+
+      // The soft keyboard shrinks the viewport below the action row, so scroll
+      // the form to its end before submitting instead of relying on a hit test
+      // that lands under the keyboard.
       final pageScrollable = find
           .descendant(
-            of: find.byType(SingleChildScrollView),
+            of: find.byType(SettingCardCreatePage),
             matching: find.byType(Scrollable),
           )
           .first;
+      // The focused field keeps itself visible, so drop focus before scrolling to
+      // the action row.
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
       final scrollableState = tester.state<ScrollableState>(pageScrollable);
       scrollableState.position.jumpTo(scrollableState.position.maxScrollExtent);
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, '创建'));
-      await _waitFor(tester, find.byType(ResourceLibraryDetailPage));
+      await tester.tap(find.byKey(const Key('setting-card-create-manual')));
+      await _waitFor(tester, find.byType(SettingCardDetailPage));
+
+      final rows = await _settingCardRows(tester);
+      expect(rows.single['name'], '长名称 Long Setting Card Name 用于小屏真实提交');
+      expect(rows.single['summary'], '安全区和软键盘同时存在时，滚动填写并提交。');
       expect(tester.takeException(), isNull);
-      final rows = await tester.runAsync(
-          () async => (await DatabaseService.database).query('resources'));
-      expect(rows!.single['name'], '长名称 Long Resource Name 用于小屏真实提交');
+
       await tester.pumpWidget(const SizedBox.shrink());
     });
-    for (final content in <String?>[
-      null,
-      '',
-      '字' * (ResourceLimits.maxPartCharacters + 1)
-    ]) {
-      testWidgets(
-          'should map real validation for ${content == null ? 'empty section' : content.isEmpty ? 'missing body' : 'oversize body'}',
-          (tester) async {
-        setViewport(tester, width: 320, height: 568);
-        final container =
-            ProviderContainer(overrides: [legacyLibraryRuntimeOverride()]);
-        addTearDown(container.dispose);
-        final repository =
-            ResourceTreeRepositoryImpl(getDb: () => DatabaseService.database);
-        final id = await tester
-            .runAsync(() => repository.createResourceTree(ResourceTreeDraft(
-                  id: const ResourceId('validation-resource'),
-                  type: ResourceType.worldview,
-                  name: '校验资源',
-                  sections: [
-                    ResourceTreeSectionDraft(title: '章节', parts: [
-                      if (content != null)
-                        ResourceTreePartDraft(title: '正文', content: content),
-                    ])
-                  ],
-                )));
-        final tree = await tester.runAsync(() => repository.readTree(id!));
-        final runtime = container.read(sectionControlRuntimeProvider);
-        await tester
-            .runAsync(() => runtime.validateSection(tree!.sections.single.id));
-        final entry = await tester
-            .runAsync(() => runtime.readSection(tree!.sections.single.id));
-        expect(entry!.validationMessage, isNotEmpty);
-        await tester.pumpWidget(MaterialApp(
-          locale: const Locale('zh'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(context)
-                  .copyWith(textScaler: const TextScaler.linear(1.6)),
-              child: child!),
-          home: Scaffold(
-              body: SafeArea(
-                  child: SingleChildScrollView(
-                      child: ResourceStudioSectionControls(
-            state: SectionControlViewState(
-                status: SectionControlViewStatus.ready,
-                resourceId: id,
-                entries: [entry],
-                totalCount: 1),
-            onRefresh: () {},
-            onLoadMore: () {},
-            onCreate: () {},
-            onRename: (_, __) {},
-            onDelete: (_) {},
-            onMove: (_, __) {},
-            onValidate: (_) {},
-            onRegenerate: (_) {},
-          )))),
-        ));
-        await tester.pumpAndSettle();
-        // Section controls collapse by default, so the per-section verdict has
-        // to be revealed before it can be asserted.
-        await tester.tap(find.text('章节控制'));
-        await tester.pumpAndSettle();
-        for (final term in ['Section', 'Part', 'ResourceTree']) {
-          expect(find.textContaining(term), findsNothing);
-        }
-        expect(
-            find.textContaining(content == null
-                ? '没有任何 段落'
-                : content.isEmpty
-                    ? '尚未生成正文'
-                    : '超出单 段落 上限'),
-            findsOneWidget);
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox.shrink());
-      });
-    }
-    for (final type in ResourceType.values) {
-      testWidgets('should create edit save and reload ${type.name}',
-          (tester) async {
-        setViewport(tester, width: 390, height: 844);
-        await tester.pumpWidget(ProviderScope(
-          overrides: [legacyLibraryRuntimeOverride()],
-          child: const MaterialApp(
-            locale: Locale('zh'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            initialRoute: '/library',
-            onGenerateRoute: AppRouter.onGenerateRoute,
-          ),
-        ));
-        await _waitFor(tester, find.text('还没有资源'));
-        await tester.enterText(
-            find.byKey(const Key('resource-search-field')), '测试');
-        await tester.tap(find.text(switch (type) {
-          ResourceType.worldview => zh.worldviewsTab,
-          ResourceType.character => zh.charactersTab,
-          ResourceType.npc => 'NPC',
-        }));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(const Key('resource-create-button')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('手动创建'));
-        await tester.pumpAndSettle();
-        final label = switch (type) {
-          ResourceType.worldview => '世界观',
-          ResourceType.character => '角色',
-          ResourceType.npc => 'NPC',
-        };
-        await tester.tap(find.byType(AppSelect<ResourceType>));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(label).last);
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          _fieldByLabel('名称'),
-          '测试${type.name}',
-        );
-        await tester.tap(find.widgetWithText(FilledButton, '创建'));
-        await _waitFor(tester, find.byType(ResourceLibraryDetailPage));
-
-        final repository = ResourceTreeRepositoryImpl(
-          getDb: () => DatabaseService.database,
-        );
-        final db = await tester.runAsync(() => DatabaseService.database);
-        final rows = await tester.runAsync(() => db!.query('resources'));
-        final id = ResourceId(rows!.single['id']! as String);
-        final initial = await tester.runAsync(() => repository.readTree(id));
-        expect(initial!.sections, hasLength(1));
-        expect(initial.parts, hasLength(1));
-        expect(initial.parts.single.content, isEmpty);
-
-        await tester.tap(find.text('进入创作工作台'));
-        await _waitFor(tester, find.text('编辑正文'));
-        final container = ProviderScope.containerOf(
-            tester.element(find.byType(ResourceStudioPage)));
-        await tester.runAsync(() async {
-          await db!.transaction((txn) => container
-              .read(assemblyReadinessRepositoryProvider)
-              .writeInTransaction(
-                txn,
-                AssemblyReadinessRecord(
-                    resourceId: id.value, state: ReadinessState.ready),
-              ));
-        });
-        await revealInStudio(tester, find.text('编辑正文'));
-        await tester.tap(find.text('编辑正文'));
-        await _waitFor(tester, find.byType(TextField));
-        await tester.enterText(find.byType(TextField), '真实保存的${type.name}正文');
-        await revealInStudio(tester, find.text('立即保存'));
-        await tester.tap(find.text('立即保存'));
-        await _waitFor(tester, find.textContaining('已自动保存'));
-        final saved = await tester.runAsync(() => repository.readTree(id));
-        expect(saved!.parts.single.content, '真实保存的${type.name}正文');
-        await revealInStudio(tester, find.text('完成编辑'));
-        await tester.tap(find.text('完成编辑'));
-        await _waitFor(tester, find.text('编辑正文'));
-        await localizedPageBack(tester);
-        await tester.pumpAndSettle();
-        await _waitFor(tester, find.byType(ResourceLibraryDetailPage));
-        await tester.tap(find.byTooltip(MaterialLocalizations.of(
-                tester.element(find.byType(ResourceLibraryDetailPage)))
-            .backButtonTooltip));
-        await _waitFor(tester, find.byType(ResourceLibraryScreen));
-        await _waitFor(tester, find.text('测试${type.name}'));
-        final readiness = await tester.runAsync(() =>
-            container.read(assemblyReadinessRepositoryProvider).read(id.value));
-        expect(readiness!.state, ReadinessState.ready);
-        expect(find.text('已准备完成'), findsOneWidget);
-        expect(
-            tester
-                .widget<EditableText>(find.descendant(
-                    of: find.byKey(const Key('resource-search-field')),
-                    matching: find.byType(EditableText)))
-                .controller
-                .text,
-            '测试');
-        final filter = tester.widget<WorkbenchTabButton>(
-            find.byKey(ValueKey('resource-filter-${type.name}')));
-        expect(filter.selected, isTrue);
-        expect(find.byType(ResourceStudioPage), findsNothing);
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pumpAndSettle();
-      });
-    }
   });
 }
 
@@ -511,91 +410,4 @@ Future<void> _waitFor(WidgetTester tester, Finder finder) async {
           .widgetList<Text>(find.byType(Text))
           .map((text) => text.data)
           .join('\n'));
-}
-
-// Only the external model response is controlled. Pipeline, SQLite,
-// repositories, runtime, providers and navigation remain production code.
-final class _AiResponses implements LlmGateway {
-  @override
-  bool get isConfigured => true;
-
-  @override
-  Future<String> rawCompletion(
-      {required String systemPrompt,
-      required String instruction,
-      int maximumOutputTokens = 4096,
-      double temperature = .7,
-      LlmTask task = LlmTask.structuredExtraction,
-      GenerationTaskHandle? taskHandle}) async {
-    if (!systemPrompt.contains('"generation_id"')) {
-      final sectionId = RegExp(r'允许的 Section ID：([^,\n]+)')
-          .firstMatch(systemPrompt)!
-          .group(1)!;
-      final partId =
-          RegExp(r'允许的 Part ID：([^,\n]+)').firstMatch(systemPrompt)!.group(1)!;
-      return jsonEncode({
-        'suggestedName': 'AI新资源',
-        'summary': '城市与居民',
-        'sections': [
-          {
-            'id': sectionId,
-            'title': '概览',
-            'summary': '城市',
-            'sortOrder': 0,
-            'parts': [
-              {
-                'id': partId,
-                'sectionId': sectionId,
-                'title': '正文',
-                'generationGoal': '描写城市',
-                'estimatedLength': 800,
-                'dependencies': <String>[],
-                'sortOrder': 0
-              }
-            ]
-          }
-        ],
-      });
-    }
-    final ids = <String, String>{};
-    for (final key in [
-      'generation_id',
-      'resource_id',
-      'section_id',
-      'part_id',
-      'attempt_id'
-    ]) {
-      ids[key] = RegExp('"$key": "(.*?)"').firstMatch(systemPrompt)!.group(1)!;
-    }
-    final content = _aiPartBody;
-    return [
-      {
-        'protocol_version': 1,
-        ...ids,
-        'sequence': 0,
-        'op': 'start_part',
-        'cursor': 0,
-      },
-      {
-        'protocol_version': 1,
-        ...ids,
-        'sequence': 1,
-        'op': 'append_text',
-        'text_delta': content,
-        'cursor': 0,
-      },
-      {
-        'protocol_version': 1,
-        ...ids,
-        'sequence': 2,
-        'op': 'complete_part',
-        'cursor': content.length,
-        'summary': '城市',
-      },
-    ].map(jsonEncode).join('\n');
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnsupportedError(invocation.memberName.toString());
 }
