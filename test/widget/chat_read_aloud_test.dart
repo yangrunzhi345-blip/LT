@@ -14,7 +14,6 @@ import 'package:lt_dialogue/services/read_aloud/read_aloud_controller.dart';
 
 import '../helpers/read_aloud_fakes.dart';
 import '../helpers/responsive_test_helper.dart';
-import '../helpers/tts_casting_fixture.dart';
 
 void main() {
   late FakeReadAloudEngine engine;
@@ -73,7 +72,7 @@ void main() {
 
   group('Chat AI 消息朗读', () {
     testWidgets(
-        'should preserve character voices and paragraph ids at all viewports',
+        'should read paragraphs and preserve paragraph ids at all viewports',
         (tester) async {
       const context = NarrativeSpeakerContext(speakers: [
         NarrativeSpeakerRef(resourceId: 'lin', displayName: '林雪'),
@@ -84,9 +83,12 @@ void main() {
           isUser: false,
           content: '林雪说：“你好。”\n\n陈默说：“再见。”\n---JSON---\n{"options":[]}');
       for (final size in requiredUiViewports) {
-        final casting = TtsCastingFixture();
-        addTearDown(casting.dispose);
-        controller = casting.controller;
+        final engine = FakeReadAloudEngine();
+        controller = ReadAloudController(
+          engine: engine,
+          initialPreferences: const ReadAloudPreferences(enabled: true),
+        );
+        addTearDown(controller.dispose);
         setViewport(tester, width: size.width, height: size.height);
         await tester.pumpWidget(app(
             aiBubbleWith(message, chatFontSize: 18, speakerContext: context),
@@ -98,17 +100,15 @@ void main() {
             matching: find.byType(IconButton)));
         await tester.pump();
         for (var i = 0; i < 4; i++) {
-          casting.audio.emitComplete();
+          engine.emitComplete();
           await tester.pump();
         }
         // Ignore only the segmenter's documented boundary whitespace.
-        final texts = casting.neural.synthesizedTexts
+        final texts = engine.spokenTexts
             .map((text) => text.replaceAll(RegExp(r'\s+'), ''))
             .toList();
-        expect(texts, contains('“你好。”'));
-        expect(texts, contains('“再见。”'));
-        expect(casting.neural.synthesizedSpeakers[texts.indexOf('“你好。”')], 3);
-        expect(casting.neural.synthesizedSpeakers[texts.indexOf('“再见。”')], 58);
+        expect(texts.join(), contains('“你好。”'));
+        expect(texts.join(), contains('“再见。”'));
         await tester.longPress(find.text('陈默说：“再见。”'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Read this paragraph'));

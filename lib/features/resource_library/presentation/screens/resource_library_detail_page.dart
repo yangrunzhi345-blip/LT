@@ -27,7 +27,6 @@ import '../../../resource_studio/presentation/pages/resource_studio_page.dart';
 import 'resource_ai_create_page.dart';
 import '../../domain/models/resource_library_view_state.dart';
 import '../resolvers/resource_presentation_resolver.dart';
-import '../widgets/resource_voice_setting_section.dart';
 import '../widgets/character_relationships_section.dart';
 import '../../../../application/resource_library/character_relationship_management.dart';
 
@@ -713,18 +712,6 @@ final class _ResourceLibraryDetailPageState
                 ],
 
                 const SizedBox(height: 24),
-
-                // Local read-aloud voice binding (device-local preference; it
-                // never writes resource content or creates a revision).
-                if (widget.item.type != ResourceType.worldview) ...<Widget>[
-                  ResourceVoiceSettingSection(
-                    resourceId: ResourceId(widget.item.id),
-                    resourceName: widget.item.name,
-                    resourceType: widget.item.type,
-                    embedded: true,
-                  ),
-                  const SizedBox(height: 24),
-                ],
 
                 // Monitored fields (definitions only — never a runtime value)
                 _buildTrackedDefinitionsSection(context, l10n),

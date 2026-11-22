@@ -48,11 +48,9 @@ import '../controllers/adventure_game_controller.dart';
 import '../services/ai_import_service.dart';
 import '../services/read_aloud/read_aloud_controller.dart';
 
+import '../services/read_aloud/flutter_tts_engine.dart';
 import '../services/read_aloud/read_aloud_settings_store.dart';
-import '../services/tts/tts_model_catalog.dart';
-import '../services/tts/tts_model_manager.dart';
-import '../services/tts/tts_runtime.dart';
-import '../services/tts/tts_voice_binding_store.dart';
+import '../services/read_aloud/routed_read_aloud_engine.dart';
 import '../application/conversation/export_conversation_use_case.dart';
 import '../application/resources/compression_coordinator.dart';
 import '../application/resources/compression_job_repository.dart';
@@ -140,58 +138,17 @@ final settingsRepoProvider = Provider<ISettingsRepository>((ref) {
 // Core Provider — ChatProvider (Facade)
 // ═══════════════════════════════════════════════════════════════
 
-/// 神经 TTS 运行时（模型目录 / 单一安装 Authority / 本地 Voice 绑定 / 路由引擎）。
-///
-/// 构建时不产生任何 IO 或网络请求；[TtsModelManager.initialize] 只扫描磁盘。
-/// 模型绝不会被自动下载。
-final ttsRuntimeProvider = Provider<TtsRuntime>((ref) {
-  final runtime = TtsRuntime.production(
-    settingsRepo: ref.watch(settingsRepoProvider),
-  );
-  unawaited(runtime.initialize());
-  ref.onDispose(runtime.dispose);
-  return runtime;
-});
-
-/// 面向设置页的模型管理 Authority（只读订阅 + 显式下载入口）。
-final ttsModelManagerProvider = ChangeNotifierProvider<TtsModelManager>((ref) {
-  return ref.watch(ttsRuntimeProvider).manager;
-}, disposeNotifier: false);
-
-/// 神经语音模型目录。
-final ttsModelCatalogProvider = Provider<TtsModelCatalog>((ref) {
-  return ref.watch(ttsRuntimeProvider).catalog;
-});
-
-/// 设备本地 Voice 绑定（旁白 / 人物 / NPC / 模式）。
-final ttsVoiceBindingsProvider = ChangeNotifierProvider<TtsVoiceBindingStore>(
-  (ref) => ref.watch(ttsRuntimeProvider).bindings,
-  disposeNotifier: false,
-);
-
-/// 全局朗读 Authority — 对话、资料库、Resource Studio、组装预览与连续阅读
-/// 共享同一个朗读会话与播放状态。
+/// 全局朗读 Authority — 对话、资料库、组装预览与连续阅读共享同一个朗读
+/// 会话与播放状态。
 ///
 /// 独立于 ChatProvider 构建：朗读 UI 只需要 settings 仓库，不应因为渲染一个
-/// 朗读按钮就拉起整个聊天运行时。引擎是唯一的 [RoutedReadAloudEngine]：
-/// 系统 TTS 始终是默认后端，神经后端只在用户显式选择时才参与，失败时降级。
+/// 朗读按钮就拉起整个聊天运行时。阅读只使用轻量系统 TTS 后端。
 final readAloudControllerProvider =
     ChangeNotifierProvider<ReadAloudController>((ref) {
-  // ChangeNotifierProvider 自己负责 dispose notifier，不要再挂 onDispose，
-  // 否则会二次 dispose 同一控制器。
-  final runtime = ref.watch(ttsRuntimeProvider);
-  final controller = ReadAloudController(
-    engine: runtime.engine,
+  return ReadAloudController(
+    engine: RoutedReadAloudEngine(systemEngine: createDefaultReadAloudEngine()),
     store: SettingsRepoReadAloudStore(ref.watch(settingsRepoProvider)),
-    voiceResolver: runtime.resolver,
   );
-  runtime.manager.addListener(controller.refreshCapability);
-  runtime.bindings.addListener(controller.refreshCapability);
-  ref.onDispose(() {
-    runtime.manager.removeListener(controller.refreshCapability);
-    runtime.bindings.removeListener(controller.refreshCapability);
-  });
-  return controller;
 });
 
 /// 全局 UI Locale 唯一 Authority。
@@ -215,8 +172,6 @@ final ChangeNotifierProvider<ChatProvider> chatProvider =
     // 必须用 read 而不是 watch：朗读状态每次变化（播放/暂停/进度）都会
     // notifyListeners，watch 会让整个 ChatProvider 被重建并释放旧子 Provider。
     readAloud: ref.read(readAloudControllerProvider),
-    // 神经语音绑定与朗读 Authority 共用同一实例，设置页只读订阅。
-    ttsVoiceBindings: ref.read(ttsRuntimeProvider).bindings,
     // Phase 10: Adventure 创建前必须经过 assembly readiness 门禁。
     readinessGate: ref.watch(adventureReadinessGateProvider),
     // The app composition root owns the process-wide creation pipeline. Keep

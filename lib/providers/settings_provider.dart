@@ -16,7 +16,6 @@ import '../services/llm_service.dart';
 import '../services/read_aloud/flutter_tts_engine.dart';
 import '../services/read_aloud/read_aloud_controller.dart';
 import '../services/read_aloud/read_aloud_settings_store.dart';
-import '../services/tts/tts_voice_binding_store.dart';
 import '../services/tts_service.dart';
 import '../services/translation_service.dart';
 import '../services/secure_key_store.dart';
@@ -167,10 +166,6 @@ class SettingsProvider extends ChangeNotifier {
   final ReadAloudController? _injectedReadAloud;
   ReadAloudController? _createdReadAloud;
 
-  /// Device-local neural voice bindings, restored from the same settings load.
-  /// Owned by the composition root, not by this provider.
-  final TtsVoiceBindingStore? _ttsVoiceBindings;
-
   final TranslationService translator = TranslationService();
   final TextEditingController searchController = TextEditingController();
 
@@ -234,7 +229,6 @@ class SettingsProvider extends ChangeNotifier {
     SecureKeyStore? secureKeyStore,
     Stream<List<ConnectivityResult>>? connectivityStream,
     ReadAloudController? readAloud,
-    TtsVoiceBindingStore? ttsVoiceBindings,
   })  : _settingsRepo = settingsRepo,
         _secureStorage = secureStorage,
         _keyStore = secureKeyStore ??
@@ -245,8 +239,7 @@ class SettingsProvider extends ChangeNotifier {
         _connectivityStream =
             connectivityStream ?? Connectivity().onConnectivityChanged,
         _probeConnectivity = connectivityStream == null,
-        _injectedReadAloud = readAloud,
-        _ttsVoiceBindings = ttsVoiceBindings;
+        _injectedReadAloud = readAloud;
 
   // ─── 初始化 ───
 
@@ -490,12 +483,9 @@ class SettingsProvider extends ChangeNotifier {
     _worldviewDeepThinkingGeneration = worldviewDeepThinkingGeneration;
     _characterCardDeepThinkingGeneration = characterCardDeepThinkingGeneration;
     _autoScrollDuringGeneration = autoScrollDuringGeneration;
-    // 朗读偏好复用本次已加载的 settings，不额外读取数据库。
     // 朗读偏好复用本次已加载的 settings，不额外读取数据库，也不触碰平台通道。
     if (!_disposed && generation == _loadGeneration) {
       readAloud.restore(parseReadAloudPreferences(settings));
-      // 神经语音绑定同样复用本次已加载的 settings，不额外读库。
-      _ttsVoiceBindings?.restore(parseTtsVoicePreferences(settings));
     }
     // Connectivity is optional telemetry; never let a stalled platform
     // channel delay key loading or block the caller's future.

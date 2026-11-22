@@ -4,7 +4,6 @@ import 'language_tag.dart';
 import 'read_aloud_language_detector.dart';
 import 'text_segmenter.dart';
 import 'text_sanitizer.dart';
-import '../tts/speech_planner.dart';
 
 /// 播放队列中的一个可朗读单元。
 ///
@@ -74,9 +73,6 @@ class PlaybackQueue {
   ///   被合并进同一段。
   /// - [ReadAloudLanguageMode.fixed]：所有段统一使用 [fixedLanguageTag]。
   ///
-  /// Speaker 规划是**增量**能力：只有 [planner] 非空且某个来源带有非空
-  /// [ReadAloudSource.speakerContext] 时才会拆出对白段；否则保持既有的整段旁白
-  /// 行为，未提供上下文的旧调用方零回归。
   static PlaybackQueue build({
     required List<ReadAloudSource> sources,
     required TextSanitizer sanitizer,
@@ -84,7 +80,6 @@ class PlaybackQueue {
     ReadAloudLanguageDetector detector = const ReadAloudLanguageDetector(),
     ReadAloudLanguageMode languageMode = ReadAloudLanguageMode.auto,
     String fixedLanguageTag = ReadAloudPreferences.defaultLanguageTag,
-    SpeechPlanner? planner,
   }) {
     final fallbackTag = normalizeBcp47(fixedLanguageTag).isEmpty
         ? ReadAloudPreferences.defaultLanguageTag
@@ -98,46 +93,19 @@ class PlaybackQueue {
     for (final source in sources) {
       final clean = sanitizer.sanitize(source.text);
       if (clean.isEmpty) continue;
-      final context = source.speakerContext;
-      final plan = (planner != null && !context.isEmpty)
-          ? planner.plan(clean, context, idPrefix: source.id)
-          : null;
-
-      if (plan == null) {
-        final segments = segmenter.segment(
-          clean,
-          languageOf: isAuto ? detect : null,
+      final segments = segmenter.segment(
+        clean,
+        languageOf: isAuto ? detect : null,
+      );
+      for (final segment in segments) {
+        chunks.add(
+          ReadAloudChunk(
+            sourceId: source.id,
+            label: source.label,
+            text: segment,
+            languageTag: detect(segment),
+          ),
         );
-        for (final segment in segments) {
-          chunks.add(
-            ReadAloudChunk(
-              sourceId: source.id,
-              label: source.label,
-              text: segment,
-              languageTag: detect(segment),
-            ),
-          );
-        }
-        continue;
-      }
-
-      for (final planned in plan.segments) {
-        final segments = segmenter.segment(
-          planned.text,
-          languageOf: isAuto ? detect : null,
-        );
-        for (final segment in segments) {
-          chunks.add(
-            ReadAloudChunk(
-              sourceId: source.id,
-              label: source.label,
-              text: segment,
-              languageTag: detect(segment),
-              role: planned.role,
-              speakerResourceId: planned.speakerResourceId,
-            ),
-          );
-        }
       }
     }
     return PlaybackQueue(chunks);
