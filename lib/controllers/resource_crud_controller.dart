@@ -98,11 +98,6 @@ class ResourceCrudController extends ChangeNotifier {
   ResourceCrudController({
     required ILibraryRepository repository,
     FutureOr<void> Function()? onLibraryChanged,
-    // Retained only so composition roots/tests that still pass the retired
-    // creation pipeline keep compiling. Phase 5c writes the legacy row and the
-    // card mirror directly, so the pipeline is never used.
-    // ignore: avoid_unused_constructor_parameters
-    Object? creationPipeline,
     IAuthorizedGenerationBudgetReader? authorizedBudget,
     LegacyCardMirror? cardMirror,
   })  : _repository = repository,

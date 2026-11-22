@@ -2,7 +2,6 @@ import '../../models/completion_params.dart';
 import '../../models/generation_mode.dart';
 import '../../models/llm_task.dart';
 import '../../models/model_capabilities.dart';
-import '../../models/scene_batch_candidate.dart';
 import '../../services/ai_generator_service.dart';
 import '../../services/llm_service.dart';
 import '../../services/llm_task_policy.dart';
@@ -10,10 +9,7 @@ import 'llm_gateway.dart';
 
 /// 将现有 AI 生成服务适配到应用层 Gateway。
 class AiGeneratorLlmGateway
-    implements
-        LlmGateway,
-        PartGenerationStreamingGateway,
-        ModelCapabilityAwareGateway {
+    implements LlmGateway, PartGenerationStreamingGateway {
   final AiGeneratorService Function() _generatorResolver;
   final bool Function()? _isConfiguredResolver;
   final LLMService Function()? _llmResolver;
@@ -27,18 +23,6 @@ class AiGeneratorLlmGateway
 
   @override
   bool get isConfigured => _isConfiguredResolver?.call() ?? true;
-
-  /// The active model's physical limits.
-  ///
-  /// The LLM service resolves the configured model id through the capability
-  /// registry; an unresolvable id stays on the conservative fallback, so a
-  /// custom endpoint never silently inherits a provider ceiling.
-  @override
-  ModelCapabilities get activeModelCapabilities {
-    final resolver = _llmResolver;
-    if (resolver == null) return ModelCapabilityRegistry.resolve('');
-    return resolver().capabilities;
-  }
 
   AiGeneratorService get _generator => _generatorResolver();
 
@@ -94,28 +78,6 @@ class AiGeneratorLlmGateway
   @override
   Future<List<String>> identifyCharacterNames(String source) =>
       _generator.identifyCharacterNames(source);
-
-  @override
-  Future<Map<String, dynamic>> generateSceneBatchCharacter({
-    required String source,
-    required String label,
-    required String worldview,
-    required List<Map<String, dynamic>> relatedCharacters,
-    required SceneBatchCandidate candidate,
-    required int minimumTotalLength,
-    required int maximumTotalLength,
-    required String detailInstruction,
-  }) =>
-      _generator.generateSceneBatchCharacter(
-        source: source,
-        label: label,
-        worldview: worldview,
-        relatedCharacters: relatedCharacters,
-        candidate: candidate,
-        minimumTotalLength: minimumTotalLength,
-        maximumTotalLength: maximumTotalLength,
-        detailInstruction: detailInstruction,
-      );
 
   @override
   Future<Map<String, String>> generateWorldview(

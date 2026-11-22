@@ -1,7 +1,12 @@
 # Enhanced TTS v1 — Optional Local Neural Read-Aloud
 
-Baseline: `main` @ `133910d`. This document describes the implemented
-architecture and is kept in sync with the code.
+> **Historical design record.** The neural / Sherpa-ONNX read-aloud backend was
+> removed in Phase 3 of the slim refactor. LT now ships system TTS only, so this
+> document no longer describes the shipped architecture; it is kept for design
+> history.
+
+Baseline: `main` @ `133910d`. This document described the architecture at that
+baseline.
 
 ## 1. Goals and invariants
 

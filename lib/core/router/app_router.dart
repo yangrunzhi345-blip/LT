@@ -12,7 +12,6 @@ import '../../features/settings/presentation/screens/chat_transfer_pages.dart';
 /// 路由统一管理 + 过渡动画
 class AppRouter {
   static const String resourceLibraryPath = '/library';
-  static const String resourceStudioPath = '/studio';
 
   /// Resolves canonical routes and the pre-Phase-11 deep-link spellings.
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {

@@ -23,29 +23,10 @@
   "navLibrary": "Library",
   "navSettings": "Settings",
   "sidebarNewAdventure": "New Adventure",
-  "sidebarRecent": "Recent",
-  "sidebarManageConversations": "Batch Manage Conversations",
-  "sidebarEmptyConversations": "No past conversations",
   "sidebarUnnamedScene": "Unnamed Scene",
-  "sidebarDeleteDialogTitle": "Delete Scene Conversation",
-  "sidebarDeleteDialogMessage": "Are you sure you want to delete \"{title}\"?\nDeleted history and narrative evolution cannot be recovered.",
-  "@sidebarDeleteDialogMessage": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "sidebarReturnHome": "Return to Explore Hall",
   "sidebarExpand": "Expand Sidebar",
   "sidebarCollapse": "Collapse Sidebar",
-  "sidebarClose": "Close Sidebar",
-  "brandSubtitle": "Narrative & World Evolution Studio",
-  "serviceConnected": "Connected",
   "serviceNotConfigured": "Key Not Configured",
-  "officialOnline": "Online",
-  "languageSetupTitle": "Choose Language",
-  "languageSetupSubtitle": "Please select your preferred display language",
   "languageSettingTitle": "Language",
   "languageSettingSubtitle": "App display language",
   "confirmAction": "Confirm",
@@ -71,97 +52,23 @@
   "retryAction": "Retry",
   "copyAction": "Copy",
   "settingsCenter": "Settings Center",
-  "settingsSystemConfig": "System Configuration",
-  "settingsReturnHome": "Return to Hall",
   "settingsReturnList": "Return to Settings",
-  "settingsPreferencesCategory": "Preferences",
-  "settingsCoreEngine": "LT Dialogue Core Engine",
-  "settingsStorageType": "SQLite · Local Encryption First",
-  "tabModelApi": "Models & API",
-  "tabModelApiSubtitle": "Provider & Key Configuration",
-  "tabSessionParams": "Session Parameters",
-  "tabSessionParamsSubtitle": "Sampling & Deep Thinking",
-  "tabThemeAppearance": "Theme & Appearance",
-  "tabThemeAppearanceSubtitle": "Light/Dark & Color Scheme",
-  "tabDataManagement": "Data Management",
-  "tabDataManagementSubtitle": "Token Stats & Storage",
-  "configCategory": "Configuration Categories",
-  "apiServiceConnected": "LLM Service Connected",
-  "apiServiceConnectedDesc": "Click to manage provider, model and endpoints",
   "apiServiceDisconnectedDesc": "Click to configure API key to start reasoning",
   "providerConfigTitle": "Models & API Services",
-  "providerConfigSubtitle": "Configure model providers, endpoints, and secure keys",
   "testConnection": "Test Connection",
   "testingConnection": "Testing...",
   "inputApiKeyHint": "Please enter a valid API key first",
-  "connectionSuccess": "Connection successful! Took {time}ms, service status is great.",
-  "@connectionSuccess": {
-    "placeholders": {
-      "time": {
-        "type": "int"
-      }
-    }
-  },
-  "connectionFailed": "Connection failed, please check your key and network connection.",
-  "connectionFailedWithReason": "Connection failed: {error}",
-  "@connectionFailedWithReason": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "apiKeyLabel": "API Key",
-  "apiKeyPlaceholder": "Enter your API key",
-  "customEndpointLabel": "Custom Endpoint (Base URL)",
   "customEndpointPlaceholder": "Custom endpoint URL",
-  "modelLabel": "Model",
-  "modelPlaceholder": "Enter model name",
-  "customModelNote": "Using custom model endpoint",
-  "modelParamsSectionTitle": "Session Model Parameters",
-  "modelParamsSectionSubtitle": "Fine-tune generation temperature, context budget, and reasoning mode",
-  "systemPromptLabel": "Custom System Prompt",
-  "systemPromptPlaceholder": "Enter system prompt to guide AI role and behavior...",
-  "authorsNoteLabel": "Author''s Note",
-  "authorsNotePlaceholder": "Inject strong contextual reminders into recent turns...",
-  "authorsNoteDepthLabel": "Insertion Depth: {depth} turns from bottom",
-  "@authorsNoteDepthLabel": {
-    "placeholders": {
-      "depth": {
-        "type": "int"
-      }
-    }
-  },
-  "authorsNoteFrequencyLabel": "Trigger Frequency: Every {freq} turns",
-  "@authorsNoteFrequencyLabel": {
-    "placeholders": {
-      "freq": {
-        "type": "int"
-      }
-    }
-  },
-  "dialogueLevelLabel": "Prose Style & Depth",
-  "temperatureLabel": "Temperature (Randomness): {value}",
-  "@temperatureLabel": {
-    "placeholders": {
-      "value": {
-        "type": "String"
-      }
-    }
-  },
   "enableThinkingLabel": "Enable Deep Thinking (Deep Thinking)",
   "enableThinkingSubtitle": "When enabled, model outputs collapsible thinking chains before story prose",
   "reasoningEffortLabel": "Reasoning Effort",
-  "quickModeLabel": "Quick Mode",
-  "quickModeSubtitle": "Bypass streaming animations and output full turns rapidly",
   "appearanceSectionTitle": "Appearance & Visual Theme",
-  "appearanceSectionSubtitle": "Customize interface color themes, dark mode, and reading font size",
   "themeModeLabel": "Theme Mode",
   "themeLight": "Light",
   "themeDark": "Dark",
   "themeSystem": "System",
   "themeColorPalette": "Theme Palette",
-  "themeColorPaletteHint": "Tap to switch instantly",
   "chatFontSizeLabel": "Narrative Text Font Size: {size} pt",
   "@chatFontSizeLabel": {
     "placeholders": {
@@ -170,44 +77,22 @@
       }
     }
   },
-  "chatFontCompact": "Compact",
-  "chatFontStandard": "Standard",
-  "chatFontSpacious": "Spacious",
   "previewTypographyTitle": "Live Typography Preview",
   "previewTypographySample": "“LT Dialogue” — In the tapestry of interwoven worldlines, every decision you make ripples through fate. Dark undercity corridors, skyward mechanical ruins: all legends begin here.",
   "readingScrollTitle": "Reading & Scroll Controls",
-  "readingScrollSubtitle": "Control screen scrolling behavior during generation",
   "autoScrollLabel": "Auto-scroll during generation",
   "autoScrollSubtitleOn": "Active: Screen continuously scrolls to the newest words as they generate.",
   "autoScrollSubtitleOff": "Recommended (Reading First): Screen stays steady so you can read from the beginning without disruption.",
   "dataManagementTitle": "Data Management & Usage Stats",
-  "dataManagementSubtitle": "View Token consumption, TTS voice settings, and storage controls",
-  "tokenUsageTitle": "Local Token Consumption Estimate",
   "sessionTokensLabel": "Current Session Tokens",
-  "totalTokensLabel": "Total Persisted Tokens",
   "readAloudSectionTitle": "Voice Message Reading (TTS)",
-  "readAloudSupportedPlatform": "Platform supports system speech synthesis. Available in dialogue and studio.",
-  "readAloudUnsupportedPlatform": "Platform does not support system speech synthesis.",
   "readAloudEnable": "Enable Voice Reading",
   "readAloudEnableSubtitle": "Support reading text in dialogue, studio, and assembly",
   "readAloudAutoRead": "Auto Read on Completion",
   "readAloudAutoReadSubtitle": "Automatically read aloud when AI completes narrative turn",
-  "readAloudRate": "Speech Rate",
-  "readAloudPitch": "Pitch",
-  "readAloudVolume": "Volume",
   "readAloudLanguage": "Read-Aloud Language",
   "readAloudAutoDetect": "Auto Detect",
-  "readAloudAutoDetectHint": "Automatically select system voice language based on text.",
-  "readAloudFixedHint": "All text will be read in the selected language.",
   "readAloudUnsupportedLanguage": " (Unsupported)",
-  "readAloudAvailableLanguagesCount": "System available voices: {count}",
-  "@readAloudAvailableLanguagesCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "readAloudDisabledInSettings": "Voice reading is disabled in settings",
   "readAloudStop": "Stop Reading",
   "readAloudStart": "Read Aloud",
@@ -215,79 +100,26 @@
   "diagnosticExportSubtitle": "Only exports the last 30 turns of current branch; API credentials and hidden thoughts are excluded.",
   "exportDiagnosticJson": "Export Diagnostic JSON",
   "cacheStorageTitle": "Cache & Storage Management",
-  "clearCache": "Clear Temp Cache",
-  "clearCacheSuccess": "Temporary cache cleared and counters reset",
   "clearAllData": "Clear All Local Data",
-  "clearDataDialogTitle": "Reset All Local Data",
-  "clearDataDialogMessage": "Are you sure you want to delete all local adventures, cards, and cached content?\nThis action cannot be undone.",
   "exportChatTitle": "Export Chat",
   "importChatTitle": "Import Chat",
-  "dashboardHeroTitle": "LT Dialogue · Exploration & Narrative Studio",
-  "dashboardHeroSubtitle": "Interactive fiction & immersive RPG storytelling space",
-  "dashboardWizardCardTitle": "Four-Step Custom Wizard",
-  "dashboardWizardCardDesc": "Start from blank canvas, define worldview, character cards, prologue and opening action.",
   "dashboardWizardCardAction": "Launch Wizard",
   "dashboardPresetCardTitle": "Preset Scene Studio",
-  "dashboardPresetCardDesc": "Browse prebuilt adventure scripts, start with one click or fine-tune.",
-  "dashboardPresetCardAction": "View Presets",
-  "dashboardLibraryCardTitle": "Resource Library",
-  "dashboardLibraryCardDesc": "Review and manage your worldviews, character cards, and NPC archives.",
-  "dashboardLibraryCardAction": "Manage Library",
-  "dashboardSettingsCardTitle": "Settings Center",
-  "dashboardSettingsCardDesc": "Configure model connection parameters, visual themes, and data management.",
-  "dashboardSettingsCardAction": "Enter Settings",
-  "recentAdventuresTitle": "Recent Adventures",
   "noRecentAdventures": "No adventures yet. Launch a wizard or choose a preset to begin.",
-  "continueAdventure": "Continue",
-  "featuredWorldviews": "Featured Worldviews",
-  "featuredCharacters": "Featured Characters",
   "resourceLibraryTitle": "Resource Library",
-  "resourceLibrarySubtitle": "Browse and manage worldviews, character cards, and scenario templates",
-  "createResourceAction": "Create Resource",
   "searchResources": "Search resources...",
   "allResources": "All",
   "worldviewsTab": "Worldviews",
   "charactersTab": "Characters",
-  "templatesTab": "Templates",
-  "recycleBinTitle": "Recycle Bin",
   "emptyRecycleBin": "Recycle bin is empty",
-  "resourceTrashEmptyDescription": "Resources you delete are kept here temporarily.",
-  "restoreAction": "Restore",
-  "permanentlyDelete": "Delete Permanently",
-  "resourceStudioTitle": "Resource Studio",
-  "resourceStudioSubtitle": "Multi-part progressive authoring and capacity management",
-  "outlineTab": "Outline",
-  "capacityTab": "Capacity",
-  "historyTab": "History",
-  "generatePart": "Generate Content",
-  "regeneratePart": "Regenerate",
-  "partSaved": "Changes saved",
   "partSaving": "Saving...",
-  "assemblyWizardTitle": "Adventure Assembly & Readiness",
   "wizardWorldviewAiSummary": "Describe a genre or core idea. AI can draft a worldview here or create a detailed, multi-section setting in the library.",
   "adventureWizardTitle": "Custom Adventure Wizard",
-  "assemblyStepWorld": "1. Worldview",
-  "assemblyStepCharacters": "2. Character",
-  "assemblyStepNpcs": "3. NPCs",
-  "assemblyStepConfig": "4. Config & Opening",
   "assemblyPreviewTitle": "Assembly Preview",
   "startAdventureAction": "Start Adventure",
-  "readinessChecking": "Checking resource readiness...",
-  "readinessPassed": "All resources ready",
-  "readinessFailed": "Resources require preparation or compression",
-  "adventureSessionTitle": "Adventure Session",
-  "inputActionHint": "What do you do next? Enter your action or dialogue...",
   "sendAction": "Send",
-  "aiThinking": "AI is pondering...",
-  "aiWriting": "AI is writing...",
-  "diceCheckTitle": "Dice Check",
-  "turnSettling": "Settling turn options...",
-  "bookmarkAdded": "Bookmark added",
-  "bookmarkRemoved": "Bookmark removed",
   "messageCopied": "Message copied to clipboard",
-  "messageEdited": "Message edited",
   "chatEditMessage": "Edit message",
-  "chatReadAloudUnsupported": "Read aloud is not supported on this platform",
   "chatCopyReasoning": "Copy reasoning (thought chain)",
   "chatReasoningCopied": "Reasoning copied to clipboard",
   "chatRetryWithModel": "Retry with another model",
@@ -305,10 +137,7 @@
   "readAloudPreparing": "Preparing to read",
   "readAloudPrevious": "Previous segment",
   "readAloudNext": "Next segment",
-  "tokenCurrentScene": "Current Scene Tokens",
   "tokenHistoryTotal": "Historical Total Tokens",
-  "tokenCurrentSceneDescription": "Tokens used in current scene",
-  "tokenHistoryDescription": "Historical total recorded locally",
   "readAloudPlatformSupportedMessage": "This platform supports system speech synthesis; available in dialogue and studio.",
   "diagnosticExportFailed": "Diagnostic export failed. Please try again later.",
   "diagnosticExported": "Diagnostic session exported: {path}",
@@ -321,7 +150,6 @@
   "readAloudLanguageHintAuto": "Automatically select an available system voice language for each passage.",
   "readAloudLanguageHintFixed": "All passages will be read in the selected language.",
   "readAloudSupportedCount": "System available voices: {count}",
-  "generationWaiting": "Waiting for content generation…",
   "errorTimeoutTitle": "Request timed out",
   "errorTimeoutSuggestion": "Check your network connection and try again",
   "errorAuthTitle": "Authentication failed",
@@ -333,7 +161,6 @@
   "errorNetworkTitle": "Network error",
   "errorNetworkSuggestion": "Check your network connection and API settings, then try again",
   "switchModelRetry": "Retry with another model",
-  "resourceTrashTooltip": "Recycle bin",
   "resourceCreateShort": "Create",
   "resourceNpcTab": "NPCs",
   "resourceRetryLoad": "Retry",
@@ -342,8 +169,6 @@
   "resourceNoMatches": "No matching resources",
   "resourceNoSummary": "No summary",
   "resourceMovedToTrash": "Moved to recycle bin",
-  "refreshRecycleBin": "Refresh recycle bin",
-  "permanentDeleteMessage": "\"{title}\" and its contents will be permanently deleted and cannot be recovered.\nContinue?",
   "readinessBlockedTitle": "Cannot start adventure yet",
   "acknowledgeAction": "Got it",
   "staleResourceTitle": "Resources changed",
@@ -363,10 +188,6 @@
   "chatSaving": "Saving...",
   "chatLoadFailedRetry": "Load failed, retry",
   "chatCharacterCount": "{count} characters",
-  "resourceDetailTitle": "Resource Details",
-  "resourceEnterStudio": "Open Resource Studio",
-  "resourceLegacyNoStudio": "Advanced authoring is unavailable for legacy resources",
-  "resourceActions": "Resource Actions",
   "moveToTrashAction": "Move to Recycle Bin",
   "moveToTrashMessage": "Move \"{name}\" to the recycle bin? It can be restored later.",
   "moveToTrashFailed": "Could not move to recycle bin. Try again.",
@@ -383,10 +204,6 @@
   "reasoningEffortMax": "Maximum · Rigorous logic",
   "restoreRecommended": "Restore recommended defaults",
   "recommendedDefaultsRestored": "Official recommended defaults restored",
-  "revisionHistoryTitle": "Revision History",
-  "revisionCount": "{count} revisions",
-  "refreshRevisionHistory": "Refresh revision history",
-  "noRestorableRevisions": "No restorable revisions yet",
   "currentRevision": "Current",
   "restoreRevision": "Restore this revision",
   "presetParseError": "The scene data could not be parsed or is incomplete",
@@ -397,9 +214,6 @@
   "presetNpcTitle": "Supporting Characters (NPCs)",
   "presetCustomizeAction": "Load and Customize",
   "presetDetailsAction": "Details",
-  "sidebarEmptyConversationsSubtitle": "Click the button above to start a new adventure",
-  "sidebarDeleteTooltip": "Delete conversation",
-  "sidebarSettingsNotConfigured": "Settings (Key not configured)",
   "characterFallbackName": "Character A",
   "monitoredStatus": "Monitored Status",
   "expandAction": "Expand",
@@ -421,7 +235,6 @@
     }
   },
   "selectPrompt": "Please select",
-  "noOptionsAvailable": "No options available",
   "notSpecified": "Not specified",
   "itemsSelectedCount": "{count} selected",
   "@itemsSelectedCount": {
@@ -457,27 +270,11 @@
   "feedbackWarning": "Warning",
   "feedbackInfo": "Info",
   "refreshFailed": "Refresh failed, please try again later",
-  "noRefreshNeeded": "Current page does not need refresh",
-  "fontSizeDialogTitle": "Adjust Font Size",
-  "fontSizeSmall": "A Small",
-  "fontSizeLarge": "A Large",
   "fontSizePreview": "Preview: Text 123\nFont size sample",
   "applyAction": "Apply",
-  "appliedPresetNotice": "Applied: {preset}",
-  "@appliedPresetNotice": {
-    "placeholders": {
-      "preset": {
-        "type": "String"
-      }
-    }
-  },
-  "dialogueParamsTitle": "Dialogue Parameters",
-  "paramsPresetLabel": "Parameter Presets",
   "customPreset": "Custom",
   "frequencyPenalty": "Frequency Penalty",
   "presencePenalty": "Presence Penalty",
-  "saveWorldviewTitle": "Save Worldview",
-  "worldviewInfoSection": "Worldview Information",
   "worldviewSavedSuccess": "Saved worldview \"{name}\"",
   "@worldviewSavedSuccess": {
     "placeholders": {
@@ -494,27 +291,11 @@
       }
     }
   },
-  "importCardDialogTitle": "Import Character Card",
-  "pasteCardJsonHeader": "Paste SillyTavern / Chub Character Card JSON",
-  "pasteCardJsonHint": "Paste character card JSON content here...",
-  "newDialoguePersonaTitle": "New Dialogue Persona",
-  "editDialoguePersonaTitle": "Edit Dialogue Persona",
-  "dialoguePersonaSettingHeader": "Dialogue Persona Settings",
-  "dialoguePersonaScopeNotice": "Personas here are used for dialogue mode only and can be completely independent of Naira.",
-  "personaNameLabel": "Persona Name *",
   "personaNameHint": "e.g. Naira, Advisor, Writing Partner",
-  "personaRoleLabel": "Role / Identity",
   "personaRoleHint": "e.g. General AI Assistant, Language Coach, Worldview Advisor",
-  "personaUserAddressLabel": "User Address",
-  "personaUserAddressHint": "e.g. User, Creator, Commander, Teacher",
-  "personaPersonalityLabel": "Personality & Behavioral Traits",
   "personaPersonalityHint": "Describe personality, values, and problem-solving style",
-  "personaSpeakingStyleLabel": "Speaking Style",
   "personaSpeakingStyleHint": "e.g. Concise, gentle, explain with steps and examples when needed",
-  "personaBackgroundLabel": "Background Lore",
   "personaBackgroundHint": "Where the persona comes from and what they know",
-  "personaContextLabel": "Dialogue Context",
-  "personaContextHint": "Describe the context in which the character communicates with the user",
   "contextWeightsTitle": "Context weights",
   "contextWeightsAdjust": "Adjust sources",
   "contextWeightsBalanced": "Balanced",
@@ -530,17 +311,7 @@
   "contextSourceRecentDialogue": "Recent dialogue",
   "contextSourceHistoricalSummary": "Historical summary",
   "contextSourceArchiveRetrieval": "Archive retrieval",
-  "personaDirectivesLabel": "Extra Behavioral Directives",
-  "personaDirectivesHint": "Optional: supplementary behavioral rules the persona must follow",
   "deleteDialoguePersonaTitle": "Delete Dialogue Persona?",
-  "deleteDialoguePersonaMessage": "Are you sure you want to delete \"{name}\"?",
-  "@deleteDialoguePersonaMessage": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
   "deleteCharacterCardFailed": "Failed to delete character card: {error}",
   "@deleteCharacterCardFailed": {
     "placeholders": {
@@ -549,11 +320,8 @@
       }
     }
   },
-  "nameRequired": "Please enter a name",
-  "manualCreatedSource": "Manually created",
   "createAction": "Create",
   "nameLabel": "Name",
-  "descriptionOptionalLabel": "Description (Optional)",
   "fontSizeAdjustment": "Font Size Adjustment",
   "fontSizeSmallA": "A Small",
   "fontSizeLargeA": "A Large",
@@ -622,34 +390,8 @@
   "pleaseEnterPersonaName": "Please enter character name",
   "manuallyCreated": "Manually created",
   "sidebarSystemSettings": "System Settings",
-  "settingsTabModelAndApi": "Models & API",
-  "settingsTabModelAndApiSubtitle": "Provider and key configuration",
-  "settingsTabSessionParams": "Session Parameters",
-  "settingsTabSessionParamsSubtitle": "Sampling rate and deep thinking",
   "settingsTabAppearance": "Theme & Palette",
-  "settingsTabAppearanceSubtitle": "Light/dark and color accents",
   "settingsTabStorage": "Data Management",
-  "settingsTabStorageSubtitle": "Token statistics and storage",
-  "settingsCustomProvider": "Custom",
-  "settingsReturnToLobby": "Return to Lobby",
-  "settingsReturnToSettingsList": "Return to Settings",
-  "settingsConfigsCategory": "Configuration Categories",
-  "settingsOfficialInService": "{provider} Official Active",
-  "@settingsOfficialInService": {
-    "placeholders": {
-      "provider": {
-        "type": "String"
-      }
-    }
-  },
-  "settingsKeyNotConfigured": "Key Not Configured",
-  "settingsLlmConnected": "LLM Service Connected",
-  "settingsLlmDisconnected": "API Key Not Configured",
-  "settingsLlmConnectedSubtitle": "Click to manage provider, models, and endpoints",
-  "settingsLlmDisconnectedSubtitle": "Click to configure API key to start reasoning",
-  "settingsEngineTitle": "LT Core Engine",
-  "settingsEngineSubtitle": "SQLite · Local Encryption First",
-  "settingsSystemConfigBadge": "System Config",
   "inferenceParamsTitle": "Inference & Sampling Parameters",
   "inferenceParamsSubtitle": "Adjust temperature, sampling thresholds, and deep thinking intensity",
   "deepseekThinkingHint": "Note: In DeepSeek V4.1 thinking mode, sampling is managed adaptively by the model. In non-thinking mode, top_p is fixed at 1.0 and only temperature is adjustable.",
@@ -700,7 +442,6 @@
   "customModelNameHint": "e.g. gpt-4o, llama-3.3-70b, qwen-max",
   "apiEndpointLabel": "API Endpoint (Base URL)",
   "apiSecurityNotice": "Key is stored in the OS credential store (encrypted local storage as a fallback); never relayed via intermediate servers",
-  "promptSettingsTitle": "Prompts & Deduction Planning",
   "importPresets": "Import Presets",
   "exportPresets": "Export Presets",
   "previewPromptAction": "Preview",
@@ -718,8 +459,6 @@
   },
   "presetJsonCopied": "Prompt preset JSON copied",
   "copyAllAction": "Copy All",
-  "dialogueLevelSectionTitle": "Dialogue Level",
-  "dialogueLevelSectionSubtitle": "Select output word budget and descriptive detail density per turn",
   "systemPromptSectionTitle": "System Prompt",
   "systemPromptSectionSubtitle": "Clean baseline. Defaults to minimal universal deduction guidelines if left blank.",
   "systemPromptHint": "Enter custom system instructions, world rules, or character guidelines (leave empty for defaults)...",
@@ -781,86 +520,22 @@
   "resourceStatusOptimizing": "Optimizing",
   "resourceStatusReady": "Ready",
   "resourceStatusOptimizationFailed": "Optimization Failed",
-  "resourceStatusGenerationFailed": "Generation Failed",
-  "resourceUnknownTime": "Unknown Time",
   "resourceCreateTitle": "Create Resource",
   "resourceTypeSectionTitle": "Resource Type",
-  "resourceTypeSectionDescription": "Choose the type of content carrier to build",
-  "resourcePreselectedType": "Selected Type",
-  "resourceCreationMethodSectionTitle": "Creation Method",
-  "resourceCreationMethodSectionDescription": "Choose between AI-assisted derivation or manual text drafting based on your creative needs",
-  "resourceAiCreationTitle": "AI Creation",
-  "resourceAiCreationDescription": "Automatically derive chapter outlines and body content from reference materials, fiction text, or existing assets using AI.",
-  "resourceRecommendBadge": "Recommended",
-  "resourceManualCreationTitle": "Manual Creation",
   "resourceManualCreationDescription": "Set custom name and summary, create a blank resource, and freely organize chapters and content.",
-  "resourceManualCreateTitle": "Create Resource Manually",
-  "resourceBasicInfoTitle": "Basic Information",
-  "resourceManualBasicInfoDescription": "Fill in the type, name, and brief introduction of the resource. After creation, you can freely edit the text in Studio.",
-  "resourceNameLabel": "Name",
   "resourceManualNameHint": "Enter a clear and distinct name",
   "resourceSummaryOptionalLabel": "Summary (Optional)",
   "resourceManualSummaryHint": "Briefly describe the role and background setting of the resource",
-  "resourceCreateAction": "Create",
-  "resourceInputNameError": "Please enter a resource name",
-  "resourceAiCreateTitle": "AI Resource Creation",
-  "resourceAiBasicInfoDescription": "Define the carrier type and title of the resource to be generated",
-  "resourceAiNameHint": "Enter the setting or character name to be generated",
-  "resourceAssociateWorldviewTitle": "Associate Worldview (Optional)",
-  "resourceAssociateWorldviewDescription": "Specify the native worldview for the character or NPC as supplemental context during generation",
-  "resourceNoAvailableWorldview": "No worldview available to associate",
-  "resourceNotSpecified": "Not specified",
-  "resourceReferenceSourceTitle": "Reference Material Source",
-  "resourceReferenceSourceDescription": "Provide worldview background, novel settings, or associated resources; AI will extract the essence and derive the chapter structure",
-  "resourceTabPaste": "Paste",
-  "resourceTabFile": "File",
-  "resourceTabExistingResource": "Existing Resource",
-  "resourcePasteReferenceLabel": "Paste Reference Content",
-  "resourcePasteReferenceHint": "Enter or paste novel outlines, setting drafts, or background descriptions...",
-  "resourceFileNameLabel": "File Name",
-  "resourceFileNameHint": "e.g. world_notes.md",
-  "resourceFileContentLabel": "File Text Content",
-  "resourceFileContentHint": "Paste or enter raw text from within the file...",
-  "resourceNoExistingInLibrary": "No ready resources available to associate in the library. Please switch to 'Paste' or 'File' input.",
-  "resourceSelectExistingLabel": "Select Existing Resource",
-  "resourceSelectExistingHint": "Click to select a reference existing resource",
-  "resourceGenerationLengthTitle": "Generation Length",
-  "resourceGenerationLengthDescription": "Soft target for the AI generated resource text. The generation may naturally expand beyond it within the configured elastic budget; quality and consistency outrank filling the quota.",
-  "resourceTargetCharactersLabel": "Target Word Count",
-  "resourceGenerationElasticCeilingLabel": "Allowed generation ceiling",
   "generationElasticSettingsTitle": "AI Generation Elastic Budget",
   "generationElasticSettingsDescription": "Extra room the AI may naturally exceed the target by (0–50%). Elasticity is allowed headroom, never a quota to fill; resources still follow their absolute capacity.",
   "generationElasticPercentLabel": "Effective elasticity",
   "generationElasticInheritLabel": "Inherit global",
   "generationElasticIndependentLabel": "Independent",
-  "generationElasticIndependentHint": "Independent ratio",
   "generationElasticSnapshotNotice": "Generation tasks that already started keep the budget they were created with.",
-  "resourceGenerationProgressTarget": "Target word count",
-  "resourceGenerationProgressCommitted": "Saved body",
-  "resourceGenerationProgressPreview": "Generating preview",
-  "resourceGenerationProgressProjected": "Projected total",
-  "resourceGenerationProgressDeviation": "Target deviation",
-  "resourceGenerationProgressRemaining": "Remaining capacity",
-  "resourceTargetCharactersValue": "{count} chars",
   "resourceTargetCharactersInputInvalid": "Enter a valid number",
-  "resourceLengthShort": "Short",
-  "resourceLengthLong": "Long",
-  "resourceStartCreateAction": "Start Creation",
-  "resourceInputOrPasteReferenceError": "Please enter or paste reference material text",
-  "resourceInputFileNameError": "Please enter a file name",
-  "resourceInputFileContentError": "Please enter file content",
-  "resourceSelectExistingError": "Please select an existing resource as reference",
-  "resourcePastedContentLabel": "Pasted Content",
   "resourceLoadFailedRetry": "Failed to load resource library. Please try again.",
   "resourceCreationFailedRetry": "Failed to create resource. Please try again.",
   "resourceUnnamed": "Unnamed Resource",
-  "resourceRevisionResourceKind": "Resource",
-  "resourceRevisionSectionKind": "Section",
-  "resourceRevisionPartKind": "Paragraph",
-  "resourceTrashSubtitle": "{kind} · {reason} · Deleted at {deletedAt} · Kept until {expiresAt}",
-  "resourceTrashRestoreFailed": "Restore failed: {error}",
-  "resourceTrashPermanentDeleteSuccess": "Permanently deleted",
-  "resourceTrashPermanentDeleteFailed": "Permanent delete failed: {error}",
   "modeTitleConversation": "Conversation Library",
   "modeTitleAdventure": "Scenario Library",
   "modeTitleCreation": "Creation Library",
@@ -870,124 +545,8 @@
   "modeEmptySubtitleConversation": "Create custom character cards or view past chat history.",
   "modeEmptySubtitleAdventure": "Import characters, locations, rules, or plot resources for scenario dialogue.",
   "modeEmptySubtitleCreation": "Import worldviews, character settings, chapter references, or writing materials for creation mode.",
-  "resourceStudioRefreshTooltip": "Refresh",
-  "resourceStudioTocTitle": "Table of Contents",
-  "resourceStudioNoContent": "Current resource has no content to display.",
-  "resourceStudioReadAloudAll": "Read Aloud Full Text",
-  "resourceStudioEditPart": "Edit Text",
-  "resourceStudioDeletePart": "Delete Paragraph",
-  "resourceStudioPartNotExistCannotEdit": "This paragraph no longer exists and cannot be edited",
-  "resourceStudioPublishCompressionTitle": "Publish Compression Results",
-  "resourceStudioPublishCompressionMessage": "The compressed text will replace current content. The original text will be recorded as a historical revision and can be restored at any time.\nAre you sure you want to publish?",
-  "resourceStudioPublishCompressionAction": "Publish",
-  "resourceStudioRestoreRevisionTitle": "Restore Historical Revision",
-  "resourceStudioRestoreRevisionMessage": "Current content will be replaced by this historical revision. The content before replacement will also be kept in version history.\nAre you sure you want to restore?",
-  "resourceStudioRestoreRevisionAction": "Restore",
-  "resourceStudioDeletePartTitle": "Delete Paragraph",
-  "resourceStudioDeletePartMessage": "“{title}” will be moved to Recycle Bin and can be restored from Recycle Bin.\nAre you sure you want to delete?",
-  "resourceStudioDeletePartAction": "Delete",
-  "resourceStudioPartNotExistCannotDelete": "This paragraph no longer exists and cannot be deleted",
   "resourceStudioMovedToTrash": "Moved to Recycle Bin. You can restore it from Recycle Bin",
-  "resourceStudioDeletePartFailed": "Failed to delete paragraph: {error}",
-  "resourceStudioContinueGenerating": "Continue Generation",
-  "resourceStudioPauseGenerating": "Pause",
-  "resourceStudioCancelGenerating": "Cancel",
-  "resourceStudioRetryGenerating": "Retry",
-  "generationFailed": "Generation failed",
-  "retryGeneration": "Regenerate",
-  "retryingGeneration": "Regenerating...",
   "retryFailedParts": "Regenerate failed parts",
-  "retryGenerationFailed": "Regeneration failed",
-  "resourceStudioCreatingAndStarting": "Creating resource and starting generation",
-  "resourceStudioTargetCharacters": "Target approx. {count} chars",
-  "resourceStudioCreationFailed": "Resource creation failed",
-  "resourceStudioPleaseRetryLater": "Please try again later",
-  "resourceStudioRetryCreation": "Retry Creation",
-  "resourceStudioSelectResourceOrSession": "Select Resource or Generation Session",
-  "resourceStudioSelectSession": "Select Generation Session",
-  "resourceStudioCreateAndStart": "Create and Start Generation",
-  "resourceStudioPendingAiPlan": "Pending AI Plan",
-  "resourceStudioConfirmAndStart": "Confirm and start generation",
-  "resourceStudioAcceptGeneratedCharacter": "Accept generated character",
-  "resourceStudioAcceptGeneratedCharacterSuccess": "Character and relationships saved",
-  "resourceStudioAcceptGeneratedCharacterFailed": "Failed to save character relationships: {error}",
-  "resourceStudioUnfinishedTask": "Unfinished Generation Task {index}",
-  "resourceStudioGeneratingStatus": "Generating",
-  "resourceStudioResourceLabel": "Resource",
-  "resourceStudioNoResourceOrSession": "No resources or recoverable generation sessions.",
-  "resourceStudioAddSectionTitle": "Add Section",
-  "resourceStudioSectionTitleField": "Section Title",
-  "sectionControlsTitle": "Section Controls",
-  "sectionControlsCount": "{count} sections",
-  "sectionControlsAdd": "Add Section",
-  "sectionControlsEmpty": "This resource has no sections yet.",
-  "sectionControlsLoadMore": "Load more (showing {shown}/{total})",
-  "sectionControlsUnnamed": "(Unnamed Section)",
-  "sectionControlsOrderIndex": "No. {index}",
-  "sectionControlsUpdated": "Updated {time}",
-  "sectionControlsValidate": "Validate",
-  "sectionControlsMoreActions": "More Actions",
-  "sectionControlsRename": "Rename",
-  "sectionControlsMoveUp": "Move Up",
-  "sectionControlsMoveDown": "Move Down",
-  "sectionControlsDelete": "Delete",
-  "sectionControlsDeleteTitle": "Delete Section",
-  "sectionControlsDeleteMessage": "Are you sure you want to delete “{title}” and all its contents?",
-  "sectionControlsGenerate": "Generate",
-  "sectionControlsRegenerate": "Regenerate",
-  "sectionControlsNoTasksTooltip": "This section has no generation task (not created from AI blueprint) and cannot be generated",
-  "sectionControlsRegenerateTooltip": "Rerun the generation task for this section; current content will be saved as history and can be restored at any time",
-  "sectionControlsRerunTooltip": "Rerun the generation task for this section",
-  "sectionControlsRenameDialogTitle": "Rename Section",
-  "partEditorUnsavedDraftFound": "Unsaved Draft Found",
-  "partEditorUnsavedDraftDesc": "Last edits were not saved to text. You can load draft to continue editing or discard it.",
-  "partEditorLoadDraft": "Load Draft",
-  "partEditorDiscardDraft": "Discard Draft",
-  "partEditorConflictDetected": "Content Conflict Detected",
-  "partEditorConflictDesc": "Another operation (such as generation or restore) modified this paragraph. Autosave paused, your text is still in draft. Please choose which version to keep:",
-  "partEditorUseMyText": "Use My Text",
-  "partEditorDiscardMyText": "Discard My Text",
-  "partEditorHint": "Edit text here, autosaves when typing pauses",
-  "partEditorSaveNow": "Save Now",
-  "partEditorFinishEditing": "Done",
-  "partEditorDraftLoaded": "Draft loaded, will save to text on save",
-  "partEditorDraftDiscarded": "Draft discarded",
-  "partEditorEditing": "Editing…",
-  "partEditorConflictOtherSaved": "Save conflict: another operation modified this paragraph, please choose which version to keep",
-  "partEditorConflictDraftRetained": "Save conflict: content retained in draft without overwriting newer version",
-  "partEditorAutoSaved": "Autosaved ({label})",
-  "partEditorTargetPartMissing": "Target content no longer exists, draft discarded",
-  "partEditorKeptMyTextAndSaved": "Kept my text and saved",
-  "partEditorConflictStillUnresolved": "Conflict still unresolved: paragraph was modified again, please re-select",
-  "partEditorResolveConflictFailed": "Failed to resolve conflict: {error}",
-  "partEditorSaving": "Saving ({label})…",
-  "capacityPanelTitle": "Capacity",
-  "capacityLatestFailureReason": "Latest compression failure reason: {reason}",
-  "capacityRefresh": "Refresh Capacity",
-  "capacityCompressing": "Compressing",
-  "capacityGenerateCandidates": "Generate Candidates",
-  "capacityRetryFailedWithCount": "Retry Failed ({count})",
-  "capacityRetryFailed": "Retry Failed Compression",
-  "capacityPublishWithCount": "Publish Compression ({count})",
-  "capacityPublish": "Publish Compression Results",
-  "capacityOptimizationTip": "Optimization generates a preview first; current content is only replaced after confirmation and can always be restored.",
-  "capacityPreparingState": "Preparing resource state.",
-  "capacityTextCharacters": "Text {count} chars",
-  "capacitySectionsCount": "Sections {count}",
-  "capacityPartsCount": "Blocks {count}",
-  "capacityRevisionsCount": "History {count}",
-  "capacityArchivedSize": "Archived {count} chars",
-  "capacityQueuedJobs": "Pending {count}",
-  "capacityPotentialSavings": "Adopting candidates can save approx. {count} chars.",
-  "capacityStatusNormal": "Normal",
-  "capacityStatusElastic": "Elastic",
-  "capacityStatusOverflow": "Over Budget",
-  "outlinePartPending": "Pending",
-  "outlinePartGenerated": "Generated",
-  "partContentIntegrityUnconfirmed": "Content completeness not yet verified",
-  "operationFailedRetry": "Operation failed, please try again",
-  "resourceImportReturnToEdit": "Back to Edit",
-  "resourceImportConfirmSave": "Confirm & Save",
   "characterCardEditTitle": "Edit Character Card",
   "characterCardCreateTitle": "New Character Card",
   "characterCardConfirmDeleteTitle": "Confirm Deletion",
@@ -998,18 +557,12 @@
   "characterCardInfoSection": "Character Card Info",
   "characterCardWorldviewOptional": "Matching Worldview (Optional)",
   "noneOption": "None",
-  "characterCardAiAssistedCreation": "AI-Assisted Character Card Creation",
   "detailedMode": "Detailed Mode",
   "conciseMode": "Concise Mode",
-  "simpleMode": "Simple Mode",
-  "characterCardTargetValidChars": "Target content {count} chars (max {max} chars)",
-  "characterCardSavedInStudioTip": "Generation will be saved continuously in Studio, recoverable and tracked in history",
   "characterCardRelateCharacterOptional": "Relate Existing Characters (Optional)",
   "characterCardRelateCharacterHint": "Click to select existing characters to relate with (leave empty for standalone character)",
   "characterCardNoOtherCharacters": "No other characters",
   "characterCardIndependentRole": "Not related (conceive as standalone character)",
-  "characterCardRelatedCount": "Related to {count} characters",
-  "characterCardUnnamed": "Unnamed Character",
   "characterCardBondRelation": "Bond Relationship:",
   "relationCompanion": "Companion / Teammate",
   "relationChildhoodFriend": "Childhood Friend",
@@ -1022,10 +575,7 @@
   "relationCustom": "Custom relationship...",
   "relationCustomDescLabel": "Custom Relationship Description",
   "relationCustomDescHint": "e.g. betrothed fiancée, otherworld soul symbiote...",
-  "characterCardCoreKeywordHint": "Enter character keywords or setting requirements (e.g. cold silver-haired swordmaster), leave blank for free generation...",
   "opening": "Opening...",
-  "aiRegenerate": "AI Regenerate",
-  "aiFillIn": "AI Fill In",
   "genderLabel": "Gender",
   "genderMale": "Male",
   "genderFemale": "Female",
@@ -1046,112 +596,24 @@
   "abilityCostLabel": "Ability Cost / Limit",
   "taboosLabel": "Taboos (separated by comma)",
   "relationsNoteLabel": "Relationship Notes",
-  "characterCardDetailTitle": "Character Card Details",
-  "characterPersonalityTraits": "Personality Traits",
-  "characterDescription": "Character Description",
-  "characterCustomFields": "Custom Fields",
   "characterAiAssistantCreateTitle": "AI Assistant Character Creation",
-  "characterCreateAction": "Create Character Card",
-  "characterMatchWorldview": "Matching: {name}",
-  "worldviewCreateTitle": "New Worldview",
-  "worldviewEditTitle": "Edit Worldview",
-  "worldviewDetailedTitle": "Detailed Worldview",
-  "worldviewConciseTitle": "Concise Worldview",
-  "worldviewOverviewDetailed": "Worldview Overview (counted toward total chars)",
-  "worldviewOverviewConcise": "Worldview Description (200~500 chars)",
-  "worldviewDetailedLimitTip": "Detailed settings (max {count} chars, confirmed content enters scenario dialogue)",
-  "worldviewConfirmDeleteMessage": "Are you sure you want to delete worldview “{name}”?",
-  "worldviewDeleteFailed": "Failed to delete worldview, please try again",
   "worldviewAiAssistantTitle": "AI Assistant Worldview Creation",
-  "worldviewCreateAction": "Create Worldview",
-  "originalTextContent": "Original Text Content",
-  "worldviewAiImportTip": "Paste any text (txt / md / HTML / novel snippet); AI will extract and integrate it into a worldview",
-  "pasteOriginalTextHint": "Paste original text content here...",
-  "importModeLabel": "Import Mode",
-  "preparingDeduction": "Preparing deduction…",
-  "deductionProgressChars": "Current valid chars: {current} / {target}\n{partial}",
-  "deductionProgressStage": "Deducing stage {current}/{total}: {partial}",
   "autoSaveToLibrary": "Autosave to Library",
-  "expectedTotalCharacters": "Expected Total Characters",
-  "adaptiveStageHelperText": "Adaptive phased high-concurrency deduction of all 9 modules, accelerating multiple times with autosave",
-  "aiAnalyzeAction": "AI Analyze",
-  "selectImportModeTitle": "Select Import Mode",
-  "selectImportModeDesc": "Please select the granularity for this character material. This choice is passed directly to AI.",
-  "conciseModeDesc": "Concise Mode: Preserves identity, personality, appearance, key experiences and necessary relations without expansion.",
-  "detailedModeDesc": "Detailed Mode: Fully organizes identity, personality, appearance, background, motives, info and relations within factual scope.",
-  "batchImportTitle": "Batch AI Import {kind}",
-  "provideCharacterDataTitle": "Provide Character Materials",
-  "batchAiRecognitionTip": "AI will identify character names first, generating characters individually after your confirmation.",
-  "pleaseSelectWorldviewFirst": "Please select a worldview first",
   "selectRelatedCharacters": "Select Related Characters",
-  "relatedCharactersCount": "{count} characters related",
-  "minTotalCharactersLabel": "Min Total Characters",
-  "maxTotalCharactersLabel": "Max Total Characters",
-  "characterDataLabel": "{label} Materials",
-  "characterDataHint": "Paste chapters, settings, or bios containing multiple {label}…",
-  "planningAction": "Planning…",
-  "enterAiStudioAction": "Enter AI Studio",
-  "selectCandidatesToImportTitle": "Select Characters to Import ({count})",
-  "importSelectedCharactersAction": "Import {count} Characters",
-  "selectCandidatesMultiTitle": "Select Targets (Multiple)",
-  "candidatesRelationTip": "Generated materials will establish verifiable relations based on original text and these existing characters.",
-  "confirmRelateCharactersAction": "Confirm Relation to {count} Characters",
-  "pasteCharacterRawTextHint": "Paste character or NPC original text here…",
-  "stagedDeepGenerationTip": "Staged deep generation, automatically completing to target completeness",
-  "worldviewModuleRules": "Rules & Boundaries",
   "worldviewModuleState": "Current World Status",
   "worldviewModuleLocations": "Locations & Geography",
   "worldviewModuleFactions": "Factions & Organizations",
-  "worldviewModuleCustoms": "Customs & Daily Life",
   "worldviewModuleTimeline": "History & Timeline",
-  "worldviewModuleGlossary": "Glossary",
-  "worldviewModuleConstraints": "Creative Constraints",
   "notSpecifiedOption": "Not specified",
   "unnamedWorldview": "Unnamed Worldview",
-  "noExistingCharacterCards": "No existing character cards",
-  "selectedCharactersCount": "{count} characters selected",
-  "@selectedCharactersCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "generatingEllipsis": "Generating…",
-  "aiImportCharacterTitle": "AI Import Character",
-  "aiImportNpcTitle": "AI Import NPC",
-  "relateExistingCharactersTitle": "Relate Existing Characters",
-  "sceneBatchImportCharacterTitle": "Batch Import Scene Characters",
-  "sceneBatchImportNpcTitle": "Batch Import Scene NPCs",
-  "belongingWorldviewOptional": "Belonging Worldview (Optional)",
-  "relateCharactersOptional": "Relate Characters (Optional)",
-  "associateWorldviewOptional": "Associate Worldview (Optional)",
-  "resourceStatusCancelled": "Cancelled",
-  "dashboardWizardBadge": "Wizard",
-  "dashboardPresetBadge": "Complete Script",
-  "dashboardLibraryBadge": "All Assets",
-  "dashboardSettingsBadge": "Model Config",
   "dashboardMyCharacterCards": "My Character Cards",
   "dashboardNoCharacterCardsTitle": "No Character Cards",
-  "dashboardNoCharacterCardsDesc": "No characters created yet. Shape your protagonist or companion in the library and select them for adventure.",
-  "dashboardGoToCharacterLibrary": "Go to Character Library",
-  "dashboardDefaultProfession": "Explorer",
-  "dashboardNoBackgroundDesc": "No background description",
-  "dashboardStartWithCharacter": "Start with this character",
   "dashboardMyWorldSettings": "My World Settings",
   "dashboardNoCustomWorldsTitle": "No Custom Worlds",
-  "dashboardNoCustomWorldsDesc": "Blank slate state with no preset worlds. Conceive exclusive worlds in the library or use the wizard to start exploring.",
   "dashboardGoToLibrary": "Go to Library",
-  "dashboardNoWorldDesc": "No setting description",
-  "dashboardStartWithWorld": "Start with this world",
-  "dashboardToggleSidebar": "Toggle sidebar",
   "dashboardConfigureApiKey": "Configure Key",
-  "dashboardSystemSettings": "System Settings",
-  "dashboardNoAdventuresTitle": "No Scenario Adventures Started",
-  "dashboardNoAdventuresDesc": "Select \"Custom Wizard\" above to begin your first legend",
   "dashboardContinueAdventures": "Continue Adventures",
   "dashboardUnnamedAdventure": "Unnamed Adventure",
-  "dashboardDeleteAdventureTooltip": "Delete adventure record",
   "dashboardSavedAt": "Saved at {time}",
   "@dashboardSavedAt": {
     "placeholders": {
@@ -1161,23 +623,6 @@
     }
   },
   "dashboardContinueExploring": "Continue Exploring",
-  "dashboardDeleteAdventureTitle": "Delete Adventure Record",
-  "dashboardDeleteAdventureMessage": "Are you sure you want to delete scenario \"{title}\" and all dialogue logs? This action cannot be undone.",
-  "@dashboardDeleteAdventureMessage": {
-    "placeholders": {
-      "title": {
-        "type": "Object"
-      }
-    }
-  },
-  "dashboardAdventureDeleted": "Deleted scenario \"{title}\"",
-  "@dashboardAdventureDeleted": {
-    "placeholders": {
-      "title": {
-        "type": "Object"
-      }
-    }
-  },
   "characterNameLabel": "Name",
   "presetScenesTitle": "Preset Scenes Studio",
   "presetScenesSubtitle": "Ready-to-use complete adventure scenario settings · Start your journey with one click",
@@ -1380,22 +825,6 @@
   "customGuidancePromptHint": "e.g., Focus on suspenseful detective atmosphere, add more sensory details...",
   "worldviewBoundRules": "Bound worldview rules and geographical laws",
   "defaultContinentRules": "Use default continent rules",
-  "readinessReadError": "Cannot read resource readiness status: {error}",
-  "@readinessReadError": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "readinessRetryError": "Failed to re-prepare resources: {error}",
-  "@readinessRetryError": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
   "startAdventureFailed": "Failed to start adventure: {error}",
   "@startAdventureFailed": {
     "placeholders": {
@@ -1416,8 +845,6 @@
   "readinessUnconfirmedDesc": "Failed to read resource status. Launch cannot be confirmed safely.",
   "readinessReadyDesc": "Click \"Enter Adventure\" below to freeze snapshot and start a new journey.",
   "readinessNotReadyDesc": "Cannot enter adventure without available revisions. Please complete resource readiness first.",
-  "readinessRetrying": "Re-preparing…",
-  "readinessRetry": "Re-prepare",
   "worldviewSettingLabel": "World Setting: {name}",
   "@worldviewSettingLabel": {
     "placeholders": {
@@ -1581,17 +1008,8 @@
   "openingSceneContentTitle": "Prologue Scene Content",
   "openingSceneContentDesc": "The first scene description when the adventure begins.",
   "openingSceneContentHint": "Describe the environment and twist when the protagonist appears...",
-  "openingBranchesDesc": "Action directions for the player to choose at the end of the prologue.",
   "branchNumberLabel": "Branch {number}",
   "@branchNumberLabel": {
-    "placeholders": {
-      "number": {
-        "type": "Object"
-      }
-    }
-  },
-  "actionOptionHint": "Action Option {number}...",
-  "@actionOptionHint": {
     "placeholders": {
       "number": {
         "type": "Object"
@@ -1673,14 +1091,6 @@
       },
       "names": {
         "type": "String"
-      }
-    }
-  },
-  "charactersAddedToRoster": "Added {count} AI-generated characters to the roster",
-  "@charactersAddedToRoster": {
-    "placeholders": {
-      "count": {
-        "type": "int"
       }
     }
   },
@@ -1903,16 +1313,8 @@
       }
     }
   },
-  "quickMenuTooltip": "Quick menu",
-  "@quickMenuTooltip": {
-    "description": "Inventory and adventure session labels."
-  },
   "characterStatusTitle": "Character status",
   "@characterStatusTitle": {
-    "description": "Inventory and adventure session labels."
-  },
-  "wordCountSettings": "Word count settings",
-  "@wordCountSettings": {
     "description": "Inventory and adventure session labels."
   },
   "backToLobby": "Back to lobby",
@@ -1962,10 +1364,6 @@
   "promptSettingsAction": "Prompt settings",
   "@promptSettingsAction": {
     "description": "Adventure session navigation label."
-  },
-  "wordCountAndDensitySettings": "Word count and dialogue density settings",
-  "@wordCountAndDensitySettings": {
-    "description": "Settings page title for response length and dialogue density."
   },
   "reasoningCopiedToast": "Reasoning copied to clipboard",
   "@reasoningCopiedToast": {
@@ -2311,10 +1709,6 @@
   },
   "energyLabel": "Energy",
   "@energyLabel": {
-    "description": "Character status sheet interface text."
-  },
-  "combatStatsTitle": "Combat attributes",
-  "@combatStatsTitle": {
     "description": "Character status sheet interface text."
   },
   "currentValuePrefix": "Current value: ",
@@ -2784,25 +2178,6 @@
   "@writingStoryStatus": {
     "description": "Chat reasoning and generation state label."
   },
-  "dialogueReplyLengthSettingsTitle": "Adjust scene reply length",
-  "@dialogueReplyLengthSettingsTitle": {
-    "description": "Dialogue response density setting label."
-  },
-  "dialogueCurrentSelection": "Selected: {id} · {name} ({range})",
-  "@dialogueCurrentSelection": {
-    "description": "Dialogue response density setting label.",
-    "placeholders": {
-      "id": {
-        "type": "String"
-      },
-      "name": {
-        "type": "String"
-      },
-      "range": {
-        "type": "String"
-      }
-    }
-  },
   "dialogueWordsAbove": "{minWords}+ words",
   "@dialogueWordsAbove": {
     "description": "Dialogue response density setting label.",
@@ -2929,10 +2304,6 @@
       }
     }
   },
-  "sectionValidationComplete": "Validation complete",
-  "@sectionValidationComplete": {
-    "description": "Resource Studio section operation feedback."
-  },
   "sectionRegenerated": "{title} regenerated {completed} of {total} parts",
   "@sectionRegenerated": {
     "description": "Resource Studio section operation feedback.",
@@ -2948,44 +2319,11 @@
       }
     }
   },
-  "sectionRegenerationFailed": "Generation stopped for {title}: {error}",
-  "@sectionRegenerationFailed": {
-    "description": "Resource Studio section operation feedback.",
-    "placeholders": {
-      "title": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "sectionGenerationComplete": "Generation complete",
-  "@sectionGenerationComplete": {
-    "description": "Resource Studio section operation feedback."
-  },
-  "capacityNoCompressionNeeded": "No sections need compression.",
-  "@capacityNoCompressionNeeded": {
-    "description": "Resource Studio capacity operation feedback."
-  },
-  "capacityCompressionAlreadyPublished": "This compression candidate was already published; no text was changed again.",
-  "@capacityCompressionAlreadyPublished": {
-    "description": "Resource Studio capacity operation feedback."
-  },
   "capacityCompressionPublished": "Published the compression candidate, saving about {savedCharacters} characters. The previous text is kept in revision history.",
   "@capacityCompressionPublished": {
     "description": "Resource Studio capacity operation feedback.",
     "placeholders": {
       "savedCharacters": {
-        "type": "int"
-      }
-    }
-  },
-  "capacityRetryBlockedByActiveTarget": "{count, plural, one{{count} failed job was skipped because its target already has an active compression.} other{{count} failed jobs were skipped because their targets already have active compression.}}",
-  "@capacityRetryBlockedByActiveTarget": {
-    "description": "Resource Studio capacity operation feedback.",
-    "placeholders": {
-      "count": {
         "type": "int"
       }
     }
@@ -2998,10 +2336,6 @@
         "type": "int"
       }
     }
-  },
-  "capacityRetryUnavailable": "There are no compression jobs available to retry.",
-  "@capacityRetryUnavailable": {
-    "description": "Resource Studio capacity operation feedback."
   },
   "capacityCompressionRunSummary": "{succeeded, plural, =0{Generated no candidates} one{Generated {succeeded} candidate} other{Generated {succeeded} candidates}}; {failed, plural, =0{{failed} jobs failed} one{{failed} job failed} other{{failed} jobs failed}}; {requeued, plural, =0{{requeued} jobs retried} one{{requeued} job retried} other{{requeued} jobs retried}}; {activeSkipped, plural, =0{{activeSkipped} active targets skipped} one{{activeSkipped} active target skipped} other{{activeSkipped} active targets skipped}}; {exhaustedSkipped, plural, =0{{exhaustedSkipped} jobs skipped at the retry limit} one{{exhaustedSkipped} job skipped at the retry limit} other{{exhaustedSkipped} jobs skipped at the retry limit}}. Candidates require confirmation before replacing text; failed jobs leave the original unchanged.",
   "@capacityCompressionRunSummary": {
@@ -3024,19 +2358,9 @@
       }
     }
   },
-  "revisionCauseManualSave": "Manual save",
   "revisionCauseGeneration": "AI generation",
-  "revisionCausePlanning": "Outline planning",
-  "revisionCauseRegeneration": "Regeneration",
-  "revisionCauseCompression": "Semantic compression",
-  "revisionCauseRestore": "Restore",
-  "revisionCauseMigration": "Data migration",
-  "revisionCauseDeletion": "Pre-deletion snapshot",
-  "revisionUnknownDate": "Unknown date",
-  "revisionAlreadyCurrent": "This revision is already current.",
   "revisionRestored": "Restored the {sourceCause} revision.",
   "revisionItemSubtitle": "{date} · {nodeCount, plural, =1{{nodeCount} node} other{{nodeCount} nodes}} · {charCount, plural, =1{{charCount} character} other{{charCount} characters}}",
-  "resourceRevisionOperationFailed": "Revision operation failed: {error}",
   "@revisionRestored": {
     "placeholders": {
       "sourceCause": {
@@ -3054,29 +2378,6 @@
       },
       "charCount": {
         "type": "int"
-      }
-    }
-  },
-  "@resourceRevisionOperationFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "resourceTrashKindResource": "Resource",
-  "resourceTrashKindSection": "Section",
-  "resourceTrashKindPart": "Paragraph",
-  "resourceTrashReasonUserDelete": "User deleted",
-  "resourceTrashRestoreOriginal": "Restored to its original location.",
-  "resourceTrashRestoreFallback": "The original section no longer exists. Restored under a new section at the resource root.",
-  "resourceTrashRestoreToLibrary": "Restored to the resource library.",
-  "resourceTrashAlreadyRestored": "This item was already restored; no changes were made.",
-  "resourceTrashLoadFailed": "Could not load the recycle bin: {error}",
-  "@resourceTrashLoadFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
       }
     }
   },
@@ -3227,52 +2528,6 @@
   "autosaveTriggerAppLifecycle": "when the app moves to the background",
   "@autosaveTriggerAppLifecycle": {
     "description": "Autosave trigger phrase shown in localized editor feedback."
-  },
-  "revisionBeforeRestore": "Before restore",
-  "@revisionBeforeRestore": {
-    "description": "Localized title for an automatically generated resource revision label."
-  },
-  "revisionBeforeCompression": "Before compression",
-  "@revisionBeforeCompression": {
-    "description": "Localized title for an automatically generated resource revision label."
-  },
-  "revisionAssembly": "Assembly snapshot",
-  "@revisionAssembly": {
-    "description": "Localized title for an automatically generated resource revision label."
-  },
-  "revisionCompressionSaved": "Semantic compression (saved {characters} characters)",
-  "@revisionCompressionSaved": {
-    "description": "Localized title for an automatically generated resource revision label.",
-    "placeholders": {
-      "characters": {
-        "type": "int"
-      }
-    }
-  },
-  "revisionModeRegenerate": "Regenerate",
-  "@revisionModeRegenerate": {
-    "description": "Localized title for an automatically generated resource revision label."
-  },
-  "revisionModeRewrite": "Rewrite",
-  "@revisionModeRewrite": {
-    "description": "Localized title for an automatically generated resource revision label."
-  },
-  "revisionModeExpand": "Expand",
-  "@revisionModeExpand": {
-    "description": "Localized title for an automatically generated resource revision label."
-  },
-  "revisionModeCondense": "Condense",
-  "@revisionModeCondense": {
-    "description": "Localized title for an automatically generated resource revision label."
-  },
-  "revisionBeforeRegeneration": "Before {mode}",
-  "@revisionBeforeRegeneration": {
-    "description": "Localized title for an automatically generated resource revision label.",
-    "placeholders": {
-      "mode": {
-        "type": "String"
-      }
-    }
   },
   "readAloudSegmentProgress": "Segment {current} of {total}",
   "@readAloudSegmentProgress": {
@@ -3544,16 +2799,10 @@
   "readinessDiagnosticPreparationFailed": "Resource preparation failed.",
   "readinessDiagnosticInterruptedPreparation": "The previous preparation was interrupted and can be retried.",
   "readinessDiagnosticUnknown": "Resource readiness could not be confirmed.",
-  "partEditorDiscardedRemoteText": "Discarded my text and adopted the latest content",
-  "sectionValidationIssueEmptySection": "Section has no parts",
-  "sectionValidationIssuePartMissing": "{part} has no content",
-  "sectionValidationIssuePartTooLong": "{part} is {actual} characters long (limit {limit})",
   "runtimeStateNoChanges": "No runtime changes yet",
-  "runtimeStateStructuredValue": "Structured value",
   "runtimeStateLegacy": "Legacy",
   "runtimeStateHistoricalChange": "Historical state change",
   "runtimeStateCommittedEvent": "Committed runtime event",
-  "runtimeStateRevision": "Revision {revision}",
   "runtimeStateCurrent": "Current state",
   "runtimeStateInitial": "Initial baseline",
   "runtimeStateResetToBaseline": "Reset to baseline",
@@ -3590,7 +2839,6 @@
   "sceneCharactersTitle": "Scene characters",
   "sceneCharactersPresent": "Present",
   "sceneCharactersAvailable": "Available in adventure",
-  "sceneCharactersAdd": "Add character",
   "sceneCharactersEnter": "Enter scene",
   "sceneCharactersLeave": "Leave scene",
   "sceneCharactersEmpty": "No available characters",
@@ -3621,7 +2869,6 @@
   "runtimeStateAll": "All",
   "runtimeStateNotInInitial": "Not part of initial state",
   "runtimeStateTurnLabel": "Turn {number}",
-  "runtimeStateRevisionRange": "Runtime revisions {from} → {to}",
   "runtimeStateRelationships": "Relationships",
   "runtimeStateSignificantChange": "Significant change",
   "runtimeStateFieldUnknown": "Unknown state",
@@ -3641,29 +2888,19 @@
   "runtimeStateTurnSummary": "Turn Summary",
   "runtimeStateWorldChanges": "World Changes",
   "runtimeStateCharacterChanges": "Character Changes",
-  "runtimeStateChangeBefore": "Before",
-  "runtimeStateChangeAfter": "After",
-  "runtimeStateChangeReason": "Reason",
-  "runtimeStateSource": "Source",
   "runtimeStateAffectedEntities": "Affected Objects",
   "runtimeStateMainStory": "Main Story",
-  "runtimeStateCurrentBranch": "Current Branch",
   "runtimeStateRecentChange": "Recent State Changes",
   "runtimeStateInScene": "In Scene",
   "runtimeStateBaselineProfile": "Baseline Profile",
   "runtimeStateDynamicState": "Runtime Dynamic State",
   "runtimeStateTrue": "Yes",
   "runtimeStateFalse": "No",
-  "runtimeStateTotalTurns": "{count} turns",
   "runtimeStateChangeCount": "{count} state changes",
   "runtimeStateOverview": "Overview",
-  "runtimeStateUnknownTurn": "Unknown Turn",
-  "runtimeStateUnknownEntity": "Unknown Entity",
-  "runtimeStateUnknownSource": "Unknown Source",
   "resourceLifecyclePlanning": "Planning",
   "resourceLifecycleGenerating": "Generating",
   "resourceLifecycleValidating": "Validating",
-  "resourceLifecycleReady": "Ready",
   "resourceLifecycleFailed": "Failed",
   "resourceLifecycleCancelled": "Cancelled",
   "resourceLifecycleRecovering": "Recovering",
@@ -3673,8 +2910,6 @@
   "resourceLifecycleArchived": "Archived",
   "resourceConsumableBadge": "Ready for Adventure",
   "resourceNotConsumableBadge": "Not Ready for Adventure",
-  "resourceUseForAdventure": "Use for Adventure",
-  "resourceNotConsumableTip": "Resource must be ready before it can be used for an adventure.",
   "resourceFilterStatusAll": "All Statuses",
   "resourceFilterStatusReady": "Ready",
   "resourceFilterStatusInProgress": "In Progress",
@@ -3702,79 +2937,8 @@
   },
   "resourcePaginationPrev": "Previous",
   "resourcePaginationNext": "Next",
-  "resourceBlueprintReviewTitle": "Blueprint Review",
-  "resourceBlueprintReviewSubtitle": "Review the planned sections and parts before starting generation.",
-  "resourceBlueprintConfirmAndGenerate": "Confirm & Generate",
-  "resourceBlueprintPlanningNotice": "Blueprint planned. Body generation has not started.",
-  "resourceBlueprintPlanAction": "Plan Blueprint",
   "resourceBlueprintPlanning": "Planning blueprint...",
-  "resourceBlueprintTotalEstimatedChars": "Estimated length: ~{count} chars",
-  "@resourceBlueprintTotalEstimatedChars": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "resourceSectionsCount": "{count} sections",
-  "@resourceSectionsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "resourcePartsCount": "{count} parts",
-  "@resourcePartsCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "resourceTreeStructureTitle": "Resource Tree",
-  "resourceTreeNoSections": "No sections or parts yet",
-  "resourceProvenanceLabel": "Source Note",
-  "resourceValidationStatusLabel": "Validation Status",
-  "resourceValidationPassed": "Passed",
-  "resourceValidationPending": "Pending / Validating",
   "resourceValidationFailed": "Failed",
-  "resourceSectionEmpty": "(No parts)",
-  "resourcePartEmpty": "(Empty content)",
-  "resourcePartCharCount": "{count} chars",
-  "@resourcePartCharCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "resourceDetailOpenStudio": "Open Studio",
-  "resourceDetailRetryGeneration": "Retry Generation",
-  "resourceDetailCancelGeneration": "Cancel Generation",
-  "resourceDetailRecoverTask": "Recover Task",
-  "resourceDetailCancelConfirmTitle": "Cancel Generation Task",
-  "resourceDetailCancelConfirmMessage": "Are you sure you want to cancel the generation? Completed parts will be preserved.",
-  "resourceDetailCancelSuccess": "Generation cancelled",
-  "resourceDetailRecoverSuccess": "Task recovered successfully",
-  "resourceDetailRecoverFailed": "Task recovery failed",
-  "resourceDetailRevalidate": "Re-validate",
-  "resourceDetailActionFailed": "Operation failed: {error}",
-  "@resourceDetailActionFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "resourceLastUpdated": "Updated {time}",
-  "@resourceLastUpdated": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
   "resourceInFlightGenerating": "Generating content...",
   "resourceInFlightValidating": "Validating quality...",
   "resourceInFlightRecovering": "Recovering session...",
@@ -3808,16 +2972,11 @@
   "trackedStateSectionTitle": "Monitored Fields",
   "trackedStateSectionSubtitle": "Define what the story should keep tracking. These are definitions only — no current value is stored on the resource.",
   "trackedStateAddAction": "Add monitor",
-  "trackedStateEditTitle": "Edit monitored field",
   "trackedStateDeleteTitle": "Delete monitored field",
-  "trackedStateDeleteConfirm": "Delete this monitored field? Past timeline history is kept.",
   "trackedStateNameLabel": "Name",
   "trackedStateNameHint": "e.g. Curse corruption, War tension",
-  "trackedStateNameRequired": "Name is required",
-  "trackedStateKindLabel": "Type",
   "trackedStateRuleLabel": "Detection rule",
   "trackedStateRuleHint": "Describe when this value should rise or fall",
-  "trackedStateImportanceLabel": "Importance",
   "trackedStateMinLabel": "Minimum",
   "trackedStateMaxLabel": "Maximum",
   "trackedStateEnumLabel": "Allowed values",
@@ -3825,14 +2984,12 @@
   "trackedStateUntriggered": "Not triggered",
   "trackedStateNoDefinitions": "No monitored fields",
   "trackedStateManageTitle": "Monitored fields",
-  "trackedStateMonitorLabel": "Monitored fields",
   "trackedStateKindNumber": "Number",
   "trackedStateKindInteger": "Integer",
   "trackedStateKindText": "Text",
   "trackedStateKindBoolean": "Boolean",
   "trackedStateKindEnum": "Enum",
   "trackedStateStatusTitle": "Monitored status",
-  "trackedStateScopeLabel": "Applies to",
   "trackedStateScopeInherit": "Its own entity (default)",
   "trackedStateScopeWorld": "World (global)",
   "trackedStateScopeCharacters": "Every character (general rule)",
@@ -3845,9 +3002,7 @@
   "trackedStateEntityTypeCharacter": "Characters",
   "trackedStateEntityTypeNpc": "NPCs",
   "trackedStateEntityTypeWorld": "World",
-  "trackedStateRuntimeProducedHint": "Current values are produced by the adventure at runtime and are never stored on the resource.",
   "trackedStateUntriggeredHint": "Not triggered means the story has no supporting evidence yet — it is not 0.",
-  "trackedStateResourceEmpty": "No monitored fields configured for this resource.",
   "trackedStateBoolYes": "Yes",
   "trackedStateBoolNo": "No",
   "trackedStateViewAllAction": "View all monitored fields",
@@ -3881,78 +3036,9 @@
   "resourceTrackedStateOwnerCharacter": "Characters",
   "resourceTrackedStateOwnerNpc": "NPCs",
   "resourceTrackedStateOwnerWorldview": "Worldviews",
-  "readAloudModeTitle": "Read-aloud mode",
-  "readAloudModeSystem": "System voice",
-  "readAloudModeSystemSubtitle": "Available immediately, no download required",
-  "readAloudModeNeural": "Enhanced voice",
-  "readAloudModeNeuralSubtitle": "Local neural voice; requires downloading a model manually",
-  "readAloudSystemStatusAvailable": "System voice is available",
-  "readAloudSystemStatusUnavailable": "No system speech backend is available on this platform",
-  "readAloudNeuralStatusInstalled": "{count, plural, =0{No models installed} =1{1 model installed} other{{count} models installed}} · {size}",
-  "@readAloudNeuralStatusInstalled": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "size": {
-        "type": "String"
-      }
-    }
-  },
-  "readAloudManageModels": "Manage voice models",
-  "readAloudNarratorVoice": "Narrator voice",
-  "readAloudDefaultCharacterVoice": "Default character voice",
-  "readAloudVoiceAutoAssign": "Auto assign",
-  "readAloudVoiceSystem": "System voice",
-  "readAloudVoiceChoose": "Choose",
-  "readAloudVoicePreview": "Preview",
-  "readAloudVoiceClear": "Clear custom voice",
   "readAloudVoiceFallbackNotice": "Switched to the system voice",
-  "ttsModelManagerTitle": "Voice models",
-  "ttsModelManagerIntro": "Models are downloaded only when you ask. After downloading, neural read-aloud runs fully offline.",
-  "ttsModelEmpty": "No downloadable models",
-  "ttsModelDownload": "Download",
-  "ttsModelDownloading": "Downloading",
-  "ttsModelPause": "Pause",
-  "ttsModelResume": "Resume",
-  "ttsModelCancel": "Cancel",
-  "ttsModelRetry": "Retry",
-  "ttsModelDelete": "Delete",
-  "ttsModelInstalled": "Installed",
-  "ttsModelNotInstalled": "Not installed",
-  "ttsModelPaused": "Paused",
-  "ttsModelVerifying": "Verifying",
-  "ttsModelInstalling": "Installing",
-  "ttsModelFailed": "Download failed",
-  "ttsModelDownloadSize": "Download size",
-  "ttsModelInstalledSize": "Disk usage",
-  "ttsModelSpeakerCount": "{count} voices",
-  "@ttsModelSpeakerCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "ttsModelLicense": "License",
-  "ttsModelVersion": "Version",
-  "ttsModelLanguages": "Languages",
-  "ttsModelDeleteConfirmTitle": "Delete voice model?",
-  "ttsModelDeleteConfirmBody": "The model files will be removed. Voice bindings saved for characters and the narrator are kept.",
-  "ttsVoicePickerTitle": "Choose a voice",
-  "ttsVoicePickerEmpty": "No voice models are installed yet. Install one to choose a voice.",
-  "ttsVoicePickerNeedsDownload": "This voice requires downloading a model",
-  "ttsVoicePickerDownloadAndUse": "Download and use",
-  "ttsVoicePickerUseSystem": "Use system voice",
-  "ttsVoicePickerInstalled": "Installed",
-  "ttsVoicePickerRequiresDownload": "Download required",
   "readAloudParagraph": "Read this paragraph",
   "readAloudFromParagraph": "Read from this paragraph",
-  "readAloudReturnToPosition": "Return to current position",
-  "characterVoiceSectionTitle": "Read-aloud voice",
-  "characterVoiceDescription": "Local read-aloud setting. It does not change this character''s content.",
-  "characterVoiceUseAuto": "Use auto assignment",
-  "characterVoiceUseDefault": "Use the default character voice",
   "ttsErrorModelDownloadFailed": "The voice model download failed. Check your network and try again.",
   "ttsErrorModelIntegrityFailed": "The voice model failed verification; the file may be corrupted.",
   "ttsErrorModelArchiveInvalid": "The voice model archive is invalid or unsafe.",
@@ -3964,9 +3050,6 @@
   "ttsErrorInsufficientStorage": "Not enough storage space.",
   "ttsErrorNetworkUnavailable": "Network is unavailable.",
   "ttsErrorCancelled": "Cancelled.",
-  "ttsVoiceFilterAll": "All",
-  "ttsVoicePreviewSentence": "This is a preview of the selected voice.",
-  "ttsModelDownloadStarted": "Download started",
   "runtimeStateFieldRelationshipStrength": "Relationship strength",
   "runtimeStateFieldRelationshipNotes": "Relationship notes",
   "sidebarRenameAdventure": "Rename",
@@ -3976,8 +3059,6 @@
   "sidebarPastWeek": "Past 7 days",
   "sidebarEarlier": "Earlier",
   "sidebarRenameFailed": "Could not rename adventure",
-  "sidebarAdventureRestored": "Restored to adventures",
-  "sidebarAdventureKind": "Adventure",
   "aboutProject": "About",
   "aboutProjectDescription": "Source repository and author contact for the LT narrative workbench.",
   "aboutSourceRepository": "Source repository",
@@ -3996,11 +3077,6 @@
   "readinessCompressionExhausted": "Compression retry limit reached. Edit the resource before preparing again.",
   "readinessCompressionNoTargets": "No safe prose parts can be compressed. Edit the resource to reduce its length.",
   "readinessCompressionNoCandidate": "No usable Part proposal was saved. Retry preparation or edit the resource.",
-  "readinessCompressionReview": "Review compression proposals",
-  "readinessCompressionApply": "Approve and rebuild",
-  "readinessCompressionOriginal": "Original content (preserved in revision history)",
-  "readinessCompressionProposed": "Proposed content",
-  "readinessCompressionCancel": "Cancel",
   "errorResourceGenerationBudgetExceeded": "Generated content exceeds the resource or Part budget. Reduce this Part and retry; saved content is preserved.",
   "resourceErrorGenerationBudgetInfeasible": "This Part cannot be generated within the frozen budget: resource ceiling {ceiling}, already saved {saved}, reserved for later required Parts {reserve}, minimum for this Part {minimum}, allowed {allowed}. Saved content is preserved; adjust the plan or compress earlier content, then retry.",
   "@resourceErrorGenerationBudgetInfeasible": {

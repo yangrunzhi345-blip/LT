@@ -13,10 +13,10 @@ Build reusable resources, start Adventures from their snapshots, and follow the 
 ## Highlights
 
 - Interactive Adventures with streaming turns, action choices, branches, and saved-session recovery.
-- A searchable Resource Library and a Resource Studio for structured editing and AI generation.
+- A searchable Resource Library for worldviews, character cards, and NPCs, with manual editing and single-shot AI drafting.
 - Character relationships carried from library resources into evolving Adventure state and narrative context.
 - A Runtime State Hub with a dashboard, entity views, timelines, and per-turn changes.
-- Translation and read-aloud, including optional local neural TTS with downloadable models.
+- Translation and system read-aloud for conversations and resource text.
 - Responsive navigation: a desktop sidebar with recent Adventures and compact navigation for smaller screens; access Adventure, Resource Library, Runtime State, and Settings.
 
 ## Interactive Adventures
@@ -25,39 +25,37 @@ Use the creation wizard to select a worldview, protagonist, companions, and NPCs
 
 During play, stream narrative turns, choose actions, create branches, switch the active character, and resume saved sessions. Bookmarks, message editing, dice checks, conversation import/export, and context summaries support longer stories.
 
-## Resource Library & Resource Studio
+## Resource Library
 
-Create, import, search, filter, and manage worldviews, character cards, and NPCs. Resources follow an ordered `Resource → Section → Part` structure.
+Create, edit, search, filter, sort, and delete worldviews, character cards, and NPCs. Each resource is a single editable document rather than a tree of sections and parts: the editor writes the whole card, and an AI draft is rendered into that same document for review before saving.
 
-Resource Studio exposes section creation and reordering, Part editing, streaming generation, manual save, autosave, and draft recovery. Retry an individual failed Part or all failed Parts, inspect revision history, and restore revisions. Validation and readiness show whether a resource can be used in an Adventure.
+Legacy tree rows and older library rows are migrated once into this card shape, so existing data stays readable and editable. Deleting a card removes it from the library; the app has no recycle-bin restore screen.
 
-Capacity tools help inspect resource size and generate compression candidates for review and explicit publication. Compression does not automatically replace current content. The library also provides trash and restore.
+Character and NPC cards also carry the relationships and tracked-state definitions that the Adventure wizard and the Runtime State Hub read.
 
 ## Characters, Relationships & Runtime State
 
-Manage character relationships in the library and generate related characters from an existing character. Relationships between selected characters can be copied into the Adventure snapshot and evolve during play. Current relationship state enters the narrative context and its weighted token-budget planning, so relevant changes can influence subsequent AI storytelling. Later library relationship edits do not silently change that snapshot.
+Manage character relationships in the library, and link related characters while drafting a new one in the creation wizard. Relationships between selected characters can be copied into the Adventure snapshot and evolve during play. Current relationship state enters the narrative context and its weighted token-budget planning, so relevant changes can influence subsequent AI storytelling. Later library relationship edits do not silently change that snapshot.
 
 For the active Adventure, the Runtime State Hub provides a dashboard, character and world state, locations, factions, relationships, tracked state, a timeline, and turn history. Inspect recorded changes and entity history alongside the story.
 
-## AI Generation Pipeline
+## AI-Assisted Authoring
 
-Configure an OpenAI-compatible endpoint, model, and API key. Resource creation and import use planning, blueprints, candidate confirmation, streamed Part generation, and validation, with recovery and retry for failed work. Flows accept manual input, pasted text, file-text references, or existing resources as appropriate.
+Configure an OpenAI-compatible endpoint, model, and API key. The Resource Library can draft a worldview, character, or NPC from a short instruction, and the model's structured answer is rendered into the card document, which you edit and save yourself. Generation is one request per card; there is no multi-step blueprint, part-by-part streaming, revision history, or automatic compression stage.
 
 Adventure generation assembles resource snapshots, recent narrative, summaries, and runtime state within a context budget. Structured state output is parsed and validated before accepted changes are persisted and used in later turns.
 
-## Read Aloud & Local Neural TTS
+## Read Aloud
 
-System TTS is the default. Enhanced / Neural TTS is optional and uses Sherpa/ONNX for on-device synthesis. Neural models are neither bundled with the APK nor downloaded automatically: download them explicitly in Settings → Read Aloud → model management. The model manager shows installation status, download progress, and disk usage, and lets you cancel downloads or remove models.
+Read-aloud uses the platform's system speech engine; no neural model is bundled, downloaded, or selectable. Settings expose enable, automatic reading, rate, pitch, and language.
 
-Choose a narrator voice and default character voice, enable automatic character voice assignment, or bind a voice to an individual character/NPC in its resource detail view. Voice and language availability depend on the installed model. If a neural voice, model, or runtime is unavailable, playback falls back to system TTS when a usable system backend exists.
-
-On Linux, system read-aloud uses Speech Dispatcher when available. Conversation translation uses the configured text model, independently of TTS.
+On Linux, system read-aloud uses Speech Dispatcher when available. Conversation translation uses the configured text model, independently of read-aloud.
 
 ## Local-first Architecture
 
-Resources, Adventures, messages, revisions, and application settings are primarily persisted in local SQLite. API keys are stored locally with application-level encryption; this does not mean the entire database is encrypted or that keys are held in an OS credential vault.
+Resources, Adventures, messages, and application settings are primarily persisted in local SQLite. API keys go to the platform credential store when the OS provides one, with an application-encrypted SQLite fallback; this does not mean the entire database is encrypted.
 
-AI text generation and translation send the required context to your configured endpoint, which may be remote. Neural model downloads require network access; installed neural TTS models can synthesize locally. Local-first storage does not mean every AI feature works offline.
+AI text generation and translation send the required context to your configured endpoint, which may be remote. Local-first storage does not mean every AI feature works offline.
 
 ## Localization
 

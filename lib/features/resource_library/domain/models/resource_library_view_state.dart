@@ -73,7 +73,7 @@ final class ResourceLibraryItem {
   final bool isConsumable;
   final ResourceLifecycleState? lifecycleState;
 
-  /// Native worldview identity used to validate related-character generation.
+  /// Native worldview identity frozen into the Adventure snapshot.
   final String originWorldviewId;
 
   /// True when this item is backed by a lightweight setting card rather than

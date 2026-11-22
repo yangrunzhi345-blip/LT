@@ -160,10 +160,6 @@ class AdventureProvider extends ChangeNotifier {
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
     IAdventureReadinessGate? readinessGate,
-    // Retained only for composition-root compatibility; the wizard and runtime
-    // no longer route resources through the creation pipeline.
-    // ignore: avoid_unused_constructor_parameters
-    Object? creationPipeline,
     AdventureResourceRelationshipLoader? relationshipLoader,
   })  : _adventureRepo = adventureRepo,
         _worldEntryRepo = worldEntryRepo,

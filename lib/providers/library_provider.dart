@@ -19,16 +19,11 @@ class LibraryProvider extends ChangeNotifier {
   List<Persona> _personas = [];
   String? _activePersonaId;
 
-  LibraryProvider({
-    required ILibraryRepository libraryRepo,
-    // Retained only for composition-root compatibility; character saves no
-    // longer route through a creation pipeline.
-    Object? creationPipeline,
-  }) : _libraryRepo = libraryRepo {
+  LibraryProvider({required ILibraryRepository libraryRepo})
+      : _libraryRepo = libraryRepo {
     _charMgr = CharacterManager(
       notifyParent: notifyListeners,
       libraryRepo: _libraryRepo,
-      creationPipeline: creationPipeline,
     );
     _presetMgr = pm.PresetManager(
       notifyParent: notifyListeners,
@@ -37,9 +32,6 @@ class LibraryProvider extends ChangeNotifier {
   }
 
   // ─── Getters ───
-  /// Exposes the manager's creation port for composition-root identity checks.
-  CharacterManager get characterManager => _charMgr;
-
   List<CharacterCard> get savedCharacterCards => _charMgr.savedCharacterCards;
   List<PromptPreset> get presets => _presetMgr.presets;
   String? get activePresetId => _presetMgr.activePresetId;

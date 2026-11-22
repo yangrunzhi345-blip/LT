@@ -247,9 +247,6 @@ class ChatProvider extends ChangeNotifier {
     required ILibraryRepository libraryRepo,
     required ISettingsRepository settingsRepo,
     IAdventureReadinessGate? readinessGate,
-    // Retained only for composition-root compatibility; no longer routed to a
-    // creation pipeline.
-    Object? creationPipeline,
     AdventureResourceRelationshipLoader? relationshipLoader,
     ReadAloudController? readAloud,
   }) {
@@ -271,13 +268,9 @@ class ChatProvider extends ChangeNotifier {
       worldEntryRepo: worldEntryRepo,
       libraryRepo: libraryRepo,
       readinessGate: readinessGate,
-      creationPipeline: creationPipeline,
       relationshipLoader: resolvedRelationshipLoader,
     );
-    _library = LibraryProvider(
-      libraryRepo: libraryRepo,
-      creationPipeline: creationPipeline,
-    );
+    _library = LibraryProvider(libraryRepo: libraryRepo);
     _messaging = MessagingProvider(
       adventureRepo: adventureRepo,
       settingsRepo: settingsRepo,

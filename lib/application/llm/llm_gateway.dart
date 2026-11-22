@@ -1,8 +1,6 @@
 import '../../services/llm_service.dart';
 import '../../models/generation_mode.dart';
 import '../../models/llm_task.dart';
-import '../../models/model_capabilities.dart';
-import '../../models/scene_batch_candidate.dart';
 
 /// 应用层唯一的 AI 生成边界。
 ///
@@ -36,21 +34,6 @@ abstract interface class LlmGateway {
   });
 
   Future<List<String>> identifyCharacterNames(String source);
-
-  /// 为单个已确认候选生成一张角色/NPC 资料。
-  ///
-  /// 批量导入按候选逐个调用，避免把多张长卡塞进一次结构化响应导致截断；
-  /// 返回对象的 `sourceId` 必须与 [candidate] 一致。
-  Future<Map<String, dynamic>> generateSceneBatchCharacter({
-    required String source,
-    required String label,
-    required String worldview,
-    required List<Map<String, dynamic>> relatedCharacters,
-    required SceneBatchCandidate candidate,
-    required int minimumTotalLength,
-    required int maximumTotalLength,
-    required String detailInstruction,
-  });
 
   Future<Map<String, String>> generateWorldview(
     String source, {
@@ -133,19 +116,6 @@ abstract interface class LlmGateway {
     String worldview = '',
     List<Map<String, dynamic>> associatedCharacters = const [],
   });
-}
-
-/// Optional capability for gateways that can report the physical limits of the
-/// model they will call.
-///
-/// Callers that must size an output budget from real model capability (for
-/// example the Blueprint planner) query this instead of assuming a fixed
-/// constant. Gateways that do not implement it are treated as "model unknown":
-/// the caller then falls back to the conservative registry default rather than
-/// inheriting any specific provider's ceiling.
-abstract interface class ModelCapabilityAwareGateway {
-  /// Capabilities of the model the next request will target.
-  ModelCapabilities get activeModelCapabilities;
 }
 
 /// Optional streaming capability for incremental resource generation.

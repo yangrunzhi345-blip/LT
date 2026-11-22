@@ -48,10 +48,6 @@ class WorldEngine {
     required this.notifyParent,
     required IWorldEntryRepository worldEntryRepo,
     required ILibraryRepository libraryRepo,
-    // Retained only for composition-root compatibility; Phase 5c no longer
-    // routes worldview saves through the creation pipeline.
-    // ignore: avoid_unused_constructor_parameters
-    Object? creationPipeline,
     LegacyCardMirror? cardMirror,
   })  : _worldEntryRepo = worldEntryRepo,
         _libraryRepo = libraryRepo,

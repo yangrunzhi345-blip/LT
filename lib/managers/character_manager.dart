@@ -33,10 +33,6 @@ class CharacterManager {
   CharacterManager({
     required this.notifyParent,
     required ILibraryRepository libraryRepo,
-    // Retained only for composition-root compatibility; Phase 5c no longer
-    // routes character saves through the creation pipeline.
-    // ignore: avoid_unused_constructor_parameters
-    Object? creationPipeline,
     LegacyCardMirror? cardMirror,
   })  : _libraryRepo = libraryRepo,
         _mirrorOverride = cardMirror;
