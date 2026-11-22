@@ -1,15 +1,15 @@
-import "../core/theme/app_colors.dart";
-import '../core/theme/app_spacing.dart';
+import "../../core/theme/app_colors.dart";
+import '../../core/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
-import '../core/widgets/custom_attribute_icon.dart';
-import '../core/widgets/app_svg_icon.dart';
-import '../core/widgets/narrative_paragraph_read_view.dart';
-import '../domain/read_aloud/read_aloud_contracts.dart';
-import '../domain/tts/speech_plan.dart';
-import '../l10n/generated/app_localizations.dart';
-import '../l10n/generated/app_localizations_zh.dart';
-import '../models/adventure_response.dart';
-import '../models/custom_attribute_item.dart';
+import '../../core/widgets/custom_attribute_icon.dart';
+import '../../core/widgets/app_svg_icon.dart';
+import '../../core/widgets/narrative_paragraph_read_view.dart';
+import '../../domain/read_aloud/read_aloud_contracts.dart';
+import '../../domain/tts/speech_plan.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
+import '../../models/adventure_response.dart';
+import '../../models/custom_attribute_item.dart';
 
 class AdventureMessageCard extends StatelessWidget {
   final String jsonContent;

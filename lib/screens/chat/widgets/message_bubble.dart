@@ -12,8 +12,8 @@ import '../../../domain/events/app_event_codec.dart';
 import '../../../core/localization/app_event_localizer.dart';
 import '../../../models/adventure_response.dart';
 import '../../../models/message.dart';
-import '../../../widgets/narr_aitor_loading.dart';
-import '../../../widgets/adventure_message_card.dart';
+import '../../../core/widgets/narr_aitor_loading.dart';
+import '../../../core/widgets/adventure_message_card.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../l10n/generated/app_localizations_zh.dart';
 

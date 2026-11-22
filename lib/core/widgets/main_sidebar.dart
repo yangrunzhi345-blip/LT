@@ -3,18 +3,18 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/responsive/app_breakpoints.dart';
-import '../core/theme/app_spacing.dart';
-import '../core/widgets/app_confirm_dialog.dart';
-import '../core/widgets/app_svg_icon.dart';
-import '../core/feedback/app_feedback.dart';
+import '../../core/responsive/app_breakpoints.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_confirm_dialog.dart';
+import '../../core/widgets/app_svg_icon.dart';
+import '../../core/feedback/app_feedback.dart';
 import 'recent_adventure_list.dart';
-import '../l10n/generated/app_localizations.dart';
-import '../l10n/generated/app_localizations_zh.dart';
-import '../models/app_section.dart';
-import '../models/resource_library_mode.dart';
-import '../providers/chat_provider.dart';
-import '../providers/riverpod_providers.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
+import '../../models/app_section.dart';
+import '../../models/resource_library_mode.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/riverpod_providers.dart';
 
 Widget buildMainSidebar(
   BuildContext context,

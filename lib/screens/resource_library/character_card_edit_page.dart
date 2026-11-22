@@ -20,7 +20,7 @@ import '../../models/resource_library_mode.dart';
 import '../../providers/riverpod_providers.dart';
 import '../../domain/resources/resource_contracts.dart';
 import '../../features/resource_studio/presentation/pages/resource_studio_page.dart';
-import '../../widgets/app_dialogs.dart';
+import '../../core/widgets/app_dialogs.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../l10n/generated/app_localizations_zh.dart';
 import 'resource_operation_feedback.dart';

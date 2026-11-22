@@ -30,8 +30,8 @@ import 'l10n/generated/app_localizations_zh.dart';
 import 'screens/landing_screen.dart';
 import 'screens/settings_center_screen.dart';
 import 'services/adventure_start_guard.dart';
-import 'widgets/app_dialogs.dart';
-import 'widgets/main_sidebar.dart';
+import 'core/widgets/app_dialogs.dart';
+import 'core/widgets/main_sidebar.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

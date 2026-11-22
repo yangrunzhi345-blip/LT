@@ -10,7 +10,7 @@ import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../models/adventure_config.dart';
 import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../core/widgets/app_dialogs.dart';
 import '../../../../../application/adventure/opening_canon_context.dart';
 
 AppLocalizations _l10n(BuildContext context) =>

@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
-import 'package:lt_dialogue/widgets/adventure_message_card.dart';
+import 'package:lt_dialogue/core/widgets/adventure_message_card.dart';
 
 import '../helpers/responsive_test_helper.dart';
 

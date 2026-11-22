@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
-import 'package:lt_dialogue/widgets/app_dialogs.dart';
+import 'package:lt_dialogue/core/widgets/app_dialogs.dart';
 
 void main() {
   for (final locale in const [Locale('en'), Locale('zh')]) {

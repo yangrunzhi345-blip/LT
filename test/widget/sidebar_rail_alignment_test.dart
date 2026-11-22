@@ -10,7 +10,7 @@ import 'package:lt_dialogue/l10n/generated/app_localizations_en.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/models/app_section.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
-import 'package:lt_dialogue/widgets/main_sidebar.dart';
+import 'package:lt_dialogue/core/widgets/main_sidebar.dart';
 
 import '../helpers/responsive_test_helper.dart';
 

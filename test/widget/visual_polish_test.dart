@@ -11,7 +11,7 @@ import 'package:lt_dialogue/core/widgets/app_svg_icon.dart';
 import 'package:lt_dialogue/core/widgets/workbench_chrome.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
-import 'package:lt_dialogue/widgets/main_sidebar.dart';
+import 'package:lt_dialogue/core/widgets/main_sidebar.dart';
 
 import '../helpers/responsive_test_helper.dart';
 

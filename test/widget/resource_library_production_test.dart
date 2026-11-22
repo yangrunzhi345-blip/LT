@@ -19,7 +19,7 @@ import 'package:lt_dialogue/features/resource_library/presentation/screens/resou
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_library_screen.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/screens/resource_manual_create_page.dart';
 import 'package:lt_dialogue/main.dart';
-import 'package:lt_dialogue/widgets/main_sidebar.dart';
+import 'package:lt_dialogue/core/widgets/main_sidebar.dart';
 import 'package:lt_dialogue/features/resource_studio/presentation/pages/resource_studio_page.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';

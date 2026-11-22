@@ -31,7 +31,7 @@ import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart
 import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/settings_repository_impl.dart';
 import 'package:lt_dialogue/services/repositories/world_entry_repository_impl.dart';
-import 'package:lt_dialogue/widgets/adventure_message_card.dart';
+import 'package:lt_dialogue/core/widgets/adventure_message_card.dart';
 import '../helpers/responsive_test_helper.dart';
 
 void main() {

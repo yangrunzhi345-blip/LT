@@ -12,7 +12,7 @@ import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import '../helpers/read_aloud_fakes.dart';
 import 'package:lt_dialogue/engines/chat_engine.dart';
 import 'package:lt_dialogue/models/adventure_response.dart';
-import 'package:lt_dialogue/widgets/adventure_message_card.dart';
+import 'package:lt_dialogue/core/widgets/adventure_message_card.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import '../helpers/responsive_test_helper.dart';

@@ -8,7 +8,7 @@ import '../../core/theme/custom_attribute_importance_visuals.dart';
 import '../../core/widgets/form_sub_page_scaffold.dart';
 import '../../models/custom_attribute_item.dart';
 import '../../utils/structured_json_codec.dart';
-import '../../widgets/app_dialogs.dart';
+import '../../core/widgets/app_dialogs.dart';
 import '../../core/feedback/app_feedback.dart';
 import '../../core/widgets/app_confirm_dialog.dart';
 import '../../application/resource_library/import_models.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../core/theme/app_colors.dart';
+import '../../core/theme/app_colors.dart';
 
 /// 全局通用 Loading 组件
 class NarrAItorLoading extends StatelessWidget {

@@ -14,7 +14,7 @@ import 'package:lt_dialogue/screens/settings_center_screen.dart';
 import 'package:lt_dialogue/main.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations_zh.dart';
 import 'package:lt_dialogue/services/database_service.dart';
-import 'package:lt_dialogue/widgets/main_sidebar.dart';
+import 'package:lt_dialogue/core/widgets/main_sidebar.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 
 void main() {

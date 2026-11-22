@@ -17,7 +17,7 @@ import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/screens/landing_screen.dart';
 import 'package:lt_dialogue/services/database_service.dart';
-import 'package:lt_dialogue/widgets/main_sidebar.dart';
+import 'package:lt_dialogue/core/widgets/main_sidebar.dart';
 
 import '../helpers/responsive_test_helper.dart';
 

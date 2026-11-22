@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../widgets/narr_aitor_loading.dart';
+import '../../core/widgets/narr_aitor_loading.dart';
 export 'app_buttons.dart';
 
 enum _AppActionButtonVariant { primary, secondary, danger, text }

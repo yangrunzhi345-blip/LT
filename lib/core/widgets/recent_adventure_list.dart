@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../core/widgets/app_action_menu.dart';
-import '../l10n/generated/app_localizations.dart';
-import '../l10n/generated/app_localizations_zh.dart';
+import '../../core/widgets/app_action_menu.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../l10n/generated/app_localizations_zh.dart';
 
 /// A presentation of the repository's activity-ordered adventures.
 class RecentAdventureList extends StatefulWidget {

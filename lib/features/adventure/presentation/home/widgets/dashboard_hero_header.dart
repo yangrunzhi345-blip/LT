@@ -7,7 +7,7 @@ import '../../../../../core/widgets/app_svg_icon.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 import '../../../../../l10n/generated/app_localizations_zh.dart';
 import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../core/widgets/app_dialogs.dart';
 
 /// Quiet workspace title, showing service configuration only when needed.
 class DashboardHeroHeader extends ConsumerWidget {

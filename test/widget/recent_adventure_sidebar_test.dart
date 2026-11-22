@@ -9,8 +9,8 @@ import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/models/app_section.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
-import 'package:lt_dialogue/widgets/main_sidebar.dart';
-import 'package:lt_dialogue/widgets/recent_adventure_list.dart';
+import 'package:lt_dialogue/core/widgets/main_sidebar.dart';
+import 'package:lt_dialogue/core/widgets/recent_adventure_list.dart';
 import '../helpers/responsive_test_helper.dart';
 
 class _SidebarChat extends ChangeNotifier implements ChatProvider {

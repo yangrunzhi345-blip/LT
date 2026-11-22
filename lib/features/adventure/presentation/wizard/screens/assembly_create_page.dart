@@ -15,7 +15,7 @@ import '../../../../../models/adventure_config.dart';
 import '../../../../../models/character_card_entry.dart';
 import '../../../../../models/resource_library_mode.dart';
 import '../../../../../providers/riverpod_providers.dart';
-import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../core/widgets/app_dialogs.dart';
 import '../adventure_preview_saver.dart';
 import '../adventure_readiness_message_localization.dart';
 import '../models/wizard_character_item.dart';

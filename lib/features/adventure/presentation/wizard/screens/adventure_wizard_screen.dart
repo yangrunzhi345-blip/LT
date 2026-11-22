@@ -36,7 +36,7 @@ import '../adventure_readiness_message_localization.dart';
 import '../../../../../screens/resource_library/character_card_tab.dart';
 import '../../../../../screens/resource_library/scene_batch_import_page.dart';
 import '../../../../../screens/resource_library/worldview_tab.dart';
-import '../../../../../widgets/app_dialogs.dart';
+import '../../../../../core/widgets/app_dialogs.dart';
 import '../../../../../core/router/app_router.dart';
 import '../models/wizard_character_item.dart';
 import '../adventure_label_formatters.dart';
