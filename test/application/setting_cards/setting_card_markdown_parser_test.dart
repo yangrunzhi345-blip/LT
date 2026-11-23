@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_markdown_parser.dart';
+import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
 
 const SettingCardMarkdownParser _parser = SettingCardMarkdownParser();
@@ -219,6 +220,94 @@ void main() {
       expect((modules['locations'] as Map)['status'], 'archived');
     });
 
+    test('keeps stored entry fields a rendered bullet does not print', () {
+      final card = _card(
+        content: '## 地点与地理\n\n- **银月城**：月光之城\n',
+        metadata: <String, Object?>{
+          SettingCardMarkdownParser.detailJsonKey: <String, Object?>{
+            'modules': <String, Object?>{
+              'locations': <Object?>[
+                <String, Object?>{
+                  'name': '银月城',
+                  'summary': '月光之城',
+                  'terrain': '高地',
+                  'ideology': '议会制',
+                },
+              ],
+            },
+          },
+        },
+      );
+
+      final detail = _parser.resolveWorldviewDetail(card);
+      final modules = detail['modules'] as Map<String, dynamic>;
+      final entry = (modules['locations'] as List).single as Map;
+
+      // The document wins on the text it carries; structured fields it never
+      // prints must survive from the stored payload.
+      expect(entry['summary'], '月光之城');
+      expect(entry['terrain'], '高地');
+      expect(entry['ideology'], '议会制');
+    });
+
+    test('keeps stored module items when a hand edit adds a bullet summary',
+        () {
+      final card = _card(
+        content: '## 地点与地理\n\n- **银月城**：月光之城\n',
+        metadata: <String, Object?>{
+          SettingCardMarkdownParser.detailJsonKey: <String, Object?>{
+            'modules': <String, Object?>{
+              'locations': <String, Object?>{
+                'content': '旧的可读正文',
+                'items': <Object?>[
+                  <String, Object?>{'name': '银月城', 'terrain': '高地'},
+                ],
+              },
+            },
+          },
+        },
+      );
+
+      final module = (_parser.resolveWorldviewDetail(card)['modules']
+          as Map)['locations'] as Map;
+      final entry = (module['items'] as List)
+          .cast<Map>()
+          .firstWhere((item) => item['name'] == '银月城');
+
+      expect(module['content'], '旧的可读正文');
+      expect(entry['summary'], '月光之城');
+      expect(entry['terrain'], '高地');
+    });
+
+    test('merges a fenced list section into the stored module items', () {
+      final card = _card(
+        content: '## 地点与地理\n\n```json\n[{"name":"北门","summary":"边境要塞"}]\n```\n',
+        metadata: <String, Object?>{
+          SettingCardMarkdownParser.detailJsonKey: <String, Object?>{
+            'modules': <String, Object?>{
+              'locations': <String, Object?>{
+                'content': '旧的正文',
+                'items': <Object?>[
+                  <String, Object?>{'name': '银月城', 'terrain': '高地'},
+                ],
+              },
+            },
+          },
+        },
+      );
+
+      final module = (_parser.resolveWorldviewDetail(card)['modules']
+          as Map)['locations'] as Map;
+      final items = (module['items'] as List).cast<Map>();
+
+      expect(items.map((item) => item['name']),
+          containsAll(<String>['银月城', '北门']));
+      expect(
+        items.firstWhere((item) => item['name'] == '银月城')['terrain'],
+        '高地',
+      );
+    });
+
     test('collects ## moduleKey sections as detailed modules', () {
       final card = _card(
         content: '''
@@ -404,6 +493,121 @@ void main() {
 
       expect(sections['personality'], '冷静。');
       expect(sections.containsKey('world_profile'), isTrue);
+    });
+  });
+
+  group('rendered Chinese documents', () {
+    test('character document round-trips its fields without metadata', () {
+      final data = <String, Object?>{
+        'name': '林恩',
+        'gender': '男',
+        'age': '24',
+        'profession': '游侠',
+        'archetype': '流浪者',
+        'personality': '沉默但可靠。',
+        'appearance': '黑发灰眼。',
+        'bodyDescription': '高瘦。',
+        'description': '来自北境。',
+        'background': '来自北境。',
+        'world_profile': <String, dynamic>{
+          'faction': '银月城',
+          'home_location': '北门',
+          'taboos': <String>['不可背誓', '不可欺凌弱者'],
+        },
+        'ability': '长弓',
+        'weakness': '怕水',
+        'equipment': '旧弓',
+        'speaking_style': '简短',
+        'character_arc': '从独行到守护',
+        'first_mes': '走吧。',
+        'mes_example': '甲：走。',
+        'custom_attributes': <dynamic>[
+          <String, dynamic>{'name': '魔力', 'value': '25/100'},
+        ],
+      };
+      final content = SettingCardService.renderGeneratedDocument(
+        data,
+        kind: SettingCardKind.character,
+      );
+      final payload = _parser.resolveStructuredPayload(
+        _card(content: content, name: '林恩'),
+      );
+
+      expect(payload['name'], '林恩');
+      expect(payload['gender'], '男');
+      expect(payload['age'], '24');
+      expect(payload['profession'], '游侠');
+      expect(payload['archetype'], '流浪者');
+      expect(payload['personality'], '沉默但可靠。');
+      expect(payload['appearance'], '黑发灰眼。');
+      expect(payload['bodyDescription'], '高瘦。');
+      expect(payload['description'], '来自北境。');
+      expect(payload['background'], '来自北境。');
+      expect(payload['ability'], '长弓');
+      expect(payload['weakness'], '怕水');
+      expect(payload['equipment'], '旧弓');
+      expect(payload['speaking_style'], '简短');
+      expect(payload['character_arc'], '从独行到守护');
+      expect(payload['first_mes'], '走吧。');
+      expect(payload['mes_example'], '甲：走。');
+      final profile = payload['world_profile'] as Map;
+      expect(profile['faction'], '银月城');
+      expect(profile['home_location'], '北门');
+      expect(profile['taboos'], <String>['不可背誓', '不可欺凌弱者']);
+      final attributes = payload['custom_attributes'] as List;
+      expect((attributes.single as Map)['name'], '魔力');
+      expect((attributes.single as Map)['value'], '25/100');
+    });
+
+    test('worldview document round-trips module text', () {
+      final data = <String, Object?>{
+        'name': '银月大陆',
+        'description': '被月光笼罩的大陆',
+        'detail_json': <String, dynamic>{
+          'modules': <String, dynamic>{
+            'overview': <String, dynamic>{'summary': '银月大陆概览'},
+            'locations': <dynamic>[
+              <String, dynamic>{'name': '银月城', 'summary': '月光之城'},
+            ],
+            'factions': <String, dynamic>{'content': '银月议会'},
+          },
+        },
+      };
+      final content = SettingCardService.renderGeneratedDocument(
+        data,
+        kind: SettingCardKind.worldview,
+      );
+      final detail = _parser.resolveWorldviewDetail(_card(content: content));
+      final modules = detail['modules'] as Map<String, dynamic>;
+
+      expect(content, contains('## 概览'));
+      expect(content, contains('## 地点与地理'));
+      expect(content, isNot(contains('```')));
+      expect((modules['overview'] as Map)['summary'], '银月大陆概览');
+      // Rendered entry bullets round-trip to item maps, keeping entry names.
+      final locations = modules['locations'] as List;
+      expect((locations.single as Map)['name'], '银月城');
+      expect((locations.single as Map)['summary'], '月光之城');
+      expect((modules['factions'] as Map)['summary'], contains('银月议会'));
+    });
+
+    test('unknown Chinese headings never pollute the payload', () {
+      final payload = _parser.resolveStructuredPayload(_card(
+        name: '林恩',
+        content: '''
+## 基础信息
+
+- **姓名**：林恩
+
+## 未识别小节
+
+这段内容只用于阅读。
+''',
+      ));
+
+      expect(payload['name'], '林恩');
+      expect(payload.containsKey('未识别小节'), isFalse);
+      expect(payload.containsKey('基础信息'), isFalse);
     });
   });
 }

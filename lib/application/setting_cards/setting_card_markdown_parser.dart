@@ -40,6 +40,72 @@ final class SettingCardMarkdownParser {
     '创作约束': 'creative_constraints',
   };
 
+  /// Chinese character-card sections rendered by the document renderer.
+  ///
+  /// The renderer writes readable Markdown instead of a JSON document, so the
+  /// parser has to turn those human-facing headings and bullet fields back into
+  /// the flat/nested payload the adventure snapshot consumes.
+  static const Map<String, String> _characterSectionKinds = <String, String>{
+    '基础信息': 'basic',
+    '性格与心理': 'personality',
+    '外貌与体态': 'appearance',
+    '背景经历': 'background',
+    '世界定位与动机': 'world_profile',
+    '能力与装备': 'ability',
+    '扮演与对话风格': 'roleplay',
+    '自定义属性': 'custom_attributes',
+  };
+
+  static const Map<String, String> _basicFieldAliases = <String, String>{
+    '姓名': 'name',
+    '性别': 'gender',
+    '年龄': 'age',
+    '职业': 'profession',
+    '职业身份': 'profession',
+    '身份': 'profession',
+    '人物原型': 'archetype',
+  };
+
+  static const Map<String, String> _appearanceFieldAliases = <String, String>{
+    '外貌': 'appearance',
+    '体态': 'bodyDescription',
+    '身材': 'bodyDescription',
+  };
+
+  static const Map<String, String> _abilityFieldAliases = <String, String>{
+    '能力': 'ability',
+    '弱点': 'weakness',
+    '装备': 'equipment',
+  };
+
+  static const Map<String, String> _roleplayFieldAliases = <String, String>{
+    '说话风格': 'speaking_style',
+    '角色弧光': 'character_arc',
+    '开场白': 'first_mes',
+    '开场首句': 'first_mes',
+    '对话示例': 'mes_example',
+  };
+
+  static const Map<String, String> _worldProfileFieldAliases = <String, String>{
+    '所属势力': 'faction',
+    '常驻地点': 'home_location',
+    '公开目标': 'public_goal',
+    '隐秘动机': 'hidden_motivation',
+    '能力来源': 'ability_source',
+    '能力代价': 'ability_cost',
+    '禁忌': 'taboos',
+    '关系备注': 'relationship_notes',
+    '秘密': 'secrets',
+  };
+
+  static const List<String> _listProfileKeys = <String>['taboos', 'secrets'];
+
+  static final RegExp _boldFieldPattern =
+      RegExp(r'^[-*]\s*\*\*(.+?)\*\*\s*[：:]\s*(.*)$');
+  static final RegExp _plainFieldPattern =
+      RegExp(r'^[-*]\s*([^：:]{1,16})[：:]\s*(.*)$');
+  static final RegExp _cjkPattern = RegExp(r'[\u4e00-\u9fff]');
+
   /// Parses `## <key>` sections into a flat map.
   ///
   /// A section body that is exactly one fenced `json` block is decoded into its
@@ -115,9 +181,10 @@ final class SettingCardMarkdownParser {
       _flattenDataEnvelope(payload);
     }
 
-    for (final entry in parseSections(card.content).entries) {
+    final sections = _normalizeSections(parseSections(card.content));
+    for (final entry in sections.entries) {
       if (!_hasValue(entry.value)) continue;
-      payload[entry.key] = entry.value;
+      _mergeSectionValue(payload, entry.key, entry.value);
     }
 
     final name = _text(payload['name']);
@@ -133,11 +200,254 @@ final class SettingCardMarkdownParser {
     } else if (card.summary.trim().isNotEmpty) {
       payload['description'] = card.summary.trim();
     } else if (card.content.trim().isNotEmpty) {
-      payload['description'] = card.content.trim();
+      // A rendered document is Markdown, not prose: never let a heading or a
+      // JSON document leak into the description the wizard displays.
+      final prose = plainProseFromContent(card.content);
+      if (prose.isNotEmpty) payload['description'] = prose;
     }
 
     return payload;
   }
+
+  /// Strips Markdown headings and fenced blocks down to readable prose.
+  ///
+  /// Used wherever a plain-text description is required (adventure wizard rows,
+  /// snapshot fallbacks). Returns '' rather than passing a JSON document through
+  /// as prose, because callers persist this text as the user-facing summary.
+  static String plainProseFromContent(String content) {
+    final text = content.replaceAll('\r\n', '\n').trim();
+    if (text.isEmpty || text.startsWith('{') || text.startsWith('[')) return '';
+    final lines = <String>[];
+    var inFence = false;
+    for (final raw in text.split('\n')) {
+      final line = raw.trim();
+      if (line.startsWith(_fence)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence || line.isEmpty) continue;
+      if (line.startsWith('#')) continue;
+      // Field bullets are structured values, not prose; they are re-read by
+      // the section parser and must not masquerade as a description.
+      if (_boldFieldPattern.hasMatch(line)) continue;
+      lines.add(line);
+    }
+    return lines.join('\n');
+  }
+
+  /// Maps English keys through unchanged and Chinese character sections into
+  /// structured payload fields.
+  ///
+  /// Unknown Chinese headings are skipped: they are display-only sections and
+  /// must not become payload keys that downstream readers cannot interpret.
+  Map<String, dynamic> _normalizeSections(Map<String, dynamic> sections) {
+    final result = <String, dynamic>{};
+    for (final entry in sections.entries) {
+      final key = entry.key.trim();
+      final kind = _characterSectionKinds[key];
+      if (kind == null) {
+        if (!_cjkPattern.hasMatch(key)) result[entry.key] = entry.value;
+        continue;
+      }
+      _applyCharacterSection(kind, entry.value, result);
+    }
+    return result;
+  }
+
+  /// Merges one content section into the accumulated payload.
+  ///
+  /// A rendered document carries fewer fields than its stored payload (for
+  /// example a custom attribute's importance/current value), so structured
+  /// maps and lists merge instead of replacing the richer original.
+  void _mergeSectionValue(
+    Map<String, dynamic> payload,
+    String key,
+    Object? value,
+  ) {
+    if (key == 'world_profile' && value is Map) {
+      final previous = payload[key];
+      payload[key] = <String, dynamic>{
+        if (previous is Map)
+          for (final entry in previous.entries)
+            entry.key.toString(): _deepCopy(entry.value),
+        for (final entry in value.entries)
+          entry.key.toString(): _deepCopy(entry.value),
+      };
+      return;
+    }
+    if (key == 'custom_attributes' && value is List) {
+      payload[key] = _mergeCustomAttributes(payload[key], value);
+      return;
+    }
+    payload[key] = value;
+  }
+
+  List<dynamic> _mergeCustomAttributes(Object? previous, List incoming) {
+    final merged = <Map<String, dynamic>>[];
+    final byName = <String, int>{};
+    void add(Map<String, dynamic> item) {
+      final name = _text(item['name']);
+      if (name.isNotEmpty) byName[name] = merged.length;
+      merged.add(item);
+    }
+
+    if (previous is List) {
+      for (final item in previous) {
+        if (item is Map) add(_mapCopy(item));
+      }
+    }
+    for (final item in incoming) {
+      if (item is! Map) continue;
+      final copy = _mapCopy(item);
+      final name = _text(copy['name']);
+      final index = name.isEmpty ? null : byName[name];
+      if (index == null) {
+        add(copy);
+        continue;
+      }
+      // The document is authoritative for the fields it renders; the stored
+      // payload keeps everything else (importance, ranges, ids).
+      merged[index] = <String, dynamic>{...merged[index], ...copy};
+    }
+    return merged;
+  }
+
+  void _applyCharacterSection(
+    String kind,
+    Object? value,
+    Map<String, dynamic> out,
+  ) {
+    if (value is String) {
+      final text = value.trim();
+      if (text.isEmpty) return;
+      switch (kind) {
+        case 'basic':
+          _mergeAliasedFields(
+              out, _parseFieldBullets(text), _basicFieldAliases);
+        case 'personality':
+          out['personality'] = text;
+        case 'appearance':
+          _mergeAliasedFields(
+            out,
+            _parseFieldBullets(text),
+            _appearanceFieldAliases,
+          );
+        case 'background':
+          out['description'] = text;
+          // background mirrors description for every existing reader.
+          out['background'] = text;
+        case 'world_profile':
+          final profile = _worldProfileFromBullets(_parseFieldBullets(text));
+          if (profile.isNotEmpty) {
+            final previous = out['world_profile'];
+            out['world_profile'] = <String, dynamic>{
+              if (previous is Map)
+                for (final entry in previous.entries)
+                  entry.key.toString(): entry.value,
+              ...profile,
+            };
+          }
+        case 'ability':
+          _mergeAliasedFields(
+              out, _parseFieldBullets(text), _abilityFieldAliases);
+        case 'roleplay':
+          _mergeAliasedFields(
+            out,
+            _parseFieldBullets(text),
+            _roleplayFieldAliases,
+          );
+        case 'custom_attributes':
+          final items = _parseCustomAttributes(text);
+          if (items.isNotEmpty) out['custom_attributes'] = items;
+      }
+      return;
+    }
+    // A fenced JSON block under a Chinese heading is still structured data.
+    if (kind == 'world_profile' && value is Map) {
+      out['world_profile'] = _mapCopy(value);
+    } else if (kind == 'custom_attributes' && value is List) {
+      out['custom_attributes'] = _deepCopy(value);
+    }
+  }
+
+  void _mergeAliasedFields(
+    Map<String, dynamic> out,
+    Map<String, String> fields,
+    Map<String, String> aliases,
+  ) {
+    for (final entry in fields.entries) {
+      final key = aliases[entry.key];
+      if (key == null || entry.value.isEmpty) continue;
+      out[key] = entry.value;
+    }
+  }
+
+  Map<String, dynamic> _worldProfileFromBullets(Map<String, String> fields) {
+    final profile = <String, dynamic>{};
+    for (final entry in fields.entries) {
+      final key = _worldProfileFieldAliases[entry.key];
+      if (key == null || entry.value.isEmpty) continue;
+      profile[key] = _listProfileKeys.contains(key)
+          ? _splitList(entry.value)
+          : entry.value;
+    }
+    return profile;
+  }
+
+  List<Map<String, String>> _parseCustomAttributes(String text) {
+    final items = <Map<String, String>>[];
+    for (final entry in _parseFieldBullets(text).entries) {
+      items.add(<String, String>{'name': entry.key, 'value': entry.value});
+    }
+    return items;
+  }
+
+  /// Converts rendered `- **name**：description` bullets into item maps.
+  ///
+  /// Returns an empty list when the module is plain prose, so callers can keep
+  /// the backwards-compatible summary map for non-list modules.
+  List<Map<String, dynamic>> _bulletModuleItems(String text) {
+    final items = <Map<String, dynamic>>[];
+    for (final raw in text.split('\n')) {
+      final match = _boldFieldPattern.firstMatch(raw.trim());
+      if (match == null) continue;
+      final name = match.group(1)!.trim();
+      if (name.isEmpty) continue;
+      final description = match.group(2)!.trim();
+      items.add(<String, dynamic>{
+        'name': name,
+        if (description.isNotEmpty) 'summary': description,
+      });
+    }
+    return items;
+  }
+
+  Map<String, String> _parseFieldBullets(String text) {
+    final fields = <String, String>{};
+    for (final raw in text.split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+      final bold = _boldFieldPattern.firstMatch(line);
+      if (bold != null) {
+        final label = bold.group(1)!.trim();
+        if (label.isNotEmpty) fields[label] = bold.group(2)!.trim();
+        continue;
+      }
+      final plain = _plainFieldPattern.firstMatch(line);
+      if (plain != null) {
+        final label = plain.group(1)!.trim();
+        if (label.isNotEmpty) fields[label] = plain.group(2)!.trim();
+      }
+    }
+    return fields;
+  }
+
+  /// Splits a readable list joined by a Chinese comma or semicolon.
+  static List<String> _splitList(String value) => value
+      .split(RegExp(r'[、；;]'))
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
 
   /// Flattens a legacy v2 `data` envelope so snapshot readers see one shape.
   ///
@@ -175,10 +485,10 @@ final class SettingCardMarkdownParser {
     if (fromContent != null && fromMetadata != null) {
       // Section-level edits are authoritative for the modules they contain,
       // but modules the user did not touch must survive from the payload.
-      final mergedModules = <String, dynamic>{
-        ..._mapCopy(fromMetadata['modules']),
-        ..._mapCopy(fromContent['modules']),
-      };
+      final mergedModules = _mergeModuleMaps(
+        _mapCopy(fromMetadata['modules']),
+        _mapCopy(fromContent['modules']),
+      );
       return <String, dynamic>{
         ...fromMetadata,
         ...fromContent,
@@ -211,7 +521,12 @@ final class SettingCardMarkdownParser {
       final value = entry.value;
       if (value is String) {
         final text = value.trim();
-        if (text.isNotEmpty) modules[key] = <String, dynamic>{'summary': text};
+        if (text.isEmpty) continue;
+        // A rendered entry list is readable Markdown bullets; turning them back
+        // into item maps keeps per-entry names available (keywords, entries).
+        final items = _bulletModuleItems(text);
+        modules[key] =
+            items.isEmpty ? <String, dynamic>{'summary': text} : items;
         continue;
       }
       if (value is Map || value is List) {
@@ -232,6 +547,88 @@ final class SettingCardMarkdownParser {
   /// budgeter structured modules instead of unfiltered prose.
   Map<String, dynamic>? parseWorldviewDetailFromContent(String content) =>
       _detailFromContent(content);
+
+  /// Merges a parsed document's modules over the stored payload.
+  ///
+  /// A rendered document only carries readable text, so replacing a stored
+  /// module wholesale would drop structured fields the renderer never prints
+  /// (terrain, ideology, per-entry metadata). Entries merge by name, with the
+  /// document winning on the fields it does carry.
+  static Map<String, dynamic> _mergeModuleMaps(
+    Map<String, dynamic> stored,
+    Map<String, dynamic> parsed,
+  ) {
+    final merged = <String, dynamic>{
+      for (final entry in stored.entries) entry.key: _deepCopy(entry.value),
+    };
+    for (final entry in parsed.entries) {
+      merged[entry.key] = _mergeModuleValue(merged[entry.key], entry.value);
+    }
+    return merged;
+  }
+
+  static dynamic _mergeModuleValue(dynamic current, dynamic next) {
+    if (current is List && next is List) return _mergeEntryLists(current, next);
+    if (current is Map && next is List) {
+      // A generated module is a Map holding `content` + `items`; a later hand
+      // edit turns its section into bullets. Merge into the stored items so the
+      // structured fields the bullets do not print are not thrown away.
+      final items = current['items'];
+      return <String, dynamic>{
+        for (final entry in current.entries)
+          entry.key.toString(): _deepCopy(entry.value),
+        'items':
+            items is List ? _mergeEntryLists(items, next) : _deepCopy(next),
+      };
+    }
+    if (current is Map && next is Map) {
+      final result = <String, dynamic>{
+        for (final entry in current.entries)
+          entry.key.toString(): _deepCopy(entry.value),
+      };
+      for (final entry in next.entries) {
+        final key = entry.key.toString();
+        result[key] = _mergeModuleValue(result[key], entry.value);
+      }
+      return result;
+    }
+    return _deepCopy(next);
+  }
+
+  static List<dynamic> _mergeEntryLists(
+    List<dynamic> current,
+    List<dynamic> next,
+  ) {
+    final result = <dynamic>[for (final item in current) _deepCopy(item)];
+    for (final item in next) {
+      final name = _entryName(item);
+      if (name.isNotEmpty) {
+        final index =
+            result.indexWhere((existing) => _entryName(existing) == name);
+        if (index >= 0) {
+          result[index] = _mergeModuleValue(result[index], item);
+          continue;
+        }
+      }
+      result.add(_deepCopy(item));
+    }
+    return result;
+  }
+
+  static String _entryName(dynamic item) {
+    if (item is! Map) return '';
+    for (final key in const <String>[
+      'name',
+      'title',
+      'term',
+      'event',
+      'label'
+    ]) {
+      final value = item[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+    }
+    return '';
+  }
 
   static String? _moduleKeyFor(String rawKey) {
     final key = rawKey.trim();

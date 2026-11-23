@@ -74,6 +74,13 @@ void main() {
 
     expect(frozen.worldviewSnapshot!['name'], '银月大陆');
     expect(frozen.worldviewSnapshot!['content'], contains('被月光笼罩'));
+    // The frozen description is a readable overview, not the card body: copying
+    // the Markdown document into description would leak headings downstream.
+    expect(frozen.worldviewSnapshot!['description'], '被月光笼罩。');
+    expect(
+      frozen.worldviewSnapshot!['description'],
+      isNot(equals(frozen.worldviewSnapshot!['content'])),
+    );
     expect(frozen.worldviewSnapshot!['snapshot_kind'], 'setting_card');
     expect(frozen.worldviewSnapshot!['source_id'], 'w1');
   });
@@ -239,6 +246,27 @@ void main() {
     expect(entries.length, greaterThanOrEqualTo(3));
     expect(snapshot['entries_json'], isNot('[]'));
     expect(jsonDecode(snapshot['entries_json'] as String), isNotEmpty);
+  });
+
+  test('worldview snapshot description prefers the card summary', () async {
+    cards.cards['w-summary'] = _card(
+      'w-summary',
+      SettingCardKind.worldview,
+      name: '银月大陆',
+      content: '## 概览\n\n模块概览正文。\n\n## 地点与地理\n\n- **银月城**：月光之城',
+      metadata: const <String, Object?>{},
+    ).copyWith(summary: '一句话摘要');
+    final config = AdventureConfig(
+      worldviewSnapshot: <String, dynamic>{'source_id': 'w-summary'},
+    );
+
+    final frozen = await gate.enforceAndFreeze(config);
+
+    expect(frozen.worldviewSnapshot!['description'], '一句话摘要');
+    expect(frozen.worldviewSnapshot!['content'], contains('## 地点与地理'));
+    final detail = frozen.worldviewSnapshot!['detail_json'] as Map;
+    final modules = detail['modules'] as Map;
+    expect(modules['locations'], isNotNull);
   });
 
   test('plain-text worldview card still freezes an overview entry', () async {

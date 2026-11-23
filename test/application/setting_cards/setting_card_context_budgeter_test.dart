@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_context_budgeter.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_reference_input.dart';
+import 'package:lt_dialogue/services/worldview_prompt_budget.dart';
+import 'package:lt_dialogue/utils/token_estimator.dart';
 
 String repeat(String unit, int count) => List.filled(count, unit).join();
 
@@ -177,6 +179,40 @@ void main() {
     expect(budgeter.selectReference(source: '', reference: ''), '');
     expect(budgeter.selectWorldview(source: '', worldview: ''), '');
     expect(budgeter.summarizeAssociatedCharacters(const []), isEmpty);
+  });
+
+  group('boundInstruction', () {
+    test('keeps a short instruction verbatim', () {
+      expect(budgeter.boundInstruction('生成一个角色'), '生成一个角色');
+      expect(budgeter.boundInstruction('  \n '), '');
+    });
+
+    test('keeps the head and tail within the shared worldview budget', () {
+      final head = 'HEAD ${repeat('甲', 1200)}';
+      final middle = repeat('乙', 2000);
+      final tail = '${repeat('丙', 1200)} TAIL';
+      final bounded = budgeter.boundInstruction('$head\n\n$middle\n\n$tail');
+
+      expect(
+        TokenEstimator(bounded).tokens,
+        lessThanOrEqualTo(WorldviewPromptBudget.maximumTokens),
+      );
+      expect(bounded, contains('HEAD'));
+      expect(bounded, contains('TAIL'));
+      expect(bounded, contains('【原文过长'));
+      // Only a boundary fragment of the middle paragraph may survive.
+      expect(bounded, isNot(contains(repeat('乙', 800))));
+    });
+
+    test('truncates a single oversized paragraph to the budget', () {
+      final bounded = budgeter.boundInstruction(repeat('丁', 4000));
+
+      expect(
+        TokenEstimator(bounded).tokens,
+        lessThanOrEqualTo(WorldviewPromptBudget.maximumTokens),
+      );
+      expect(bounded, isNotEmpty);
+    });
   });
 
   group('SettingCardReferenceInput', () {

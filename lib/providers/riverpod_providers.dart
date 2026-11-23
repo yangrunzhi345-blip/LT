@@ -12,6 +12,7 @@ import '../domain/setting_cards/setting_card_repository.dart';
 import '../services/repositories/setting_card_repository_impl.dart';
 import '../application/setting_cards/setting_card_service.dart';
 import '../application/setting_cards/setting_card_library_runtime.dart';
+import '../application/setting_cards/setting_card_relation_context.dart';
 import '../application/setting_cards/setting_card_adventure_snapshot.dart';
 import '../services/repositories/adventure_repository.dart';
 import '../services/repositories/adventure_repository_impl.dart';
@@ -281,9 +282,18 @@ final settingCardRepositoryProvider = Provider<SettingCardRepository>((ref) {
 });
 
 final settingCardServiceProvider = Provider<SettingCardService>((ref) {
+  final repository = ref.watch(settingCardRepositoryProvider);
+  final relationships = ref.watch(characterRelationshipManagementProvider);
   return SettingCardService(
-    repository: ref.watch(settingCardRepositoryProvider),
+    repository: repository,
     gateway: ref.watch(llmGatewayProvider),
+    // Regenerating a card must honour the relations the user already
+    // confirmed, so the loader reads the relationship table on demand.
+    relationLoader: (cardId) => SettingCardRelationContext.load(
+      cardId: cardId,
+      listFor: relationships.listFor,
+      cards: repository,
+    ),
   );
 });
 

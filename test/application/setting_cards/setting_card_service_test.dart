@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_markdown_parser.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_reference_input.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
+import 'package:lt_dialogue/models/generation_stage_progress.dart';
+import 'package:lt_dialogue/models/generation_task_handle.dart';
 
 import '../../helpers/setting_card_fakes.dart';
 
@@ -94,22 +98,30 @@ void main() {
     };
     await service.create(kind: SettingCardKind.worldview, name: '');
 
-    final stages = <String>[];
+    final stages = <GenerationStageProgress>[];
     final card = await service.generate(
       id: 'card-1',
       instruction: '生成一个奇幻大陆',
-      onProgress: (_, __, name) => stages.add(name),
+      onProgress: stages.add,
     );
 
     expect(gateway.worldviewCalls, 1);
     expect(gateway.sources.single, '生成一个奇幻大陆');
     expect(stages, isNotEmpty);
+    expect(stages.first.stageName, '概览');
+    expect(stages.first.currentCharacters, 120);
+    expect(stages.first.targetCharacters, 2000);
     expect(card.name, '银月大陆');
     expect(card.summary, '被月光笼罩的大陆');
-    expect(card.content, contains('## description'));
+    // The document is human-readable Markdown, never a JSON fence or a raw
+    // module object leaked into the editor.
+    expect(card.content, contains('## 概览'));
     expect(card.content, contains('被月光笼罩的大陆'));
-    expect(card.content, contains('## modules'));
     expect(card.content, contains('三百年前的战争'));
+    expect(card.content, isNot(contains('```json')));
+    expect(card.content, isNot(contains('## detail_json')));
+    expect(card.content, isNot(contains('"modules"')));
+    expect(card.content.trimLeft().startsWith('{'), isFalse);
   });
 
   test('generate without an instruction expands the current body', () async {
@@ -689,5 +701,392 @@ void main() {
         generated.metadata[SettingCardMarkdownParser.detailJsonKey] as Map;
     expect((detail['modules'] as Map)['overview'], isA<Map>());
     expect(detail['tracked_state_definitions'], definitions);
+  });
+
+  group('rendered documents', () {
+    test('worldview modules render as readable Chinese sections', () async {
+      gateway.worldviewResponse = <String, dynamic>{
+        'name': '银月大陆',
+        'description': '被月光笼罩的大陆',
+        'detail_json': <String, dynamic>{
+          'format_version': 2,
+          'mode': 'detailed',
+          'modules': <String, dynamic>{
+            'overview': <String, dynamic>{
+              'summary': '银月大陆概览',
+              'status': 'confirmed',
+            },
+            'locations': <dynamic>[
+              <String, dynamic>{'name': '银月城', 'summary': '月光之城'},
+              <String, dynamic>{'name': '北门', 'description': '边境要塞'},
+            ],
+            'factions': <String, dynamic>{
+              'content': '银月议会',
+              'status': 'confirmed'
+            },
+            'unknown_module': <String, dynamic>{'summary': '未知模块文本'},
+          },
+        },
+      };
+      final card =
+          await service.create(kind: SettingCardKind.worldview, name: '');
+
+      final generated = await service.generate(id: card.id, instruction: '生成');
+
+      expect(generated.content, contains('## 概览'));
+      expect(generated.content, contains('银月大陆概览'));
+      expect(generated.content, contains('## 地点与地理'));
+      expect(generated.content, contains('- **银月城**：月光之城'));
+      expect(generated.content, contains('## 势力与组织'));
+      expect(generated.content, contains('银月议会'));
+      expect(generated.content, contains('## unknown_module'));
+      expect(generated.content, contains('未知模块文本'));
+      expect(generated.content, isNot(contains('```')));
+      expect(generated.content, isNot(contains('"status"')));
+    });
+
+    test('worldview module with body and items renders each entry once',
+        () async {
+      gateway.worldviewResponse = <String, dynamic>{
+        'name': '银月大陆',
+        'description': '被月光笼罩的大陆',
+        'detail_json': <String, dynamic>{
+          'modules': <String, dynamic>{
+            'overview': <String, dynamic>{'summary': '银月大陆概览'},
+            'locations': <String, dynamic>{
+              'content': '银月城是月光之城，北门是边境要塞。',
+              'items': <dynamic>[
+                <String, dynamic>{'name': '银月城', 'description': '月光之城'},
+                <String, dynamic>{'name': '北门', 'description': '边境要塞'},
+              ],
+            },
+          },
+        },
+      };
+      final card =
+          await service.create(kind: SettingCardKind.worldview, name: '');
+
+      final generated = await service.generate(id: card.id, instruction: '生成');
+
+      // The formatted body already describes both places, so the structured
+      // items must not repeat them.
+      expect('银月城'.allMatches(generated.content).length, 1);
+      expect('北门'.allMatches(generated.content).length, 1);
+      expect(generated.content, contains('## 地点与地理'));
+      expect(generated.content, isNot(contains('```')));
+    });
+
+    test('worldview detail_json may arrive as a JSON string', () async {
+      gateway.worldviewResponse = <String, dynamic>{
+        'name': '银月大陆',
+        'description': '被月光笼罩的大陆',
+        'detail_json': jsonEncode(<String, dynamic>{
+          'modules': <String, dynamic>{
+            'overview': <String, dynamic>{'summary': '银月大陆概览'},
+            'locations': <dynamic>[
+              <String, dynamic>{'name': '银月城', 'summary': '月光之城'},
+            ],
+          },
+        }),
+      };
+      final card =
+          await service.create(kind: SettingCardKind.worldview, name: '');
+
+      final generated = await service.generate(id: card.id, instruction: '生成');
+
+      expect(generated.content, contains('## 概览'));
+      expect(generated.content, contains('银月大陆概览'));
+      expect(generated.content, contains('## 地点与地理'));
+      expect(generated.content, isNot(contains('```')));
+      final detail =
+          generated.metadata[SettingCardMarkdownParser.detailJsonKey];
+      expect(detail, isA<Map>());
+    });
+
+    test('character payload renders fixed Chinese sections without JSON',
+        () async {
+      gateway.characterResponse = <String, dynamic>{
+        'name': '林恩',
+        'gender': '男',
+        'age': '24',
+        'profession': '游侠',
+        'archetype': '流浪者',
+        'personality': '沉默但可靠。',
+        'appearance': '黑发灰眼。',
+        'bodyDescription': '高瘦。',
+        'description': '来自北境。',
+        'background': '来自北境。',
+        'world_profile': <String, dynamic>{
+          'faction': '银月城',
+          'home_location': '北门',
+          'taboos': <String>['不可背誓', '不可欺凌弱者'],
+        },
+        'ability': '长弓',
+        'weakness': '怕水',
+        'equipment': '旧弓',
+        'speaking_style': '简短',
+        'character_arc': '从独行到守护',
+        'first_mes': '走吧。',
+        'mes_example': '甲：走。',
+        'custom_attributes': <dynamic>[
+          <String, dynamic>{'name': '魔力', 'value': '25/100'},
+        ],
+      };
+      final card =
+          await service.create(kind: SettingCardKind.character, name: '林恩');
+
+      final generated = await service.generate(id: card.id, instruction: '生成');
+
+      expect(generated.content, contains('## 基础信息'));
+      expect(generated.content, contains('- **姓名**：林恩'));
+      expect(generated.content, contains('## 性格与心理'));
+      expect(generated.content, contains('## 世界定位与动机'));
+      expect(
+        generated.content,
+        contains('- **禁忌**：不可背誓、不可欺凌弱者'),
+      );
+      expect(generated.content, contains('## 自定义属性'));
+      expect(generated.content, contains('- **魔力**：25/100'));
+      // description and background carry the same text: render it once.
+      expect('来自北境'.allMatches(generated.content).length, 1);
+      expect(generated.content, isNot(contains('```')));
+      expect(generated.content, isNot(contains('## detail')));
+      expect(generated.content.trimLeft().startsWith('{'), isFalse);
+    });
+  });
+
+  group('legacy mirror bodies', () {
+    test('card mirror renders a readable character document', () {
+      final content = LegacyCardMirror.cardContent(
+        jsonEncode(<String, dynamic>{
+          'data': <String, dynamic>{
+            'name': '林恩',
+            'gender': '男',
+            'personality': '沉默但可靠。',
+            'appearance': '黑发灰眼。',
+          },
+        }),
+      );
+
+      expect(content, contains('## 基础信息'));
+      expect(content, contains('- **姓名**：林恩'));
+      expect(content, contains('## 性格与心理'));
+      expect(content, isNot(contains('```')));
+      expect(content, isNot(contains('"personality"')));
+      expect(content.trimLeft().startsWith('{'), isFalse);
+    });
+
+    test('worldview mirror expands detail modules instead of fenced JSON', () {
+      final content = LegacyCardMirror.worldviewContent(
+        description: '被月光笼罩的大陆',
+        detailJson: jsonEncode(<String, dynamic>{
+          'modules': <String, dynamic>{
+            'overview': <String, dynamic>{'summary': '大陆概览'},
+            'locations': <dynamic>[
+              <String, dynamic>{'name': '银月城', 'summary': '月光之城'},
+            ],
+          },
+        }),
+      );
+
+      expect(content, contains('## 概览'));
+      expect(content, contains('## 地点与地理'));
+      expect(content, contains('- **银月城**：月光之城'));
+      expect(content, isNot(contains('```')));
+      expect(content, isNot(contains('## detail')));
+    });
+
+    test('worldview mirror keeps the authored description as overview', () {
+      final content = LegacyCardMirror.worldviewContent(
+        description: '玩家写下的世界描述。',
+        detailJson: jsonEncode(<String, dynamic>{
+          'modules': <String, dynamic>{
+            'overview': <String, dynamic>{'summary': '模型概览'},
+            'locations': <dynamic>[
+              <String, dynamic>{'name': '银月城', 'summary': '月光之城'},
+            ],
+          },
+        }),
+      );
+
+      expect(content, contains('玩家写下的世界描述。'));
+      expect(content, contains('## 地点与地理'));
+      expect(content, contains('银月城'));
+    });
+
+    test('card mirror never returns a raw JSON object', () {
+      final content =
+          LegacyCardMirror.cardContent('{"spec":"x","spec_version":2}');
+
+      expect(content, isEmpty);
+      expect(content, isNot(contains('{')));
+    });
+
+    test('an unparseable legacy body stays plain text without a fence', () {
+      final content = LegacyCardMirror.cardContent('not json at all');
+
+      expect(content, 'not json at all');
+    });
+  });
+
+  group('generation plumbing', () {
+    test('NPC generation forwards isNpc and the task handle', () async {
+      gateway.characterResponse = <String, dynamic>{
+        'name': '守卫',
+        'personality': '忠诚',
+      };
+      final handle = GenerationTaskHandle(taskId: 'task-1');
+      final card = await service.create(kind: SettingCardKind.npc, name: '守卫');
+
+      final generated = await service.generate(
+        id: card.id,
+        instruction: '生成',
+        taskHandle: handle,
+      );
+
+      expect(gateway.isNpcArgs.single, isTrue);
+      expect(gateway.taskHandleArgs.single, same(handle));
+      expect(generated.content, contains('## 基础信息'));
+      expect(generated.content, isNot(contains('```')));
+      expect(generated.content, isNot(contains('"personality"')));
+      expect(generated.content.trimLeft().startsWith('{'), isFalse);
+    });
+
+    test('character progress arrives as structured stage progress', () async {
+      gateway.characterResponse = <String, dynamic>{
+        'name': '林恩',
+        'personality': '冷静',
+      };
+      final card =
+          await service.create(kind: SettingCardKind.character, name: '林恩');
+      final progress = <GenerationStageProgress>[];
+
+      await service.generate(
+        id: card.id,
+        instruction: '生成',
+        onProgress: progress.add,
+      );
+
+      expect(progress, isNotEmpty);
+      final reported = progress.last;
+      expect(reported.stageName, '外貌与体态');
+      expect(reported.currentCharacters, 320);
+      expect(reported.targetCharacters, 900);
+      expect(reported.supplementRound, 1);
+    });
+
+    test('saved relations are injected when none were passed explicitly',
+        () async {
+      final cards = MemorySettingCardRepository();
+      final relatedGateway = FakeSettingCardGateway(
+        characterResponse: <String, dynamic>{
+          'name': '林恩',
+          'personality': '冷静',
+        },
+      );
+      final relatedService = SettingCardService(
+        repository: cards,
+        gateway: relatedGateway,
+        relationLoader: (cardId) async => <Map<String, String>>[
+          <String, String>{
+            'name': '艾琳',
+            'profession': '祭司',
+            'personality': '温和',
+            'background': '同乡',
+            'relation': '同伴',
+          },
+        ],
+      );
+      final card = await relatedService.create(
+        kind: SettingCardKind.character,
+        name: '林恩',
+      );
+
+      await relatedService.generate(id: card.id, instruction: '生成角色');
+
+      expect(
+        relatedGateway.associatedCharacterArgs.single.single['name'],
+        '艾琳',
+      );
+      expect(
+        relatedGateway.sources.single,
+        contains('以下角色关系已由用户确认，不可改写'),
+      );
+    });
+  });
+
+  group('cancellation', () {
+    test('a cancelled character generation never overwrites the card',
+        () async {
+      final card = await service.create(
+        kind: SettingCardKind.character,
+        name: '林恩',
+        summary: '旧摘要',
+        content: '旧正文',
+      );
+      gateway.characterResponse = <String, dynamic>{
+        'name': '林恩',
+        'description': '新正文',
+      };
+      final handle = GenerationTaskHandle(taskId: 'cancel-character');
+
+      await expectLater(
+        service.generate(
+          id: card.id,
+          instruction: '重写',
+          taskHandle: handle,
+          onProgress: (_) => handle.cancel(),
+        ),
+        throwsA(isA<SettingCardGenerationCancelledException>()),
+      );
+
+      final stored = (await repository.findById(card.id))!;
+      expect(stored.content, '旧正文');
+      expect(stored.summary, '旧摘要');
+      expect(
+        stored.metadata.containsKey(SettingCardService.previousSnapshotKey),
+        isFalse,
+      );
+    });
+
+    test('a cancelled worldview generation leaves detail payload untouched',
+        () async {
+      final card = await service.create(
+        kind: SettingCardKind.worldview,
+        name: '银月大陆',
+        content: '旧世界观正文',
+      );
+      gateway.worldviewResponse = <String, dynamic>{
+        'name': '银月大陆',
+        'description': '新概述',
+        'detail_json': <String, dynamic>{
+          'modules': <String, dynamic>{
+            'overview': <String, dynamic>{'summary': '新概览'},
+          },
+        },
+      };
+      final handle = GenerationTaskHandle(taskId: 'cancel-worldview');
+
+      await expectLater(
+        service.generate(
+          id: card.id,
+          instruction: '重写',
+          taskHandle: handle,
+          onProgress: (_) => handle.cancel(),
+        ),
+        throwsA(isA<SettingCardGenerationCancelledException>()),
+      );
+
+      final stored = (await repository.findById(card.id))!;
+      expect(stored.content, '旧世界观正文');
+      expect(
+        stored.metadata.containsKey(SettingCardMarkdownParser.detailJsonKey),
+        isFalse,
+      );
+      expect(
+        stored.metadata.containsKey(SettingCardService.previousSnapshotKey),
+        isFalse,
+      );
+    });
   });
 }

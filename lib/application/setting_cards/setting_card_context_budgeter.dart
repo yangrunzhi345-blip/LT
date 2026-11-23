@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import '../../models/worldview_details.dart';
+import '../../services/worldview_prompt_budget.dart';
+import '../../utils/token_estimator.dart';
 
 /// Selects the parts of oversized reference material that fit a generation
 /// prompt without silently flooding it.
@@ -18,6 +20,67 @@ final class SettingCardContextBudgeter {
   static const int maximumModuleCharacters = 1600;
   static const int maximumPersonalityCharacters = 280;
   static const int maximumBackgroundCharacters = 400;
+
+  /// Bounds a generation instruction/source to the shared worldview prompt
+  /// budget before it reaches the gateway.
+  ///
+  /// Trimming keeps whole paragraphs from both ends (head first, then tail)
+  /// instead of only the prefix: the user's request often sits at the start
+  /// while the freshest reference text sits at the end. A boundary paragraph is
+  /// token-truncated with the shared estimator, and an explicit marker records
+  /// that the middle was dropped, so a downstream policy never has to silently
+  /// cut again.
+  String boundInstruction(
+    String source, {
+    int maximumTokens = WorldviewPromptBudget.maximumTokens,
+  }) {
+    final text = source.trim();
+    if (text.isEmpty) return '';
+    if (TokenEstimator(text).tokens <= maximumTokens) return text;
+
+    final paragraphs = _splitUnits(text);
+    if (paragraphs.length <= 1) {
+      return truncateToTokens(text, maximumTokens);
+    }
+    const marker = '\n\n【原文过长：中段已按预算省略】\n\n';
+    final markerTokens = TokenEstimator(marker).tokens;
+    var remaining = maximumTokens - markerTokens;
+    if (remaining <= 0) return truncateToTokens(text, maximumTokens);
+
+    final head = <String>[];
+    final tail = <String>[];
+    var low = 0;
+    var high = paragraphs.length - 1;
+    var takeHead = true;
+    while (low <= high) {
+      final candidate = paragraphs[takeHead ? low : high];
+      final cost = TokenEstimator(candidate).tokens + 2;
+      if (cost > remaining) break;
+      if (takeHead) {
+        head.add(candidate);
+        low += 1;
+      } else {
+        tail.insert(0, candidate);
+        high -= 1;
+      }
+      remaining -= cost;
+      takeHead = !takeHead;
+    }
+    if (low <= high && remaining > 32) {
+      final boundary = truncateToTokens(
+        paragraphs[takeHead ? low : high],
+        remaining,
+      );
+      if (boundary.isNotEmpty) {
+        if (takeHead) {
+          head.add(boundary);
+        } else {
+          tail.insert(0, boundary);
+        }
+      }
+    }
+    return '${head.join('\n\n')}$marker${tail.join('\n\n')}';
+  }
 
   /// Keeps [reference] verbatim while it fits, otherwise keeps the paragraphs
   /// that share the most terms with [source].

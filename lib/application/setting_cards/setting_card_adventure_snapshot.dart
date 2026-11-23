@@ -329,8 +329,8 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
   /// adventure id before writing world entries, so the placeholder `0` only
   /// appears inside the persisted config copy and is never used as a row id.
   static Map<String, dynamic> _worldviewSnapshot(SettingCard card) {
-    final description = _worldviewDescription(card);
     final detail = _parser.resolveWorldviewDetail(card);
+    final description = _worldviewDescription(card, detail);
     // A hand-edited document can be valid JSON with the wrong value types
     // (for example format_version as a string). Degrading to the simple shape
     // is better than failing adventure start on a recoverable authoring error.
@@ -355,7 +355,6 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
     snapshot['name'] = card.name;
     snapshot['summary'] = card.summary;
     snapshot['content'] = card.content;
-    snapshot['description'] = card.content;
     final entries = WorldviewSnapshotService.buildManagedEntries(0, snapshot);
     snapshot['entries_json'] =
         jsonEncode(<Map<String, dynamic>>[for (final e in entries) e.toJson()]);
@@ -363,17 +362,41 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
   }
 
   /// Short prose used as the preset description and fallback overview.
-  static String _worldviewDescription(SettingCard card) {
+  ///
+  /// The frozen description must be readable on its own: the card body is
+  /// stored separately under content, so copying it here would make a card's
+  /// Markdown document its own summary.
+  static String _worldviewDescription(
+    SettingCard card,
+    Map<String, dynamic> detail,
+  ) {
     final summary = card.summary.trim();
     if (summary.isNotEmpty) return summary;
-    for (final line in card.content.replaceAll('\r\n', '\n').split('\n')) {
-      final text = line.trim();
-      if (text.isEmpty || text.startsWith('#') || text.startsWith('```')) {
-        continue;
-      }
-      return text;
+    final modules = detail['modules'];
+    if (modules is Map) {
+      final text = _overviewText(modules['overview']);
+      if (text.isNotEmpty) return text;
     }
-    return card.content.trim();
+    return SettingCardMarkdownParser.plainProseFromContent(card.content);
+  }
+
+  static String _overviewText(Object? value) {
+    if (value is String) return _readable(value);
+    if (value is Map) {
+      for (final key in const ['summary', 'content', 'description', 'detail']) {
+        final text = _readable(value[key]);
+        if (text.isNotEmpty) return text;
+      }
+    }
+    return '';
+  }
+
+  static String _readable(Object? value) {
+    if (value is! String) return '';
+    final text = value.trim();
+    if (text.isEmpty || text.startsWith('{') || text.startsWith('[')) return '';
+    if (text.split('\n').any((line) => line.trim().startsWith('#'))) return '';
+    return text;
   }
 
   static Map<String, dynamic> _cardJson(
@@ -392,7 +415,9 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
     final description = _text(payload['description']);
     result['id'] = card.id;
     result['name'] = name.isNotEmpty ? name : card.name;
-    result['description'] = description.isNotEmpty ? description : card.content;
+    result['description'] = description.isNotEmpty
+        ? description
+        : SettingCardMarkdownParser.plainProseFromContent(card.content);
     result['content'] = card.content;
     result['summary'] = card.summary;
     result['source_id'] = card.id;
@@ -410,7 +435,9 @@ final class SettingCardAwareReadinessGate implements IAdventureReadinessGate {
     result['id'] = card.id;
     result['name'] = name.isNotEmpty ? name : card.name;
     result['source_id'] = card.id;
-    result['description'] = description.isNotEmpty ? description : card.content;
+    result['description'] = description.isNotEmpty
+        ? description
+        : SettingCardMarkdownParser.plainProseFromContent(card.content);
     result['content'] = card.content;
     result['summary'] = card.summary;
     result['setting_card_id'] = card.id;

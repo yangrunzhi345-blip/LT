@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import '../../domain/setting_cards/setting_card.dart';
 import '../../domain/setting_cards/setting_card_repository.dart';
-import '../../models/worldview_details.dart';
 import '../../services/repositories/library_repository.dart';
+import '../setting_cards/setting_card_markdown_parser.dart';
 
 /// 冒险创建初始数据的应用层用例。
 ///
@@ -17,6 +17,7 @@ class AdventureSetupUseCase {
   /// Adventure library rows only; mirrors the legacy repository's default
   /// adventure-mode filter without importing the l10n-heavy mode model.
   static const String _adventureMode = 'adventure';
+  static const SettingCardMarkdownParser _parser = SettingCardMarkdownParser();
 
   final ILibraryRepository _repository;
 
@@ -100,14 +101,50 @@ class AdventureSetupUseCase {
       <String, dynamic>{
         'id': card.id,
         'name': card.name,
-        'description': card.content,
-        'detail_json': WorldviewDetails.simple(card.content).encode(),
+        'description': _worldviewDescription(card),
+        'detail_json': jsonEncode(_parser.resolveWorldviewDetail(card)),
         'entries_json': '[]',
         'source': 'setting_card',
         'content_hash': '',
         'created_at': card.createdAt,
         'updated_at': card.updatedAt,
       };
+
+  /// Short prose overview for the wizard row.
+  ///
+  /// Priority is summary, then the overview module, then the first prose
+  /// paragraph. The wizard shows this string directly, so a Markdown heading or
+  /// a JSON document must never reach it.
+  static String _worldviewDescription(SettingCard card) {
+    final summary = card.summary.trim();
+    if (summary.isNotEmpty) return summary;
+    final detail = _parser.resolveWorldviewDetail(card);
+    final overview = _overviewText(detail['modules']);
+    if (overview.isNotEmpty) return overview;
+    return SettingCardMarkdownParser.plainProseFromContent(card.content);
+  }
+
+  static String _overviewText(Object? modules) {
+    if (modules is! Map) return '';
+    final overview = modules['overview'];
+    if (overview is String) return _readable(overview);
+    if (overview is Map) {
+      for (final key in const ['summary', 'content', 'description', 'detail']) {
+        final text = _readable(overview[key]);
+        if (text.isNotEmpty) return text;
+      }
+    }
+    return '';
+  }
+
+  /// Rejects Markdown / JSON while accepting ordinary prose.
+  static String _readable(Object? value) {
+    if (value is! String) return '';
+    final text = value.trim();
+    if (text.isEmpty || text.startsWith('{') || text.startsWith('[')) return '';
+    if (text.split('\n').any((line) => line.trim().startsWith('#'))) return '';
+    return text;
+  }
 
   /// Card document rendered in the legacy character_cards / npc_cards row
   /// shape. [replacedLegacyRow] keeps the card↔worldview binding when the card
@@ -132,24 +169,68 @@ class AdventureSetupUseCase {
 
   /// Character/NPC payload the legacy rows carry as JSON text.
   ///
-  /// Migrated cards keep the legacy json_data document verbatim; native cards
-  /// are markdown, so the document becomes the prose description the wizard
-  /// displays and the AI context reads.
+  /// The card document is resolved back into structured fields first, so the
+  /// wizard and AI context read the same gender/age/profession/personality/
+  /// appearance the card was rendered from. A card that holds only prose
+  /// degrades to a plain name + description without any Markdown or JSON.
   static Map<String, dynamic> _cardPayload(SettingCard card) {
-    final document = card.content.trim();
-    if (document.startsWith('{')) {
-      try {
-        final decoded = jsonDecode(document);
-        if (decoded is Map<String, dynamic>) return decoded;
-      } on FormatException {
-        // A markdown body that merely starts with '{' is not a JSON document.
+    final payload = _parser.resolveStructuredPayload(card);
+    if (_hasStructuredFields(payload)) {
+      final result = Map<String, dynamic>.from(payload);
+      result['description'] = _readable(result['description']);
+      if ((result['description'] as String).isEmpty) {
+        final prose = _plainProse(card);
+        if (prose.isNotEmpty) result['description'] = prose;
       }
+      return result;
     }
     return <String, dynamic>{
       'data': <String, dynamic>{
-        'name': card.name,
-        'description': document,
+        'name': card.name.trim(),
+        'description': _plainProse(card),
       },
     };
+  }
+
+  /// Fields that make a card more than a prose document.
+  static bool _hasStructuredFields(Map<String, dynamic> payload) {
+    const keys = <String>[
+      'gender',
+      'age',
+      'profession',
+      'personality',
+      'appearance',
+      'bodyDescription',
+      'body_description',
+      'world_profile',
+      'custom_attributes',
+      'ability',
+      'weakness',
+      'equipment',
+      'first_mes',
+      'mes_example',
+      'speaking_style',
+      'character_arc',
+      'background',
+    ];
+    for (final key in keys) {
+      final value = payload[key];
+      if (value == null) continue;
+      if (value is String && value.trim().isEmpty) continue;
+      if (value is Map && value.isEmpty) continue;
+      if (value is List && value.isEmpty) continue;
+      return true;
+    }
+    return false;
+  }
+
+  static String _plainProse(SettingCard card) {
+    final summary = card.summary.trim();
+    if (summary.isNotEmpty) return summary;
+    final payloadProse = SettingCardMarkdownParser.plainProseFromContent(
+      _parser.resolveStructuredPayload(card)['description']?.toString() ?? '',
+    );
+    if (payloadProse.isNotEmpty) return payloadProse;
+    return SettingCardMarkdownParser.plainProseFromContent(card.content);
   }
 }
