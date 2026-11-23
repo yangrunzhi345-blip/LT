@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +13,8 @@ import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/setting_cards/setting_card.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../models/generation_stage_progress.dart';
+import '../../../../models/generation_task_handle.dart';
 import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
 import '../widgets/setting_card_length_selector.dart';
@@ -25,10 +29,21 @@ final class SettingCardCreatePage extends ConsumerStatefulWidget {
     super.key,
     this.initialType = ResourceType.worldview,
     this.mode = ResourceLibraryMode.adventure,
+    this.initialOriginWorldviewId = '',
+    this.initialAssociatedCharacters = const <Map<String, String>>[],
   });
 
   final ResourceType initialType;
   final ResourceLibraryMode mode;
+
+  /// Pre-selected origin worldview, used when this page is opened from a card's
+  /// relationship panel so the new character lands in the same world.
+  final String initialOriginWorldviewId;
+
+  /// Existing characters passed as generation context. The relationship panel
+  /// links the card that opened this page so a related character is generated
+  /// with that bond in mind.
+  final List<Map<String, String>> initialAssociatedCharacters;
 
   @override
   ConsumerState<SettingCardCreatePage> createState() =>
@@ -46,7 +61,11 @@ final class _SettingCardCreatePageState
   SettingCardGenerationLength _length = SettingCardGenerationLength.standard;
   final _customLength = TextEditingController();
   List<SettingCard> _worldviews = const <SettingCard>[];
-  String _originWorldviewId = '';
+  late String _originWorldviewId = widget.initialOriginWorldviewId;
+  late final List<Map<String, String>> _associatedCharacters =
+      List<Map<String, String>>.of(widget.initialAssociatedCharacters);
+  GenerationTaskHandle? _taskHandle;
+  GenerationStageProgress? _progress;
   bool _busy = false;
 
   @override
@@ -70,6 +89,9 @@ final class _SettingCardCreatePageState
 
   @override
   void dispose() {
+    // A page that is going away must not leave a live generation writing into
+    // a disposed state; cancelling is a no-op once the request finished.
+    unawaited(_taskHandle?.cancel());
     _name.dispose();
     _summary.dispose();
     _instruction.dispose();
@@ -79,24 +101,30 @@ final class _SettingCardCreatePageState
 
   Future<void> _submit({required bool generate}) async {
     if (_busy) return;
+    final l10n = _l10n(context);
     final name = _name.text.trim();
     final instruction = _instruction.text.trim();
     if (generate && instruction.isEmpty) {
-      AppFeedback.warning(context, _l10n(context).settingCardGenerateHint);
+      AppFeedback.warning(context, l10n.settingCardGenerateHint);
       return;
     }
     final targetCharacters = _resolveTargetCharacters();
     if (generate && targetCharacters == null && _isCustomLength) {
       AppFeedback.warning(
         context,
-        _l10n(context).settingCardLengthCustomInvalid(
+        l10n.settingCardLengthCustomInvalid(
           SettingCardLengthSelector.minimumCharacters,
           _maximumCharacters,
         ),
       );
       return;
     }
-    setState(() => _busy = true);
+    final handle = GenerationTaskHandle();
+    setState(() {
+      _busy = true;
+      _progress = null;
+      _taskHandle = handle;
+    });
     final service = ref.read(settingCardServiceProvider);
     String? createdId;
     try {
@@ -113,26 +141,69 @@ final class _SettingCardCreatePageState
         await service.generate(
           id: card.id,
           instruction: instruction,
+          associatedCharacters: _associatedCharacters,
           reference: _reference,
           targetTotalCharacters: targetCharacters,
+          taskHandle: handle,
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() => _progress = progress);
+          },
         );
+      }
+      if (handle.isCancelled) {
+        // A cancelled first pass leaves the draft empty, so clean it up and
+        // keep the form editable instead of navigating away. The card exists
+        // here because create() already returned.
+        await service.discardEmptyDraft(createdId);
+        if (mounted) {
+          AppFeedback.info(context, l10n.settingCardGenerationCancelled);
+        }
+        return;
       }
       if (!mounted) return;
       Navigator.of(context).pop<String>(card.id);
-    } on SettingCardGenerationException {
+    } on SettingCardGenerationException catch (error) {
       // A failed first generation must not leave an empty draft in the
       // library; discardEmptyDraft only removes a card whose body is still
       // empty, so authored content is never touched.
       if (createdId != null) await service.discardEmptyDraft(createdId);
-      if (mounted) {
-        AppFeedback.error(context, _l10n(context).settingCardGenerateFailed);
+      if (!mounted) return;
+      if (handle.isCancelled) {
+        AppFeedback.info(context, l10n.settingCardGenerationCancelled);
+        return;
       }
+      AppFeedback.error(
+        context,
+        sanitizeSettingCardGenerationMessage(
+          error.message,
+          fallback: l10n.settingCardGenerateFailed,
+        ),
+      );
     } catch (error) {
       if (createdId != null) await service.discardEmptyDraft(createdId);
-      if (mounted) AppFeedback.error(context, error.toString());
+      if (!mounted) return;
+      if (handle.isCancelled) {
+        AppFeedback.info(context, l10n.settingCardGenerationCancelled);
+        return;
+      }
+      // Only the type is logged: raw messages can carry JSON or protocol
+      // fragments that must never reach the user.
+      debugPrint('[setting-card-create] generation failed: $error.runtimeType');
+      AppFeedback.error(context, l10n.settingCardGenerateFailed);
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _progress = null;
+          _taskHandle = null;
+        });
+      }
     }
+  }
+
+  void _cancelGeneration() {
+    unawaited(_taskHandle?.cancel());
   }
 
   int get _maximumCharacters =>
@@ -143,7 +214,9 @@ final class _SettingCardCreatePageState
   /// Resolves the target the picker represents, or null when no explicit
   /// length should be sent (default preset, or an unusable custom number).
   int? _resolveTargetCharacters() {
-    if (!_isCustomLength) return _length.targetCharacters;
+    if (!_isCustomLength) {
+      return targetCharactersFor(_kindOf(_type), _length);
+    }
     return SettingCardLengthSelector.parseCustomCharacters(
       _customLength.text,
       maximumCharacters: _maximumCharacters,
@@ -236,7 +309,7 @@ final class _SettingCardCreatePageState
                 keyPrefix: 'setting-card-create-length',
                 value: _length,
                 customCharactersController: _customLength,
-                maximumCharacters: _maximumCharacters,
+                kind: _kindOf(_type),
                 enabled: !_busy,
                 onChanged: (value) => setState(() => _length = value),
               ),
@@ -279,7 +352,36 @@ final class _SettingCardCreatePageState
               ),
               if (_busy) ...<Widget>[
                 const SizedBox(height: AppSpacing.lg),
-                const Center(child: CircularProgressIndicator()),
+                Row(
+                  children: <Widget>[
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        key: const Key('setting-card-create-progress'),
+                        _progress == null
+                            ? l10n.settingCardGenerateAction
+                            : formatSettingCardGenerationProgress(
+                                l10n,
+                                _progress!,
+                              ),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    key: const Key('setting-card-create-cancel'),
+                    onPressed: _cancelGeneration,
+                    child: Text(l10n.settingCardGenerationCancelAction),
+                  ),
+                ),
               ],
             ],
           ),

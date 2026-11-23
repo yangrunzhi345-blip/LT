@@ -3179,5 +3179,30 @@
   "settingCardRelationshipTypeRival": "宿敌",
   "settingCardRelationshipTypeSibling": "兄弟姐妹",
   "settingCardRelationshipTypeStranger": "陌生人",
-  "settingCardRelationshipTypeCustom": "自定义"
+  "settingCardRelationshipTypeCustom": "自定义",
+  "settingCardGenerationProgressCount": "{current} / {target} 字",
+  "@settingCardGenerationProgressCount": {
+    "description": "Generation progress word-count segment.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "settingCardGenerationSupplementRound": "补全第 {round} 轮",
+  "@settingCardGenerationSupplementRound": {
+    "description": "Supplement round segment appended to generation progress.",
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "settingCardGenerationCancelAction": "取消生成",
+  "settingCardGenerationCancelled": "已取消生成，可继续编辑",
+  "settingCardGenerateRelatedAction": "基于此角色生成关联角色",
+  "settingCardBackgroundUnavailable": "暂无背景描述"
 }

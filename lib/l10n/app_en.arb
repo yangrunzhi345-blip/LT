@@ -3179,5 +3179,30 @@
   "settingCardRelationshipTypeRival": "Rival",
   "settingCardRelationshipTypeSibling": "Sibling",
   "settingCardRelationshipTypeStranger": "Stranger",
-  "settingCardRelationshipTypeCustom": "Custom"
+  "settingCardRelationshipTypeCustom": "Custom",
+  "settingCardGenerationProgressCount": "{current} / {target} characters",
+  "@settingCardGenerationProgressCount": {
+    "description": "Generation progress word-count segment.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
+  "settingCardGenerationSupplementRound": "Supplement round {round}",
+  "@settingCardGenerationSupplementRound": {
+    "description": "Supplement round segment appended to generation progress.",
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "settingCardGenerationCancelAction": "Cancel generation",
+  "settingCardGenerationCancelled": "Generation cancelled. You can keep editing.",
+  "settingCardGenerateRelatedAction": "Generate a related character",
+  "settingCardBackgroundUnavailable": "No background description yet"
 }

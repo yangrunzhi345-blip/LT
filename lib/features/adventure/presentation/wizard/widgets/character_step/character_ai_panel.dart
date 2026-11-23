@@ -244,6 +244,7 @@ class WizardCharacterAiPanel extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             progressText!,
+            key: const Key('wizard-character-progress'),
             style: TextStyle(
               fontSize: 11,
               color: scheme.primary,

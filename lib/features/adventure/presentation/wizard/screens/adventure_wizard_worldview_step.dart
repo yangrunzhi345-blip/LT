@@ -188,6 +188,7 @@ extension _WizardWorldviewStep on _AdventureWizardScreenState {
                       const SizedBox(width: 6),
                       Text(
                         _aiWorldviewProgress!,
+                        key: const Key('wizard-worldview-progress'),
                         style: TextStyle(
                           fontSize: 11,
                           color: scheme.primary,

@@ -6,9 +6,11 @@ import 'package:sqflite/sqflite.dart';
 import 'package:lt_dialogue/application/resource_library/character_relationship_management.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
+import 'package:lt_dialogue/core/widgets/app_select.dart';
 import 'package:lt_dialogue/domain/resources/character_relationship.dart';
 import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/domain/setting_cards/setting_card.dart';
+import 'package:lt_dialogue/features/resource_library/presentation/screens/setting_card_create_page.dart';
 import 'package:lt_dialogue/features/resource_library/presentation/widgets/setting_card_relationships_section.dart';
 import 'package:lt_dialogue/l10n/generated/app_localizations.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
@@ -410,6 +412,44 @@ void main() {
 
     expect(find.byType(SettingCardRelationshipsSection), findsOneWidget);
     expect(find.text('关系'), findsNothing);
+  });
+
+  testWidgets('related-character entry opens create page with prefill',
+      (tester) async {
+    final cards = MemorySettingCardRepository();
+    await cards.save(
+        _card(id: 'world_a', kind: SettingCardKind.worldview, name: '银月大陆'));
+    final repo = _FakeRelationshipRepository();
+
+    await _pumpCards(
+      tester,
+      card: _card(
+        id: 'sc_lynn',
+        kind: SettingCardKind.character,
+        name: '林恩',
+        originWorldviewId: 'world_a',
+      ),
+      relationships: repo,
+      cards: cards,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('setting-card-relationship-generate-related')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SettingCardCreatePage), findsOneWidget);
+    final typeSelect = tester.widget<AppSelect<ResourceType>>(
+      find.byKey(const Key('setting-card-create-type')),
+    );
+    expect(typeSelect.value, ResourceType.character);
+    // The origin worldview is carried over so the new character starts in the
+    // same world as the card that opened the flow.
+    final originSelect = tester.widget<AppSelect<String>>(
+      find.byKey(const Key('setting-card-create-origin-worldview')),
+    );
+    expect(originSelect.value, 'world_a');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('does not overflow at 320 px with enlarged text', (tester) async {

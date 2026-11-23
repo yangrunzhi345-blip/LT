@@ -7,6 +7,8 @@ import '../../../../domain/resources/resource_limits.dart';
 import '../../../../domain/setting_cards/setting_card.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../models/generation_stage_progress.dart';
+import '../resolvers/resource_presentation_resolver.dart';
 
 /// Soft generation-length tiers shared by the create and regenerate flows.
 ///
@@ -17,13 +19,70 @@ import '../../../../l10n/generated/app_localizations_zh.dart';
 enum SettingCardGenerationLength {
   standard(null),
   compact(3000),
-  detailed(12000),
+  detailed(null),
   custom(null);
 
   const SettingCardGenerationLength(this.targetCharacters);
 
   final int? targetCharacters;
 }
+
+/// Resolves the prompt target for [length] given the card [kind].
+///
+/// The detailed tier is kind-dependent: a long worldview is built from many
+/// modules, while asking for the same word count from a single character card
+/// only invites padding. Character and NPC cards therefore stop at a smaller
+/// detailed budget that still sits inside the 4,000–6,000 character band.
+int? targetCharactersFor(
+  SettingCardKind kind,
+  SettingCardGenerationLength length,
+) {
+  switch (length) {
+    case SettingCardGenerationLength.standard:
+    case SettingCardGenerationLength.custom:
+      return null;
+    case SettingCardGenerationLength.compact:
+      return 3000;
+    case SettingCardGenerationLength.detailed:
+      return kind == SettingCardKind.worldview ? 12000 : 5000;
+  }
+}
+
+/// Formats a structured generation stage for the create / detail progress row.
+///
+/// Only the stage name is shown when the request had no explicit target, so a
+/// concise pass does not display a misleading "0 / 0". The supplement round is
+/// appended when the model is on a follow-up pass.
+String formatSettingCardGenerationProgress(
+  AppLocalizations l10n,
+  GenerationStageProgress progress,
+) {
+  final stageName = progress.stageName.trim().isNotEmpty
+      ? progress.stageName.trim()
+      : (progress.totalStages > 0
+          ? '${progress.stage} / ${progress.totalStages}'
+          : '');
+  final parts = <String>[
+    if (stageName.isNotEmpty) stageName,
+    if (progress.targetCharacters case final target?)
+      l10n.settingCardGenerationProgressCount(
+        progress.currentCharacters,
+        target,
+      ),
+    if (progress.supplementRound > 0)
+      l10n.settingCardGenerationSupplementRound(progress.supplementRound),
+  ];
+  return parts.join(' · ');
+}
+
+/// Removes protocol markers and raw JSON from a generation error before it is
+/// shown. The typed exception's own message is readable Chinese, so it is kept
+/// and only scrubbed; unknown failures fall back to [fallback].
+String sanitizeSettingCardGenerationMessage(
+  String? message, {
+  required String fallback,
+}) =>
+    ResourcePresentationResolver.sanitize(message, fallback: fallback);
 
 /// Compact length picker used above the instruction field.
 ///
@@ -36,7 +95,7 @@ final class SettingCardLengthSelector extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.customCharactersController,
-    required this.maximumCharacters,
+    required this.kind,
     this.enabled = true,
     this.keyPrefix = 'setting-card-length',
   });
@@ -79,7 +138,11 @@ final class SettingCardLengthSelector extends StatelessWidget {
   /// when the form is submitted.
   final TextEditingController customCharactersController;
 
-  final int maximumCharacters;
+  final SettingCardKind kind;
+
+  /// Largest target offered for [kind]; see [maximumCharactersFor].
+  int get maximumCharacters => maximumCharactersFor(kind);
+
   final bool enabled;
   final String keyPrefix;
 
@@ -154,7 +217,7 @@ final class SettingCardLengthSelector extends StatelessWidget {
         customCharactersController.text.trim().isEmpty) {
       // Seed the field with the previous preset so switching to 自定义 does not
       // force retyping a length the user just picked.
-      final seed = value.targetCharacters;
+      final seed = targetCharactersFor(kind, value);
       if (seed != null) {
         customCharactersController.text = '$seed';
       }

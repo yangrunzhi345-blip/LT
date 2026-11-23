@@ -1,11 +1,13 @@
 part of 'adventure_wizard_screen.dart';
 
-/// Soft length target for one detailed generation pass.
+/// Soft length targets for one detailed generation pass.
 ///
 /// The prompt asks the model for roughly this many characters. Nothing
 /// validates or trims the result afterwards, so a shorter or longer answer is
-/// still saved as-is.
-const int _aiDetailedTargetCharacters = 12000;
+/// still saved as-is. Characters use a smaller budget than worldviews because a
+/// single character document starts padding long before 12,000 characters.
+const int _aiWorldviewDetailedTargetCharacters = 12000;
+const int _aiCharacterDetailedTargetCharacters = 5000;
 
 /// Fallback titles used when a generated card comes back without a name.
 ///
@@ -58,10 +60,12 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
         id: card.id,
         instruction: source,
         targetTotalCharacters:
-            _aiWorldviewDetailed ? _aiDetailedTargetCharacters : null,
-        onProgress: (current, total, _) {
+            _aiWorldviewDetailed ? _aiWorldviewDetailedTargetCharacters : null,
+        onProgress: (progress) {
           if (!mounted) return;
-          _rebuild(() => _aiWorldviewProgress = '$current / $total');
+          final label =
+              formatSettingCardGenerationProgressLabel(l10n, progress);
+          _rebuild(() => _aiWorldviewProgress = label);
         },
       );
       if (!mounted) return;
@@ -76,7 +80,7 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
       if (!mounted) return;
       AppFeedback.error(
         context,
-        l10n.aiGenerationFailed(localizeAppError(l10n, asAppDomainError(e))),
+        l10n.aiGenerationFailed(describeSettingCardGenerationError(e, l10n)),
       );
     } finally {
       if (mounted) {
@@ -94,14 +98,17 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
     final name = card.name.trim();
     _worldviewNameCtrl.text = name.isEmpty ? _fallbackWorldviewName : name;
     final summary = card.summary.trim();
-    _worldviewDescCtrl.text =
-        summary.isNotEmpty ? summary : _firstProseParagraph(card.content);
+    _worldviewDescCtrl.text = summary.isNotEmpty && !_looksLikeJson(summary)
+        ? summary
+        : _firstProseParagraph(card.content);
   }
 
   /// First prose block of a generated markdown document.
   ///
   /// Generated cards start with headings (`## description`) and may contain
   /// JSON fences, none of which belong in the single-line description field.
+  /// A paragraph that still looks like raw JSON is treated as empty so callers
+  /// never forward protocol payloads into an editable field.
   String _firstProseParagraph(String content) {
     var inFence = false;
     final paragraph = <String>[];
@@ -123,7 +130,74 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
       }
       paragraph.add(trimmed);
     }
-    return paragraph.join('\n');
+    final text = paragraph.join('\n').trim();
+    return _looksLikeJson(text) ? '' : text;
+  }
+
+  /// Reads the first prose paragraph under a named section, ignoring fences.
+  String _sectionProse(String content, List<String> headings) {
+    var inTarget = false;
+    var inFence = false;
+    final buffer = <String>[];
+    for (final line in const LineSplitter().convert(content)) {
+      final trimmed = line.trim();
+      if (trimmed.startsWith('#')) {
+        if (inTarget && buffer.isNotEmpty) break;
+        final title = trimmed.replaceFirst(RegExp(r'^#+\s*'), '').toLowerCase();
+        inTarget = headings.any(
+          (heading) => title.contains(heading.toLowerCase()),
+        );
+        continue;
+      }
+      if (!inTarget) continue;
+      if (trimmed.startsWith('```')) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) continue;
+      if (trimmed.isEmpty) {
+        if (buffer.isNotEmpty) break;
+        continue;
+      }
+      buffer.add(trimmed);
+    }
+    final text = buffer.join('\n').trim();
+    return _looksLikeJson(text) ? '' : text;
+  }
+
+  /// True when [text] is (or leaked) JSON instead of prose.
+  bool _looksLikeJson(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+    if (trimmed.startsWith('{') ||
+        trimmed.startsWith('[') ||
+        trimmed.startsWith('```')) {
+      return true;
+    }
+    // JSON that lost its leading brace still shows dense quoted keys; two or
+    // more of them is protocol payload, not narrative prose.
+    final quotedKeys =
+        RegExp(r'"[A-Za-z0-9_]+"\s*:').allMatches(trimmed).length;
+    return quotedKeys >= 2;
+  }
+
+  /// Best available background text for a generated character card.
+  ///
+  /// Preference order: the card summary, the first prose paragraph, then a
+  /// named background section. JSON-looking text is never returned.
+  String _characterBackgroundFromCard(SettingCard card) {
+    final summary = card.summary.trim();
+    if (summary.isNotEmpty && !_looksLikeJson(summary)) return summary;
+    final prose = _firstProseParagraph(card.content);
+    if (prose.isNotEmpty) return prose;
+    return _sectionProse(card.content, const <String>[
+      'description',
+      'background',
+      '背景',
+      '背景故事',
+      '人物背景',
+      '外貌与背景',
+    ]);
   }
 
   /// AI 自动编写角色设定（支持简约模式与详细全维模式生成）
@@ -183,12 +257,12 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
         worldview: worldviewBody,
         associatedCharacters: associatedCharacters,
         targetTotalCharacters:
-            _aiCharacterDetailed ? _aiDetailedTargetCharacters : null,
-        onProgress: (stage, total, stageName) {
+            _aiCharacterDetailed ? _aiCharacterDetailedTargetCharacters : null,
+        onProgress: (progress) {
           if (!mounted) return;
-          final label = stageName.trim();
-          _rebuild(() => _aiCharacterProgress =
-              label.isEmpty ? '$stage / $total' : '$stage / $total · $label');
+          final label =
+              formatSettingCardGenerationProgressLabel(l10n, progress);
+          _rebuild(() => _aiCharacterProgress = label);
         },
       );
       if (!mounted) return;
@@ -196,13 +270,16 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
       // add it to the party.
       await _loadData();
       if (!mounted) return;
-      _rebuild(() => _addGeneratedCharacter(generated));
+      _rebuild(() {
+        _addGeneratedCharacter(generated);
+        _applyGeneratedCharacterRelationships(generated.id);
+      });
     } catch (e) {
       if (createdId != null) await service.discardEmptyDraft(createdId);
       if (!mounted) return;
       AppFeedback.error(
         context,
-        l10n.aiGenerationFailed(localizeAppError(l10n, asAppDomainError(e))),
+        l10n.aiGenerationFailed(describeSettingCardGenerationError(e, l10n)),
       );
     } finally {
       if (mounted) {
@@ -225,19 +302,29 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
         _characterCardEntries.where((e) => e.id == card.id).firstOrNull;
     if (entry != null && !entry.hasParseError) {
       _bindCharacterFromLibrary(entry);
+      // A card whose body parsed to no prose still needs a readable roster
+      // line; keep the neutral placeholder rather than an empty background.
+      final added =
+          _characters.where((character) => character.id == card.id).firstOrNull;
+      if (added != null && added.background.trim().isEmpty) {
+        added.background = _l10n(context).settingCardBackgroundUnavailable;
+      }
       return;
     }
     // The refreshed library list does not carry this card (or its row is
-    // malformed), so build the roster entry straight from the card body.
+    // malformed), so build the roster entry straight from the card body. The
+    // raw body is never used as a fallback: a generated document can be a bare
+    // JSON payload, which must not surface as the character's background.
     final isFirst = _characters.isEmpty;
     final name =
         card.name.trim().isEmpty ? _fallbackCharacterName : card.name.trim();
-    final prose = _firstProseParagraph(card.content);
-    final background = prose.isEmpty ? card.content : prose;
+    final background = _characterBackgroundFromCard(card);
     _characters.add(WizardCharacterItem(
       id: card.id,
       name: name,
-      background: background,
+      background: background.isEmpty
+          ? _l10n(context).settingCardBackgroundUnavailable
+          : background,
       isProtagonist: isFirst,
       narrativeRole: isFirst
           ? AdventureCharacterRole.protagonist
@@ -245,12 +332,67 @@ extension _WizardAiDrafts on _AdventureWizardScreenState {
       rawJson: <String, dynamic>{
         'data': <String, dynamic>{
           'name': name,
-          'description': background,
+          if (background.isNotEmpty) 'description': background,
         },
       },
     ));
     _syncRelationships();
   }
+
+  /// Writes the bond the user chose in the AI panel onto the new character's
+  /// relationship rows, so the generated pairing is not left as an unset pair.
+  ///
+  /// [AdventureCharacterRelationship.stableId] keeps the id identical to the
+  /// rows [_syncRelationships] just created, so this updates them in place
+  /// instead of introducing a second relationship store.
+  void _applyGeneratedCharacterRelationships(String newId) {
+    final associatedIds = _aiAssociatedCharacterIds
+        .where((id) => id != newId)
+        .toList(growable: false);
+    if (associatedIds.isEmpty) return;
+    final label = _aiRelationType.trim();
+    final relationKey = _relationKeyForLabel(label);
+    final customName = label == '自定义'
+        ? (_aiCustomRelationCtrl.text.trim().isEmpty
+            ? '关联角色'
+            : _aiCustomRelationCtrl.text.trim())
+        : label;
+    for (final otherId in associatedIds) {
+      final stableId = AdventureCharacterRelationship.stableId(newId, otherId);
+      final existing =
+          _relationships.where((r) => r.id == stableId).firstOrNull;
+      if (existing == null) {
+        _relationships.add(WizardRelationshipItem(
+          id: stableId,
+          sourceCharacterId: newId,
+          targetCharacterId: otherId,
+          relationType: relationKey,
+          customRelationName:
+              relationKey == AdventureRelationType.custom ? customName : '',
+          description: customName,
+        ));
+        continue;
+      }
+      existing.relationType = relationKey;
+      if (relationKey == AdventureRelationType.custom) {
+        existing.customRelationName = customName;
+      }
+      if (existing.description.trim().isEmpty) {
+        existing.description = customName;
+      }
+    }
+  }
+
+  /// Maps the AI panel's localized relation label to the stored enum value.
+  String _relationKeyForLabel(String label) => switch (label) {
+        '同伴' => AdventureRelationType.companion,
+        '恋人' => AdventureRelationType.lover,
+        '师徒' => AdventureRelationType.mentor,
+        '宿敌' => AdventureRelationType.rival,
+        '亲人' => AdventureRelationType.family,
+        '雇佣关系' => AdventureRelationType.employer,
+        _ => AdventureRelationType.custom,
+      };
 
   /// 获取关联角色的简短显示名称
   String _getAssociatedCharacterShortName(String id) {

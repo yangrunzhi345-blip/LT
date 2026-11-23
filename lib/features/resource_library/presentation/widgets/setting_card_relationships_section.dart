@@ -11,7 +11,9 @@ import '../../../../domain/resources/resource_contracts.dart';
 import '../../../../domain/setting_cards/setting_card.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../models/resource_library_mode.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../screens/setting_card_create_page.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
@@ -283,6 +285,40 @@ final class _SettingCardRelationshipsSectionState
     setState(() => _relationships = relationships);
   }
 
+  /// Opens the create page seeded with this card's world and body, so a
+  /// related character is generated from the same context instead of a blank
+  /// world. Uses the existing create flow rather than a second form.
+  Future<void> _openRelatedCreation() async {
+    final card = widget.card;
+    final type = card.kind == SettingCardKind.npc
+        ? ResourceType.npc
+        : ResourceType.character;
+    final associated = <String, String>{
+      'name': card.name.trim(),
+      'background': card.content,
+    };
+    await Navigator.of(context).push(
+      MaterialPageRoute<String>(
+        builder: (_) => SettingCardCreatePage(
+          initialType: type,
+          mode: _modeOf(card.mode),
+          initialOriginWorldviewId: card.originWorldviewId,
+          initialAssociatedCharacters: <Map<String, String>>[associated],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    // The refreshed card list must include the newly created card so it can be
+    // linked right away.
+    await _load();
+  }
+
+  ResourceLibraryMode _modeOf(String mode) => switch (mode) {
+        'conversation' => ResourceLibraryMode.conversation,
+        'creation' => ResourceLibraryMode.creation,
+        _ => ResourceLibraryMode.adventure,
+      };
+
   @override
   Widget build(BuildContext context) {
     if (!_supported) return const SizedBox.shrink();
@@ -296,6 +332,15 @@ final class _SettingCardRelationshipsSectionState
       children: [
         Text(l10n.settingCardRelationshipsTitle,
             style: theme.textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.xs),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            key: const Key('setting-card-relationship-generate-related'),
+            onPressed: _openRelatedCreation,
+            child: Text(l10n.settingCardGenerateRelatedAction),
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm),
         if (_loading)
           const Padding(

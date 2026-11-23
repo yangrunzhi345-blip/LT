@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../application/setting_cards/setting_card_reference_input.dart';
 import '../../../../application/setting_cards/setting_card_service.dart';
 import '../../../../core/feedback/app_feedback.dart';
+import '../../../../core/localization/app_error_localizer.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/widgets/app_read_aloud.dart';
 import '../../../../core/widgets/app_text_field.dart';
@@ -11,13 +14,45 @@ import '../../../../domain/read_aloud/read_aloud_contracts.dart';
 import '../../../../domain/setting_cards/setting_card.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../l10n/generated/app_localizations_zh.dart';
+import '../../../../models/generation_stage_progress.dart';
+import '../../../../models/generation_task_handle.dart';
 import '../../../../providers/riverpod_providers.dart';
+import '../resolvers/resource_presentation_resolver.dart';
 import '../widgets/setting_card_length_selector.dart';
 import '../widgets/setting_card_reference_editor.dart';
 import '../widgets/setting_card_relationships_section.dart';
 
 AppLocalizations _l10n(BuildContext context) =>
     AppLocalizations.of(context) ?? AppLocalizationsZh();
+
+/// Describes a setting-card generation failure for user display.
+///
+/// Declared on this page's library so the adventure wizard — which imports this
+/// page but cannot import this feature's helpers directly — reuses the exact
+/// same sanitizer instead of duplicating protocol scrubbing.
+/// Formats generation progress for callers that only import this page (the
+/// adventure wizard). Keeps one formatter shared with the create/detail rows.
+String formatSettingCardGenerationProgressLabel(
+  AppLocalizations l10n,
+  GenerationStageProgress progress,
+) =>
+    formatSettingCardGenerationProgress(l10n, progress);
+
+String describeSettingCardGenerationError(
+  Object error,
+  AppLocalizations l10n,
+) {
+  if (error is SettingCardGenerationException) {
+    return sanitizeSettingCardGenerationMessage(
+      error.message,
+      fallback: l10n.settingCardGenerateFailed,
+    );
+  }
+  return ResourcePresentationResolver.sanitize(
+    localizeAppError(l10n, asAppDomainError(error)),
+    fallback: l10n.settingCardGenerateFailed,
+  );
+}
 
 /// Single-document editor for a lightweight setting card.
 ///
@@ -60,7 +95,15 @@ final class _SettingCardDetailPageState
   bool _generating = false;
   SettingCardGenerationLength _length = SettingCardGenerationLength.standard;
   final _customLength = TextEditingController();
-  String _progressLabel = '';
+
+  /// Instruction field for the generate dialog.
+  ///
+  /// Owned by the page, not the dialog: disposing a dialog-local controller the
+  /// moment the route pops races the exit animation, which keeps rebuilding the
+  /// text field and would touch a disposed controller.
+  final _generateInstruction = TextEditingController();
+  GenerationStageProgress? _progress;
+  GenerationTaskHandle? _taskHandle;
   String? _loadError;
 
   @override
@@ -71,12 +114,21 @@ final class _SettingCardDetailPageState
 
   @override
   void dispose() {
+    // Leaving the page must stop a still-running generation so it cannot write
+    // into a disposed state; cancelling a finished request is a no-op.
+    unawaited(_taskHandle?.cancel());
     _name.dispose();
     _summary.dispose();
     _content.dispose();
     _customLength.dispose();
+    _generateInstruction.dispose();
     super.dispose();
   }
+
+  String _describeError(Object error) => ResourcePresentationResolver.sanitize(
+        localizeAppError(_l10n(context), asAppDomainError(error)),
+        fallback: _l10n(context).errorUnknown,
+      );
 
   Future<void> _load() async {
     try {
@@ -98,7 +150,7 @@ final class _SettingCardDetailPageState
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _loadError = error.toString();
+        _loadError = _describeError(error);
       });
     }
   }
@@ -127,7 +179,7 @@ final class _SettingCardDetailPageState
       AppFeedback.success(context, _l10n(context).settingCardSaved);
     } catch (error) {
       if (mounted) {
-        AppFeedback.error(context, error.toString());
+        AppFeedback.error(context, _describeError(error));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -142,7 +194,10 @@ final class _SettingCardDetailPageState
   /// length should be sent (default preset, or an unusable custom number).
   int? _resolveTargetCharacters(SettingCardGenerationLength length) {
     if (length != SettingCardGenerationLength.custom) {
-      return length.targetCharacters;
+      return targetCharactersFor(
+        _card?.kind ?? SettingCardKind.worldview,
+        length,
+      );
     }
     return SettingCardLengthSelector.parseCustomCharacters(
       _customLength.text,
@@ -155,11 +210,14 @@ final class _SettingCardDetailPageState
     if (card == null || _generating) return;
     final request = await _askInstruction();
     if (request == null || !mounted) return;
+    final l10n = _l10n(context);
     final targetCharacters = _resolveTargetCharacters(request.length);
+    final handle = GenerationTaskHandle();
     setState(() {
       _generating = true;
       _length = request.length;
-      _progressLabel = '';
+      _progress = null;
+      _taskHandle = handle;
     });
     try {
       final updated = await ref.read(settingCardServiceProvider).generate(
@@ -167,11 +225,18 @@ final class _SettingCardDetailPageState
             instruction: request.instruction,
             reference: request.reference,
             targetTotalCharacters: targetCharacters,
-            onProgress: (stage, total, name) {
+            taskHandle: handle,
+            onProgress: (progress) {
               if (!mounted) return;
-              setState(() => _progressLabel = name);
+              setState(() => _progress = progress);
             },
           );
+      if (handle.isCancelled) {
+        if (mounted) {
+          AppFeedback.info(context, l10n.settingCardGenerationCancelled);
+        }
+        return;
+      }
       if (!mounted) return;
       setState(() {
         _card = updated;
@@ -179,18 +244,40 @@ final class _SettingCardDetailPageState
         _summary.text = updated.summary;
         _content.text = updated.content;
       });
-    } on SettingCardGenerationException {
-      if (mounted) {
-        AppFeedback.error(context, _l10n(context).settingCardGenerateFailed);
+    } on SettingCardGenerationException catch (error) {
+      if (!mounted) return;
+      if (handle.isCancelled) {
+        AppFeedback.info(context, l10n.settingCardGenerationCancelled);
+        return;
       }
+      AppFeedback.error(
+        context,
+        sanitizeSettingCardGenerationMessage(
+          error.message,
+          fallback: l10n.settingCardGenerateFailed,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      if (handle.isCancelled) {
+        AppFeedback.info(context, l10n.settingCardGenerationCancelled);
+        return;
+      }
+      debugPrint('[setting-card-detail] generation failed: $error.runtimeType');
+      AppFeedback.error(context, l10n.settingCardGenerateFailed);
     } finally {
       if (mounted) {
         setState(() {
           _generating = false;
-          _progressLabel = '';
+          _progress = null;
+          _taskHandle = null;
         });
       }
     }
+  }
+
+  void _cancelGeneration() {
+    unawaited(_taskHandle?.cancel());
   }
 
   bool get _canRestore =>
@@ -236,7 +323,7 @@ final class _SettingCardDetailPageState
       });
       AppFeedback.success(context, l10n.settingCardRestored);
     } catch (error) {
-      if (mounted) AppFeedback.error(context, error.toString());
+      if (mounted) AppFeedback.error(context, _describeError(error));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -248,7 +335,7 @@ final class _SettingCardDetailPageState
         SettingCardReferenceInput? reference,
         SettingCardGenerationLength length,
       })?> _askInstruction() async {
-    final controller = TextEditingController(text: _card?.summary ?? '');
+    final controller = _generateInstruction..text = _card?.summary ?? '';
     final l10n = _l10n(context);
     var mode = SettingCardReferenceMode.paste;
     SettingCardReferenceInput? reference;
@@ -286,7 +373,7 @@ final class _SettingCardDetailPageState
                   key: const Key('setting-card-generate-length'),
                   value: length,
                   customCharactersController: _customLength,
-                  maximumCharacters: _maximumCharacters,
+                  kind: _card?.kind ?? SettingCardKind.worldview,
                   onChanged: (value) => setLocal(() => length = value),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -321,7 +408,6 @@ final class _SettingCardDetailPageState
         ),
       ),
     );
-    controller.dispose();
     return result;
   }
 
@@ -453,15 +539,27 @@ final class _SettingCardDetailPageState
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    Flexible(
+                    Expanded(
                       child: Text(
-                        _progressLabel.isEmpty
+                        key: const Key('setting-card-generate-progress'),
+                        _progress == null
                             ? l10n.settingCardGenerateAction
-                            : _progressLabel,
+                            : formatSettingCardGenerationProgress(
+                                l10n,
+                                _progress!,
+                              ),
                         style: theme.textTheme.bodySmall,
                       ),
                     ),
                   ],
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    key: const Key('setting-card-generate-cancel'),
+                    onPressed: _cancelGeneration,
+                    child: Text(l10n.settingCardGenerationCancelAction),
+                  ),
                 ),
               ],
               const SizedBox(height: AppSpacing.lg),

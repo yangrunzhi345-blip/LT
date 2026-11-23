@@ -14,12 +14,15 @@ import 'package:lt_dialogue/domain/resources/resource_contracts.dart';
 import 'package:lt_dialogue/application/setting_cards/setting_card_service.dart';
 import 'package:lt_dialogue/core/theme/app_theme.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/screens/adventure_wizard_screen.dart';
+import 'package:lt_dialogue/features/adventure/presentation/wizard/widgets/character_step/character_relationship_panel.dart';
 import 'package:lt_dialogue/features/adventure/presentation/wizard/widgets/character_step/character_roster_panel.dart';
 import 'package:lt_dialogue/providers/chat_provider.dart';
 import 'package:lt_dialogue/providers/riverpod_providers.dart';
 import 'package:lt_dialogue/services/database_service.dart';
 import 'package:lt_dialogue/services/repositories/character_relationship_repository.dart';
 import 'package:lt_dialogue/services/repositories/adventure_repository_impl.dart';
+import 'package:lt_dialogue/models/generation_stage_progress.dart';
+import 'package:lt_dialogue/models/generation_task_handle.dart';
 import 'package:lt_dialogue/models/resource_library_mode.dart';
 import 'package:lt_dialogue/services/repositories/library_repository.dart';
 import 'package:lt_dialogue/services/repositories/library_repository_impl.dart';
@@ -118,6 +121,7 @@ class _GatedWorldviewGateway implements LlmGateway {
     String source, {
     int? targetTotalCharacters,
     void Function(WorldviewGenerationProgress progress)? onProgress,
+    GenerationTaskHandle? taskHandle,
     dynamic generationMode,
   }) async {
     onProgress?.call(const WorldviewGenerationProgress(
@@ -142,8 +146,11 @@ class _GatedWorldviewGateway implements LlmGateway {
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
     int? targetTotalCharacters,
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    void Function(GenerationStageProgress progress)? onStageProgress,
     dynamic generationMode,
   }) =>
       _inner.generateDetailedResourceCharacter(
@@ -151,7 +158,10 @@ class _GatedWorldviewGateway implements LlmGateway {
         worldview: worldview,
         associatedCharacters: associatedCharacters,
         targetTotalCharacters: targetTotalCharacters,
+        isNpc: isNpc,
+        taskHandle: taskHandle,
         onProgress: onProgress,
+        onStageProgress: onStageProgress,
         generationMode: generationMode,
       );
 
@@ -265,9 +275,20 @@ void main() {
     await tester.pump();
     // In flight: the entry point is disabled and reports progress while the
     // gateway is still holding the answer.
-    await pumpUntil(tester, () => find.text('1 / 2').evaluate().isNotEmpty);
+    await pumpUntil(
+      tester,
+      () => find
+          .byKey(const Key('wizard-worldview-progress'))
+          .evaluate()
+          .isNotEmpty,
+    );
     expect(find.text('正在构思世界观…'), findsOneWidget);
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const Key('wizard-worldview-progress')))
+          .data,
+      contains('阶段一'),
+    );
     final generatingButton = tester.widget<FilledButton>(
       find
           .ancestor(
@@ -293,7 +314,10 @@ void main() {
     expect(find.text('星海大陆'), findsWidgets);
     expect(find.text('一片漂浮于星海的大陆'), findsOneWidget);
     // Progress is cleared once the pass finishes.
-    expect(find.text('1 / 2'), findsNothing);
+    expect(
+      find.byKey(const Key('wizard-worldview-progress')),
+      findsNothing,
+    );
     // Concise mode is the default, so no long-form target is requested.
     expect(gateway.targetCharacterArgs.single, isNull);
     expect(tester.takeException(), isNull);
@@ -409,6 +433,96 @@ void main() {
     expect(
       find.descendant(of: roster, matching: find.text('林恩·改')),
       findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('generated character without prose never leaks JSON or fences',
+      (tester) async {
+    final gateway = _GatedWorldviewGateway(paused: false)
+      ..characterResponse = <String, dynamic>{
+        'name': '洛恩',
+        'modules': <String, dynamic>{'history': 'x'},
+      };
+    await pumpWizard(tester, gateway);
+
+    final stepper = tester.widget<Stepper>(find.byType(Stepper));
+    stepper.onStepTapped!(1);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.tap(find.text('开始 AI 自动生成主角'));
+    await pumpUntil(
+      tester,
+      () => find
+          .descendant(
+            of: find.byType(WizardCharacterRosterPanel),
+            matching: find.text('洛恩'),
+          )
+          .evaluate()
+          .isNotEmpty,
+    );
+
+    // The bare generated document is a JSON fence with no prose, so the roster
+    // must fall back to the neutral placeholder instead of showing raw JSON.
+    expect(find.textContaining('暂无背景描述'), findsOneWidget);
+    expect(find.textContaining('```'), findsNothing);
+    expect(find.textContaining('{'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('generated character records the chosen bond with associations',
+      (tester) async {
+    final gateway = _GatedWorldviewGateway(paused: false)
+      ..characterResponse = <String, dynamic>{
+        'name': '林恩',
+        'description': '游侠',
+      };
+    await pumpWizard(tester, gateway);
+
+    final stepper = tester.widget<Stepper>(find.byType(Stepper));
+    stepper.onStepTapped!(1);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.tap(find.text('开始 AI 自动生成主角'));
+    await pumpUntil(
+      tester,
+      () => find
+          .descendant(
+            of: find.byType(WizardCharacterRosterPanel),
+            matching: find.text('林恩'),
+          )
+          .evaluate()
+          .isNotEmpty,
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // The roster is non-empty now, so the association set auto-selected the
+    // first member; generating a second character should record that bond.
+    gateway.characterResponse = <String, dynamic>{
+      'name': '洛恩',
+      'description': '剑士',
+    };
+    await tester.tap(find.text('使用 AI 增添阵容角色'));
+    await pumpUntil(
+      tester,
+      () => find
+          .descendant(
+            of: find.byType(WizardCharacterRosterPanel),
+            matching: find.text('洛恩'),
+          )
+          .evaluate()
+          .isNotEmpty,
+    );
+
+    expect(find.byType(WizardCharacterRelationshipPanel), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(WizardCharacterRelationshipPanel),
+        matching: find.text('同伴'),
+      ),
+      findsWidgets,
     );
     expect(tester.takeException(), isNull);
   });
