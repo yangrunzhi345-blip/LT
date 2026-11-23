@@ -1,5 +1,6 @@
 import '../../models/completion_params.dart';
 import '../../models/generation_mode.dart';
+import '../../models/generation_stage_progress.dart';
 import '../../models/llm_task.dart';
 import '../../models/model_capabilities.dart';
 import '../../services/ai_generator_service.dart';
@@ -49,8 +50,11 @@ class AiGeneratorLlmGateway implements LlmGateway {
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
     int? targetTotalCharacters,
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    void Function(GenerationStageProgress progress)? onStageProgress,
     LlmGenerationMode? generationMode,
   }) =>
       _generator.textToDetailedCharacterCard(
@@ -58,7 +62,10 @@ class AiGeneratorLlmGateway implements LlmGateway {
         worldview: worldview,
         associatedCharacters: associatedCharacters,
         targetTotalCharacters: targetTotalCharacters,
+        isNpc: isNpc,
+        taskHandle: taskHandle,
         onProgress: onProgress,
+        onStageProgress: onStageProgress,
         generationMode: generationMode,
       );
 
@@ -90,11 +97,13 @@ class AiGeneratorLlmGateway implements LlmGateway {
     String source, {
     int? targetTotalCharacters,
     void Function(WorldviewGenerationProgress progress)? onProgress,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   }) =>
       _generator.textToDetailedWorldview(
         source,
         targetTotalCharacters: targetTotalCharacters,
+        taskHandle: taskHandle,
         onProgress: onProgress == null
             ? null
             : (value) => onProgress(
@@ -196,8 +205,9 @@ class AiGeneratorLlmGateway implements LlmGateway {
       throw StateError('该操作需要配置 LLM 解析器');
     }
     final llm = resolver();
-    final isJson = systemPrompt.toLowerCase().contains('json') ||
-        instruction.toLowerCase().contains('json');
+    // JSON output is a property of the declared task, not of whether the
+    // prompt happens to contain the word "json".
+    final wantsJson = LlmTaskPolicyTable.policyFor(task).preferJsonOutput;
     final buffer = StringBuffer();
     await llm.sendMessageStream(
       [
@@ -213,7 +223,7 @@ class AiGeneratorLlmGateway implements LlmGateway {
         capabilities: ModelCapabilityRegistry.resolve(llm.config.model),
         userParams: CompletionParams(temperature: temperature),
         maximumOutputTokens: maximumOutputTokens,
-        forceJson: isJson ? true : null,
+        forceJson: wantsJson ? true : null,
       ),
       taskHandle: taskHandle,
     );

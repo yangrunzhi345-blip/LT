@@ -1,5 +1,6 @@
 import '../../services/llm_service.dart';
 import '../../models/generation_mode.dart';
+import '../../models/generation_stage_progress.dart';
 import '../../models/llm_task.dart';
 
 /// 应用层唯一的 AI 生成边界。
@@ -22,8 +23,11 @@ abstract interface class LlmGateway {
     String worldview = '',
     List<Map<String, String>> associatedCharacters = const [],
     int? targetTotalCharacters,
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    void Function(GenerationStageProgress progress)? onStageProgress,
     LlmGenerationMode? generationMode,
   });
 
@@ -44,6 +48,7 @@ abstract interface class LlmGateway {
     String source, {
     int? targetTotalCharacters,
     void Function(WorldviewGenerationProgress progress)? onProgress,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   });
 

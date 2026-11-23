@@ -329,4 +329,64 @@ void main() {
       expect(result['name'], '艾莉诺亚');
     });
   });
+
+  group('Leaked JSON and NPC appearance', () {
+    test('rejects a text field that is itself a JSON container', () {
+      expect(
+        DetailedCharacterStageNormalizer.normalize(
+          CharacterGenerationStage.identity,
+          {..._validIdentity(), 'personality': '{"note":"not prose"}'},
+        ),
+        isNull,
+      );
+      expect(
+        DetailedCharacterStageNormalizer.normalize(
+          CharacterGenerationStage.appearance,
+          {'appearance': _long('银色长发。'), 'bodyDescription': '["a","b"]'},
+        ),
+        isNull,
+      );
+    });
+
+    test('NPC appearance accepts a missing bodyDescription', () {
+      final payload = DetailedCharacterStageNormalizer.normalize(
+        CharacterGenerationStage.appearance,
+        {'appearance': _long('独眼与围裙。')},
+        isNpc: true,
+      );
+      expect(payload, isA<CharacterAppearancePayload>());
+      expect((payload! as CharacterAppearancePayload).bodyDescription, '');
+      expect(
+        DetailedCharacterStageNormalizer.normalize(
+          CharacterGenerationStage.appearance,
+          {'appearance': _long('独眼与围裙。')},
+        ),
+        isNull,
+      );
+    });
+
+    test('background exposes the optional roleplay fields', () {
+      final payload = DetailedCharacterStageNormalizer.normalize(
+        CharacterGenerationStage.backgroundWorld,
+        {
+          'description': _long('背景。'),
+          'faction': '遗民会',
+          'home_location': '档案库',
+          'public_goal': _long('目标。'),
+          'hidden_motivation': _long('动机。'),
+          'scenario': _long('场景。'),
+          'first_mes': _long('开场白。'),
+          'mes_example': _long('示例对话。'),
+          'speaking_style': _long('说话克制。'),
+          'character_arc': _long('从独行到托付。'),
+        },
+      );
+      final background = payload! as CharacterBackgroundPayload;
+      expect(background.scenario, _long('场景。'));
+      expect(background.firstMes, _long('开场白。'));
+      expect(background.mesExample, _long('示例对话。'));
+      expect(background.speakingStyle, _long('说话克制。'));
+      expect(background.characterArc, _long('从独行到托付。'));
+    });
+  });
 }

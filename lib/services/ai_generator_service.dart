@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'api_error.dart';
 import '../models/completion_params.dart';
 import '../models/generation_mode.dart';
+import '../models/generation_stage_progress.dart';
 import '../models/llm_message.dart';
 import '../models/llm_task.dart';
 import '../models/model_capabilities.dart';
@@ -68,12 +69,58 @@ class AiGeneratorService {
 
   AiGeneratorService(this._llm);
 
+  /// Bounded parse-repair attempts for a call whose contract is one JSON
+  /// object. The first attempt uses the original prompt; the second appends a
+  /// corrective instruction. A response that still cannot be parsed must
+  /// surface as a failure, never be stored as prose.
+  static const int jsonParseAttempts = 2;
+
+  static const String jsonParseRetryHint =
+      '上一次输出无法解析为合法 JSON，请严格只返回 JSON 对象，不要输出任何解释或 Markdown。';
+
+  Future<T> _requestJsonWithRepair<T>({
+    required String stageLabel,
+    required String prompt,
+    required Future<String> Function(String attemptPrompt) request,
+    required T Function(String response) parse,
+  }) async {
+    for (var attempt = 1; attempt <= jsonParseAttempts; attempt++) {
+      final attemptPrompt =
+          attempt == 1 ? prompt : '$prompt\n\n$jsonParseRetryHint';
+      try {
+        final response = await request(attemptPrompt);
+        return parse(response);
+      } on GenerationCancelledException {
+        rethrow;
+      } on FormatException {
+        if (attempt == jsonParseAttempts) rethrow;
+      } on StateError catch (error) {
+        if (attempt == jsonParseAttempts) {
+          throw FormatException(
+            '$stageLabel 未返回合法 JSON 对象：${error.message}',
+          );
+        }
+      }
+    }
+    throw FormatException('$stageLabel 未能返回可解析的 JSON');
+  }
+
+  static void _throwIfCancelled(GenerationTaskHandle? taskHandle) {
+    if (taskHandle?.isCancelled == true) {
+      throw const GenerationCancelledException();
+    }
+  }
+
   // ─── 公开 API ───
 
   /// F1: 图片 → 世界观
   Future<Map<String, String>> imageToWorldview(String imageBase64) async {
-    final response = await _callVision(imageBase64, _f1Prompt);
-    return _parseWorldviewResponse(response);
+    return _requestJsonWithRepair<Map<String, String>>(
+      stageLabel: '世界观图片识别',
+      prompt: _f1Prompt,
+      request: (prompt) => _callVision(imageBase64, prompt),
+      parse: _parseWorldviewResponse,
+    );
   }
 
   /// F2: 图片 → 角色卡
@@ -85,8 +132,12 @@ class AiGeneratorService {
         worldview.isNotEmpty
             ? '当前世界观设定：\n${WorldviewPromptBudget.bound(worldview)}\n\n请确保角色与世界观高度契合。'
             : '');
-    final response = await _callVision(imageBase64, prompt);
-    return _parseCharacterCardResponse(response);
+    return _requestJsonWithRepair<Map<String, String>>(
+      stageLabel: '角色图片识别',
+      prompt: prompt,
+      request: (attemptPrompt) => _callVision(imageBase64, attemptPrompt),
+      parse: _parseCharacterCardResponse,
+    );
   }
 
   /// F3: 文字 → 世界观
@@ -95,12 +146,17 @@ class AiGeneratorService {
     LlmGenerationMode? generationMode,
   }) async {
     final prompt = _f3Prompt.replaceFirst('{userPrompt}', userPrompt);
-    final response = await _callText(
-      prompt,
-      task: LlmTask.worldviewFast,
-      generationMode: generationMode,
+    return _requestJsonWithRepair<Map<String, String>>(
+      stageLabel: '世界观生成',
+      prompt: prompt,
+      request: (attemptPrompt) => _callText(
+        attemptPrompt,
+        task: LlmTask.worldviewFast,
+        generationMode: generationMode,
+        expectJsonObject: true,
+      ),
+      parse: _parseWorldviewResponse,
     );
-    return _parseWorldviewResponse(response);
   }
 
   /// Generates a reviewable candidate using the optimized two-stage concurrent engine.
@@ -108,10 +164,12 @@ class AiGeneratorService {
     String userPrompt, {
     int? targetTotalCharacters,
     void Function(DetailedWorldviewGenerationProgress progress)? onProgress,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   }) async {
     final key = ContentHasher.hashString(
-      '$userPrompt\n#target=${targetTotalCharacters ?? 0}\n#mode=$generationMode',
+      '$userPrompt\n#target=${targetTotalCharacters ?? 0}'
+      '\n#mode=$generationMode\n#task=${taskHandle?.taskId ?? ''}',
     );
     final existing = _detailedFlights[key];
     if (existing != null) {
@@ -126,6 +184,7 @@ class AiGeneratorService {
     final future = textToDetailedWorldviewMultiTurn(
       userPrompt,
       targetTotalCharacters: targetTotalCharacters,
+      taskHandle: taskHandle,
       generationMode: generationMode,
       onDetailedProgress: (progress) {
         for (final listener in List.of(listeners)) {
@@ -209,6 +268,7 @@ class AiGeneratorService {
         onProgress,
     void Function(DetailedWorldviewGenerationProgress progress)?
         onDetailedProgress,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   }) async {
     final isEpic =
@@ -296,11 +356,13 @@ class AiGeneratorService {
       final maximumAttempts = RetryBudget.structuredJson.contentStageAttempts;
       String response;
       for (var attempt = 1;; attempt++) {
+        _throwIfCancelled(taskHandle);
         try {
           response = await _callMessages(
             messages,
             task: LlmTask.worldviewDeep,
             maximumOutputTokens: 8192,
+            taskHandle: taskHandle,
             generationMode: generationMode,
             expectJsonObject: true,
           );
@@ -441,7 +503,7 @@ $sourceText
 $sourceText
 
 【严格要求】：
-1. 涵盖各族与各阶层民众的日常生活面貌、主要社会风俗节庆、贸易与经济命脉（如魔晶等）、禁忌与信仰体系；
+1. 涵盖各族与各阶层民众的日常生活面貌、主要社会风俗节庆、贸易与经济命脉（如用户原文中出现的资源、货币或专有名词等）、禁忌与信仰体系；
 2. 保持宏篇详尽叙述，字数要求 800~1500 字；
 3. 严格输出单层 JSON 格式：
 {
@@ -470,7 +532,7 @@ $sourceText
 
 【严格要求】：
 1. 必须优先从【用户核心材料原文】中提取所有历史纪元事件（如创世纪元、神话大战、众神黄昏、人类原罪、魔女兴起等重大节点）；
-2. 必须优先从【用户核心材料原文】中提取所有核心专有名词术语（如源流、天理、神族、魔女会、二十六王座、龙晶、魔晶等）；
+2. 必须优先从【用户核心材料原文】中提取所有核心专有名词术语（如用户原文中出现的专有名词、组织、能量或物产等）；
 3. 必须提取材料中设定的核心禁忌、阶位极限与创作者必须恪守的铁律；
 4. 严格输出单层 JSON 格式：
 {
@@ -588,7 +650,7 @@ $sourceText
 $sourceText
 
 【严格要求】：
-1. 涵盖各族与各阶层民众的日常生活面貌、主要社会风俗节庆、贸易与经济命脉（如魔晶等）、禁忌与信仰体系；
+1. 涵盖各族与各阶层民众的日常生活面貌、主要社会风俗节庆、贸易与经济命脉（如用户原文中出现的资源、货币或专有名词等）、禁忌与信仰体系；
 2. 保持宏篇详尽叙述，字数要求 600~1200 字；
 3. 严格输出单层 JSON 格式：
 {
@@ -608,7 +670,7 @@ $sourceText
 
 【严格要求】：
 1. 必须优先从【用户核心材料原文】中提取所有历史纪元事件（如创世纪元、神话大战、众神黄昏、人类原罪、魔女兴起等重大节点）；
-2. 必须优先从【用户核心材料原文】中提取所有核心专有名词术语（如源流、天理、神族、魔女会、二十六王座、龙晶、魔晶等）；
+2. 必须优先从【用户核心材料原文】中提取所有核心专有名词术语（如用户原文中出现的专有名词、组织、能量或物产等）；
 3. 必须提取材料中设定的核心禁忌、阶位极限与创作者必须恪守的铁律；
 4. 严格输出单层 JSON 格式：
 {
@@ -897,6 +959,7 @@ $glossaryRequirement
       sourceText: sourceText,
       targetTotalCharacters: targetTotalCharacters,
       onDetailedProgress: onDetailedProgress,
+      taskHandle: taskHandle,
       generationMode: generationMode,
     );
   }
@@ -907,6 +970,7 @@ $glossaryRequirement
     required int? targetTotalCharacters,
     void Function(DetailedWorldviewGenerationProgress progress)?
         onDetailedProgress,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   }) async {
     if (targetTotalCharacters == null) return initial;
@@ -924,6 +988,7 @@ $glossaryRequirement
     // unmet. A productive round normally adds several thousand characters.
     const maximumSupplementRounds = 16;
     for (var round = 1; round <= maximumSupplementRounds; round++) {
+      _throwIfCancelled(taskHandle);
       final modules = _weakestWorldviewModules(detail, limit: 3);
       onDetailedProgress?.call(DetailedWorldviewGenerationProgress(
         question: DetailedWorldviewQuestion(
@@ -961,7 +1026,9 @@ $glossaryRequirement
       ],
           task: LlmTask.worldviewDeep,
           maximumOutputTokens: 8192,
-          generationMode: generationMode);
+          taskHandle: taskHandle,
+          generationMode: generationMode,
+          expectJsonObject: true);
       final decoded =
           StructuredJsonCodec.tryDecodeObject(response, repair: true) ??
               StructuredJsonCodec.tryDecodeObject(
@@ -971,13 +1038,23 @@ $glossaryRequirement
       if (decoded == null) {
         throw const FormatException('世界观补全返回了无效 JSON');
       }
-      _mergeWorldviewSupplement(detail, decoded, modules);
+      final merged = _mergeWorldviewSupplement(detail, decoded, modules);
       final next = guard.count(
         detailJson: detail,
         fallbackDescription: initial['description']?.toString() ?? '',
       );
-      if (next <= current) {
-        throw StateError('世界观补全未增加有效正文，已停止以避免重复生成。');
+      if (!merged || next <= current) {
+        // A round that adds nothing means the model has exhausted this
+        // direction. Discarding every earlier round is worse than returning a
+        // structurally usable worldview with an explicit soft flag.
+        return _softIncompleteWorldview(
+          initial: initial,
+          detail: detail,
+          onDetailedProgress: onDetailedProgress,
+          currentCharacters: current,
+          targetCharacters: target,
+          supplementRound: round,
+        );
       }
       current = next;
       if (current >= target) {
@@ -1004,7 +1081,73 @@ $glossaryRequirement
         return initial;
       }
     }
+    if (_hasCoreWorldviewStructure(detail)) {
+      return _softIncompleteWorldview(
+        initial: initial,
+        detail: detail,
+        onDetailedProgress: onDetailedProgress,
+        currentCharacters: current,
+        targetCharacters: target,
+        supplementRound: maximumSupplementRounds,
+      );
+    }
     throw StateError('世界观补全达到安全上限后仍未达到目标字数。');
+  }
+
+  /// Returns a best-effort result carrying an explicit soft flag when the
+  /// requested length was not reached but the core modules are present.
+  Map<String, dynamic> _softIncompleteWorldview({
+    required Map<String, dynamic> initial,
+    required Map<String, dynamic> detail,
+    required void Function(DetailedWorldviewGenerationProgress progress)?
+        onDetailedProgress,
+    required int currentCharacters,
+    required int targetCharacters,
+    required int supplementRound,
+  }) {
+    initial['detail_json'] = detail;
+    initial['generation_soft_incomplete'] = true;
+    onDetailedProgress?.call(DetailedWorldviewGenerationProgress(
+      question: DetailedWorldviewQuestion(
+        questionIndex: supplementRound,
+        totalQuestions: supplementRound,
+        module: 'complete',
+        modules: const [],
+        part: supplementRound,
+        totalParts: supplementRound,
+        targetCharacters: targetCharacters,
+        maximumCharacters: targetCharacters,
+        dependsOnPreviousPart: true,
+      ),
+      completedQuestions: supplementRound,
+      partialText: '已达到当前可用的最佳结果',
+      questionCompleted: true,
+      currentCharacters: currentCharacters,
+      targetCharacters: targetCharacters,
+      supplementRound: supplementRound,
+    ));
+    return initial;
+  }
+
+  /// A worldview is structurally usable when it has an overview and at least
+  /// two further populated modules. Missing this shape is a real failure.
+  bool _hasCoreWorldviewStructure(Map<String, dynamic> detail) {
+    final modules = detail['modules'];
+    if (modules is! Map) return false;
+    final overview = modules['overview'];
+    if (_moduleText(overview).isEmpty) return false;
+    var populated = 0;
+    for (final key in DetailedWorldviewQuestionPlanner.modules) {
+      if (key == 'overview') continue;
+      final value = modules[key];
+      if (value == null) continue;
+      final hasText = _moduleText(value).isNotEmpty ||
+          (value is Map &&
+              value['items'] is List &&
+              (value['items'] as List).isNotEmpty);
+      if (hasText) populated++;
+    }
+    return populated >= 2;
   }
 
   List<String> _weakestWorldviewModules(
@@ -1049,7 +1192,7 @@ ${jsonEncode({
 {"modules":{"${modules.first}":{"content":"新增正文"}}}
 可包含上述其他模块，但只能补充它们的新增正文。''';
 
-  void _mergeWorldviewSupplement(
+  bool _mergeWorldviewSupplement(
     Map<String, dynamic> detail,
     Map<String, dynamic> increment,
     List<String> requestedModules,
@@ -1078,10 +1221,8 @@ ${jsonEncode({
       modules[key] = previousMap;
       mergedAny = true;
     }
-    if (!mergedAny) {
-      throw const FormatException('世界观补全没有请求模块的新增正文');
-    }
     detail['modules'] = modules;
+    return mergedAny;
   }
 
   String _moduleText(Object? value) {
@@ -1137,6 +1278,7 @@ ${jsonEncode({
       '你是世界观编辑助手。$scope。只输出合法 JSON，不得改动未请求的模块。\n'
       '当前世界观：${jsonEncode(worldview)}\n用户修改要求：$instruction',
       task: LlmTask.worldviewFast,
+      expectJsonObject: true,
     );
     final parsed = AiAdventureUtils.parseJson(response);
     return parsed == null ? const {} : Map<String, dynamic>.from(parsed);
@@ -1145,10 +1287,14 @@ ${jsonEncode({
   /// F4: 文字 → 角色卡
   /// [worldview] 当前世界观描述，确保生成的角色与世界观一致。
   /// [associatedCharacters] 关联的已有角色列表，新角色将与这些角色产生关系。
-  Future<Map<String, String>> textToCharacterCard(String userPrompt,
-      {String worldview = '',
-      List<Map<String, String>> associatedCharacters = const [],
-      LlmGenerationMode? generationMode}) async {
+  Future<Map<String, String>> textToCharacterCard(
+    String userPrompt, {
+    String worldview = '',
+    List<Map<String, String>> associatedCharacters = const [],
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
+    LlmGenerationMode? generationMode,
+  }) async {
     final existingNames = associatedCharacters
         .map((c) => (c['name'] ?? '').trim())
         .where((n) => n.isNotEmpty)
@@ -1184,8 +1330,11 @@ ${jsonEncode({
         : '';
 
     final isCompanion = associatedCharacters.isNotEmpty;
-    final roleInstruction =
-        isCompanion ? '，作为冒险队伍中的重要伙伴或核心搭档' : '，作为玩家在冒险中扮演的主角';
+    final roleInstruction = isNpc
+        ? '，作为故事中的功能型 NPC 配角（重点刻画功能定位、与主角的冲突或合作钩子、立场与秘密、标志性说话习惯；弱化漫长成长史与身材细节，不要写成主角式成长弧光）'
+        : isCompanion
+            ? '，作为冒险队伍中的重要伙伴或核心搭档'
+            : '，作为玩家在冒险中扮演的主角';
 
     var genderHint = '';
     final trimmedPrompt = userPrompt.trim();
@@ -1197,6 +1346,9 @@ ${jsonEncode({
         trimmedPrompt.contains('男主角') ||
         trimmedPrompt.contains('男性')) {
       genderHint = '\n⚠️【性别明确指定】用户指定该角色为【男性角色/男主角】，gender 字段必须为"男"！\n';
+    } else {
+      genderHint =
+          '\n【性别判定】用户未明确性别时，必须依据材料与世界观显式判断 gender；确实无法判断时填「其他」，不得默认女性。\n';
     }
 
     final prompt = _f4Prompt
@@ -1209,12 +1361,18 @@ ${jsonEncode({
                 ? '\n当前世界观设定：\n${WorldviewPromptBudget.bound(worldview)}\n\n请确保角色的出身、职业、性格、背景故事与世界观高度契合，角色必须是这个世界中自然存在的居民。'
                 : '')
         .replaceFirst('{associatedCharacters}', associatedText);
-    final response = await _callText(
-      prompt,
-      task: LlmTask.characterFast,
-      generationMode: generationMode,
+    final result = await _requestJsonWithRepair<Map<String, String>>(
+      stageLabel: isNpc ? 'NPC 角色卡生成' : '角色卡生成',
+      prompt: prompt,
+      request: (attemptPrompt) => _callText(
+        attemptPrompt,
+        task: LlmTask.characterFast,
+        taskHandle: taskHandle,
+        generationMode: generationMode,
+        expectJsonObject: true,
+      ),
+      parse: _parseCharacterCardResponse,
     );
-    final result = _parseCharacterCardResponse(response);
     var name = result['name']?.trim() ?? '';
     if (existingNames.contains(name)) {
       final prof = result['profession']?.trim() ?? '';
@@ -1231,7 +1389,10 @@ ${jsonEncode({
     int? targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    void Function(GenerationStageProgress progress)? onStageProgress,
     bool fastMode = false,
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   }) {
     if (targetTotalCharacters == null) {
@@ -1240,7 +1401,10 @@ ${jsonEncode({
         worldview: worldview,
         associatedCharacters: associatedCharacters,
         onProgress: onProgress,
+        onStageProgress: onStageProgress,
         fastMode: fastMode,
+        isNpc: isNpc,
+        taskHandle: taskHandle,
         generationMode: generationMode,
       );
     }
@@ -1250,6 +1414,8 @@ ${jsonEncode({
       'worldview': worldview,
       'relationships': associatedCharacters,
       'fastMode': fastMode,
+      'isNpc': isNpc,
+      'taskId': taskHandle?.taskId ?? '',
       'generationMode': generationMode?.name,
     }));
     final existing = _detailedCharacterFlights[identity];
@@ -1262,7 +1428,10 @@ ${jsonEncode({
       associatedCharacters: associatedCharacters,
       targetTotalCharacters: targetTotalCharacters,
       onProgress: onProgress,
+      onStageProgress: onStageProgress,
       fastMode: fastMode,
+      isNpc: isNpc,
+      taskHandle: taskHandle,
       generationMode: generationMode,
     ).whenComplete(() {
       if (identical(_detailedCharacterFlights[identity], flight)) {
@@ -1280,15 +1449,20 @@ ${jsonEncode({
     int? targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    void Function(GenerationStageProgress progress)? onStageProgress,
     bool fastMode = false,
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   }) async {
-// Fast mode: single call using textToCharacterCard
+    // Fast mode: single call using textToCharacterCard
     if (fastMode) {
       final basic = await textToCharacterCard(
         userPrompt,
         worldview: worldview,
         associatedCharacters: associatedCharacters,
+        isNpc: isNpc,
+        taskHandle: taskHandle,
         generationMode: generationMode,
       );
       final initial = <String, dynamic>{
@@ -1302,7 +1476,10 @@ ${jsonEncode({
         'bodyDescription': '',
         'description': '',
         'background': basic['background'] ?? '',
-        'world_profile': basic['world_profile'] ?? '{}',
+        // The parser returns world_profile as JSON text; downstream guard,
+        // merge and persistence all require a Map. Decode it here instead of
+        // letting a String travel through the pipeline.
+        'world_profile': _decodeProfileMap(basic['world_profile']),
       };
       if (targetTotalCharacters == null) return initial;
       return _completeDetailedCharacterCard(
@@ -1312,6 +1489,9 @@ ${jsonEncode({
         associatedCharacters: associatedCharacters,
         targetTotalCharacters: targetTotalCharacters,
         onProgress: onProgress,
+        onStageProgress: onStageProgress,
+        isNpc: isNpc,
+        taskHandle: taskHandle,
         generationMode: generationMode,
       );
     }
@@ -1335,12 +1515,25 @@ ${jsonEncode({
       if (reportProgress) {
         onProgress?.call(1, 2, stageName);
       }
+      final stageIndex = switch (stage) {
+        CharacterGenerationStage.identity => 1,
+        CharacterGenerationStage.appearance => 2,
+        CharacterGenerationStage.backgroundWorld => 3,
+      };
+      onStageProgress?.call(GenerationStageProgress(
+        stage: stageIndex,
+        totalStages: 3,
+        stageName: stageName,
+        targetCharacters: targetTotalCharacters,
+      ));
       final parsed = await _runCharacterStage(
         stage: stage,
         stageLabel: stageName,
         systemPrompt: systemPrompt,
         confirmedResults: confirmedResults,
         userInstruction: userInstruction,
+        isNpc: isNpc,
+        taskHandle: taskHandle,
         generationMode: generationMode,
       );
       if (reportProgress) {
@@ -1375,7 +1568,15 @@ ${jsonEncode({
           }).join('\n')}\n请在构思新角色时，务必使其人物原型、行为动机与上述关联角色（特别是指定关系）形成鲜明的戏剧互动张力！\n$noDuplicateNameRule'
         : '';
 
+    // Supporting characters serve the scene; protagonists and companions
+    // carry the growth arc. The same staged pipeline is used, but the stage
+    // instructions differ so an NPC is never graded like a protagonist.
+    final roleDirective = isNpc
+        ? '【角色定位：NPC / 配角】优先刻画功能定位、与主角的冲突或合作钩子、立场与秘密、标志性说话习惯；弱化漫长成长史与身材描写，不要写成主角式成长弧光。'
+        : '【角色定位：${associatedCharacters.isNotEmpty ? '伙伴 / 核心搭档' : '玩家主角'}】需要完整的人物动机、成长弧光与鲜明的角色表现力。';
+
     final t1Prompt = '''
+$roleDirective
 基于以下世界观背景与要求，提炼或设计角色的核心身份定位与矛盾心理原型：
 $wvSection$assocSection【用户材料与需求】：
 $userPrompt
@@ -1386,7 +1587,7 @@ $userPrompt
 3. 严格输出单层 JSON 格式：
 {
   "name": "角色中文姓名（若材料中已提供姓名则必须严格使用原文姓名；若未提供则构思契合世界观的姓名）",
-  "gender": "男 或 女 或 其他（优先严格提取自材料）",
+  "gender": "男 或 女 或 其他（优先严格提取自材料；材料未指定时按世界观合理判断，不得默认女性）",
   "age": "年龄（优先严格提取自材料，如：24 或 120岁）",
   "profession": "职业或社会身份（优先严格提取自材料，必须契合世界观）",
   "archetype": "核心人物原型（如：背负宿命的叛逆者、渴望救赎的守护者）",
@@ -1412,6 +1613,19 @@ $userPrompt
     final personality = t1.personality;
 
     // ---------- Stage 2：并行外貌 & 背景 ----------
+    final appearanceRequirement = isNpc
+        ? '''1. 优先提取材料中能一眼辨认其身份的服饰、随身物件、神态与标志性动作；身材只需简要交代与角色功能、行动方式相关的特征；
+2. 严格输出单层 JSON 格式：
+{
+  "appearance": "可辨识的外貌、服饰、随身标志物与神态气质（80~200字，结合材料提炼）",
+  "bodyDescription": "与角色功能相关的体态与行动姿态（40~100字，可简要，不必细写身材）"
+}'''
+        : '''1. 优先提取材料中描写的面容、发色、瞳色、常穿服饰、随身物件与身材体态；
+2. 严格输出单层 JSON 格式：
+{
+  "appearance": "面容五官、发型发色、眼神气质、神情常态、常穿服饰与随身标志性信物/装备（150~350字，结合材料提炼）",
+  "bodyDescription": "身高身姿、体格力量感、肤色体态、特殊伤疤/刺青/生理异质或改造印记（100~250字，结合材料提炼）"
+}''';
     final t2aPrompt = '''
 基于已确定的角色身份「$name（$gender，$age，$profession）」及其矛盾性格，以及【用户材料与需求】，请提取并细化角色的生动外貌肖像与身材体格特征。服饰、五官、气质必须与其职业、性格、世界观文化高度呼应。
 
@@ -1419,12 +1633,7 @@ $userPrompt
 $userPrompt
 
 【提取与设计要求】：
-1. 优先提取材料中描写的面容、发色、瞳色、常穿服饰、随身物件与身材体态；
-2. 严格输出单层 JSON 格式：
-{
-  "appearance": "面容五官、发型发色、眼神气质、神情常态、常穿服饰与随身标志性信物/装备（150~350字，结合材料提炼）",
-  "bodyDescription": "身高身姿、体格力量感、肤色体态、特殊伤疤/刺青/生理异质或改造印记（100~250字，结合材料提炼）"
-}
+$appearanceRequirement
 ''';
     // Build association info for turn 3 marker
     final turn3AssocInfo = associatedCharacters
@@ -1436,16 +1645,26 @@ $userPrompt
         .where((s) => s.isNotEmpty)
         .join('，');
 
-    final t2bPrompt = '''
-基于已确认的身份、性格与外貌，以及【用户材料与需求】，请深入推演角色的身世背景、深层动机、能力来源与代价、所属阵营、出生地、禁忌以及与关联角色的关系描述。请确保与世界观深度融合。
-
-【用户材料与需求】：
-$userPrompt
-
-【重要：羁绊背景融合】关联角色信息：$turn3AssocInfo
-
-【提取与设计要求】：
-1. 必须严格优先提取用户材料中的生平经历、所属阵营、特长能力、宿命危机与关键人际关系，严禁抹除用户设定的关键剧情；
+    final backgroundRequirement = isNpc
+        ? '''1. 必须严格优先提取用户材料中的功能定位、当前处境、立场、秘密与关键人际关系，严禁抹除用户设定的关键剧情；
+2. 严格输出单层 JSON 格式：
+{
+  "description": "功能定位与当前处境：其在故事中的功能、与主角的立场/冲突/合作钩子，以及当前处境（80~200字；只交代必要来历，不铺陈完整成长史）",
+  "public_goal": "当前公开诉求或行动目标（30~100字）",
+  "hidden_motivation": "隐藏立场、秘密或真实目的（30~100字）",
+  "ability_source": "其能力/专长/资源的来源（40~150字，普通 NPC 可写 not_applicable）",
+  "ability_cost": "使用能力或维持立场所付出的代价（30~100字）",
+  "faction": "所属势力组织或立场阵营（优先提取自原文）",
+  "home_location": "常驻据点或活动区域（优先提取自原文）",
+  "taboos": ["禁忌1", "禁忌2"],
+  "relationship_notes": "与主角、关键势力或关联角色的纠葛与态度（50~200字）",
+  "scenario": "一个能立刻开始角色扮演的具体场景（60~150字）",
+  "first_mes": "该 NPC 亲口说出的第一段开场白（60~150字，第一人称，可直接用于对话）",
+  "mes_example": "示例对话（100~220字，用「用户：」与「角色名：」开头，体现标志性说话习惯）",
+  "speaking_style": "说话风格、语气与口癖（40~120字）",
+  "character_arc": "该 NPC 的立场可能带来的剧情变化（30~100字，可简要）"
+}'''
+        : '''1. 必须严格优先提取用户材料中的生平经历、所属阵营、特长能力、宿命危机与关键人际关系，严禁抹除用户设定的关键剧情；
 2. 严格输出单层 JSON 格式：
 {
   "description": "生平背景经历：过去的成长环境、决定命运的重大转折点、现在的处境与羁绊（提炼自原文并详尽展开，200~500字）",
@@ -1456,8 +1675,23 @@ $userPrompt
   "faction": "所属势力组织或立场阵营（优先提取自原文）",
   "home_location": "出生地、故乡或经常活动的常驻据点（优先提取自原文）",
   "taboos": ["禁忌1", "禁忌2"],
-  "relationship_notes": "在世界中与关键势力、地点或关联角色的纠葛与态度（50~200字）"
-}
+  "relationship_notes": "在世界中与关键势力、地点或关联角色的纠葛与态度（50~200字）",
+  "scenario": "一个能立刻开始角色扮演的具体场景（80~200字）",
+  "first_mes": "角色亲口说出的第一段开场白（80~200字，第一人称，可直接用于对话）",
+  "mes_example": "示例对话（150~300字，用「用户：」与「角色名：」开头，体现标志性说话习惯）",
+  "speaking_style": "说话风格、语气与口癖（50~150字）",
+  "character_arc": "角色弧光与可能的变化方向（50~150字）"
+}''';
+    final t2bPrompt = '''
+基于已确认的身份、性格与外貌，以及【用户材料与需求】，请深入推演角色的身世背景、深层动机、能力来源与代价、所属阵营、出生地、禁忌以及与关联角色的关系描述。请确保与世界观深度融合。
+
+【用户材料与需求】：
+$userPrompt
+
+【重要：羁绊背景融合】关联角色信息：$turn3AssocInfo
+
+【提取与设计要求】：
+$backgroundRequirement
 ''';
     // Stage 2 runs strictly sequentially: Stage2B must see the confirmed
     // Stage1 and Stage2A results, so the two turns can never share a mutable
@@ -1507,6 +1741,11 @@ $userPrompt
       'bodyDescription': bodyDescription,
       'description': description,
       'background': description,
+      'scenario': t2b.scenario,
+      'first_mes': t2b.firstMes,
+      'mes_example': t2b.mesExample,
+      'speaking_style': t2b.speakingStyle,
+      'character_arc': t2b.characterArc,
       'world_profile': {
         'faction': faction,
         'home_location': homeLocation,
@@ -1518,6 +1757,12 @@ $userPrompt
         'relationship_notes': relationshipNotes,
       },
     };
+    onStageProgress?.call(GenerationStageProgress(
+      stage: 3,
+      totalStages: 3,
+      stageName: '详细角色卡已完成',
+      targetCharacters: targetTotalCharacters,
+    ));
     if (targetTotalCharacters == null) return initial;
     return _completeDetailedCharacterCard(
       initial: initial,
@@ -1526,6 +1771,9 @@ $userPrompt
       associatedCharacters: associatedCharacters,
       targetTotalCharacters: targetTotalCharacters,
       onProgress: onProgress,
+      onStageProgress: onStageProgress,
+      isNpc: isNpc,
+      taskHandle: taskHandle,
       generationMode: generationMode,
     );
   }
@@ -1542,6 +1790,8 @@ $userPrompt
     required String systemPrompt,
     required List<Map<String, dynamic>> confirmedResults,
     required String userInstruction,
+    required bool isNpc,
+    required GenerationTaskHandle? taskHandle,
     required LlmGenerationMode? generationMode,
   }) async {
     // Content budget: the first call plus the bounded retries below. Each
@@ -1549,6 +1799,7 @@ $userPrompt
     // failures, so the two budgets stay finite and independently auditable.
     final maximumAttempts = RetryBudget.structuredJson.contentStageAttempts;
     for (var attempt = 1; attempt <= maximumAttempts; attempt++) {
+      _throwIfCancelled(taskHandle);
       final messages = <Map<String, dynamic>>[
         {'role': 'system', 'content': systemPrompt},
         for (final result in confirmedResults)
@@ -1561,6 +1812,7 @@ $userPrompt
           messages,
           task: LlmTask.characterDeep,
           maximumOutputTokens: 8192,
+          taskHandle: taskHandle,
           generationMode: generationMode,
           expectJsonObject: true,
         );
@@ -1572,7 +1824,11 @@ $userPrompt
       }
       final parsed = StructuredJsonCodec.tryDecodeObject(response);
       if (parsed == null) continue;
-      final payload = DetailedCharacterStageNormalizer.normalize(stage, parsed);
+      final payload = DetailedCharacterStageNormalizer.normalize(
+        stage,
+        parsed,
+        isNpc: isNpc,
+      );
       if (payload != null) return payload;
     }
     throw FormatException(
@@ -1589,13 +1845,19 @@ $userPrompt
     required int targetTotalCharacters,
     void Function(int currentStage, int totalStages, String stageName)?
         onProgress,
+    void Function(GenerationStageProgress progress)? onStageProgress,
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
     LlmGenerationMode? generationMode,
   }) async {
     const coordinator = DetailedCharacterGenerationCoordinator();
     return coordinator.complete(
       initial: initial,
       targetTotalCharacters: targetTotalCharacters,
+      isNpc: isNpc,
+      taskHandle: taskHandle,
       requestSupplement: (candidate, report) async {
+        _throwIfCancelled(taskHandle);
         final response = await _callText(
           _characterSupplementPrompt(
             candidate: candidate,
@@ -1603,9 +1865,11 @@ $userPrompt
             userPrompt: userPrompt,
             worldview: worldview,
             associatedCharacters: associatedCharacters,
+            isNpc: isNpc,
           ),
           task: LlmTask.characterDeep,
           maximumOutputTokens: 8192,
+          taskHandle: taskHandle,
           generationMode: generationMode,
           expectJsonObject: true,
         );
@@ -1615,17 +1879,26 @@ $userPrompt
         }
         return supplement;
       },
-      onProgress: (progress) => onProgress?.call(
-        progress.phase == CharacterGenerationPhase.completed
-            ? 10
-            : 2 + progress.supplementRound,
-        10,
-        progress.phase == CharacterGenerationPhase.completed
-            ? '详细角色卡已完成'
-            : '当前有效内容 ${progress.currentCharacters} / '
-                '${progress.targetCharacters}；仍需完善：'
-                '${progress.weakModules.join('、')}',
-      ),
+      onProgress: (progress) {
+        final completed = progress.phase == CharacterGenerationPhase.completed;
+        onProgress?.call(
+          completed ? 10 : 2 + progress.supplementRound,
+          10,
+          completed
+              ? '详细角色卡已完成'
+              : '当前有效内容 ${progress.currentCharacters} / '
+                  '${progress.targetCharacters}；仍需完善：'
+                  '${progress.weakModules.join('、')}',
+        );
+        onStageProgress?.call(GenerationStageProgress(
+          stage: completed ? 10 : 2 + progress.supplementRound,
+          totalStages: 10,
+          stageName: completed ? '详细角色卡已完成' : '补全角色卡',
+          currentCharacters: progress.currentCharacters,
+          targetCharacters: progress.targetCharacters,
+          supplementRound: progress.supplementRound,
+        ));
+      },
     );
   }
 
@@ -1635,6 +1908,7 @@ $userPrompt
     required String userPrompt,
     required String worldview,
     required List<Map<String, String>> associatedCharacters,
+    bool isNpc = false,
   }) {
     final profile = candidate['world_profile'] is Map
         ? Map<String, dynamic>.from(candidate['world_profile'] as Map)
@@ -1661,9 +1935,8 @@ $userPrompt
 已确认角色卡：${jsonEncode({...candidate, 'world_profile': profile})}
 
 只补充薄弱模块，避免复述已有内容。world_profile 只写角色自己的世界定位，不得复制完整世界观。普通人可令 ability 为 not_applicable。
-若薄弱模块包含 roleplayBehavior（或 scenario / first_mes / mes_example 任一缺失），必须在本次增量中至少给出 scenario、first_mes、mes_example 这三项中的【任意两项或全部三项】；仅返回其中一项会被判定为薄弱并触发再次补全。
-这两项（或三项）去掉空白后的合计字符数必须不少于 180 字，每项都应是可以直接用于稳定 RP 的完整内容，不得是占位符或空串。
-可返回字段：personality、description、appearance、bodyDescription、scenario、first_mes、mes_example、ability、weakness、equipment、custom_attributes、world_profile。world_profile 可含 faction、home_location、public_goal、hidden_motivation、secrets、ability_source、ability_cost、taboos、relationship_notes。
+${isNpc ? '若薄弱模块包含 roleplayBehavior（或 scenario / first_mes / mes_example / speaking_style 任一缺失），必须在本次增量中至少给出 scenario、first_mes、mes_example、speaking_style 这四项中的【任意两项】；仅返回其中一项会被判定为薄弱并触发再次补全。这两项去掉空白后的合计字符数必须不少于 100 字。' : '若薄弱模块包含 roleplayBehavior（或 scenario / first_mes / mes_example 任一缺失），必须在本次增量中至少给出 scenario、first_mes、mes_example 这三项中的【任意两项或全部三项】；仅返回其中一项会被判定为薄弱并触发再次补全。这两项（或三项）去掉空白后的合计字符数必须不少于 180 字，每项都应是可以直接用于稳定 RP 的完整内容，不得是占位符或空串。'}
+可返回字段：personality、description、appearance、bodyDescription、scenario、first_mes、mes_example、speaking_style、character_arc、ability、weakness、equipment、custom_attributes、world_profile。world_profile 可含 faction、home_location、public_goal、hidden_motivation、secrets、ability_source、ability_cost、taboos、relationship_notes。
 ''';
   }
 
@@ -1674,8 +1947,16 @@ $userPrompt
       '{userPrompt}',
       userPrompt,
     );
-    final response = await _callText(prompt, task: LlmTask.characterFast);
-    return _parseConversationCharacterResponse(response);
+    return _requestJsonWithRepair<Map<String, String>>(
+      stageLabel: '对话角色卡生成',
+      prompt: prompt,
+      request: (attemptPrompt) => _callText(
+        attemptPrompt,
+        task: LlmTask.characterFast,
+        expectJsonObject: true,
+      ),
+      parse: _parseConversationCharacterResponse,
+    );
   }
 
   /// F6: 文字 → 开场场景 + 选项
@@ -1744,6 +2025,7 @@ $userPrompt
       final response = await _callText(
         attemptPrompt,
         task: LlmTask.structuredExtraction,
+        expectJsonObject: true,
       );
       final parsed = parseOpeningResponse(response);
       if (parsed != null) return parsed;
@@ -1940,17 +2222,24 @@ $userPrompt
     final response = await _callText(
       prompt,
       task: LlmTask.structuredExtraction,
+      expectJsonObject: true,
     );
     return _parseNpcsResponse(response);
   }
 
   /// 创作资料库专用结构化导入。与冒险模式的简化字段保持独立，避免接口漂移。
   Future<Map<String, dynamic>> textToCreationWorld(String userPrompt) async {
-    final response = await _callText(
-      _creationWorldPrompt.replaceFirst('{source}', userPrompt),
-      task: LlmTask.worldviewFast,
+    final prompt = _creationWorldPrompt.replaceFirst('{source}', userPrompt);
+    return _requestJsonWithRepair<Map<String, dynamic>>(
+      stageLabel: '创作世界观整理',
+      prompt: prompt,
+      request: (attemptPrompt) => _callText(
+        attemptPrompt,
+        task: LlmTask.worldviewFast,
+        expectJsonObject: true,
+      ),
+      parse: _parseCreationObject,
     );
-    return _parseCreationObject(response);
   }
 
   Future<Map<String, dynamic>> textToCreationCharacter(
@@ -1966,13 +2255,18 @@ $userPrompt
         .replaceFirst('{source}', userPrompt)
         .replaceFirst('{worldview}', WorldviewPromptBudget.bound(worldview))
         .replaceFirst('{related}', related);
-    final response = await _callText(
-      prompt,
-      task: LlmTask.characterFast,
-      maximumOutputTokens: maximumOutputTokens,
-      taskHandle: taskHandle,
+    return _requestJsonWithRepair<Map<String, dynamic>>(
+      stageLabel: '创作角色整理',
+      prompt: prompt,
+      request: (attemptPrompt) => _callText(
+        attemptPrompt,
+        task: LlmTask.characterFast,
+        maximumOutputTokens: maximumOutputTokens,
+        taskHandle: taskHandle,
+        expectJsonObject: true,
+      ),
+      parse: _parseCreationObject,
     );
-    return _parseCreationObject(response);
   }
 
   Future<List<String>> identifyCharacterNames(
@@ -1989,6 +2283,7 @@ $userPrompt
       task: LlmTask.structuredExtraction,
       maximumOutputTokens: maximumOutputTokens,
       taskHandle: taskHandle,
+      expectJsonObject: true,
     );
     final parsed = AiAdventureUtils.parseJson(response);
     if (parsed == null) return const [];
@@ -2033,6 +2328,7 @@ $userPrompt
     final response = await _callText(
       prompt,
       task: LlmTask.structuredExtraction,
+      expectJsonObject: true,
     );
     final parsed = AiAdventureUtils.parseJson(response);
     final list = parsed?['npcs'];
@@ -2047,9 +2343,11 @@ $userPrompt
   }
 
   Map<String, dynamic> _parseCreationObject(String response) {
-    final parsed = AiAdventureUtils.parseJson(response);
-    if (parsed == null) return {'name': '', 'summary': response.trim()};
-    return Map<String, dynamic>.from(parsed);
+    final parsed = StructuredJsonCodec.tryDecodeObject(response, repair: true);
+    if (parsed == null) {
+      throw const FormatException('创作资料整理结果不是合法的 JSON 对象');
+    }
+    return parsed;
   }
 
   /// 解析批量 NPC JSON 数组响应
@@ -2181,7 +2479,7 @@ $userPrompt
     LlmTask task, {
     required int maximumOutputTokens,
     required double temperature,
-    required bool jsonHint,
+    required bool expectJsonObject,
     LlmGenerationMode? generationMode,
   }) {
     return const LlmTaskResolver().resolve(
@@ -2193,7 +2491,9 @@ $userPrompt
         enableThinking: generationMode == LlmGenerationMode.deepThinking,
       ),
       maximumOutputTokens: maximumOutputTokens,
-      forceJson: jsonHint ? true : null,
+      // The caller declares whether it needs a JSON object; prompt text is
+      // never sniffed for "json" to decide the response format.
+      forceJson: expectJsonObject ? true : null,
     );
   }
 
@@ -2225,7 +2525,7 @@ $userPrompt
       task,
       maximumOutputTokens: maximumOutputTokens,
       temperature: temperature,
-      jsonHint: prompt.toLowerCase().contains('json'),
+      expectJsonObject: expectJsonObject,
       generationMode: generationMode,
     );
     final result = await _llm.sendMessageStreamDetailed(
@@ -2259,13 +2559,11 @@ $userPrompt
       };
     }).toList();
 
-    final jsonHint = messages.any(
-        (m) => (m['content']?.toString() ?? '').toLowerCase().contains('json'));
     final params = _taskParams(
       task,
       maximumOutputTokens: maximumOutputTokens,
       temperature: temperature,
-      jsonHint: jsonHint,
+      expectJsonObject: expectJsonObject,
       generationMode: generationMode,
     );
 
@@ -2284,65 +2582,74 @@ $userPrompt
   // ─── 响应解析 ───
 
   Map<String, String> _parseWorldviewResponse(String response) {
-    final json = AiAdventureUtils.parseJson(response);
-    if (json != null) {
-      return {
-        'name': (json['name'] as String?) ?? '未命名世界观',
-        'description': (json['description'] as String?) ?? response.trim(),
-      };
+    final json = StructuredJsonCodec.tryDecodeObject(response, repair: true);
+    if (json == null) {
+      throw const FormatException('世界观响应不是合法的 JSON 对象');
     }
-    return {
-      'name': 'AI 生成的世界观',
-      'description': response.trim(),
-    };
+    final name = _jsonFieldText(json['name']);
+    final description = _jsonFieldText(json['description']);
+    if (name.isEmpty) {
+      throw const FormatException('世界观 JSON 缺少有效的 name 字段');
+    }
+    if (description.isEmpty) {
+      throw const FormatException('世界观 JSON 缺少有效的 description 字段');
+    }
+    return {'name': name, 'description': description};
+  }
+
+  /// Reads a text field from a decoded JSON object. A missing or non-string
+  /// value is empty, never a stringified container or the raw response.
+  static String _jsonFieldText(Object? value) {
+    if (value is String) return value.trim();
+    if (value is num) return value.toString();
+    return '';
+  }
+
+  /// Decodes a world_profile that may arrive as a Map or as JSON text.
+  static Map<String, dynamic> _decodeProfileMap(Object? value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is String && value.trim().isNotEmpty) {
+      final decoded = StructuredJsonCodec.tryDecodeObject(value, repair: true);
+      if (decoded != null) return decoded;
+    }
+    return <String, dynamic>{};
   }
 
   Map<String, String> _parseCharacterCardResponse(String response) {
-    final json = AiAdventureUtils.parseJson(response);
-    if (json != null) {
-      final rawProfile = json['world_profile'];
-      final profile = rawProfile is Map
-          ? Map<String, dynamic>.from(rawProfile)
-          : const <String, dynamic>{};
-      return {
-        'name': (json['name'] as String?) ?? '未命名角色',
-        'gender': (json['gender'] as String?) ?? '女',
-        'age': (json['age']?.toString()) ?? '',
-        'profession': (json['profession'] as String?) ?? '',
-        'personality': (json['personality'] as String?) ?? '',
-        'background': (json['background'] as String?) ?? '',
-        'appearance': (json['appearance'] as String?) ?? '',
-        'world_profile': jsonEncode({
-          'faction': _profileText(profile, 'faction', '独立行动者'),
-          'home_location': _profileText(profile, 'home_location', '待在剧情中确定'),
-          'public_goal': _profileText(profile, 'public_goal', '追寻个人目标'),
-          'hidden_motivation':
-              _profileText(profile, 'hidden_motivation', '尚未对外公开'),
-          'ability_source': _profileText(profile, 'ability_source', '个人训练与经历'),
-          'ability_cost': _profileText(profile, 'ability_cost', '需承担行动风险与消耗'),
-          'taboos': _profileList(profile['taboos']),
-          'relationship_notes':
-              _profileText(profile, 'relationship_notes', '关系将在剧情中逐步展开'),
-        }),
-      };
+    final json = StructuredJsonCodec.tryDecodeObject(response, repair: true);
+    if (json == null) {
+      throw const FormatException('角色卡响应不是合法的 JSON 对象');
     }
+    final name = _jsonFieldText(json['name']);
+    final gender = _jsonFieldText(json['gender']);
+    // A missing gender is a parse failure, not a free choice to default to
+    // female. The caller re-requests with a corrective prompt, then fails.
+    if (name.isEmpty) {
+      throw const FormatException('角色卡 JSON 缺少有效的 name 字段');
+    }
+    if (gender.isEmpty) {
+      throw const FormatException('角色卡 JSON 缺少有效的 gender 字段');
+    }
+    final profile = _decodeProfileMap(json['world_profile']);
     return {
-      'name': 'AI 生成的角色',
-      'gender': '女',
-      'age': '',
-      'profession': '',
-      'personality': response.trim(),
-      'background': '',
-      'appearance': '',
+      'name': name,
+      'gender': gender,
+      'age': _jsonFieldText(json['age']),
+      'profession': _jsonFieldText(json['profession']),
+      'personality': _jsonFieldText(json['personality']),
+      'background': _jsonFieldText(json['background']),
+      'appearance': _jsonFieldText(json['appearance']),
       'world_profile': jsonEncode({
-        'faction': '独立行动者',
-        'home_location': '待在剧情中确定',
-        'public_goal': '追寻个人目标',
-        'hidden_motivation': '尚未对外公开',
-        'ability_source': '个人训练与经历',
-        'ability_cost': '需承担行动风险与消耗',
-        'taboos': ['暂无明确禁忌'],
-        'relationship_notes': '关系将在剧情中逐步展开',
+        'faction': _profileText(profile, 'faction', '独立行动者'),
+        'home_location': _profileText(profile, 'home_location', '待在剧情中确定'),
+        'public_goal': _profileText(profile, 'public_goal', '追寻个人目标'),
+        'hidden_motivation':
+            _profileText(profile, 'hidden_motivation', '尚未对外公开'),
+        'ability_source': _profileText(profile, 'ability_source', '个人训练与经历'),
+        'ability_cost': _profileText(profile, 'ability_cost', '需承担行动风险与消耗'),
+        'taboos': _profileList(profile['taboos']),
+        'relationship_notes':
+            _profileText(profile, 'relationship_notes', '关系将在剧情中逐步展开'),
       }),
     };
   }
@@ -2366,28 +2673,23 @@ $userPrompt
   }
 
   Map<String, String> _parseConversationCharacterResponse(String response) {
-    final json = AiAdventureUtils.parseJson(response);
-    if (json != null) {
-      return {
-        'name': (json['name'] as String?) ?? '',
-        'role': (json['role'] as String?) ?? '',
-        'user_call_name': (json['user_call_name'] as String?) ?? '',
-        'personality': (json['personality'] as String?) ?? '',
-        'speaking_style': (json['speaking_style'] as String?) ?? '',
-        'background': (json['background'] as String?) ?? '',
-        'scenario': (json['scenario'] as String?) ?? '',
-        'system_prompt': (json['system_prompt'] as String?) ?? '',
-      };
+    final json = StructuredJsonCodec.tryDecodeObject(response, repair: true);
+    if (json == null) {
+      throw const FormatException('对话角色卡响应不是合法的 JSON 对象');
+    }
+    final name = _jsonFieldText(json['name']);
+    if (name.isEmpty) {
+      throw const FormatException('对话角色卡 JSON 缺少有效的 name 字段');
     }
     return {
-      'name': '',
-      'role': '',
-      'user_call_name': '',
-      'personality': response.trim(),
-      'speaking_style': '',
-      'background': '',
-      'scenario': '',
-      'system_prompt': '',
+      'name': name,
+      'role': _jsonFieldText(json['role']),
+      'user_call_name': _jsonFieldText(json['user_call_name']),
+      'personality': _jsonFieldText(json['personality']),
+      'speaking_style': _jsonFieldText(json['speaking_style']),
+      'background': _jsonFieldText(json['background']),
+      'scenario': _jsonFieldText(json['scenario']),
+      'system_prompt': _jsonFieldText(json['system_prompt']),
     };
   }
 

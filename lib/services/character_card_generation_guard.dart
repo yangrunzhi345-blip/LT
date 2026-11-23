@@ -67,6 +67,8 @@ final class CharacterCardGenerationGuard {
       payload['scenario'],
       payload['first_mes'] ?? payload['firstMessage'],
       payload['mes_example'] ?? payload['exampleDialogues'],
+      payload['speaking_style'],
+      payload['character_arc'],
       payload['appearance'],
       payload['bodyDescription'] ?? payload['body_description'],
       payload['ability'],
@@ -101,25 +103,31 @@ final class CharacterCardGenerationGuard {
   CharacterCardGenerationReport evaluate({
     required Map<String, dynamic> card,
     required int targetCharacters,
+    bool isNpc = false,
   }) {
     final payload = _payload(card);
     final profile = _map(payload['world_profile']);
     final readiness = <CharacterCardGenerationModule, CharacterModuleReadiness>{
       CharacterCardGenerationModule.identity: _identityReadiness(payload),
+      // A supporting character is allowed to arrive with a functional history
+      // rather than a full growth arc. The protagonist keeps the stricter
+      // personality + history contract.
       CharacterCardGenerationModule.personalityAndHistory: _textReadiness(
         [
           payload['personality'],
           payload['description'] ?? payload['background']
         ],
-        minimumCharacters: 160,
-        minimumPopulatedFields: 2,
+        minimumCharacters: isNpc ? 100 : 160,
+        minimumPopulatedFields: isNpc ? 1 : 2,
       ),
       CharacterCardGenerationModule.appearanceAndPhysicality: _textReadiness(
-        [
-          payload['appearance'],
-          payload['bodyDescription'] ?? payload['body_description']
-        ],
-        minimumCharacters: 100,
+        isNpc
+            ? [payload['appearance']]
+            : [
+                payload['appearance'],
+                payload['bodyDescription'] ?? payload['body_description']
+              ],
+        minimumCharacters: isNpc ? 80 : 100,
       ),
       CharacterCardGenerationModule.abilityAndLimits:
           _abilityReadiness(payload, profile),
@@ -140,8 +148,9 @@ final class CharacterCardGenerationGuard {
           payload['scenario'],
           payload['first_mes'] ?? payload['firstMessage'],
           payload['mes_example'] ?? payload['exampleDialogues'],
+          if (isNpc) payload['speaking_style'],
         ],
-        minimumCharacters: 180,
+        minimumCharacters: isNpc ? 80 : 180,
         minimumPopulatedFields: 2,
       ),
     };

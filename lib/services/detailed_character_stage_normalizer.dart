@@ -68,6 +68,16 @@ class CharacterBackgroundPayload extends DetailedCharacterStagePayload {
   final String relationshipNotes;
   final List<String> taboos;
 
+  /// Roleplay-facing fields produced by Stage 2B so a card that never needs a
+  /// supplement still opens with usable in-character material. They are
+  /// optional on the schema: an older model response without them is still a
+  /// valid background stage, and the supplement phase can fill them later.
+  final String scenario;
+  final String speakingStyle;
+  final String characterArc;
+  final String firstMes;
+  final String mesExample;
+
   const CharacterBackgroundPayload({
     required this.description,
     required this.publicGoal,
@@ -78,6 +88,11 @@ class CharacterBackgroundPayload extends DetailedCharacterStagePayload {
     required this.homeLocation,
     required this.relationshipNotes,
     required this.taboos,
+    this.scenario = '',
+    this.speakingStyle = '',
+    this.characterArc = '',
+    this.firstMes = '',
+    this.mesExample = '',
   });
 
   @override
@@ -91,6 +106,11 @@ class CharacterBackgroundPayload extends DetailedCharacterStagePayload {
         'home_location': homeLocation,
         'relationship_notes': relationshipNotes,
         'taboos': taboos,
+        'scenario': scenario,
+        'speaking_style': speakingStyle,
+        'character_arc': characterArc,
+        'first_mes': firstMes,
+        'mes_example': mesExample,
       };
 }
 
@@ -113,17 +133,22 @@ class DetailedCharacterStageNormalizer {
 
   static DetailedCharacterStagePayload? normalize(
     CharacterGenerationStage stage,
-    Map<String, dynamic> raw,
-  ) {
+    Map<String, dynamic> raw, {
+    bool isNpc = false,
+  }) {
     try {
       final payload = switch (stage) {
         CharacterGenerationStage.identity => _identity(raw),
-        CharacterGenerationStage.appearance => _appearance(raw),
+        CharacterGenerationStage.appearance => _appearance(raw, isNpc: isNpc),
         CharacterGenerationStage.backgroundWorld => _background(raw),
       };
       // Keep StageSchemaValidator as the single contract gate: a payload is
       // accepted only if the canonical shape it produces also validates.
-      if (!StageSchemaValidator.validate(stage, payload.toCanonicalJson())) {
+      if (!StageSchemaValidator.validate(
+        stage,
+        payload.toCanonicalJson(),
+        isNpc: isNpc,
+      )) {
         return null;
       }
       return payload;
@@ -145,13 +170,21 @@ class DetailedCharacterStageNormalizer {
     );
   }
 
-  static CharacterAppearancePayload _appearance(Map<String, dynamic> raw) {
+  static CharacterAppearancePayload _appearance(
+    Map<String, dynamic> raw, {
+    required bool isNpc,
+  }) {
     return CharacterAppearancePayload(
       appearance: _requiredText(raw, const ['appearance']),
-      bodyDescription: _requiredText(
-        raw,
-        const ['bodyDescription', 'body_description'],
-      ),
+      // An NPC's function, stance and voice matter; a detailed body profile is
+      // optional. Missing bodyDescription must not burn a stage retry for a
+      // supporting character.
+      bodyDescription: isNpc
+          ? _optionalText(raw, const ['bodyDescription', 'body_description'])
+          : _requiredText(
+              raw,
+              const ['bodyDescription', 'body_description'],
+            ),
     );
   }
 
@@ -189,6 +222,11 @@ class DetailedCharacterStageNormalizer {
       homeLocation: field(const ['home_location']),
       relationshipNotes: optionalField(const ['relationship_notes']),
       taboos: taboos.isEmpty ? const [defaultTaboo] : taboos,
+      scenario: optionalField(const ['scenario']),
+      speakingStyle: optionalField(const ['speaking_style']),
+      characterArc: optionalField(const ['character_arc']),
+      firstMes: optionalField(const ['first_mes']),
+      mesExample: optionalField(const ['mes_example']),
     );
   }
 
@@ -207,12 +245,30 @@ class DetailedCharacterStageNormalizer {
       if (value is String) {
         final trimmed = value.trim();
         if (trimmed.isEmpty) throw const _InvalidStagePayload();
+        // A field whose value is itself a serialised JSON object/array means
+        // the model leaked a nested payload into prose. Accepting it would
+        // persist raw JSON as character text, so the stage is re-requested.
+        if (_looksLikeJsonContainer(trimmed)) {
+          throw const _InvalidStagePayload();
+        }
         return trimmed;
       }
       if (allowNumber && value is num) return value.toString();
       throw const _InvalidStagePayload();
     }
     return null;
+  }
+
+  /// Mirrors the opening-scene guard: a value that is a complete JSON
+  /// container is raw model structure, not prose.
+  static bool _looksLikeJsonContainer(String text) {
+    if (text.length < 2) return false;
+    final first = text.codeUnitAt(0);
+    final last = text.codeUnitAt(text.length - 1);
+    final opensObject = first == 0x7B; // {
+    final opensArray = first == 0x5B; // [
+    if (!opensObject && !opensArray) return false;
+    return opensObject ? last == 0x7D : last == 0x5D;
   }
 
   static String _requiredText(

@@ -62,6 +62,32 @@ void main() {
       expect(count, '北境世界'.length);
     });
 
+    test('should not double count a module content and its items', () {
+      // locations/factions persist both a rendered `content` prose block and
+      // the structured `items` that prose was rendered from. Counting both
+      // inflates the effective length and makes the soft target unreachable.
+      final count = guard.count(detailJson: {
+        'modules': {
+          'locations': {
+            'content': '1. 银月城 【平原】：银月城坐落在白河南岸，是北境最大的贸易据点。',
+            'status': 'confirmed',
+            'items': [
+              {
+                'name': '银月城',
+                'terrain': '平原',
+                'description': '银月城坐落在白河南岸，是北境最大的贸易据点。',
+              },
+            ],
+          },
+        },
+      });
+
+      expect(
+        count,
+        '1.银月城【平原】：银月城坐落在白河南岸，是北境最大的贸易据点。'.length,
+      );
+    });
+
     test('should deduplicate identical visible content across modules', () {
       final count = guard.count(detailJson: {
         'modules': {

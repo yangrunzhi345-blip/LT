@@ -15,11 +15,14 @@ class LlmTaskPolicyTable {
       task: LlmTask.adventureNarrative,
       thinking: ThinkingPolicy.followUserSetting,
     ),
+    // 冒险规划目前只有「生成一份结构化冒险配置」这一个消费者，它必须拿到
+    // JSON 对象。此前靠 prompt 里是否出现 json 字样临时开启 response_format，
+    // 去掉该启发式后改为在任务策略里显式声明，避免调用方静默失去 JSON 约束。
     LlmTask.adventurePlanning: LlmTaskPolicy(
       task: LlmTask.adventurePlanning,
       thinking: ThinkingPolicy.followUserSetting,
       reasoningEffort: 'high',
-      preferJsonOutput: false,
+      preferJsonOutput: true,
     ),
     LlmTask.worldviewFast: LlmTaskPolicy(
       task: LlmTask.worldviewFast,

@@ -53,12 +53,19 @@ class StageSchemaValidator {
   /// [stage] is nullable so an unmapped stage is an explicit validation
   /// failure rather than an automatic pass.
   static bool validate(
-      CharacterGenerationStage? stage, Map<String, dynamic> data) {
+    CharacterGenerationStage? stage,
+    Map<String, dynamic> data, {
+    bool isNpc = false,
+  }) {
     if (stage == null) return false;
     return switch (stage) {
       CharacterGenerationStage.identity => _hasAllText(data, _identityFields),
-      CharacterGenerationStage.appearance =>
-        _hasAllText(data, _appearanceFields),
+      // An NPC's recognisable appearance is the required signal; a detailed
+      // body profile is not part of the supporting-character contract.
+      CharacterGenerationStage.appearance => _hasAllText(
+          data,
+          isNpc ? const ['appearance'] : _appearanceFields,
+        ),
       CharacterGenerationStage.backgroundWorld =>
         _hasAllText(data, _backgroundFields),
     };

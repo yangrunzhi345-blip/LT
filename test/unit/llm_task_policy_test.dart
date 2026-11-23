@@ -96,6 +96,14 @@ void main() {
       expect(params.responseFormat, {'type': 'json_object'});
     });
 
+    test('adventure planning requests JSON like its prompt contract', () {
+      final params = resolver.resolve(
+        task: LlmTask.adventurePlanning,
+        capabilities: flash,
+      );
+      expect(params.responseFormat, {'type': 'json_object'});
+    });
+
     test('prose tasks never request JSON', () {
       final params = resolver.resolve(
         task: LlmTask.translation,

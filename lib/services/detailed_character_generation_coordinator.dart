@@ -1,5 +1,6 @@
 import '../core/config/generation_limits.dart';
 import 'character_card_generation_guard.dart';
+import 'llm_service.dart';
 
 enum CharacterGenerationPhase {
   anchor,
@@ -65,6 +66,8 @@ final class DetailedCharacterGenerationCoordinator {
       CharacterCardGenerationReport report,
     ) requestSupplement,
     void Function(CharacterGenerationProgress progress)? onProgress,
+    bool isNpc = false,
+    GenerationTaskHandle? taskHandle,
   }) async {
     final target = targetTotalCharacters
         .clamp(
@@ -73,10 +76,15 @@ final class DetailedCharacterGenerationCoordinator {
         )
         .toInt();
     var candidate = Map<String, dynamic>.from(initial);
-    var report = guard.evaluate(card: candidate, targetCharacters: target);
+    var report = guard.evaluate(
+      card: candidate,
+      targetCharacters: target,
+      isNpc: isNpc,
+    );
     for (var round = 1;
         round <= maximumSupplementRounds && !report.completed;
         round++) {
+      _throwIfCancelled(taskHandle);
       onProgress?.call(CharacterGenerationProgress(
         phase: CharacterGenerationPhase.supplement,
         currentCharacters: report.currentCharacters,
@@ -86,18 +94,26 @@ final class DetailedCharacterGenerationCoordinator {
       ));
       final supplement = await requestSupplement(candidate, report);
       var next = mergeCharacterCardSupplement(candidate, supplement);
-      var nextReport = guard.evaluate(card: next, targetCharacters: target);
+      var nextReport = guard.evaluate(
+        card: next,
+        targetCharacters: target,
+        isNpc: isNpc,
+      );
       // Handle no progress with bounded retries (max 2 extra attempts)
       int noProgressAttempts = 0;
       while (nextReport.currentCharacters <= report.currentCharacters &&
           noProgressAttempts < 2) {
+        _throwIfCancelled(taskHandle);
         // Retry supplement request without advancing round count
         noProgressAttempts++;
         final retrySupplement = await requestSupplement(candidate, report);
         final retryNext =
             mergeCharacterCardSupplement(candidate, retrySupplement);
-        final retryReport =
-            guard.evaluate(card: retryNext, targetCharacters: target);
+        final retryReport = guard.evaluate(
+          card: retryNext,
+          targetCharacters: target,
+          isNpc: isNpc,
+        );
         if (retryReport.currentCharacters > report.currentCharacters) {
           // Progress made, break out of retry loop
           next = retryNext;
@@ -107,12 +123,25 @@ final class DetailedCharacterGenerationCoordinator {
         // else continue retrying
       }
       if (nextReport.currentCharacters <= report.currentCharacters) {
+        // No growth is only fatal when the card is still structurally
+        // unusable. A structurally complete card may legitimately stop short
+        // of the requested length; returning it preserves several rounds of
+        // valid content instead of discarding them.
+        if (_softComplete(nextReport)) {
+          return _softReturn(next, nextReport, target, onProgress);
+        }
+        if (_softComplete(report)) {
+          return _softReturn(candidate, report, target, onProgress);
+        }
         throw const CharacterGenerationNoProgressException();
       }
       candidate = next;
       report = nextReport;
     }
     if (!report.completed) {
+      if (_softComplete(report)) {
+        return _softReturn(candidate, report, target, onProgress);
+      }
       throw CharacterGenerationTargetNotReachedException(report);
     }
     onProgress?.call(CharacterGenerationProgress(
@@ -122,6 +151,35 @@ final class DetailedCharacterGenerationCoordinator {
       supplementRound: 0,
     ));
     return candidate;
+  }
+
+  /// A card that reaches the length cap with every required module ready is
+  /// usable even when the requested character count is unmet; only a
+  /// structurally broken card is a hard failure.
+  static bool _softComplete(CharacterCardGenerationReport report) =>
+      report.requiredModulesReady && report.structurallyConsistent;
+
+  Map<String, dynamic> _softReturn(
+    Map<String, dynamic> candidate,
+    CharacterCardGenerationReport report,
+    int target,
+    void Function(CharacterGenerationProgress progress)? onProgress,
+  ) {
+    final result = Map<String, dynamic>.from(candidate)
+      ..['generation_soft_incomplete'] = true;
+    onProgress?.call(CharacterGenerationProgress(
+      phase: CharacterGenerationPhase.completed,
+      currentCharacters: report.currentCharacters,
+      targetCharacters: target,
+      supplementRound: 0,
+    ));
+    return result;
+  }
+
+  static void _throwIfCancelled(GenerationTaskHandle? taskHandle) {
+    if (taskHandle?.isCancelled == true) {
+      throw const GenerationCancelledException();
+    }
   }
 
   /// Merges only incremental fields; identity anchors are immutable.

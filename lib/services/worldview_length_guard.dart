@@ -44,8 +44,22 @@ final class WorldviewLengthGuard {
           .where((text) => text.isNotEmpty)
           .toList(growable: false);
       if (key == 'overview' && normalizedTexts.isNotEmpty) hasOverview = true;
+      // A module may persist both a rendered `content` prose block and the
+      // structured `items` it was rendered from (locations / factions). The
+      // item text is normally a subset of the prose, so counting both inflates
+      // the effective length. Containment is checked per module only, so a
+      // genuinely repeated sentence in another module is still deduplicated by
+      // the global [seen] set exactly as before.
+      final kept = <String>[];
       for (final normalized in normalizedTexts) {
         if (!seen.add(normalized)) continue;
+        if (kept.any((existing) => existing.contains(normalized))) continue;
+        kept.removeWhere((existing) {
+          if (!normalized.contains(existing)) return false;
+          total -= existing.length;
+          return true;
+        });
+        kept.add(normalized);
         total += normalized.length;
       }
     }
