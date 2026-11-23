@@ -3135,6 +3135,20 @@
   "settingCardLengthDefault": "默认",
   "settingCardLengthCompact": "精简",
   "settingCardLengthDetailed": "详细",
+  "settingCardLengthCustom": "自定义",
+  "settingCardLengthCustomField": "目标字数",
+  "@settingCardLengthCustomInvalid": {
+    "description": "Error shown when a custom generation target falls outside the supported character range.",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "settingCardLengthCustomInvalid": "请输入 {min}–{max} 之间的目标字数",
   "settingCardOriginWorldviewLabel": "所属世界观",
   "settingCardOriginWorldviewNone": "不指定",
   "settingCardRestorePrevious": "恢复重生成前版本",

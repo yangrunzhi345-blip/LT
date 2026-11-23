@@ -3135,6 +3135,20 @@
   "settingCardLengthDefault": "Default",
   "settingCardLengthCompact": "Concise",
   "settingCardLengthDetailed": "Detailed",
+  "settingCardLengthCustom": "Custom",
+  "settingCardLengthCustomField": "Target characters",
+  "@settingCardLengthCustomInvalid": {
+    "description": "Error shown when a custom generation target falls outside the supported character range.",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "settingCardLengthCustomInvalid": "Enter a target between {min} and {max} characters.",
   "settingCardOriginWorldviewLabel": "Origin worldview",
   "settingCardOriginWorldviewNone": "Unspecified",
   "settingCardRestorePrevious": "Restore pre-generation version",

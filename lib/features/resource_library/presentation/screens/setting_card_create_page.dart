@@ -44,6 +44,7 @@ final class _SettingCardCreatePageState
   SettingCardReferenceMode _referenceMode = SettingCardReferenceMode.paste;
   SettingCardReferenceInput? _reference;
   SettingCardGenerationLength _length = SettingCardGenerationLength.standard;
+  final _customLength = TextEditingController();
   List<SettingCard> _worldviews = const <SettingCard>[];
   String _originWorldviewId = '';
   bool _busy = false;
@@ -72,6 +73,7 @@ final class _SettingCardCreatePageState
     _name.dispose();
     _summary.dispose();
     _instruction.dispose();
+    _customLength.dispose();
     super.dispose();
   }
 
@@ -81,6 +83,17 @@ final class _SettingCardCreatePageState
     final instruction = _instruction.text.trim();
     if (generate && instruction.isEmpty) {
       AppFeedback.warning(context, _l10n(context).settingCardGenerateHint);
+      return;
+    }
+    final targetCharacters = _resolveTargetCharacters();
+    if (generate && targetCharacters == null && _isCustomLength) {
+      AppFeedback.warning(
+        context,
+        _l10n(context).settingCardLengthCustomInvalid(
+          SettingCardLengthSelector.minimumCharacters,
+          _maximumCharacters,
+        ),
+      );
       return;
     }
     setState(() => _busy = true);
@@ -101,7 +114,7 @@ final class _SettingCardCreatePageState
           id: card.id,
           instruction: instruction,
           reference: _reference,
-          targetTotalCharacters: _length.targetCharacters,
+          targetTotalCharacters: targetCharacters,
         );
       }
       if (!mounted) return;
@@ -120,6 +133,21 @@ final class _SettingCardCreatePageState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  int get _maximumCharacters =>
+      SettingCardLengthSelector.maximumCharactersFor(_kindOf(_type));
+
+  bool get _isCustomLength => _length == SettingCardGenerationLength.custom;
+
+  /// Resolves the target the picker represents, or null when no explicit
+  /// length should be sent (default preset, or an unusable custom number).
+  int? _resolveTargetCharacters() {
+    if (!_isCustomLength) return _length.targetCharacters;
+    return SettingCardLengthSelector.parseCustomCharacters(
+      _customLength.text,
+      maximumCharacters: _maximumCharacters,
+    );
   }
 
   @override
@@ -207,6 +235,8 @@ final class _SettingCardCreatePageState
                 key: const Key('setting-card-create-length'),
                 keyPrefix: 'setting-card-create-length',
                 value: _length,
+                customCharactersController: _customLength,
+                maximumCharacters: _maximumCharacters,
                 enabled: !_busy,
                 onChanged: (value) => setState(() => _length = value),
               ),

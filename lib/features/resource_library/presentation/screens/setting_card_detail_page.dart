@@ -59,6 +59,7 @@ final class _SettingCardDetailPageState
   bool _saving = false;
   bool _generating = false;
   SettingCardGenerationLength _length = SettingCardGenerationLength.standard;
+  final _customLength = TextEditingController();
   String _progressLabel = '';
   String? _loadError;
 
@@ -73,6 +74,7 @@ final class _SettingCardDetailPageState
     _name.dispose();
     _summary.dispose();
     _content.dispose();
+    _customLength.dispose();
     super.dispose();
   }
 
@@ -132,11 +134,28 @@ final class _SettingCardDetailPageState
     }
   }
 
+  int get _maximumCharacters => SettingCardLengthSelector.maximumCharactersFor(
+        _card?.kind ?? SettingCardKind.worldview,
+      );
+
+  /// Resolves the target the picker represents, or null when no explicit
+  /// length should be sent (default preset, or an unusable custom number).
+  int? _resolveTargetCharacters(SettingCardGenerationLength length) {
+    if (length != SettingCardGenerationLength.custom) {
+      return length.targetCharacters;
+    }
+    return SettingCardLengthSelector.parseCustomCharacters(
+      _customLength.text,
+      maximumCharacters: _maximumCharacters,
+    );
+  }
+
   Future<void> _generate() async {
     final card = _card;
     if (card == null || _generating) return;
     final request = await _askInstruction();
     if (request == null || !mounted) return;
+    final targetCharacters = _resolveTargetCharacters(request.length);
     setState(() {
       _generating = true;
       _length = request.length;
@@ -147,7 +166,7 @@ final class _SettingCardDetailPageState
             id: card.id,
             instruction: request.instruction,
             reference: request.reference,
-            targetTotalCharacters: request.length.targetCharacters,
+            targetTotalCharacters: targetCharacters,
             onProgress: (stage, total, name) {
               if (!mounted) return;
               setState(() => _progressLabel = name);
@@ -242,53 +261,63 @@ final class _SettingCardDetailPageState
         })>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setLocal) => AlertDialog(
-          title: Text(l10n.settingCardGenerateAction),
-          // scrollable keeps the dialog usable at 320px and when the soft
-          // keyboard shrinks the available height; the editor adds a second
-          // field group below the instruction.
-          scrollable: true,
-          content: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              AppTextField(
-                key: const Key('setting-card-generate-instruction'),
-                controller: controller,
-                label: l10n.settingCardGenerateHint,
-                maxLines: 4,
-                minLines: 3,
-                autofocus: true,
+        builder: (context, setLocal) => ListenableBuilder(
+          listenable: _customLength,
+          builder: (context, _) => AlertDialog(
+            title: Text(l10n.settingCardGenerateAction),
+            // scrollable keeps the dialog usable at 320px and when the soft
+            // keyboard shrinks the available height; the editor adds a second
+            // field group below the instruction.
+            scrollable: true,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                AppTextField(
+                  key: const Key('setting-card-generate-instruction'),
+                  controller: controller,
+                  label: l10n.settingCardGenerateHint,
+                  maxLines: 4,
+                  minLines: 3,
+                  autofocus: true,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                SettingCardLengthSelector(
+                  key: const Key('setting-card-generate-length'),
+                  value: length,
+                  customCharactersController: _customLength,
+                  maximumCharacters: _maximumCharacters,
+                  onChanged: (value) => setLocal(() => length = value),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                SettingCardReferenceEditor(
+                  mode: mode,
+                  onModeChanged: (value) => setLocal(() => mode = value),
+                  onChanged: (value) => reference = value,
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.cancelAction),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              SettingCardLengthSelector(
-                key: const Key('setting-card-generate-length'),
-                value: length,
-                onChanged: (value) => setLocal(() => length = value),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              SettingCardReferenceEditor(
-                mode: mode,
-                onModeChanged: (value) => setLocal(() => mode = value),
-                onChanged: (value) => reference = value,
+              FilledButton(
+                key: const Key('setting-card-generate-confirm'),
+                // A custom target outside the supported range cannot be sent,
+                // so confirm stays disabled until the field is usable.
+                onPressed: length == SettingCardGenerationLength.custom &&
+                        _resolveTargetCharacters(length) == null
+                    ? null
+                    : () => Navigator.of(dialogContext).pop((
+                          instruction: controller.text.trim(),
+                          reference: reference,
+                          length: length,
+                        )),
+                child: Text(l10n.settingCardGenerateAction),
               ),
             ],
           ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.cancelAction),
-            ),
-            FilledButton(
-              key: const Key('setting-card-generate-confirm'),
-              onPressed: () => Navigator.of(dialogContext).pop((
-                instruction: controller.text.trim(),
-                reference: reference,
-                length: length,
-              )),
-              child: Text(l10n.settingCardGenerateAction),
-            ),
-          ],
         ),
       ),
     );
